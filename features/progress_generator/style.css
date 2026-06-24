@@ -1,0 +1,120 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #151515;
+    font-family: Arial, Helvetica, sans-serif;
+    color: white;
+    padding: 30px;
+}
+
+.tracker {
+    max-width: 900px;
+    margin: auto;
+    background: #222;
+    border: 3px solid #111;
+    overflow: hidden;
+}
+
+.header img {
+    width: 100%;
+    display: block;
+}
+
+.row {
+    position: relative;
+    height: 52px;
+    background: #2d2d2d;
+    margin-bottom: 4px;
+    overflow: hidden;
+}
+
+.fill {
+    position: absolute;
+    inset: 0;
+    width: 0%;
+    transition: width 1s ease;
+}
+
+.content {
+    position: relative;
+    z-index: 2;
+
+    height: 100%;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    padding: 0 18px;
+
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.label {
+    text-shadow: 1px 1px 3px black;
+}
+
+.percent {
+    text-shadow: 1px 1px 3px black;
+}
+
+.purple {
+    background: linear-gradient(
+        90deg,
+        #7d2cff,
+        #d33bff
+    );
+}
+
+.blue {
+    background: linear-gradient(
+        90deg,
+        #3b82f6,
+        #06b6d4
+    );
+}
+
+.cyan {
+    background: linear-gradient(
+        90deg,
+        #00a6ff,
+        #00ffd9
+    );
+}
+
+.red {
+    background: linear-gradient(
+        90deg,
+        #ff6b6b,
+        #ff4d4d
+    );
+}
+
+.green {
+    background: linear-gradient(
+        90deg,
+        #22c55e,
+        #16a34a
+    );
+}
+
+.orange {
+    background: linear-gradient(
+        90deg,
+        #f59e0b,
+        #f97316
+    );
+}
+
+@media (max-width: 700px) {
+
+    .content {
+        font-size: 16px;
+    }
+
+}
