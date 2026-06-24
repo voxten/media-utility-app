@@ -115,6 +115,13 @@ class MainApp(QMainWindow):
                 ]
             },
             {
+                "category": "Text Tools",
+                "icon": "📝",
+                "submodules": [
+                    {"name": "Text to Speech", "icon": "🗣️", "widget": TTSTab()},
+                ]
+            },
+            {
                 "category": "PDF Tools",
                 "icon": "📄",
                 "submodules": [
@@ -134,7 +141,6 @@ class MainApp(QMainWindow):
                 "icon": "⛽",
                 "submodules": [
                     {"name": "Progress Bar", "icon": "🖼️", "widget": ProjectProgressTab()},
-                    {"name": "Text to Speech", "icon": "🗣️", "widget": TTSTab()},
                 ]
             },
         ]
