@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton,
-    QComboBox, QFileDialog, QMessageBox, QProgressBar, QTabWidget, QFrame, QTextEdit
+    QComboBox, QFileDialog, QMessageBox, QProgressBar, QTabWidget, QFrame, QPlainTextEdit
 )
 from PyQt6.QtCore import QTimer, Qt
 from PyQt6.QtGui import QPixmap, QColor
@@ -32,12 +32,20 @@ def is_youtube(url):
     return "youtube.com" in url_lower or "youtu.be" in url_lower
 
 
+def sanitize_x_url(url):
+    """Cleans up trailing video markers from X/Twitter URLs that cause 404 errors."""
+    if "x.com" in url.lower() or "twitter.com" in url.lower():
+        if "/video/" in url:
+            url = url.split("/video/")[0]
+    return url
+
+
 # ---------- Worker thread ----------
 
 class YTDLWorker(threading.Thread):
     def __init__(self, url, format_id, out_template, progress_queue, is_audio_only=False, preferred_codec="mp3"):
         super().__init__(daemon=True)
-        self.url = url
+        self.url = sanitize_x_url(url.strip())
         self.format_id = format_id
         self.out_template = out_template
         self.progress_queue = progress_queue
@@ -45,7 +53,7 @@ class YTDLWorker(threading.Thread):
         self.preferred_codec = preferred_codec
 
     def run(self):
-        cookie_path = "youtube_cookies.txt" if is_youtube(self.url) else "x.com_cookies.txt"
+        cookie_path = "features/download/youtube_cookies.txt" if is_youtube(self.url) else "features/download/x.com_cookies.txt"
 
         ydl_opts = {
             "format": self.format_id,
@@ -55,10 +63,6 @@ class YTDLWorker(threading.Thread):
             "quiet": True,
             "no_warnings": True,
             "cookiefile": cookie_path,
-            "extractor_args": {
-                "twitter": {"api": ["legacy", "syndication"]},
-                "youtube": {"player_client": ["default", "-tv_simply"]}
-            },
         }
 
         # Dynamically set postprocessors depending on if we are running audio conversion
@@ -123,7 +127,7 @@ class YTBatchWorker(threading.Thread):
         total_videos = len(self.urls)
 
         for index, url in enumerate(self.urls, start=1):
-            url = url.strip()
+            url = sanitize_x_url(url.strip())
             if not url:
                 continue
 
@@ -131,7 +135,7 @@ class YTBatchWorker(threading.Thread):
             fmt_id = "bestvideo+bestaudio/best" if is_youtube(url) else "best"
             out_template = self.filename_template.replace("{title}", "%(title)s").replace("{ext}", "%(ext)s")
             final_out_path = str(self.outdir / out_template)
-            cookie_path = "youtube_cookies.txt" if is_youtube(url) else "x.com_cookies.txt"
+            cookie_path = "features/download/youtube_cookies.txt" if is_youtube(url) else "features/download/x.com_cookies.txt"
 
             ydl_opts = {
                 "format": fmt_id,
@@ -146,7 +150,6 @@ class YTBatchWorker(threading.Thread):
                     "preferedformat": "mp4",
                 }],
                 "cookiefile": cookie_path,
-                "extractor_args": {"twitter": {"api": ["legacy", "syndication"]}},
             }
 
             try:
@@ -195,28 +198,22 @@ class YouTubeTab(QWidget):
         self.timer.start(150)
 
     def init_ui(self):
-        # Component Global Styles Configuration Injection
         self.setStyleSheet("""
-            /* Scoped Custom Cards Layout */
             QFrame#CardWrapper {
                 background-color: #1a1f2c;
                 border: 1px solid #242c3e;
                 border-radius: 12px;
             }
-
             QFrame#ControlPanel {
                 background-color: #11151d;
                 border: 1px solid #1e2533;
                 border-radius: 12px;
             }
-
             QLabel#PanelHeader {
                 font-size: 20px;
                 font-weight: bold;
                 color: #ffffff;
             }
-
-            /* Neon Action Gradient Button */
             QPushButton#ActionBtn {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #ef4444, stop:1 #b91c1c);
                 color: #ffffff;
@@ -232,8 +229,6 @@ class YouTubeTab(QWidget):
             QPushButton#ActionBtn:pressed {
                 background: #991b1b;
             }
-
-            /* Custom Glowing Progress Bar */
             QProgressBar {
                 border: 1px solid #242c3e;
                 border-radius: 6px;
@@ -247,8 +242,6 @@ class YouTubeTab(QWidget):
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #6366f1, stop:1 #4f46e5);
                 border-radius: 5px;
             }
-
-            /* Inner Module Scoped Tabs Style overrides */
             QTabWidget::pane#SubTabs {
                 border: 1px solid #242c3e;
                 background-color: #141822;
@@ -271,12 +264,10 @@ class YouTubeTab(QWidget):
         main_layout.setSpacing(16)
         main_layout.setContentsMargins(20, 20, 20, 20)
 
-        # Header Title Area
         header = QLabel("Universal Cloud Downloader")
         header.setObjectName("PanelHeader")
         main_layout.addWidget(header)
 
-        # Content Navigation Modes Cards
         self.mode_tabs = QTabWidget()
         self.mode_tabs.tabBar().setObjectName("SubTabs")
         self.mode_tabs.setObjectName("SubTabs")
@@ -291,7 +282,6 @@ class YouTubeTab(QWidget):
         self.mode_tabs.addTab(self.batch_widget, "🗂️  Batch Download Automation")
         main_layout.addWidget(self.mode_tabs)
 
-        # Output Properties Group Box Card layout Frame
         output_card = QFrame()
         output_card.setObjectName("CardWrapper")
         output_layout = QVBoxLayout(output_card)
@@ -319,7 +309,6 @@ class YouTubeTab(QWidget):
 
         main_layout.addWidget(output_card)
 
-        # Control Panel Execution Box Card layout Frame
         control_card = QFrame()
         control_card.setObjectName("ControlPanel")
         control_layout = QVBoxLayout(control_card)
@@ -361,7 +350,6 @@ class YouTubeTab(QWidget):
         url_row.addWidget(self.check_btn)
         layout.addLayout(url_row)
 
-        # Premium Media Preview Header Card layout
         media_preview_card = QFrame()
         media_preview_card.setStyleSheet("background-color: #11151d; border-radius: 8px; border: 1px solid #242c3e;")
         preview_layout = QHBoxLayout(media_preview_card)
@@ -379,7 +367,6 @@ class YouTubeTab(QWidget):
         preview_layout.addWidget(self.title_label, 1)
         layout.addWidget(media_preview_card)
 
-        # Filter Formats Inner Sub Tabs
         self.format_tabs = QTabWidget()
         self.format_tabs.setObjectName("SubTabs")
         self.format_tabs.tabBar().setObjectName("SubTabs")
@@ -395,7 +382,6 @@ class YouTubeTab(QWidget):
 
         self.video_tab, self.video_combo = build_dropdown_tab("🎥 Layout Streams:")
 
-        # Modified Audio Tab layout to hold an Extension format dropdown next to stream selector
         self.audio_tab = QWidget()
         audio_layout = QHBoxLayout(self.audio_tab)
         audio_layout.setContentsMargins(10, 10, 10, 10)
@@ -427,14 +413,16 @@ class YouTubeTab(QWidget):
         lbl.setStyleSheet("color: #9ca3af; font-weight: 600; margin-bottom: 4px;")
         layout.addWidget(lbl)
 
-        self.batch_input = QTextEdit()
+        self.batch_input = QPlainTextEdit()
         self.batch_input.setPlaceholderText("https://youtube.com/watch?v=...\nhttps://x.com/...\nhttps://youtu.be/...")
         self.batch_input.setStyleSheet("""
-            background-color: #0f1117; 
-            color: #34d399; 
-            font-family: 'Consolas', 'Courier New', monospace; 
-            font-size: 13px;
-            border: 1px solid #242c3e;
+            QPlainTextEdit {
+                background-color: #0f1117; 
+                color: #34d399; 
+                font-family: 'Consolas', 'Courier New', monospace; 
+                font-size: 13px;
+                border: 1px solid #242c3e;
+            }
         """)
         layout.addWidget(self.batch_input)
 
@@ -457,8 +445,8 @@ class YouTubeTab(QWidget):
             QMessageBox.critical(self, "Execution Error", str(e))
 
     def check_formats(self):
-        url = self.url_input.text().strip()
-        if not url:
+        raw_url = self.url_input.text().strip()
+        if not raw_url:
             QMessageBox.warning(self, "Input Alert", "Please supply a qualified uniform link path.")
             return
 
@@ -472,13 +460,13 @@ class YouTubeTab(QWidget):
 
         def _fetch():
             try:
-                cookie_path = "youtube_cookies.txt" if is_youtube(url) else "x.com_cookies.txt"
+                url = sanitize_x_url(raw_url)
+                cookie_path = "features/download/youtube_cookies.txt" if is_youtube(url) else "features/download/x.com_cookies.txt"
                 ydl_opts = {
                     "quiet": True,
                     "no_warnings": True,
                     "extract_flat": False,
                     "cookiefile": cookie_path,
-                    "extractor_args": {"twitter": {"api": ["legacy", "syndication"]}},
                 }
                 with ytdlp.YoutubeDL(ydl_opts) as ydl:
                     info = ydl.extract_info(url, download=False)
@@ -740,12 +728,9 @@ class YouTubeTab(QWidget):
 
 
 if __name__ == "__main__":
-    # Test harness execution code
     from PyQt6.QtWidgets import QApplication, QMainWindow
 
     app = QApplication(sys.argv)
-
-    # Simple default test layout mimicry from app.py palette configuration
     app.setStyle("Fusion")
     window = QMainWindow()
     tab = YouTubeTab()

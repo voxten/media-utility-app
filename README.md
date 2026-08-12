@@ -17,3 +17,5 @@ pip install audioop-lts
 pyinstaller --noconsole --onefile app.py
 
 pip install pyinstaller
+
+pip install PyMuPDF

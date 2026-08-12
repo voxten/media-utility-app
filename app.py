@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout, QPushButton, QLabel, QStackedWidget, QButtonGroup, QMessageBox
 )
 from PyQt6.QtGui import QIcon, QPalette, QColor, QFont
-from PyQt6.QtCore import Qt, QProcess
+from PyQt6.QtCore import Qt, QProcess, QPropertyAnimation, QEasingCurve
 
 # --- SAFE DECOUPLED IMPORTS ---
 try:
@@ -66,6 +66,9 @@ class MainApp(QMainWindow):
         self.setGeometry(100, 100, 1100, 750)
         self.setWindowIcon(QIcon.fromTheme("multimedia-player"))
 
+        # Dictionary to keep active animation references safe from garbage collection
+        self._submenu_animations = {}
+
         # Background compiler process controller
         self.build_process = None
 
@@ -79,16 +82,16 @@ class MainApp(QMainWindow):
         # --- SIDEBAR LAUNCH INTERFACE ---
         self.sidebar = QWidget()
         self.sidebar.setObjectName("SidebarPanel")
-        self.sidebar.setFixedWidth(240)
+        self.sidebar.setFixedWidth(260)  # Slightly wider for better breathing room
         sidebar_layout = QVBoxLayout(self.sidebar)
         sidebar_layout.setContentsMargins(12, 28, 12, 28)
-        sidebar_layout.setSpacing(4)
+        sidebar_layout.setSpacing(2)
 
         # Launcher App Brand Title
-        brand_label = QLabel("LAUNCH INTERFACE")
+        brand_label = QLabel("M E D I A   S T U D I O")
         brand_label.setObjectName("BrandTitle")
         sidebar_layout.addWidget(brand_label)
-        sidebar_layout.addSpacing(24)
+        sidebar_layout.addSpacing(20)
 
         # Content Controller Stack
         self.content_stack = QStackedWidget()
@@ -149,7 +152,7 @@ class MainApp(QMainWindow):
         stack_index = 0
         for cat_idx, cat_data in enumerate(self.menu_structure):
             # 1. Create Main "Folder" Header Button
-            cat_btn = QPushButton(f"▼  {cat_data['icon']}  {cat_data['category']}")
+            cat_btn = QPushButton(f"▼  {cat_data['category'].upper()}")
             cat_btn.setObjectName("CategoryButton")
             cat_btn.setCursor(Qt.CursorShape.PointingHandCursor)
             sidebar_layout.addWidget(cat_btn)
@@ -157,13 +160,15 @@ class MainApp(QMainWindow):
             # 2. Create Subfolder Container Widget
             sub_container = QWidget()
             sub_container.setObjectName("SubMenuContainer")
+
+            # Reset layouts margins to 0 to prevent visual snapping artifacts during animations
             sub_layout = QVBoxLayout(sub_container)
-            sub_layout.setContentsMargins(16, 2, 0, 6)  # Indent sub-modules
-            sub_layout.setSpacing(4)
+            sub_layout.setContentsMargins(0, 0, 0, 0)
+            sub_layout.setSpacing(2)
 
             # 3. Populate Submodules inside the Main Folder
             for module in cat_data["submodules"]:
-                sub_btn = QPushButton(f"{module['icon']}  {module['name']}")
+                sub_btn = QPushButton(f"    {module['name']}")
                 sub_btn.setObjectName("SubNavButton")
                 sub_btn.setCheckable(True)
                 sub_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -186,20 +191,19 @@ class MainApp(QMainWindow):
 
             sidebar_layout.addWidget(sub_container)
 
-            # 4. Connect Click Mechanics to Expand/Collapse Folders Dynamically
+            # 4. Connect Click Mechanics to Expand/Collapse Folders Dynamically with Animations
             cat_btn.clicked.connect(
-                lambda checked, container=sub_container, button=cat_btn, icon=cat_data['icon'],
+                lambda checked, container=sub_container, button=cat_btn,
                        title=cat_data['category']:
-                self.toggle_category(container, button, icon, title)
+                self.toggle_category(container, button, title)
             )
 
         # Push layouts upwards
         sidebar_layout.addStretch()
 
         # --- COMPILER SYSTEM BUTTON ---
-        # Positioned neatly at the very bottom of the sidebar
         sidebar_layout.addSpacing(10)
-        self.build_btn = QPushButton("📦  Build Executable")
+        self.build_btn = QPushButton("Build Executable")
         self.build_btn.setObjectName("BuildEngineButton")
         self.build_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.build_btn.clicked.connect(self.trigger_application_build)
@@ -237,14 +241,33 @@ class MainApp(QMainWindow):
         main_layout.addWidget(right_container, stretch=1)
         self.setCentralWidget(central_widget)
 
-    def toggle_category(self, container, button, icon, title):
-        """Collapses or opens main folder panels on user interaction."""
-        is_visible = container.isVisible()
-        container.setVisible(not is_visible)
+    def toggle_category(self, container, button, title):
+        """Collapses or opens main folder panels using a fluid height animation loop."""
+        if container.property("is_expanded") is None:
+            container.setProperty("is_expanded", True)
 
-        # Toggle structural indicator arrow
-        arrow = "▶" if is_visible else "▼"
-        button.setText(f"{arrow}  {icon}  {title}")
+        is_expanded = container.property("is_expanded")
+
+        # Set up properties transition pipeline
+        anim = QPropertyAnimation(container, b"maximumHeight")
+        anim.setDuration(220)
+        anim.setEasingCurve(QEasingCurve.Type.InOutQuad)
+
+        if is_expanded:
+            container.setProperty("is_expanded", False)
+            button.setText(f"▶  {title.upper()}")
+            anim.setStartValue(container.height())
+            anim.setEndValue(0)
+        else:
+            container.setProperty("is_expanded", True)
+            button.setText(f"▼  {title.upper()}")
+            # Dynamically pull natural structural height of items inside container
+            target_height = container.layout().sizeHint().height()
+            anim.setStartValue(container.height())
+            anim.setEndValue(target_height)
+
+        self._submenu_animations[container] = anim
+        anim.start()
 
     def switch_interface(self, index):
         """Seamlessly transitions between launcher view states."""
@@ -260,7 +283,6 @@ class MainApp(QMainWindow):
         if self.build_process and self.build_process.state() == QProcess.ProcessState.Running:
             return
 
-        # Locate execution path of active python virtual environment toolset
         venv_pyinstaller_win = os.path.join(".venv", "Scripts", "pyinstaller.exe")
         venv_pyinstaller_unix = os.path.join(".venv", "bin", "pyinstaller")
 
@@ -269,11 +291,8 @@ class MainApp(QMainWindow):
         elif os.path.exists(venv_pyinstaller_unix):
             pyinstaller_exec = venv_pyinstaller_unix
         else:
-            pyinstaller_exec = "pyinstaller"  # System path global fallback
+            pyinstaller_exec = "pyinstaller"
 
-        # Compilation Configuration Arguments
-        # --noconfirm: Overwrites pre-existing build exports automatically
-        # --windowed: Hides native command terminal behind GUI framework execution
         arguments = [
             "--clean",
             "--noconfirm",
@@ -283,18 +302,16 @@ class MainApp(QMainWindow):
         ]
 
         self.build_btn.setEnabled(False)
-        self.build_btn.setText("⏳ Building App...")
+        self.build_btn.setText("Building App...")
 
         self.build_process = QProcess()
         self.build_process.finished.connect(self.on_build_completed)
-
-        # Start executing background system compiler assembly line
         self.build_process.start(pyinstaller_exec, arguments)
 
     def on_build_completed(self, exit_code, exit_status):
         """Handles post-compilation cleanup actions and alerts user."""
         self.build_btn.setEnabled(True)
-        self.build_btn.setText("📦  Build Executable")
+        self.build_btn.setText("Build Executable")
 
         if exit_code == 0:
             QMessageBox.information(
@@ -333,42 +350,80 @@ def apply_premium_style(app: QApplication):
 
     app.setStyleSheet("""
         QMainWindow, QWidget#CentralWidget { background-color: #0b0d13; }
-        QWidget#SidebarPanel { background-color: #11141c; border-right: 1px solid #1c2130; }
-        QLabel#BrandTitle { color: #6366f1; font-size: 11px; font-weight: 800; padding-left: 12px; }
 
+        /* Modernized Sidebar Configuration */
+        QWidget#SidebarPanel { 
+            background-color: #090a0f; 
+            border-right: 1px solid #161a25; 
+        }
+        QLabel#BrandTitle { 
+            color: #a5b4fc; 
+            font-size: 11px; 
+            font-weight: 800; 
+            padding-left: 20px; 
+            letter-spacing: 2px;
+        }
+
+        /* Clean and Responsive Category Accordion Headers */
         QPushButton#CategoryButton {
-            background-color: transparent; color: #e5e7eb; border: none;
-            padding: 8px 12px; font-weight: 700; font-size: 13px; text-align: left;
+            background-color: transparent; 
+            color: #6b7280; 
+            border: none;
+            padding: 12px 20px; 
+            font-weight: 800; 
+            font-size: 10px; 
+            text-align: left;
+            margin: 4px 0px 0px 0px;
         }
-        QPushButton#CategoryButton:hover { color: #6366f1; }
-        QWidget#SubMenuContainer { background-color: transparent; }
+        QPushButton#CategoryButton:hover { 
+            color: #e5e7eb; 
+        }
 
+        QWidget#SubMenuContainer { 
+            background-color: transparent; 
+        }
+
+        /* Sleek Modern Left-Border Indicator for Submenus */
         QPushButton#SubNavButton {
-            background-color: transparent; color: #9ca3af; border: none;
-            border-left: 2px solid #1c2130; border-radius: 0px; padding: 8px 16px;
-            font-weight: 600; font-size: 12px; text-align: left;
+            background-color: transparent; 
+            color: #9ca3af; 
+            border: none;
+            border-left: 3px solid transparent;
+            padding: 9px 16px 9px 24px;
+            font-weight: 500; 
+            font-size: 12px; 
+            text-align: left;
+            margin: 2px 0px;
         }
-        QPushButton#SubNavButton:hover { background-color: #1a1f2c; color: #f3f4f6; border-left: 2px solid #4f46e5; }
-        QPushButton#SubNavButton:checked { background-color: #1e2536; color: #818cf8; border-left: 2px solid #6366f1; font-weight: 700; }
+        QPushButton#SubNavButton:hover { 
+            color: #f3f4f6; 
+            background-color: #11141c; 
+        }
+        QPushButton#SubNavButton:checked { 
+            color: #818cf8; 
+            font-weight: 700; 
+            border-left: 3px solid #6366f1;
+            background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #16192b, stop:1 #090a0f);
+        }
 
-        /* Premium Custom Build Button Styling */
+        /* Custom Build Engine Module Button - Ghost Style */
         QPushButton#BuildEngineButton {
-            background-color: #1a1b35;
-            color: #a5b4fc;
-            border: 1px solid #312e81;
+            background-color: transparent;
+            color: #6b7280;
+            border: 1px solid #374151;
             border-radius: 6px;
             padding: 10px;
-            font-weight: bold;
-            font-size: 12px;
+            font-weight: 600;
+            font-size: 11px;
+            margin: 0px 16px;
         }
         QPushButton#BuildEngineButton:hover {
-            background-color: #1e1b4b;
-            border-color: #4f46e5;
-            color: #c7d2fe;
+            color: #d1d5db;
+            border-color: #4b5563;
+            background-color: #1f2937;
         }
         QPushButton#BuildEngineButton:disabled {
-            background-color: #11131c;
-            color: #4b5563;
+            color: #374151;
             border-color: #1f2937;
         }
 
@@ -378,7 +433,6 @@ def apply_premium_style(app: QApplication):
             border-radius: 6px; font-size: 15px; font-weight: bold; padding: 0px;
         }
         QPushButton#ToggleKey:hover { background-color: #1a1f2c; border-color: #6366f1; color: #f3f4f6; }
-        QPushButton#ToggleKey:pressed { background-color: #0b0d13; }
 
         QStackedWidget#ContentStack { background-color: #0b0d13; }
 
@@ -393,7 +447,6 @@ def apply_premium_style(app: QApplication):
             border-radius: 8px; padding: 11px 20px; font-weight: 600; font-size: 13px;
         }
         QPushButton:hover { background-color: #283149; border-color: #6366f1; }
-        QPushButton:pressed { background-color: #171b26; }
 
         QScrollBar:vertical { border: none; background: #0b0d13; width: 6px; margin: 0px; }
         QScrollBar::handle:vertical { background: #232a3d; min-height: 40px; border-radius: 3px; }
