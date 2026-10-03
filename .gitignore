@@ -180,3 +180,5 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+# Frontend sources (the generic "lib/" rule above targets Python build dirs)
+!frontend/src/lib/

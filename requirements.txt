@@ -1,5 +1,6 @@
-# Runtime dependencies (backend services). The old Qt UI additionally needs PyQt6 + playwright
+# Runtime dependencies (native window + backend services). The old Qt UI additionally needs PyQt6 + playwright
 # until it is removed in the final migration phase.
+pywebview
 yt-dlp
 requests
 Pillow

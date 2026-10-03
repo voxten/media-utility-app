@@ -1,0 +1,149 @@
+{
+  "app": {
+    "name": "Media Studio",
+    "tagline": "Narzędzia do multimediów, dokumentów i tekstu w jednym miejscu"
+  },
+  "nav": {
+    "home": "Start",
+    "settings": "Ustawienia",
+    "collapse": "Zwiń nawigację",
+    "expand": "Rozwiń nawigację",
+    "runningJobs_one": "{{count}} zadanie w toku",
+    "runningJobs_few": "{{count}} zadania w toku",
+    "runningJobs_many": "{{count}} zadań w toku",
+    "runningJobs_other": "{{count}} zadania w toku"
+  },
+  "categories": {
+    "video": "Wideo",
+    "image": "Obrazy",
+    "text": "Tekst",
+    "pdf": "PDF",
+    "system": "System",
+    "generators": "Generatory"
+  },
+  "tools": {
+    "download": { "name": "Pobieranie wideo", "description": "Pobieraj filmy i audio z YouTube, X i innych serwisów." },
+    "converter": { "name": "Konwerter obrazów", "description": "Konwertuj całe foldery obrazów między formatami." },
+    "watermark": { "name": "Usuwanie znaku wodnego", "description": "Zamaluj znak wodny i usuń go algorytmem lub AI." },
+    "tts": { "name": "Tekst na mowę", "description": "Zamieniaj tekst w nagranie głosowe w wielu językach." },
+    "pdf": { "name": "Łączenie PDF", "description": "Układaj strony z wielu plików PDF i łącz je w jeden." },
+    "duplicates": { "name": "Wyszukiwarka duplikatów", "description": "Znajdź podobne zdjęcia i filmy, nawet po zmianie rozmiaru." },
+    "progress": { "name": "Generator postępu", "description": "Twórz grafiki z paskami postępu projektu." }
+  },
+  "home": {
+    "greeting": "Witaj w Media Studio",
+    "subtitle": "Wybierz narzędzie, aby zacząć. Zadania działają w tle, więc możesz przełączać się między nimi.",
+    "allTools": "Wszystkie narzędzia",
+    "recentJobs": "Ostatnie zadania",
+    "noJobs": "Nie uruchomiono jeszcze żadnego zadania.",
+    "open": "Otwórz"
+  },
+  "settings": {
+    "title": "Ustawienia",
+    "subtitle": "Wygląd, język, domyślne lokalizacje i zależności.",
+    "appearance": "Wygląd",
+    "theme": "Motyw",
+    "themeDescription": "Wybierz motyw aplikacji lub dopasuj go do systemu.",
+    "themes": { "system": "Systemowy", "light": "Jasny", "dark": "Ciemny" },
+    "language": "Język",
+    "languageDescription": "Język interfejsu aplikacji.",
+    "files": "Pliki",
+    "outputDir": "Domyślny folder zapisu",
+    "outputDirDescription": "Tu narzędzia zapisują pliki, jeśli nie wskażesz innego miejsca.",
+    "cookies": "Pliki cookies",
+    "cookiesDescription": "Pliki cookies (format Netscape) potrzebne do pobierania treści wymagających zalogowania.",
+    "cookiesYoutube": "YouTube",
+    "cookiesX": "X (Twitter)",
+    "cookiesHint": "Pozostaw puste, aby użyć pliku z folderu features/download (jeśli istnieje).",
+    "dependencies": "Zależności",
+    "dependenciesDescription": "Zewnętrzne programy i biblioteki używane przez narzędzia.",
+    "deps": {
+      "ffmpeg": "FFmpeg",
+      "mediainfo": "MediaInfo",
+      "lama": "Model AI LaMa (opcjonalny)"
+    },
+    "depOk": "Dostępne",
+    "depMissing": "Brak",
+    "depOptional": "Nie zainstalowano",
+    "usedBy": "Używane przez: {{tools}}",
+    "refresh": "Odśwież",
+    "about": "O aplikacji",
+    "version": "Wersja {{version}}",
+    "python": "Python {{version}}",
+    "backendMock": "Tryb podglądu (bez backendu Python)"
+  },
+  "common": {
+    "browse": "Przeglądaj",
+    "clear": "Wyczyść",
+    "cancel": "Anuluj",
+    "close": "Zamknij",
+    "save": "Zapisz",
+    "openFolder": "Otwórz folder",
+    "comingSoon": "To narzędzie jest właśnie przenoszone do nowego interfejsu.",
+    "comingSoonTitle": "Wkrótce",
+    "selectFolder": "Wybierz folder…",
+    "notSet": "Nie ustawiono",
+    "status": { "working": "Przetwarzanie…" },
+    "jobStatus": { "running": "W toku", "done": "Zakończono", "error": "Błąd", "cancelled": "Anulowano" }
+  },
+  "converter": {
+    "status": {
+      "scanning": "Wyszukiwanie plików…",
+      "noFiles": "Nie znaleziono pasujących plików.",
+      "converting": "Konwertowanie: {{file}}",
+      "done": "Konwersja zakończona."
+    },
+    "log": {
+      "converted": "{{src}} → {{dst}} ({{kb}} KB)",
+      "failed": "Nie udało się przekonwertować {{src}}: {{error}}"
+    }
+  },
+  "pdf": {
+    "status": {
+      "rendering": "Renderowanie: {{file}}, strona {{page}}",
+      "merging": "Łączenie stron {{current}}/{{total}}",
+      "saving": "Zapisywanie pliku…",
+      "done": "Plik PDF zapisany."
+    },
+    "log": { "readFailed": "Nie można odczytać {{file}}: {{error}}" }
+  },
+  "duplicates": {
+    "status": {
+      "collecting": "Zbieranie listy plików…",
+      "noFiles": "Nie znaleziono pasujących plików.",
+      "scanning": "Analiza: {{file}}",
+      "grouping": "Grupowanie podobnych plików…",
+      "done": "Gotowe. Znalezione grupy: {{groups}}"
+    },
+    "log": { "corrupted": "Nie można odczytać (uszkodzony?): {{file}}" }
+  },
+  "tts": {
+    "status": {
+      "synthesizing": "Generowanie mowy…",
+      "encoding": "Kodowanie pliku audio…",
+      "done": "Nagranie zapisane."
+    }
+  },
+  "download": {
+    "status": {
+      "probing": "Pobieranie informacji o materiale…",
+      "thumbnail": "Pobieranie miniatury…",
+      "starting": "Rozpoczynanie pobierania…",
+      "downloading": "Pobieranie…",
+      "postprocessing": "Przetwarzanie (FFmpeg)…",
+      "done": "Pobieranie zakończone.",
+      "batchDone": "Kolejka zakończona."
+    },
+    "log": { "itemFailed": "Nie udało się pobrać {{url}}: {{error}}" }
+  },
+  "watermark": {
+    "status": {
+      "loading": "Wczytywanie obrazu…",
+      "processing": "Usuwanie znaku wodnego ({{method}})…",
+      "done": "Gotowe."
+    },
+    "notice": {
+      "lamaMissing": "Brak IOPaint/PyTorch – użyto algorytmu OpenCV (Telea). Aby użyć modelu LaMa: pip install iopaint torch torchvision"
+    }
+  }
+}

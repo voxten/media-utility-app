@@ -1,0 +1,147 @@
+{
+  "app": {
+    "name": "Media Studio",
+    "tagline": "Media, document and text tools in one place"
+  },
+  "nav": {
+    "home": "Home",
+    "settings": "Settings",
+    "collapse": "Collapse navigation",
+    "expand": "Expand navigation",
+    "runningJobs_one": "{{count}} task running",
+    "runningJobs_other": "{{count}} tasks running"
+  },
+  "categories": {
+    "video": "Video",
+    "image": "Images",
+    "text": "Text",
+    "pdf": "PDF",
+    "system": "System",
+    "generators": "Generators"
+  },
+  "tools": {
+    "download": { "name": "Video downloader", "description": "Download video and audio from YouTube, X and more." },
+    "converter": { "name": "Image converter", "description": "Convert whole folders of images between formats." },
+    "watermark": { "name": "Watermark remover", "description": "Paint over a watermark and remove it with OpenCV or AI." },
+    "tts": { "name": "Text to speech", "description": "Turn text into natural-sounding speech in many languages." },
+    "pdf": { "name": "PDF merger", "description": "Arrange pages from several PDFs and merge them into one." },
+    "duplicates": { "name": "Duplicate finder", "description": "Find similar photos and videos, even after resizing." },
+    "progress": { "name": "Progress generator", "description": "Create project progress-bar graphics." }
+  },
+  "home": {
+    "greeting": "Welcome to Media Studio",
+    "subtitle": "Pick a tool to get started. Tasks run in the background, so you can switch between tools freely.",
+    "allTools": "All tools",
+    "recentJobs": "Recent tasks",
+    "noJobs": "No tasks have been run yet.",
+    "open": "Open"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Appearance, language, default locations and dependencies.",
+    "appearance": "Appearance",
+    "theme": "Theme",
+    "themeDescription": "Choose an app theme or follow the system.",
+    "themes": { "system": "System", "light": "Light", "dark": "Dark" },
+    "language": "Language",
+    "languageDescription": "Language of the user interface.",
+    "files": "Files",
+    "outputDir": "Default output folder",
+    "outputDirDescription": "Tools save files here unless you choose another location.",
+    "cookies": "Cookie files",
+    "cookiesDescription": "Netscape-format cookie files for downloading content that requires signing in.",
+    "cookiesYoutube": "YouTube",
+    "cookiesX": "X (Twitter)",
+    "cookiesHint": "Leave empty to use the file in features/download (if present).",
+    "dependencies": "Dependencies",
+    "dependenciesDescription": "External programs and libraries used by the tools.",
+    "deps": {
+      "ffmpeg": "FFmpeg",
+      "mediainfo": "MediaInfo",
+      "lama": "LaMa AI model (optional)"
+    },
+    "depOk": "Available",
+    "depMissing": "Missing",
+    "depOptional": "Not installed",
+    "usedBy": "Used by: {{tools}}",
+    "refresh": "Refresh",
+    "about": "About",
+    "version": "Version {{version}}",
+    "python": "Python {{version}}",
+    "backendMock": "Preview mode (no Python backend)"
+  },
+  "common": {
+    "browse": "Browse",
+    "clear": "Clear",
+    "cancel": "Cancel",
+    "close": "Close",
+    "save": "Save",
+    "openFolder": "Open folder",
+    "comingSoon": "This tool is being moved to the new interface.",
+    "comingSoonTitle": "Coming soon",
+    "selectFolder": "Select a folder…",
+    "notSet": "Not set",
+    "status": { "working": "Working…" },
+    "jobStatus": { "running": "Running", "done": "Completed", "error": "Failed", "cancelled": "Cancelled" }
+  },
+  "converter": {
+    "status": {
+      "scanning": "Looking for files…",
+      "noFiles": "No matching files found.",
+      "converting": "Converting: {{file}}",
+      "done": "Conversion finished."
+    },
+    "log": {
+      "converted": "{{src}} → {{dst}} ({{kb}} KB)",
+      "failed": "Failed to convert {{src}}: {{error}}"
+    }
+  },
+  "pdf": {
+    "status": {
+      "rendering": "Rendering: {{file}}, page {{page}}",
+      "merging": "Merging pages {{current}}/{{total}}",
+      "saving": "Saving file…",
+      "done": "PDF saved."
+    },
+    "log": { "readFailed": "Cannot read {{file}}: {{error}}" }
+  },
+  "duplicates": {
+    "status": {
+      "collecting": "Collecting files…",
+      "noFiles": "No matching files found.",
+      "scanning": "Analysing: {{file}}",
+      "grouping": "Grouping similar files…",
+      "done": "Done. Groups found: {{groups}}"
+    },
+    "log": { "corrupted": "Cannot read (corrupted?): {{file}}" }
+  },
+  "tts": {
+    "status": {
+      "synthesizing": "Generating speech…",
+      "encoding": "Encoding audio…",
+      "done": "Audio saved."
+    }
+  },
+  "download": {
+    "status": {
+      "probing": "Fetching media info…",
+      "thumbnail": "Fetching thumbnail…",
+      "starting": "Starting download…",
+      "downloading": "Downloading…",
+      "postprocessing": "Post-processing (FFmpeg)…",
+      "done": "Download finished.",
+      "batchDone": "Queue finished."
+    },
+    "log": { "itemFailed": "Failed to download {{url}}: {{error}}" }
+  },
+  "watermark": {
+    "status": {
+      "loading": "Loading image…",
+      "processing": "Removing watermark ({{method}})…",
+      "done": "Done."
+    },
+    "notice": {
+      "lamaMissing": "IOPaint/PyTorch not installed – OpenCV (Telea) was used instead. To use LaMa: pip install iopaint torch torchvision"
+    }
+  }
+}
