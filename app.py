@@ -17,14 +17,14 @@ except Exception as e:
     YouTubeTab = QWidget
 
 try:
-    from converter_tab import ImageConverterTab
+    from features.converter.converter_tab import ImageConverterTab
 except Exception as e:
     print(f"[ERROR] Failed to load ImageConverterTab:")
     traceback.print_exc()
     ImageConverterTab = QWidget
 
 try:
-    from pdf_merger import PDFMergerTab
+    from features.pdf_merger.pdf_merger import PDFMergerTab
 except Exception as e:
     print(f"[ERROR] Failed to load PDFMergerTab:")
     traceback.print_exc()
@@ -52,11 +52,18 @@ except Exception as e:
     ProjectProgressTab = QWidget
 
 try:
-    from tts_tab import TTSTab
+    from features.tts.tts_tab import TTSTab
 except Exception as e:
     print(f"[ERROR] Failed to load TTSTab:")
     traceback.print_exc()
     TTSTab = QWidget
+
+try:
+    from features.watermark.watermark_remover_tab import WatermarkRemoverTab
+except Exception as e:
+    print(f"[ERROR] Failed to load WatermarkRemoverTab:")
+    traceback.print_exc()
+    WatermarkRemoverTab = QWidget
 
 
 class MainApp(QMainWindow):
@@ -115,6 +122,7 @@ class MainApp(QMainWindow):
                 "icon": "🖼️",
                 "submodules": [
                     {"name": "Converter", "icon": "⛏", "widget": ImageConverterTab()},
+                    {"name": "Watermark Remover", "icon": "🪄", "widget": WatermarkRemoverTab()},
                 ]
             },
             {
@@ -455,7 +463,26 @@ def apply_premium_style(app: QApplication):
     """)
 
 
+def setup_exception_handler():
+    def handle_exception(exc_type, exc_value, exc_traceback):
+        if issubclass(exc_type, KeyboardInterrupt):
+            sys.__excepthook__(exc_type, exc_value, exc_traceback)
+            return
+        traceback.print_exception(exc_type, exc_value, exc_traceback)
+        try:
+            QMessageBox.critical(
+                None,
+                "Nieoczekiwany błąd",
+                f"Wystąpił błąd w aplikacji:\n\n{exc_value}\n\nSzczegóły zostały wypisane w konsoli."
+            )
+        except Exception:
+            pass
+
+    sys.excepthook = handle_exception
+
+
 def main():
+    setup_exception_handler()
     app = QApplication(sys.argv)
     apply_premium_style(app)
     window = MainApp()
@@ -464,4 +491,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main()
