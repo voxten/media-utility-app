@@ -14,6 +14,8 @@ export interface JobState extends JobInfo {
   result?: unknown;
   /** Extra fields from the last progress event (download speed, eta, ...). */
   extra: Record<string, unknown>;
+  /** Hidden from the jobs panel / recent list; pages keep their own job state. */
+  dismissed?: boolean;
 }
 
 interface JobsStore {
@@ -26,10 +28,11 @@ export const useJobs = create<JobsStore>((set) => ({
   jobs: {},
   order: [],
   clearFinished: () =>
-    set((state) => {
-      const jobs = Object.fromEntries(Object.entries(state.jobs).filter(([, j]) => j.status === "running"));
-      return { jobs, order: state.order.filter((id) => id in jobs) };
-    }),
+    set((state) => ({
+      jobs: Object.fromEntries(
+        Object.entries(state.jobs).map(([id, job]) => [id, job.status === "running" ? job : { ...job, dismissed: true }]),
+      ),
+    })),
 }));
 
 function patch(jobId: string, fn: (job: JobState) => Partial<JobState>) {

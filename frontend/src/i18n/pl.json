@@ -510,5 +510,25 @@
       "error": "Nie udało się wyeksportować grafiki",
       "bannerError": "Nie można wczytać banera"
     }
+  },
+  "jobs": {
+    "title": "Zadania",
+    "openTool": "Przejdź",
+    "emptyTitle": "Brak zadań",
+    "emptyBody": "Tu pojawią się operacje uruchomione w dowolnym narzędziu.",
+    "clearFinished": "Wyczyść zakończone",
+    "clearHint": "Ukrywa zakończone zadania z listy. Wyniki w narzędziach zostają.",
+    "toastDone": "{{tool}}: zakończono",
+    "toastError": "{{tool}}: błąd"
+  },
+  "palette": {
+    "title": "Szukaj",
+    "placeholder": "Wpisz nazwę narzędzia lub polecenia…",
+    "noResults": "Brak wyników.",
+    "showJobs": "Pokaż zadania",
+    "theme": "Przełącz motyw na: {{theme}}",
+    "language": "Zmień język na: {{language}}",
+    "navigate": "wybór",
+    "open": "otwórz"
   }
 }

@@ -1,6 +1,6 @@
 import {
+  Badge,
   Button,
-  Caption1,
   Hamburger,
   makeStyles,
   mergeClasses,
@@ -20,16 +20,22 @@ import {
   Home24Filled,
   Home24Regular,
   Settings24Filled,
+  Search20Regular,
   Settings24Regular,
+  TaskListLtr24Filled,
+  TaskListLtr24Regular,
   type FluentIcon,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { navigate } from "../lib/router";
 import { useRunningJobCount } from "../stores/jobs";
+import { useUi } from "../stores/ui";
 import { CATEGORIES, TOOLS } from "./tools";
 
 const HomeIcon = bundleIcon(Home24Filled, Home24Regular);
 const SettingsIcon = bundleIcon(Settings24Filled, Settings24Regular);
+const JobsIcon = bundleIcon(TaskListLtr24Filled, TaskListLtr24Regular);
+const JOBS_ITEM = "__jobs";
 
 const EXPANDED_WIDTH = 272;
 const RAIL_WIDTH = 56;
@@ -51,13 +57,12 @@ const useStyles = makeStyles({
     flexShrink: 0,
     boxShadow: tokens.shadow4,
   },
-  jobs: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    padding: "8px 12px",
-    color: tokens.colorNeutralForeground2,
-  },
+  brandText: { flexGrow: 1 },
+  search: { marginLeft: "auto" },
+  jobsLabel: { display: "flex", alignItems: "center", gap: "8px", width: "100%" },
+  jobsBadge: { marginLeft: "auto" },
+  railJobs: { position: "relative" },
+  railBadge: { position: "absolute", top: "0", right: "0", pointerEvents: "none" },
   rail: {
     width: `${RAIL_WIDTH}px`,
     height: "100%",
@@ -97,6 +102,10 @@ export function Navigation({ route, collapsed, onToggle }: NavigationProps) {
   const styles = useStyles();
   const running = useRunningJobCount();
   const label = collapsed ? t("nav.expand") : t("nav.collapse");
+  const openJobs = () => useUi.getState().setJobsOpen(true);
+  const openPalette = () => useUi.getState().setPaletteOpen(true);
+  const searchLabel = `${t("palette.title")} (Ctrl+K)`;
+  const runningLabel = running > 0 ? t("nav.runningJobs", { count: running }) : t("jobs.title");
 
   if (collapsed) {
     const railItem = (id: string, Icon: FluentIcon, text: string) => (
@@ -115,16 +124,24 @@ export function Navigation({ route, collapsed, onToggle }: NavigationProps) {
         <Tooltip content={label} relationship="label" positioning="after">
           <Hamburger onClick={onToggle} />
         </Tooltip>
+        <Tooltip content={searchLabel} relationship="label" positioning="after">
+          <Button appearance="subtle" className={styles.railButton} icon={<Search20Regular />} onClick={openPalette} />
+        </Tooltip>
         <div className={styles.railDivider} />
         {railItem("home", HomeIcon, t("nav.home"))}
         <div className={styles.railDivider} />
         {TOOLS.map((tool) => railItem(tool.id, tool.icon, t(`tools.${tool.id}.name`)))}
         <div className={styles.railSpacer} />
-        {running > 0 && (
-          <Tooltip content={t("nav.runningJobs", { count: running })} relationship="label" positioning="after">
-            <Spinner size="tiny" />
-          </Tooltip>
-        )}
+        <Tooltip content={runningLabel} relationship="label" positioning="after">
+          <span className={styles.railJobs}>
+            <Button appearance="subtle" className={styles.railButton} icon={running > 0 ? <Spinner size="extra-tiny" /> : <JobsIcon />} onClick={openJobs} />
+            {running > 0 && (
+              <Badge size="small" className={styles.railBadge}>
+                {running}
+              </Badge>
+            )}
+          </span>
+        </Tooltip>
         {railItem("settings", SettingsIcon, t("nav.settings"))}
       </nav>
     );
@@ -136,7 +153,9 @@ export function Navigation({ route, collapsed, onToggle }: NavigationProps) {
       type="inline"
       className={styles.drawer}
       selectedValue={route}
-      onNavItemSelect={(_, data) => navigate(String(data.value))}
+      // No slide-in animation when the app starts or the rail expands.
+      surfaceMotion={null}
+      onNavItemSelect={(_, data) => (data.value === JOBS_ITEM ? openJobs() : navigate(String(data.value)))}
     >
       <div className={styles.header}>
         <Tooltip content={label} relationship="label">
@@ -144,8 +163,11 @@ export function Navigation({ route, collapsed, onToggle }: NavigationProps) {
         </Tooltip>
         <div className={styles.brand}>
           <div className={styles.logo} />
-          <Subtitle2>{t("app.name")}</Subtitle2>
+          <Subtitle2 className={styles.brandText}>{t("app.name")}</Subtitle2>
         </div>
+        <Tooltip content={searchLabel} relationship="label">
+          <Button appearance="subtle" className={styles.search} icon={<Search20Regular />} onClick={openPalette} />
+        </Tooltip>
       </div>
       <NavDrawerBody>
         <NavItem value="home" icon={<HomeIcon />}>
@@ -163,13 +185,17 @@ export function Navigation({ route, collapsed, onToggle }: NavigationProps) {
         ))}
       </NavDrawerBody>
       <NavDrawerFooter>
-        {running > 0 && (
-          <div className={styles.jobs}>
-            <Spinner size="extra-tiny" />
-            <Caption1>{t("nav.runningJobs", { count: running })}</Caption1>
-          </div>
-        )}
         <NavDivider />
+        <NavItem value={JOBS_ITEM} icon={running > 0 ? <Spinner size="extra-tiny" /> : <JobsIcon />}>
+          <span className={styles.jobsLabel}>
+            {t("jobs.title")}
+            {running > 0 && (
+              <Badge size="small" className={styles.jobsBadge}>
+                {running}
+              </Badge>
+            )}
+          </span>
+        </NavItem>
         <NavItem value="settings" icon={<SettingsIcon />}>
           {t("nav.settings")}
         </NavItem>

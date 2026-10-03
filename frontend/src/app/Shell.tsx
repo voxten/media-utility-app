@@ -3,7 +3,11 @@ import { makeStyles, Spinner, tokens, Toaster } from "@fluentui/react-components
 import { ConfirmHost } from "../components/ConfirmDialog";
 import { TOASTER_ID } from "../components/notify";
 import { useRoute } from "../lib/router";
+import { useUi } from "../stores/ui";
+import { CommandPalette } from "./CommandPalette";
+import { JobsPanel } from "./JobsPanel";
 import { Navigation } from "./Navigation";
+import { useJobNotifications } from "./useJobNotifications";
 
 const HomePage = lazy(() => import("../features/home/HomePage"));
 const SettingsPage = lazy(() => import("../features/settings/SettingsPage"));
@@ -39,6 +43,13 @@ const useStyles = makeStyles({
     position: "relative",
   },
   loading: { height: "100%", display: "grid", placeItems: "center" },
+  // Subtle WinUI-like page entrance; disabled by prefers-reduced-motion in global.css.
+  page: {
+    height: "100%",
+    animationName: { from: { opacity: 0, transform: "translateY(12px)" }, to: { opacity: 1, transform: "none" } },
+    animationDuration: tokens.durationNormal,
+    animationTimingFunction: tokens.curveDecelerateMid,
+  },
 });
 
 function readCollapsed(): boolean {
@@ -69,6 +80,20 @@ export function Shell() {
     }
   }, [collapsed]);
 
+  useJobNotifications(route);
+
+  // Ctrl+K anywhere opens the command palette.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        useUi.getState().setPaletteOpen(true);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   return (
     <div className={styles.shell}>
       <Navigation route={route} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
@@ -80,11 +105,15 @@ export function Shell() {
             </div>
           }
         >
-          <PageForRoute key={route} route={route} />
+          <div key={route} className={styles.page}>
+            <PageForRoute route={route} />
+          </div>
         </Suspense>
       </main>
       <Toaster toasterId={TOASTER_ID} position="top-end" offset={{ vertical: 16 }} pauseOnHover />
       <ConfirmHost />
+      <JobsPanel />
+      <CommandPalette />
     </div>
   );
 }

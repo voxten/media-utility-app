@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import {
   Link,
   Toast,
@@ -38,10 +38,13 @@ export function useNotify() {
     [dispatchToast],
   );
 
-  return {
-    success: (title: string, options?: NotifyOptions) => show("success", title, options),
-    error: (title: string, options?: NotifyOptions) => show("error", title, options),
-    warning: (title: string, options?: NotifyOptions) => show("warning", title, options),
-    info: (title: string, options?: NotifyOptions) => show("info", title, options),
-  };
+  return useMemo(
+    () => ({
+      success: (title: string, options?: NotifyOptions) => show("success", title, options),
+      error: (title: string, options?: NotifyOptions) => show("error", title, options),
+      warning: (title: string, options?: NotifyOptions) => show("warning", title, options),
+      info: (title: string, options?: NotifyOptions) => show("info", title, options),
+    }),
+    [show],
+  );
 }

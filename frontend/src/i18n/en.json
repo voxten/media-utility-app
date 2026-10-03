@@ -466,5 +466,25 @@
       "error": "Could not export the image",
       "bannerError": "Cannot load the banner"
     }
+  },
+  "jobs": {
+    "title": "Tasks",
+    "openTool": "Open",
+    "emptyTitle": "No tasks",
+    "emptyBody": "Operations started in any tool will show up here.",
+    "clearFinished": "Clear finished",
+    "clearHint": "Hides finished tasks from the list. Results stay in the tools.",
+    "toastDone": "{{tool}}: finished",
+    "toastError": "{{tool}}: failed"
+  },
+  "palette": {
+    "title": "Search",
+    "placeholder": "Type a tool or command name…",
+    "noResults": "No results.",
+    "showJobs": "Show tasks",
+    "theme": "Switch theme to: {{theme}}",
+    "language": "Switch language to: {{language}}",
+    "navigate": "select",
+    "open": "open"
   }
 }

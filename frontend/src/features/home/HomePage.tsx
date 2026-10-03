@@ -79,7 +79,7 @@ const useStyles = makeStyles({
 function RecentJobs() {
   const styles = useStyles();
   const { t } = useTranslation();
-  const jobs = useJobs(useShallow((s) => s.order.slice(0, 6).map((id) => s.jobs[id])));
+  const jobs = useJobs(useShallow((s) => s.order.map((id) => s.jobs[id]).filter((j) => !j.dismissed).slice(0, 6)));
 
   if (jobs.length === 0) {
     return (
