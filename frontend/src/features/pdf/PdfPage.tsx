@@ -118,7 +118,8 @@ const useStyles = makeStyles({
   },
   thumb: { maxWidth: "100%", maxHeight: "100%", boxShadow: tokens.shadow4, backgroundColor: "#fff" },
   meta: { display: "flex", alignItems: "center", gap: "6px", minWidth: 0 },
-  name: { flexGrow: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: tokens.colorNeutralForeground2 },
+  name: { flexGrow: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: tokens.colorNeutralForeground2 },
+  pageNumber: { flexShrink: 0, whiteSpace: "nowrap", color: tokens.colorNeutralForeground3 },
   colorBar: { position: "absolute", left: "10px", right: "10px", top: "0", height: "3px", borderRadius: "0 0 3px 3px" },
   actions: {
     position: "absolute",
@@ -182,12 +183,12 @@ function PageCardView({ item, index, color, onRemove, onPreview, overlay }: Card
       )}
       <div className={styles.meta}>
         <ReOrderDotsVertical16Regular className={styles.muted} />
-        <Caption1 className={styles.name} title={item.file}>
+        <Caption1 className={styles.name} title={`${item.fileName} · ${t("pdf.pageShort", { page: item.page + 1 })}`}>
           {item.fileName}
         </Caption1>
-        <Badge appearance="tint" size="small" color="informative">
+        <Caption1 className={styles.pageNumber}>
           {t("pdf.pageShort", { page: item.page + 1 })}
-        </Badge>
+        </Caption1>
       </div>
     </div>
   );
@@ -231,7 +232,7 @@ export default function PdfPage() {
     onDone: (result) =>
       notify.success(t("pdf.toast.merged", { count: result.pageCount }), {
         body: result.outPath,
-        action: { label: t("common.showInFolder"), onClick: () => api.system.reveal(result.outPath) },
+        action: { label: t("common.showInFolder"), onClick: () => api.system.reveal(result.outPath).catch(() => undefined) },
       }),
     onError: (error) => notify.error(t("pdf.toast.mergeError"), { body: error }),
   });
@@ -359,7 +360,7 @@ export default function PdfPage() {
         onCancel={merge.running ? merge.cancel : inspect.cancel}
       >
         {merge.result && (
-          <Button icon={<FolderOpen16Regular />} onClick={() => api.system.reveal(merge.result!.outPath)}>
+          <Button icon={<FolderOpen16Regular />} onClick={() => api.system.reveal(merge.result!.outPath).catch(() => undefined)}>
             {t("common.showInFolder")}
           </Button>
         )}

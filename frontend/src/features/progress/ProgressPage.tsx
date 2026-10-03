@@ -82,7 +82,7 @@ const useForm = create<ProgressState>((set) => ({
 const useStyles = makeStyles({
   columns: {
     display: "grid",
-    gridTemplateColumns: "minmax(380px, 5fr) minmax(0, 6fr)",
+    gridTemplateColumns: "minmax(0, 1.2fr) minmax(0, 1fr)",
     gap: "16px",
     alignItems: "start",
     "@media (max-width: 1100px)": { gridTemplateColumns: "minmax(0, 1fr)" },
@@ -90,7 +90,7 @@ const useStyles = makeStyles({
   rows: { display: "flex", flexDirection: "column", gap: "6px" },
   row: {
     display: "grid",
-    gridTemplateColumns: "20px 28px minmax(0, 1.3fr) minmax(70px, 1fr) 76px 28px",
+    gridTemplateColumns: "20px 28px minmax(60px, 1.2fr) minmax(50px, 1fr) 72px 28px",
     alignItems: "center",
     gap: "8px",
     padding: "6px 8px",
@@ -98,6 +98,7 @@ const useStyles = makeStyles({
     backgroundColor: tokens.colorNeutralBackground1,
     border: `1px solid ${tokens.colorNeutralStroke3}`,
   },
+  slider: { minWidth: "0 !important", width: "100%" },
   handle: { cursor: "grab", color: tokens.colorNeutralForeground3, display: "grid", placeItems: "center", touchAction: "none" },
   swatch: {
     width: "26px",
@@ -114,7 +115,12 @@ const useStyles = makeStyles({
   colorInput: { width: "40px", height: "28px", border: "none", padding: "0", background: "none", cursor: "pointer" },
   spin: { minWidth: "0", width: "100%" },
   nameInput: { minWidth: "0", width: "100%" },
-  options: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 16px" },
+  options: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "12px 16px",
+    "@media (max-width: 550px)": { gridTemplateColumns: "1fr" },
+  },
   bannerRow: { display: "flex", gap: "8px", alignItems: "center" },
   bannerName: { flexGrow: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: tokens.colorNeutralForeground3 },
   previewPanel: { position: "sticky", top: "0" },
@@ -168,7 +174,14 @@ function SortableRow({ row: r, onChange, onRemove }: { row: ProgressRow; onChang
       </span>
       <ColorButton row={r} onChange={onChange} />
       <Input className={styles.nameInput} value={r.name} onChange={(_, d) => onChange({ name: d.value })} aria-label={t("progress.name")} />
-      <Slider min={0} max={100} value={r.value} onChange={(_, d) => onChange({ value: d.value })} aria-label={t("progress.value")} />
+      <Slider
+        className={styles.slider}
+        min={0}
+        max={100}
+        value={r.value}
+        onChange={(_, d) => onChange({ value: d.value })}
+        aria-label={t("progress.value")}
+      />
       <SpinButton
         className={styles.spin}
         min={0}
@@ -250,7 +263,7 @@ export default function ProgressPage() {
       const result = await api.progress.save(dataUrl, out);
       notify.success(t("progress.toast.saved"), {
         body: result.outPath,
-        action: { label: t("common.showInFolder"), onClick: () => api.system.reveal(result.outPath) },
+        action: { label: t("common.showInFolder"), onClick: () => api.system.reveal(result.outPath).catch(() => undefined) },
       });
     } catch (err) {
       notify.error(t("progress.toast.error"), { body: String(err) });

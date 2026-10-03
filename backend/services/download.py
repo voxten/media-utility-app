@@ -11,6 +11,9 @@ AUTO_FORMAT_YOUTUBE = "bestvideo+bestaudio/best"
 AUTO_FORMAT_GENERIC = "best"
 AUDIO_CODECS = ("mp3", "wav", "m4a", "flac", "aac", "opus")
 DEFAULT_TEMPLATE = "{title}.{ext}"
+# yt-dlp enables only deno by default. Without a JS runtime YouTube falls back to clients whose
+# streams fail with HTTP 403 part-way through, so allow every runtime yt-dlp can use.
+JS_RUNTIMES = ("deno", "node", "bun", "quickjs")
 
 
 def fmt_bytes(n: Optional[float]) -> str:
@@ -57,7 +60,12 @@ def output_template(outdir: str, filename_template: str = DEFAULT_TEMPLATE) -> s
 
 
 def _base_opts(url: str, cookies: Dict[str, Optional[str]]) -> Dict[str, Any]:
-    opts: Dict[str, Any] = {"quiet": True, "no_warnings": True, "noplaylist": True}
+    opts: Dict[str, Any] = {
+        "quiet": True,
+        "no_warnings": True,
+        "noplaylist": True,
+        "js_runtimes": {name: {} for name in JS_RUNTIMES},
+    }
     cookie = cookie_file_for(url, cookies)
     if cookie:
         opts["cookiefile"] = cookie

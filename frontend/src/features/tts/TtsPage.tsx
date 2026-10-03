@@ -5,6 +5,7 @@ import {
   Combobox,
   Dropdown,
   Field,
+  Input,
   makeStyles,
   Option,
   OptionGroup,
@@ -14,7 +15,7 @@ import {
   Textarea,
   tokens,
 } from "@fluentui/react-components";
-import { Cloud24Regular, Desktop24Regular, FolderOpen16Regular, MicSparkle16Filled } from "@fluentui/react-icons";
+import { Cloud24Regular, Desktop24Regular, Dismiss16Regular, FolderOpen16Regular, MicSparkle16Filled } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { create } from "zustand";
 import { toolById } from "../../app/tools";
@@ -51,7 +52,8 @@ interface TtsForm {
   locale: string;
   rate: { edge: number; pyttsx3: number };
   format: (typeof FORMATS)[number];
-  outPath: string;
+  outDir: string;
+  fileName: string;
   audioSrc: string | null;
   lastOutput: string | null;
   set: (patch: Partial<Omit<TtsForm, "set">>) => void;
@@ -64,7 +66,8 @@ const useForm = create<TtsForm>((set) => ({
   locale: "",
   rate: { edge: 0, pyttsx3: 200 },
   format: "mp3",
-  outPath: "",
+  outDir: "",
+  fileName: "",
   audioSrc: null,
   lastOutput: null,
   set: (patch) => set(patch),
@@ -75,14 +78,35 @@ const voiceCache: Partial<Record<Engine, Voice[]>> = {};
 const useStyles = makeStyles({
   columns: {
     display: "grid",
-    gridTemplateColumns: "minmax(0, 3fr) minmax(300px, 2fr)",
+    gridTemplateColumns: "minmax(0, 3fr) minmax(0, 2fr)",
     gap: "16px",
-    "@media (max-width: 1000px)": { gridTemplateColumns: "minmax(0, 1fr)" },
+    "@media (max-width: 1050px)": { gridTemplateColumns: "minmax(0, 1fr)" },
   },
-  textarea: { minHeight: "280px", "& textarea": { maxHeight: "none", fontSize: tokens.fontSizeBase400, lineHeight: tokens.lineHeightBase400 } },
+  textarea: {
+    minHeight: "280px",
+    display: "flex",
+    flexDirection: "column",
+    width: "100%",
+    "& textarea": {
+      maxHeight: "none",
+      minHeight: "inherit",
+      boxSizing: "border-box",
+      flexGrow: 1,
+      height: "100%",
+      fontSize: tokens.fontSizeBase400,
+      lineHeight: tokens.lineHeightBase400,
+    },
+  },
   counter: { display: "flex", justifyContent: "space-between", color: tokens.colorNeutralForeground3 },
-  row: { display: "grid", gridTemplateColumns: "minmax(0, 1fr) 110px", gap: "12px" },
+  row: {
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 1fr) 110px",
+    gap: "12px",
+    alignItems: "start",
+    "@media (max-width: 480px)": { gridTemplateColumns: "minmax(0, 1fr)" },
+  },
   narrowDropdown: { minWidth: "0", width: "100%" },
+  muted: { color: tokens.colorNeutralForeground3 },
   engineHint: { color: tokens.colorNeutralForeground3 },
   player: { display: "flex", flexDirection: "column", gap: "10px" },
   playerActions: { display: "flex", gap: "8px" },
@@ -102,7 +126,7 @@ export default function TtsPage() {
     onDone: async (result) => {
       notify.success(t("tts.toast.done"), {
         body: result.outPath,
-        action: { label: t("common.showInFolder"), onClick: () => api.system.reveal(result.outPath) },
+        action: { label: t("common.showInFolder"), onClick: () => api.system.reveal(result.outPath).catch(() => undefined) },
       });
       try {
         form.set({ audioSrc: await api.tts.audioDataUrl(result.outPath), lastOutput: result.outPath });
@@ -112,6 +136,21 @@ export default function TtsPage() {
     },
     onError: (error) => notify.error(t("tts.toast.error"), { body: error }),
   });
+
+  // Clean up preview if the output file was deleted on disk.
+  useEffect(() => {
+    if (!form.lastOutput) return;
+    const verifyFile = () => {
+      api.system.pathInfo(form.lastOutput!).then((info) => {
+        if (!info.exists) {
+          form.set({ audioSrc: null, lastOutput: null });
+        }
+      }).catch(() => undefined);
+    };
+    verifyFile();
+    window.addEventListener("focus", verifyFile);
+    return () => window.removeEventListener("focus", verifyFile);
+  }, [form.lastOutput]);
 
   // Load voices per engine (Edge needs the network; cached for the session).
   useEffect(() => {
@@ -150,11 +189,14 @@ export default function TtsPage() {
   );
   const selectedVoice = voices?.find((v) => v.id === form.voice);
   const rateCfg = RATE[form.engine];
-  const outPath = form.outPath || joinPath(outputDir, `${t("tts.defaultName")}.${form.format}`);
+  const effectiveOutDir = form.outDir || outputDir;
+  const rawName = form.fileName.trim() || t("tts.defaultName");
+  const cleanName = rawName.replace(/\.[^.\\/]+$/, "");
+  const effectiveFileName = `${cleanName}.${form.format}`;
+  const outPath = joinPath(effectiveOutDir, effectiveFileName);
   const words = form.text.trim() ? form.text.trim().split(/\s+/).length : 0;
 
-  const setFormat = (format: (typeof FORMATS)[number]) =>
-    form.set({ format, outPath: form.outPath ? form.outPath.replace(/\.[^.\\/]+$/, "") + `.${format}` : "" });
+  const setFormat = (format: (typeof FORMATS)[number]) => form.set({ format });
 
   const start = () =>
     runner
@@ -252,12 +294,30 @@ export default function TtsPage() {
             onChange={(v) => form.set({ rate: { ...form.rate, [form.engine]: v } })}
           />
 
+          <Field label={t("tts.outputFolder")}>
+            <PathPicker
+              value={effectiveOutDir}
+              onChange={(dir) => form.set({ outDir: dir })}
+              openable
+            />
+          </Field>
+
           <div className={styles.row}>
-            <Field label={t("tts.output")}>
-              <PathPicker mode="save" value={outPath} defaultFileName={`${t("tts.defaultName")}.${form.format}`} fileTypes={[`Audio (*.${form.format})`]} onChange={(p) => form.set({ outPath: p })} />
+            <Field label={t("tts.fileName")}>
+              <Input
+                value={form.fileName}
+                placeholder={t("tts.defaultName")}
+                onChange={(_, d) => form.set({ fileName: d.value })}
+                contentAfter={<Caption1 className={styles.muted}>.{form.format}</Caption1>}
+              />
             </Field>
             <Field label={t("tts.format")}>
-              <Dropdown className={styles.narrowDropdown} value={form.format.toUpperCase()} selectedOptions={[form.format]} onOptionSelect={(_, d) => setFormat(d.optionValue as (typeof FORMATS)[number])}>
+              <Dropdown
+                className={styles.narrowDropdown}
+                value={form.format.toUpperCase()}
+                selectedOptions={[form.format]}
+                onOptionSelect={(_, d) => setFormat(d.optionValue as (typeof FORMATS)[number])}
+              >
                 {FORMATS.map((f) => (
                   <Option key={f} value={f}>
                     {f.toUpperCase()}
@@ -273,11 +333,20 @@ export default function TtsPage() {
         <Panel
           title={t("tts.preview")}
           actions={
-            form.lastOutput && (
-              <Button appearance="subtle" icon={<FolderOpen16Regular />} onClick={() => api.system.reveal(form.lastOutput!)}>
-                {t("common.showInFolder")}
-              </Button>
-            )
+            <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+              {form.lastOutput && (
+                <Button appearance="subtle" icon={<FolderOpen16Regular />} onClick={() => api.system.reveal(form.lastOutput!).catch(() => undefined)}>
+                  {t("common.showInFolder")}
+                </Button>
+              )}
+              <Button
+                appearance="subtle"
+                size="small"
+                icon={<Dismiss16Regular />}
+                onClick={() => form.set({ audioSrc: null, lastOutput: null })}
+                aria-label={t("common.clear")}
+              />
+            </div>
           }
         >
           <AudioPlayer src={form.audioSrc} autoPlay />

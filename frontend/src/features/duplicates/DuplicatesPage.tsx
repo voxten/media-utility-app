@@ -92,7 +92,16 @@ function keeper(group: MediaItem[]): MediaItem {
 }
 
 const useStyles = makeStyles({
-  setup: { display: "grid", gridTemplateColumns: "minmax(0, 2fr) minmax(220px, 1fr)", gap: "20px", alignItems: "end" },
+  setup: {
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 2fr) minmax(220px, 1fr)",
+    gap: "20px",
+    alignItems: "end",
+    "@media (max-width: 850px)": {
+      gridTemplateColumns: "minmax(0, 1fr)",
+      gap: "12px",
+    },
+  },
   stats: { display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" },
   groups: { display: "flex", flexDirection: "column", gap: "14px" },
   group: {
@@ -167,7 +176,7 @@ function ItemCard({ item, isKeeper, selected, onToggle, onTrash }: { item: Media
                 <MenuItem icon={<Open16Regular />} onClick={() => api.system.openPath(item.path)}>
                   {t("common.open")}
                 </MenuItem>
-                <MenuItem icon={<FolderOpen16Regular />} onClick={() => api.system.reveal(item.path)}>
+                <MenuItem icon={<FolderOpen16Regular />} onClick={() => api.system.reveal(item.path).catch(() => undefined)}>
                   {t("common.showInFolder")}
                 </MenuItem>
                 <MenuItem icon={<Delete16Regular />} onClick={onTrash}>
@@ -262,7 +271,7 @@ export default function DuplicatesPage() {
     if (!out) return;
     try {
       const path = await api.duplicates.exportCsv(groups, out.toLowerCase().endsWith(".csv") ? out : `${out}.csv`);
-      notify.success(t("duplicates.toast.exported"), { action: { label: t("common.showInFolder"), onClick: () => api.system.reveal(path) } });
+      notify.success(t("duplicates.toast.exported"), { action: { label: t("common.showInFolder"), onClick: () => api.system.reveal(path).catch(() => undefined) } });
     } catch (err) {
       notify.error(String(err));
     }

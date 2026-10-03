@@ -28,6 +28,14 @@
       "name": "Image converter",
       "description": "Convert whole folders of images between formats."
     },
+    "rembg": {
+      "name": "AI Background Remover",
+      "description": "Remove backgrounds with sub-pixel edge matting and anti-halo debleeding."
+    },
+    "upscale": {
+      "name": "AI Image Upscaler",
+      "description": "Enlarge photos and graphics 2x or 4x with full transparency support."
+    },
     "watermark": {
       "name": "Watermark remover",
       "description": "Paint over a watermark and remove it with OpenCV or AI."
@@ -83,7 +91,20 @@
     "deps": {
       "ffmpeg": "FFmpeg",
       "mediainfo": "MediaInfo",
-      "lama": "LaMa AI model (optional)"
+      "lama": "LaMa AI model (optional)",
+      "rembg": "BiRefNet AI Model (Background removal)",
+      "upscale_general": "Real-ESRGAN General AI Model (x4v3)",
+      "upscale_anime": "Real-ESRGAN Anime AI Model (x4plus)",
+      "install": "Download & install",
+      "installing": "Installing…",
+      "installed": "Dependency installed successfully",
+      "failed": "Installation failed",
+      "detailLamaModelOnly": "Requires downloading big-lama.pt model weights (~196 MB)",
+      "detailLamaFull": "Requires installing PyTorch and LaMa model",
+      "detailRembgMissing": "Requires installing rembg and onnxruntime (~140 MB)",
+      "detailFfmpegMissing": "FFmpeg executable not found in PATH",
+      "detailUpscaleGenMissing": "Requires downloading realesr-general-x4v3.pth weights (~4.8 MB)",
+      "detailUpscaleAnimeMissing": "Requires downloading RealESRGAN_x4plus_anime_6B.pth weights (~17.9 MB)"
     },
     "depOk": "Available",
     "depMissing": "Missing",
@@ -130,9 +151,23 @@
     "retry": "Retry",
     "errorsCount_one": "{{count}} error",
     "errorsCount_other": "{{count}} errors",
-    "more": "More"
+    "more": "More",
+    "saveAs": "Save as…",
+    "saveBtn": "Save",
+    "saveLocation": "Save location",
+    "outputFolder": "Output folder",
+    "fileName": "File name",
+    "savedSuccess": "File saved",
+    "view": "View",
+    "viewSplit": "Split slider",
+    "viewSide": "Side by side",
+    "viewAfter": "Result only",
+    "viewBefore": "Original only",
+    "before": "Before (Original)",
+    "after": "After (Result)"
   },
   "converter": {
+    "changeImage": "Change image",
     "status": {
       "scanning": "Looking for files…",
       "noFiles": "No matching files found.",
@@ -308,6 +343,8 @@
     },
     "rate": "Speaking rate",
     "output": "Output file",
+    "outputFolder": "Output folder",
+    "fileName": "File name",
     "format": "Format",
     "defaultName": "speech",
     "preview": "Preview",
@@ -384,6 +421,69 @@
       "batchDone": "Queue finished: {{ok}} downloaded, {{failed}} failed"
     }
   },
+  "upscale": {
+    "status": {
+      "loading": "Loading image…",
+      "scaling": "Upscaling image with AI ({{percent}}%)…",
+      "tiling": "Upscaling image tiles ({{percent}}%)…",
+      "debleeding": "Cleaning edges (Anti-Halo)…",
+      "modelInference": "Real-ESRGAN AI model inference…",
+      "alphaProcessing": "Processing transparency…",
+      "done": "Upscaling completed successfully."
+    },
+    "dropTitle": "Drop image to upscale",
+    "dropHint": "or click to choose a file (PNG, JPG, WEBP, BMP, TIFF)",
+    "howTitle": "How does AI upscaling work?",
+    "howBody": "The Real-ESRGAN model analyzes textures, contours, and fine details, synthesizing lost information at higher resolution (2x or 4x). Our algorithm fully supports the alpha channel (transparency), eliminating dark color fringes (halos) around transparent edges in PNG and WebP files.",
+    "models": {
+      "general": "Real-ESRGAN · Photos & Graphics (x4v3)",
+      "anime": "Real-ESRGAN · Anime & Illustrations (x4plus)"
+    },
+    "modelPromo": {
+      "title": "Real-ESRGAN AI Model ({{model}})",
+      "desc": "Requires a one-time download of model weights to run locally on your computer.",
+      "installBtn": "Download & activate model ({{size}})",
+      "installing": "Downloading AI model weights…",
+      "ready": "AI model downloaded and ready to use!"
+    },
+    "options": {
+      "model": "AI Model",
+      "scale": "Scale factor",
+      "scale2x": "2× (sharp)",
+      "scale4x": "4× (maximum)",
+      "alphaMode": "Transparency handling",
+      "alphaSmooth": "Smooth (Lanczos-4)",
+      "alphaAi": "Deep AI (SRVGGNet)",
+      "antiHalo": "Edge protection (Anti-Halo)",
+      "antiHaloHint": "Prevents dark edge fringing and haloing around transparent cutouts"
+    },
+    "badges": {
+      "transparent": "Transparency (RGBA)",
+      "opaque": "Standard (RGB)"
+    },
+    "changeImage": "Change image",
+    "before": "Before",
+    "after": "After ({{scale}}×)",
+    "compareHint": "Drag the slider to compare original and upscaled image.",
+    "previewHint": "Preview of original image on transparent background.",
+    "idle": {
+      "ready": "Ready to upscale image.",
+      "done": "Image successfully upscaled.",
+      "needModel": "Download the selected AI model above to begin."
+    },
+    "runBtn": "Upscale image ({{scale}}×)",
+    "saveBtn": "Save upscaled image",
+    "backToOptions": "Change options",
+    "continueWithThis": "Continue with this image",
+    "suffix": "_upscaled",
+    "toast": {
+      "loadError": "Could not load image.",
+      "error": "Error during image upscaling.",
+      "done": "Image successfully upscaled!",
+      "saved": "Upscaled image saved.",
+      "saveError": "Could not save file."
+    }
+  },
   "watermark": {
     "status": {
       "loading": "Loading image…",
@@ -397,6 +497,13 @@
     "dropHint": "or click to choose a file (PNG, JPG, WEBP, BMP, TIFF)",
     "howTitle": "How does it work?",
     "howBody": "Paint over the watermark with the brush, then click “Remove watermark”. The algorithm rebuilds the background from its surroundings. The optional LaMa AI model gives the best results.",
+    "lamaPromo": {
+      "title": "LaMa AI Model (optional)",
+      "desc": "Removes watermarks with photorealistic quality by reconstructing textures and background.",
+      "installBtn": "Download & install model (~196 MB)",
+      "installing": "Downloading & installing model…",
+      "ready": "LaMa model installed and activated!"
+    },
     "changeImage": "Change image",
     "tools": "Mask tools",
     "brush": "Brush",
@@ -490,5 +597,98 @@
     "language": "Switch language to: {{language}}",
     "navigate": "select",
     "open": "open"
+  },
+  "rembg": {
+    "changeImage": "Change image",
+    "status": {
+      "loading": "Loading image…",
+      "preparingModel": "Preparing AI model ({{model}})…",
+      "inferring": "Extracting foreground with neural network…",
+      "refiningEdges": "Cleaning edge halo and filtering remnants…",
+      "compositing": "Compositing transparent output…",
+      "done": "Background removed successfully."
+    },
+    "dropTitle": "Drop image here to remove background",
+    "dropHint": "or click to browse (PNG, JPG, WEBP, BMP, TIFF)",
+    "howTitle": "How does AI background removal work?",
+    "howBody": "Powered by modern BiRefNet (Bilateral Reference Network) for sub-pixel boundary segmentation. Our built-in Anti-Halo debleed algorithm neutralizes bright/white edge halos and color bleeding (hair, fur, fine garments), ensuring your cutouts look flawless against any background.",
+    "modelPromo": {
+      "title": "BiRefNet / RMBG AI Model",
+      "desc": "This tool requires rembg and ONNX Runtime. Click below to install in the background.",
+      "installBtn": "Download & activate AI (~140 MB)",
+      "installing": "Installing AI dependencies…",
+      "ready": "AI model is ready to use!"
+    },
+    "options": {
+      "model": "AI Model",
+      "modelBirefnet": "BiRefNet · Maximum precision & hair (recommended)",
+      "modelBirefnetLite": "BiRefNet Lite · Fast & lightweight",
+      "modelIsnet": "IS-Net · General purpose (DIS)",
+      "modelU2net": "U2Net · Classic model",
+      "antiHalo": "Edge Anti-Halo Debleed",
+      "antiHaloHint": "Replaces white/bright border bleed with the true foreground color",
+      "choke": "Edge Choke / Erode",
+      "chokeHint": "Shaves outermost boundary pixels (0-4 px) to eliminate fringe halos",
+      "feather": "Edge Feathering",
+      "featherHint": "Softens aliasing steps on sharp edges",
+      "despeckle": "Remove Small Remnants (Despeckle)",
+      "despeckleHint": "Automatically filters isolated background specks and noise",
+      "previewBg": "Preview Background",
+      "bgChecker": "Checkerboard",
+      "bgBlack": "Pure Black",
+      "bgWhite": "Pure White",
+      "bgCustom": "Custom Color",
+      "brushMode": "Manual Touch-up",
+      "brushErase": "Erase speck",
+      "brushRestore": "Restore detail",
+      "brushNone": "Preview / Pan",
+      "brushSize": "Brush Size",
+      "clearStrokes": "Clear strokes"
+    },
+    "preview": {
+      "before": "Original",
+      "after": "Cutout",
+      "timeElapsed": "Elapsed: {{seconds}}s"
+    },
+    "actions": {
+      "remove": "Remove background",
+      "processing": "Removing background…",
+      "savePng": "Save as PNG",
+      "saveWebp": "Save as WebP",
+      "savedSuccess": "Saved image to file"
+    }
+  },
+  "deps": {
+    "status": {
+      "installingTorch": "Installing PyTorch…",
+      "torchInstalled": "PyTorch installed.",
+      "installingRembg": "Installing rembg and onnxruntime…",
+      "downloadingModel": "Downloading LaMa model ({{percent}}%)…",
+      "downloading": "Downloading ({{percent}}%)…",
+      "verifying": "Verifying installation…",
+      "downloadingFfmpeg": "Downloading FFmpeg ({{percent}}%)…",
+      "extractingFfmpeg": "Extracting FFmpeg…",
+      "done": "Installation complete."
+    },
+    "log": {
+      "installingTorch": "Installing PyTorch via pip…",
+      "torchInstalled": "PyTorch is ready to use.",
+      "installingRembg": "Installing rembg and onnxruntime via pip…",
+      "pipOutput": "{{line}}",
+      "downloadingModel": "Downloading LaMa AI model weights (big-lama.pt)…",
+      "modelDownloaded": "Model downloaded and verified successfully.",
+      "downloadingFfmpeg": "Downloading portable FFmpeg package…",
+      "extractingFfmpeg": "Extracting FFmpeg executables…",
+      "ffmpegInstalled": "FFmpeg extracted and added to PATH.",
+      "verifying": "Verifying model loading in PyTorch…",
+      "done": "Installation completed successfully."
+    },
+    "installTitle": {
+      "lama": "LaMa AI Model",
+      "ffmpeg": "FFmpeg",
+      "rembg": "BiRefNet AI Model (Background removal)",
+      "upscale_general": "Real-ESRGAN General AI Model",
+      "upscale_anime": "Real-ESRGAN Anime AI Model"
+    }
   }
 }

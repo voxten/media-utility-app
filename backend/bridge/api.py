@@ -7,18 +7,32 @@ underscore attributes so pywebview does not expose it.
 """
 
 import base64
+import logging
 import mimetypes
 import platform
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+logger = logging.getLogger(__name__)
+
 from backend import APP_NAME, APP_VERSION
 from backend.bridge.events import EventBus
 from backend.core import deps, system, win_theme
 from backend.core.jobs import JobManager
 from backend.core.settings import Settings
-from backend.services import converter, download, duplicates, pdf, progress_image, tts, watermark
+from backend.services import (
+    converter,
+    deps_installer,
+    download,
+    duplicates,
+    pdf,
+    progress_image,
+    rembg_service,
+    tts,
+    upscale,
+    watermark,
+)
 
 
 class _Context:
@@ -94,16 +108,40 @@ class DialogsApi(_Namespace):
 
 class SystemApi(_Namespace):
     def open_path(self, path: str) -> None:
-        system.open_path(path)
+        try:
+            system.open_path(path)
+        except Exception as e:
+            logger.warning("Could not open path %s: %s", path, e)
 
     def reveal(self, path: str) -> None:
-        system.reveal_in_folder(path)
+        try:
+            system.reveal_in_folder(path)
+        except Exception as e:
+            logger.warning("Could not reveal path %s: %s", path, e)
 
     def trash(self, path: str) -> None:
-        system.move_to_trash(path)
+        try:
+            system.move_to_trash(path)
+        except Exception as e:
+            logger.warning("Could not move to trash %s: %s", path, e)
 
     def dependencies(self) -> List[Dict[str, Any]]:
         return deps.check_dependencies()
+
+    def install_dependency(self, dep_id: str) -> str:
+        if dep_id.startswith("upscale"):
+            tool_prefix = "upscale"
+        elif dep_id == "lama":
+            tool_prefix = "watermark"
+        elif dep_id == "rembg":
+            tool_prefix = "rembg"
+        else:
+            tool_prefix = "download"
+        return self._ctx.jobs.submit(
+            f"{tool_prefix}.install",
+            lambda ctx: deps_installer.install_dependency(ctx, dep_id),
+            title=f"deps.installTitle.{dep_id}",
+        )
 
     def path_info(self, path: str) -> Dict[str, Any]:
         p = Path(path)
@@ -175,8 +213,14 @@ class TtsApi(_Namespace):
 
     def audio_data_url(self, path: str) -> str:
         """Generated audio for the in-app player (the WebView cannot read arbitrary local files)."""
+        p = Path(path)
+        if not p.is_file():
+            return ""
         mime = mimetypes.guess_type(path)[0] or "audio/mpeg"
-        return f"data:{mime};base64,{base64.b64encode(Path(path).read_bytes()).decode('ascii')}"
+        try:
+            return f"data:{mime};base64,{base64.b64encode(p.read_bytes()).decode('ascii')}"
+        except Exception:
+            return ""
 
 
 class DownloadApi(_Namespace):
@@ -237,6 +281,59 @@ class ProgressApi(_Namespace):
         return progress_image.save_png(data_url, out_path)
 
 
+class UpscaleApi(_Namespace):
+    def load(self, path: str) -> Dict[str, Any]:
+        return upscale.load_preview(path)
+
+    def models_status(self) -> Dict[str, bool]:
+        return {
+            "general": upscale.is_model_available("general"),
+            "anime": upscale.is_model_available("anime"),
+        }
+
+    def start(self, params: Dict[str, Any]) -> str:
+        path = params["path"]
+        model = params.get("model", "general")
+        scale = int(params.get("scale", 4))
+        alpha_mode = params.get("alphaMode", "smooth")
+        anti_halo = bool(params.get("antiHalo", True))
+
+        return self._ctx.jobs.submit(
+            "upscale",
+            lambda ctx: upscale.upscale(
+                ctx,
+                image_path=path,
+                model_id=model,
+                scale=scale,
+                alpha_mode=alpha_mode,
+                anti_halo=anti_halo,
+            ),
+            title=f"{Path(path).name} ({scale}x)",
+        )
+
+    def save(self, result_path: str, out_path: str) -> str:
+        return upscale.save_result(result_path, out_path)
+
+
+class RemBgApi(_Namespace):
+    def load(self, path: str) -> Dict[str, Any]:
+        return rembg_service.load_preview(path)
+
+    def is_available(self) -> bool:
+        return rembg_service.is_available()
+
+    def remove(self, params: Dict[str, Any]) -> str:
+        path = params["path"]
+        return self._ctx.jobs.submit(
+            "rembg",
+            lambda ctx: rembg_service.remove(ctx, params),
+            title=Path(path).name,
+        )
+
+    def save(self, result_path: str, out_path: str) -> str:
+        return rembg_service.save_result(result_path, out_path)
+
+
 class Api:
     def __init__(self, bus: EventBus, settings: Settings) -> None:
         self._ctx = _Context(bus, settings)
@@ -252,6 +349,8 @@ class Api:
         self.download = DownloadApi(self._ctx)
         self.watermark = WatermarkApi(self._ctx)
         self.progress = ProgressApi(self._ctx)
+        self.upscale = UpscaleApi(self._ctx)
+        self.rembg = RemBgApi(self._ctx)
 
     def _attach_window(self, window: Any) -> None:
         self._ctx.window = window

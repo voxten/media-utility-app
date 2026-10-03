@@ -48,6 +48,7 @@ export function AudioPlayer({ src, autoPlay }: { src: string; autoPlay?: boolean
         onEnded={() => setPlaying(false)}
         onTimeUpdate={(e) => setPosition(e.currentTarget.currentTime)}
         onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+        onError={() => setPlaying(false)}
       />
       <Button appearance="primary" className={styles.play} icon={playing ? <Pause20Filled /> : <Play20Filled />} onClick={toggle} aria-label={playing ? "Pause" : "Play"} />
       <Slider

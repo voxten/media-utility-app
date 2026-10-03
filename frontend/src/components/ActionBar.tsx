@@ -21,6 +21,8 @@ const useStyles = makeStyles({
     backgroundColor: tokens.colorNeutralBackground1,
     border: `1px solid ${tokens.colorNeutralStroke2}`,
     boxShadow: tokens.shadow16,
+    flexWrap: "wrap",
+    boxSizing: "border-box",
   },
   status: { flexGrow: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: "6px" },
   line: { display: "flex", justifyContent: "space-between", gap: "12px", minWidth: 0 },
@@ -28,7 +30,7 @@ const useStyles = makeStyles({
   percent: { color: tokens.colorNeutralForeground3, fontVariantNumeric: "tabular-nums" },
   idle: { color: tokens.colorNeutralForeground3 },
   error: { color: tokens.colorPaletteRedForeground1 },
-  actions: { display: "flex", gap: "8px", flexShrink: 0 },
+  actions: { display: "flex", gap: "8px", flexShrink: 0, flexWrap: "wrap" },
 });
 
 interface ActionBarProps {

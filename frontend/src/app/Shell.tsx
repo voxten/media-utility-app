@@ -14,6 +14,8 @@ const SettingsPage = lazy(() => import("../features/settings/SettingsPage"));
 
 const TOOL_PAGES: Record<string, LazyExoticComponent<ComponentType>> = {
   converter: lazy(() => import("../features/converter/ConverterPage")),
+  rembg: lazy(() => import("../features/rembg/RemBgPage")),
+  upscale: lazy(() => import("../features/upscale/UpscalePage")),
   pdf: lazy(() => import("../features/pdf/PdfPage")),
   duplicates: lazy(() => import("../features/duplicates/DuplicatesPage")),
   tts: lazy(() => import("../features/tts/TtsPage")),

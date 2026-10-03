@@ -3,7 +3,11 @@
 import {
   ArrowDownload24Filled,
   ArrowDownload24Regular,
+  ArrowMaximize24Filled,
+  ArrowMaximize24Regular,
   bundleIcon,
+  Cut24Filled,
+  Cut24Regular,
   DataBarHorizontal24Filled,
   DataBarHorizontal24Regular,
   DocumentCopy24Filled,
@@ -34,6 +38,8 @@ export const CATEGORIES: CategoryId[] = ["video", "image", "text", "pdf", "syste
 export const TOOLS: ToolDefinition[] = [
   { id: "download", category: "video", icon: bundleIcon(ArrowDownload24Filled, ArrowDownload24Regular), accent: "#e0475b" },
   { id: "converter", category: "image", icon: bundleIcon(ImageArrowForward24Filled, ImageArrowForward24Regular), accent: "#2f8fd8" },
+  { id: "rembg", category: "image", icon: bundleIcon(Cut24Filled, Cut24Regular), accent: "#06b6d4" },
+  { id: "upscale", category: "image", icon: bundleIcon(ArrowMaximize24Filled, ArrowMaximize24Regular), accent: "#d946ef" },
   { id: "watermark", category: "image", icon: bundleIcon(ImageEdit24Filled, ImageEdit24Regular), accent: "#8a5cf6" },
   { id: "tts", category: "text", icon: bundleIcon(PersonVoice24Filled, PersonVoice24Regular), accent: "#14a37f" },
   { id: "pdf", category: "pdf", icon: bundleIcon(DocumentPdf24Filled, DocumentPdf24Regular), accent: "#d9480f" },

@@ -27,6 +27,8 @@ export interface Dependency {
   detail: string;
   usedBy: string[];
   required: boolean;
+  installable?: boolean;
+  sizeEstimate?: string;
 }
 
 export type JobStatus = "running" | "done" | "error" | "cancelled";
@@ -73,3 +75,52 @@ export interface BridgeEvents {
 }
 
 export type BridgeEventName = keyof BridgeEvents;
+
+export interface UpscalePreview {
+  path: string;
+  width: number;
+  height: number;
+  hasAlpha: boolean;
+  dataUrl: string;
+}
+
+export interface UpscaleResult {
+  resultPath: string;
+  width: number;
+  height: number;
+  hasAlpha: boolean;
+  dataUrl: string;
+}
+
+export interface UpscaleOptions {
+  path: string;
+  model: "general" | "anime";
+  scale: 2 | 4;
+  alphaMode: "smooth" | "ai";
+  antiHalo: boolean;
+}
+
+export interface RemBgPreview {
+  path: string;
+  width: number;
+  height: number;
+  dataUrl: string;
+}
+
+export interface RemBgResult {
+  resultPath: string;
+  width: number;
+  height: number;
+  dataUrl: string;
+  elapsed?: number;
+}
+
+export interface RemBgOptions {
+  path: string;
+  model: "birefnet" | "birefnet-lite" | "isnet" | "u2net";
+  antiHalo: boolean;
+  choke: number;
+  feather: number;
+  despeckle: boolean;
+  userMask?: string;
+}

@@ -22,6 +22,7 @@ const useStyles = makeStyles({
     backgroundColor: tokens.colorNeutralBackground2,
     border: `1px solid ${tokens.colorNeutralStroke3}`,
     borderRadius: tokens.borderRadiusMedium,
+    flexWrap: "wrap",
   },
   stacked: { flexWrap: "wrap" },
   icon: {
@@ -31,8 +32,8 @@ const useStyles = makeStyles({
   },
   text: { display: "flex", flexDirection: "column", flexGrow: 1, minWidth: "200px", gap: "2px" },
   description: { color: tokens.colorNeutralForeground3 },
-  control: { display: "flex", alignItems: "center", gap: "8px", flexShrink: 0, maxWidth: "100%" },
-  wideControl: { flexBasis: "100%", flexShrink: 1 },
+  control: { display: "flex", alignItems: "center", gap: "8px", flexShrink: 0, maxWidth: "100%", minWidth: 0 },
+  wideControl: { flexBasis: "100%", flexShrink: 1, minWidth: 0 },
   indented: { paddingLeft: "38px" },
 });
 

@@ -1,10 +1,11 @@
 import { Caption1, Field, makeStyles, Slider, tokens } from "@fluentui/react-components";
 
 const useStyles = makeStyles({
-  row: { display: "flex", alignItems: "center", gap: "12px" },
-  slider: { flexGrow: 1 },
+  row: { display: "flex", alignItems: "center", gap: "12px", width: "100%", minWidth: 0 },
+  slider: { flexGrow: 1, minWidth: 0 },
   value: {
     minWidth: "40px",
+    flexShrink: 0,
     textAlign: "right",
     fontVariantNumeric: "tabular-nums",
     fontWeight: tokens.fontWeightSemibold,

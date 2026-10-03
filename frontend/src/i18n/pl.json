@@ -30,6 +30,14 @@
       "name": "Konwerter obrazów",
       "description": "Konwertuj całe foldery obrazów między formatami."
     },
+    "rembg": {
+      "name": "Usuwanie tła AI",
+      "description": "Usuwaj tło z precyzyjnym wycinaniem krawędzi, włosów i eliminacją białych obwódek."
+    },
+    "upscale": {
+      "name": "Skalowanie obrazów AI",
+      "description": "Zwiększaj rozdzielczość zdjęć i grafik 2x lub 4x z zachowaniem przezroczystości."
+    },
     "watermark": {
       "name": "Usuwanie znaku wodnego",
       "description": "Zamaluj znak wodny i usuń go algorytmem lub AI."
@@ -85,7 +93,20 @@
     "deps": {
       "ffmpeg": "FFmpeg",
       "mediainfo": "MediaInfo",
-      "lama": "Model AI LaMa (opcjonalny)"
+      "lama": "Model AI LaMa (opcjonalny)",
+      "rembg": "Model AI BiRefNet (Usuwanie tła)",
+      "upscale_general": "Model AI Real-ESRGAN General (x4v3)",
+      "upscale_anime": "Model AI Real-ESRGAN Anime (x4plus)",
+      "install": "Pobierz i zainstaluj",
+      "installing": "Instalowanie…",
+      "installed": "Pomyślnie zainstalowano zależność",
+      "failed": "Instalacja nie powiodła się",
+      "detailLamaModelOnly": "Wymaga pobrania wag modelu big-lama.pt (~196 MB)",
+      "detailLamaFull": "Wymaga instalacji PyTorch oraz modelu LaMa",
+      "detailRembgMissing": "Wymaga instalacji rembg oraz onnxruntime (~140 MB)",
+      "detailFfmpegMissing": "Brak programu FFmpeg na ścieżce PATH",
+      "detailUpscaleGenMissing": "Wymaga pobrania wag modelu realesr-general-x4v3.pth (~4.8 MB)",
+      "detailUpscaleAnimeMissing": "Wymaga pobrania wag modelu RealESRGAN_x4plus_anime_6B.pth (~17.9 MB)"
     },
     "depOk": "Dostępne",
     "depMissing": "Brak",
@@ -134,9 +155,23 @@
     "errorsCount_few": "{{count}} błędy",
     "errorsCount_many": "{{count}} błędów",
     "errorsCount_other": "{{count}} błędu",
-    "more": "Więcej"
+    "more": "Więcej",
+    "saveAs": "Zapisz jako…",
+    "saveBtn": "Zapisz",
+    "saveLocation": "Miejsce zapisu",
+    "outputFolder": "Folder zapisu",
+    "fileName": "Nazwa pliku",
+    "savedSuccess": "Zapisano plik",
+    "view": "Widok",
+    "viewSplit": "Suwak",
+    "viewSide": "Obok siebie",
+    "viewAfter": "Tylko wynik",
+    "viewBefore": "Tylko oryginał",
+    "before": "Przed (Oryginał)",
+    "after": "Po (Wynik)"
   },
   "converter": {
+    "changeImage": "Zmień obraz",
     "status": {
       "scanning": "Wyszukiwanie plików…",
       "noFiles": "Nie znaleziono pasujących plików.",
@@ -346,6 +381,8 @@
     },
     "rate": "Tempo mowy",
     "output": "Plik wynikowy",
+    "outputFolder": "Folder docelowy",
+    "fileName": "Nazwa pliku",
     "format": "Format",
     "defaultName": "mowa",
     "preview": "Odsłuch",
@@ -426,6 +463,69 @@
       "batchDone": "Kolejka zakończona: {{ok}} pobrano, {{failed}} błędów"
     }
   },
+  "upscale": {
+    "status": {
+      "loading": "Wczytywanie obrazu…",
+      "scaling": "Skalowanie obrazu z AI ({{percent}}%)…",
+      "tiling": "Skalowanie fragmentów obrazu ({{percent}}%)…",
+      "debleeding": "Oczyszczanie krawędzi (Anti-Halo)…",
+      "modelInference": "Inferencja modelu AI Real-ESRGAN…",
+      "alphaProcessing": "Przetwarzanie przezroczystości…",
+      "done": "Skalowanie zakończone sukcesem."
+    },
+    "dropTitle": "Upuść obraz do przeskalowania",
+    "dropHint": "lub kliknij, aby wybrać plik (PNG, JPG, WEBP, BMP, TIFF)",
+    "howTitle": "Jak działa skalowanie AI?",
+    "howBody": "Model AI Real-ESRGAN analizuje tekstury, krawędzie i detale, odtwarzając brakujące informacje w wyższej rozdzielczości (2x lub 4x). Nasz algorytm w pełni obsługuje kanał alfa (przezroczystość), eliminując ciemne obwódki (halo) na przezroczystych krawędziach PNG i WebP.",
+    "models": {
+      "general": "Real-ESRGAN · Zdjęcia i grafiki (x4v3)",
+      "anime": "Real-ESRGAN · Anime i ilustracje (x4plus)"
+    },
+    "modelPromo": {
+      "title": "Model AI Real-ESRGAN ({{model}})",
+      "desc": "Wymaga jednorazowego pobrania wag modelu AI do uruchomienia na Twoim komputerze.",
+      "installBtn": "Pobierz i aktywuj model ({{size}})",
+      "installing": "Pobieranie wag modelu AI…",
+      "ready": "Model AI został pobrany i jest gotowy do użycia!"
+    },
+    "options": {
+      "model": "Model AI",
+      "scale": "Powiększenie",
+      "scale2x": "2× (ostre)",
+      "scale4x": "4× (maksymalne)",
+      "alphaMode": "Obsługa przezroczystości",
+      "alphaSmooth": "Gładka (Lanczos-4)",
+      "alphaAi": "Głęboka AI (SRVGGNet)",
+      "antiHalo": "Ochrona krawędzi (Anti-Halo)",
+      "antiHaloHint": "Eliminuje ciemne obwódki na brzegach przezroczystych obiektów"
+    },
+    "badges": {
+      "transparent": "Przezroczystość (RGBA)",
+      "opaque": "Standardowy (RGB)"
+    },
+    "changeImage": "Zmień obraz",
+    "before": "Przed",
+    "after": "Po ({{scale}}×)",
+    "compareHint": "Przesuń suwak, aby porównać oryginalny i przeskalowany obraz.",
+    "previewHint": "Podgląd oryginalnego obrazu na przezroczystym tle.",
+    "idle": {
+      "ready": "Gotowy do powiększenia obrazu.",
+      "done": "Obraz został pomyślnie powiększony.",
+      "needModel": "Pobierz wybrany model AI powyżej, aby rozpocząć."
+    },
+    "runBtn": "Powiększ obraz ({{scale}}×)",
+    "saveBtn": "Zapisz powiększony obraz",
+    "backToOptions": "Zmień opcje",
+    "continueWithThis": "Kontynuuj z tym obrazem",
+    "suffix": "_upscaled",
+    "toast": {
+      "loadError": "Nie udało się wczytać obrazu.",
+      "error": "Błąd podczas skalowania obrazu.",
+      "done": "Obraz został pomyślnie powiększony!",
+      "saved": "Zapisano powiększony obraz.",
+      "saveError": "Nie udało się zapisać pliku."
+    }
+  },
   "watermark": {
     "status": {
       "loading": "Wczytywanie obrazu…",
@@ -439,6 +539,13 @@
     "dropHint": "lub kliknij, aby wybrać plik (PNG, JPG, WEBP, BMP, TIFF)",
     "howTitle": "Jak to działa?",
     "howBody": "Zamaluj pędzlem obszar ze znakiem wodnym, a następnie kliknij „Usuń znak wodny”. Algorytm odtworzy tło na podstawie otoczenia. Najlepsze efekty daje model AI LaMa (opcjonalny).",
+    "lamaPromo": {
+      "title": "Model AI LaMa (opcjonalny)",
+      "desc": "Usuwaj znaki wodne z fotorealistyczną jakością, precyzyjnie rekonstruując tło.",
+      "installBtn": "Pobierz i zainstaluj model (~196 MB)",
+      "installing": "Pobieranie i instalowanie modelu…",
+      "ready": "Model LaMa został zainstalowany i aktywowany!"
+    },
     "changeImage": "Zmień obraz",
     "tools": "Narzędzia maski",
     "brush": "Pędzel",
@@ -534,5 +641,98 @@
     "language": "Zmień język na: {{language}}",
     "navigate": "wybór",
     "open": "otwórz"
+  },
+  "rembg": {
+    "changeImage": "Zmień obraz",
+    "status": {
+      "loading": "Wczytywanie obrazu…",
+      "preparingModel": "Przygotowywanie modelu AI ({{model}})…",
+      "inferring": "Precyzyjne wycinanie tła przez sieć neuronową…",
+      "refiningEdges": "Czyszczenie białej poświaty i pozostałości krawędzi…",
+      "compositing": "Składanie przezroczystego obrazu…",
+      "done": "Tło zostało pomyślnie usunięte."
+    },
+    "dropTitle": "Upuść obraz do usunięcia tła",
+    "dropHint": "lub kliknij, aby wybrać plik (PNG, JPG, WEBP, BMP, TIFF)",
+    "howTitle": "Jak działa precyzyjne usuwanie tła AI?",
+    "howBody": "Narzędzie wykorzystuje najnowszy model BiRefNet (Bilateral Reference Network) do subpikselowej segmentacji krawędzi. Dodatkowo wbudowany algorytm Anti-Halo debleed neutralizuje białe piksele zanieczyszczające krawędzie (włosy, sierść, brzegi ubrań), dzięki czemu wycięty obiekt wygląda idealnie na każdym, nawet najciemniejszym tle.",
+    "modelPromo": {
+      "title": "Model AI BiRefNet / RMBG",
+      "desc": "Do działania narzędzia wymagana jest biblioteka rembg oraz ONNX Runtime. Kliknij poniżej, aby zainstalować w tle.",
+      "installBtn": "Pobierz i aktywuj AI (~140 MB)",
+      "installing": "Instalowanie zależności AI…",
+      "ready": "Model AI jest gotowy do użycia!"
+    },
+    "options": {
+      "model": "Model AI",
+      "modelBirefnet": "BiRefNet · Maksymalna precyzja i włosy (zalecany)",
+      "modelBirefnetLite": "BiRefNet Lite · Szybki i lekki",
+      "modelIsnet": "IS-Net · Ogólnego zastosowania (DIS)",
+      "modelU2net": "U2Net · Klasyczny model",
+      "antiHalo": "Ochrona krawędzi (Anti-Halo Debleed)",
+      "antiHaloHint": "Zastępuje białe/jasne zabrudzenia na krawędziach prawdziwym kolorem obiektu",
+      "choke": "Podcięcie krawędzi (Choke)",
+      "chokeHint": "Ścina zewnętrzną warstwę pikseli (0-4 px), usuwając białą obwódkę",
+      "feather": "Wygładzanie krawędzi",
+      "featherHint": "Zmiękcza ząbkowanie na krawędziach",
+      "despeckle": "Usuń drobne pozostałości tła (Despeckle)",
+      "despeckleHint": "Automatycznie odfiltrowuje małe odizolowane plamki i pyłki",
+      "previewBg": "Tło podglądu",
+      "bgChecker": "Szachownica",
+      "bgBlack": "Czysta czerń",
+      "bgWhite": "Czysta biel",
+      "bgCustom": "Własny kolor",
+      "brushMode": "Ręczna korekta",
+      "brushErase": "Wymaż plamkę",
+      "brushRestore": "Przywróć detal",
+      "brushNone": "Podgląd / Przesuwanie",
+      "brushSize": "Rozmiar pędzla",
+      "clearStrokes": "Wyczyść poprawki"
+    },
+    "preview": {
+      "before": "Oryginał",
+      "after": "Bez tła",
+      "timeElapsed": "Czas wykonania: {{seconds}}s"
+    },
+    "actions": {
+      "remove": "Usuń tło",
+      "processing": "Usuwanie tła…",
+      "savePng": "Zapisz jako PNG",
+      "saveWebp": "Zapisz jako WebP",
+      "savedSuccess": "Zapisano obraz do pliku"
+    }
+  },
+  "deps": {
+    "status": {
+      "installingTorch": "Instalowanie PyTorch…",
+      "torchInstalled": "Zainstalowano PyTorch.",
+      "installingRembg": "Instalowanie rembg i onnxruntime…",
+      "downloadingModel": "Pobieranie modelu LaMa ({{percent}}%)…",
+      "downloading": "Pobieranie ({{percent}}%)…",
+      "verifying": "Weryfikacja instalacji…",
+      "downloadingFfmpeg": "Pobieranie FFmpeg ({{percent}}%)…",
+      "extractingFfmpeg": "Rozpakowywanie FFmpeg…",
+      "done": "Instalacja zakończona."
+    },
+    "log": {
+      "installingTorch": "Instalowanie PyTorch przez pip…",
+      "torchInstalled": "PyTorch jest gotowy do użycia.",
+      "installingRembg": "Instalowanie rembg i onnxruntime przez pip…",
+      "pipOutput": "{{line}}",
+      "downloadingModel": "Pobieranie wag modelu AI LaMa (big-lama.pt)…",
+      "modelDownloaded": "Model pobrany i pomyślnie zweryfikowany.",
+      "downloadingFfmpeg": "Pobieranie przenośnego pakietu FFmpeg…",
+      "extractingFfmpeg": "Rozpakowywanie plików wykonywalnych FFmpeg…",
+      "ffmpegInstalled": "FFmpeg rozpakowany i dodany do ścieżki PATH.",
+      "verifying": "Weryfikacja ładowania modelu w PyTorch…",
+      "done": "Instalacja zakończona sukcesem."
+    },
+    "installTitle": {
+      "lama": "Model AI LaMa",
+      "ffmpeg": "FFmpeg",
+      "rembg": "Model AI BiRefNet (Usuwanie tła)",
+      "upscale_general": "Model AI Real-ESRGAN General",
+      "upscale_anime": "Model AI Real-ESRGAN Anime"
+    }
   }
 }

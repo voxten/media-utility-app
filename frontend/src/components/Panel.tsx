@@ -13,10 +13,11 @@ const useStyles = makeStyles({
     backgroundColor: tokens.colorNeutralBackground2,
     border: `1px solid ${tokens.colorNeutralStroke3}`,
     minWidth: 0,
+    boxSizing: "border-box",
   },
-  head: { display: "flex", alignItems: "center", gap: "12px", minHeight: "32px" },
-  title: { flexGrow: 1 },
-  actions: { display: "flex", gap: "8px", alignItems: "center" },
+  head: { display: "flex", alignItems: "center", gap: "12px", minHeight: "32px", flexWrap: "wrap", minWidth: 0 },
+  title: { flexGrow: 1, minWidth: 0 },
+  actions: { display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap", minWidth: 0 },
 });
 
 interface PanelProps {

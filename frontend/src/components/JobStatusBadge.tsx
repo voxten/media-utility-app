@@ -10,9 +10,13 @@ export function translateMessage(t: TFunction, message: string | null | undefine
   return t(message, { ...params, defaultValue: message });
 }
 
-export function jobMessage(t: TFunction, job: Pick<JobInfo, "status" | "message" | "params" | "error">) {
+export function jobMessage(
+  t: TFunction,
+  job: Pick<JobInfo, "status" | "message" | "params" | "error"> & { percent?: number | null }
+) {
   if (job.status === "error") return job.error ?? t("common.jobStatus.error");
-  return translateMessage(t, job.message, job.params);
+  const percent = job.percent != null ? Math.round(job.percent) : undefined;
+  return translateMessage(t, job.message, { percent, ...job.params });
 }
 
 const COLORS: Record<JobStatus, "informative" | "success" | "danger" | "subtle"> = {

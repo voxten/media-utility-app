@@ -21,12 +21,22 @@ def open_path(path: str) -> None:
 def reveal_in_folder(path: str) -> None:
     """Open the containing folder with the file selected (falls back to opening the folder)."""
     target = Path(path)
-    if sys.platform == "win32" and target.exists():
-        subprocess.Popen(["explorer", "/select,", str(target)])
-    elif sys.platform == "darwin" and target.exists():
-        subprocess.Popen(["open", "-R", str(target)])
+    if target.exists() and target.is_file():
+        if sys.platform == "win32":
+            subprocess.Popen(["explorer", "/select,", str(target)])
+            return
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", "-R", str(target)])
+            return
+
+    # Fall back to opening the parent folder (or target if it is a directory)
+    folder = target if target.is_dir() else target.parent
+    if folder.exists():
+        open_path(str(folder))
+    elif target.exists():
+        open_path(str(target))
     else:
-        open_path(str(target.parent if target.is_file() else target))
+        raise FileNotFoundError(path)
 
 
 def move_to_trash(path: str) -> None:

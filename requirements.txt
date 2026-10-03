@@ -1,6 +1,6 @@
 # Runtime dependencies (native window + backend services).
 pywebview
-yt-dlp
+yt-dlp[default]>=2026.8.19  # [default] pulls yt-dlp-ejs, needed for YouTube's JS challenges
 requests
 Pillow
 PyMuPDF
@@ -17,3 +17,6 @@ send2trash
 
 # Optional: AI watermark removal (LaMa) – large download, install only if needed:
 #   pip install iopaint torch torchvision
+
+# Optional: AI background removal (BiRefNet / rembg) – install only if needed:
+#   pip install "rembg[cpu]>=2.0.59" onnxruntime pymatting

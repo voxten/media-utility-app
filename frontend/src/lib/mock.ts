@@ -109,10 +109,12 @@ export function createMockBackend(emit: Emit) {
       trash: () => ok(undefined),
       dependencies: () =>
         ok([
-          { id: "ffmpeg", ok: true, detail: "C:\\ffmpeg\\bin\\ffmpeg.exe", usedBy: ["download", "tts"], required: true },
-          { id: "mediainfo", ok: true, detail: "", usedBy: ["duplicates"], required: true },
-          { id: "lama", ok: false, detail: "pip install iopaint torch torchvision", usedBy: ["watermark"], required: false },
+          { id: "ffmpeg", ok: true, detail: "C:\\ffmpeg\\bin\\ffmpeg.exe", usedBy: ["download", "tts"], required: true, installable: false, sizeEstimate: "" },
+          { id: "mediainfo", ok: true, detail: "", usedBy: ["duplicates"], required: true, installable: false, sizeEstimate: "" },
+          { id: "lama", ok: false, detail: "settings.deps.detailLamaModelOnly", usedBy: ["watermark"], required: false, installable: true, sizeEstimate: "~196 MB" },
         ]),
+      install_dependency: (id: string) =>
+        simulateJob(id === "lama" ? "watermark.install" : "download.install", id, { id, ok: true }, 2500),
       path_info: (path: string) => ok({ exists: true, isDir: !path.includes("."), isFile: path.includes("."), name: path.split("\\").pop(), parent: "" }),
     },
     jobs: {
@@ -210,6 +212,32 @@ export function createMockBackend(emit: Emit) {
     progress: {
       load_banner: () => ok(""),
       save: (_d: string, outPath: string) => ok({ outPath, bytes: 0 }),
+    },
+    upscale: {
+      load: (path: string) => ok({ path, width: 800, height: 600, hasAlpha: true, dataUrl: fakePhoto(0) }),
+      models_status: () => ok({ general: true, anime: false }),
+      start: (_params: { path: string; scale?: number }) =>
+        simulateJob("upscale", "image.png (4x)", {
+          resultPath: "C:\\cache\\upscaled.png",
+          width: 3200,
+          height: 2400,
+          hasAlpha: true,
+          dataUrl: fakePhoto(1),
+        }, 1500),
+      save: (_r: string, out: string) => ok(out),
+    },
+    rembg: {
+      load: (path: string) => ok({ path, width: 800, height: 600, dataUrl: fakePhoto(0) }),
+      is_available: () => ok(false),
+      remove: () =>
+        simulateJob("rembg", "image.png", {
+          resultPath: "C:\\cache\\rembg_result.png",
+          width: 800,
+          height: 600,
+          dataUrl: fakePhoto(2),
+          elapsed: 1.2,
+        }, 1500),
+      save: (_r: string, out: string) => ok(out),
     },
   };
 }

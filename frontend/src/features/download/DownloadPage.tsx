@@ -120,8 +120,9 @@ const useForm = create<DownloadForm>((set) => ({
 }));
 
 const useStyles = makeStyles({
-  urlRow: { display: "flex", gap: "8px" },
-  urlInput: { flexGrow: 1 },
+  urlRow: { display: "flex", gap: "8px", width: "100%", minWidth: 0 },
+  urlInput: { flexGrow: 1, minWidth: 0 },
+  searchBtn: { flexShrink: 0, whiteSpace: "nowrap" },
   media: { display: "grid", gridTemplateColumns: "240px minmax(0, 1fr)", gap: "20px", alignItems: "start", "@media (max-width: 800px)": { gridTemplateColumns: "1fr" } },
   thumb: { width: "100%", aspectRatio: "16 / 9", objectFit: "cover", borderRadius: tokens.borderRadiusLarge, boxShadow: tokens.shadow8, backgroundColor: tokens.colorNeutralBackground3 },
   mediaInfo: { display: "flex", flexDirection: "column", gap: "8px", minWidth: 0 },
@@ -133,10 +134,31 @@ const useStyles = makeStyles({
   formatsHead: { display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" },
   grow: { flexGrow: 1 },
   codec: { minWidth: "120px" },
-  outputGrid: { display: "grid", gridTemplateColumns: "minmax(0, 3fr) minmax(0, 2fr)", gap: "16px", "@media (max-width: 900px)": { gridTemplateColumns: "1fr" } },
-  tokens: { display: "flex", gap: "4px", marginTop: "6px" },
-  token: { cursor: "pointer" },
-  batchArea: { minHeight: "180px", "& textarea": { fontFamily: tokens.fontFamilyMonospace, maxHeight: "none" } },
+  outputGrid: {
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 3fr) minmax(0, 2fr)",
+    gap: "16px",
+    "@media (max-width: 1050px)": { gridTemplateColumns: "minmax(0, 1fr)" },
+  },
+  templateInput: { width: "100%", minWidth: 0 },
+  tokens: { display: "flex", gap: "6px", marginTop: "6px", flexWrap: "wrap", minWidth: 0 },
+  token: { cursor: "pointer", flexShrink: 0 },
+  batchPanel: { flexGrow: 1, display: "flex", flexDirection: "column", minHeight: "260px" },
+  batchArea: {
+    flexGrow: 1,
+    minHeight: "180px",
+    display: "flex",
+    flexDirection: "column",
+    width: "100%",
+    "& textarea": {
+      fontFamily: tokens.fontFamilyMonospace,
+      maxHeight: "none",
+      minHeight: "inherit",
+      boxSizing: "border-box",
+      flexGrow: 1,
+      height: "100%",
+    },
+  },
   queue: { display: "flex", flexDirection: "column", gap: "6px" },
   queueItem: {
     display: "grid",
@@ -298,7 +320,7 @@ export default function DownloadPage() {
                 onChange={(_, d) => form.set({ url: d.value })}
                 onKeyDown={(e) => e.key === "Enter" && runProbe()}
               />
-              <Button size="large" icon={probe.running ? <Spinner size="tiny" /> : <Search16Regular />} disabled={!form.url.trim() || probe.running} onClick={runProbe}>
+              <Button className={styles.searchBtn} size="large" icon={probe.running ? <Spinner size="tiny" /> : <Search16Regular />} disabled={!form.url.trim() || probe.running} onClick={runProbe}>
                 {t("download.check")}
               </Button>
             </div>
@@ -415,7 +437,11 @@ export default function DownloadPage() {
           )}
         </>
       ) : (
-        <Panel title={t("download.queueTitle")} actions={<Badge appearance="tint">{t("download.urlCount", { count: urls.length })}</Badge>}>
+        <Panel
+          className={styles.batchPanel}
+          title={t("download.queueTitle")}
+          actions={<Badge appearance="tint">{t("download.urlCount", { count: urls.length })}</Badge>}
+        >
           <Textarea
             className={styles.batchArea}
             resize="vertical"
@@ -457,7 +483,7 @@ export default function DownloadPage() {
             <PathPicker value={outdir} onChange={(dir) => form.set({ outdir: dir })} openable />
           </Field>
           <Field label={t("download.template")}>
-            <Input value={form.template} onChange={(_, d) => form.set({ template: d.value })} />
+            <Input className={styles.templateInput} value={form.template} onChange={(_, d) => form.set({ template: d.value })} />
             <div className={styles.tokens}>
               {TEMPLATE_TOKENS.map((tok) => (
                 <Badge key={tok} appearance="outline" className={styles.token} onClick={() => form.set({ template: form.template + tok })}>

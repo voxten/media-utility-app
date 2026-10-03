@@ -6,7 +6,18 @@
 // Outside pywebview (plain `npm run dev` in a browser) a mock backend is used so the UI
 // can be developed and previewed without Python.
 
-import type { AppInfo, BridgeEventName, BridgeEvents, Dependency, JobInfo, Settings } from "./types";
+import type {
+  AppInfo,
+  BridgeEventName,
+  BridgeEvents,
+  Dependency,
+  JobInfo,
+  RemBgOptions,
+  RemBgPreview,
+  Settings,
+  UpscaleOptions,
+  UpscalePreview,
+} from "./types";
 import { createMockBackend } from "./mock";
 
 type Handler<E extends BridgeEventName> = (payload: BridgeEvents[E]) => void;
@@ -108,6 +119,7 @@ export const api = {
     reveal: (path: string) => call<void>("system", "reveal", path),
     trash: (path: string) => call<void>("system", "trash", path),
     dependencies: () => call<Dependency[]>("system", "dependencies"),
+    installDependency: (id: string) => call<JobId>("system", "install_dependency", id),
     pathInfo: (path: string) =>
       call<{ exists: boolean; isDir: boolean; isFile: boolean; name: string; parent: string }>("system", "path_info", path),
   },
@@ -169,5 +181,17 @@ export const api = {
   progress: {
     loadBanner: (path: string) => call<string>("progress", "load_banner", path),
     save: (dataUrl: string, outPath: string) => call<{ outPath: string; bytes: number }>("progress", "save", dataUrl, outPath),
+  },
+  upscale: {
+    load: (path: string) => call<UpscalePreview>("upscale", "load", path),
+    modelsStatus: () => call<{ general: boolean; anime: boolean }>("upscale", "models_status"),
+    start: (params: UpscaleOptions) => call<JobId>("upscale", "start", params),
+    save: (resultPath: string, outPath: string) => call<string>("upscale", "save", resultPath, outPath),
+  },
+  rembg: {
+    load: (path: string) => call<RemBgPreview>("rembg", "load", path),
+    isAvailable: () => call<boolean>("rembg", "is_available"),
+    remove: (params: RemBgOptions) => call<JobId>("rembg", "remove", params),
+    save: (resultPath: string, outPath: string) => call<string>("rembg", "save", resultPath, outPath),
   },
 };

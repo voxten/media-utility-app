@@ -17,8 +17,38 @@ OUTPUT_FORMATS = (".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff")
 MASK_DILATE_PX = 3
 
 
+_CACHED_LAMA_MODEL = None
+_CACHED_LAMA_DEVICE = None
+
+
 def lama_available() -> bool:
-    return all(importlib.util.find_spec(m) is not None for m in ("iopaint", "torch"))
+    from backend.core.deps import is_lama_ready
+
+    return is_lama_ready()
+
+
+def _get_direct_lama_model() -> tuple:
+    global _CACHED_LAMA_MODEL, _CACHED_LAMA_DEVICE
+    if _CACHED_LAMA_MODEL is not None:
+        return _CACHED_LAMA_MODEL, _CACHED_LAMA_DEVICE
+
+    from backend.core.deps import lama_model_path
+
+    model_path = lama_model_path()
+    if not model_path or not model_path.is_file():
+        return None, None
+
+    try:
+        import torch
+
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        model = torch.jit.load(str(model_path), map_location="cpu").to(device)
+        model.eval()
+        _CACHED_LAMA_MODEL = model
+        _CACHED_LAMA_DEVICE = device
+        return model, device
+    except Exception:
+        return None, None
 
 
 def read_image(path: str) -> np.ndarray:
@@ -74,17 +104,54 @@ def _split_alpha(img: np.ndarray) -> tuple:
     raise ValueError(f"Unsupported channel count: {img.shape[2]}")
 
 
+def _inpaint_lama_direct(model: Any, device: str, bgr: np.ndarray, mask: np.ndarray) -> np.ndarray:
+    import torch
+
+    rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+    orig_h, orig_w = rgb.shape[:2]
+
+    # Modulo-8 padding for LaMa FFC generator
+    pad_h = (8 - orig_h % 8) % 8
+    pad_w = (8 - orig_w % 8) % 8
+    if pad_h > 0 or pad_w > 0:
+        rgb_padded = cv2.copyMakeBorder(rgb, 0, pad_h, 0, pad_w, cv2.BORDER_REFLECT)
+        mask_padded = cv2.copyMakeBorder(mask, 0, pad_h, 0, pad_w, cv2.BORDER_REFLECT)
+    else:
+        rgb_padded = rgb
+        mask_padded = mask
+
+    img_t = torch.from_numpy(rgb_padded).permute(2, 0, 1).unsqueeze(0).float() / 255.0
+    mask_t = torch.from_numpy((mask_padded > 0).astype(np.float32)).unsqueeze(0).unsqueeze(0)
+
+    with torch.no_grad():
+        out_t = model(img_t.to(device), mask_t.to(device))
+
+    res = out_t[0].permute(1, 2, 0).detach().cpu().numpy()
+    res = res[:orig_h, :orig_w, :]
+    res = np.clip(res * 255.0, 0, 255).astype(np.uint8)
+
+    # Blend result: masked pixels are replaced with model inpainting, unmasked remain original
+    binary_mask = (mask > 0)[:, :, np.newaxis]
+    blended_rgb = np.where(binary_mask, res, rgb)
+    return cv2.cvtColor(blended_rgb, cv2.COLOR_RGB2BGR)
+
+
 def _inpaint_lama(bgr: np.ndarray, mask: np.ndarray) -> np.ndarray:
+    model, device = _get_direct_lama_model()
+    if model is not None:
+        return _inpaint_lama_direct(model, device, bgr, mask)
+
+    # Fallback to IOPaint if installed
     import torch
     from iopaint.model_manager import ModelManager
     from iopaint.schema import InpaintRequest
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = ModelManager(name="lama", device=device)
+    mm = ModelManager(name="lama", device=device)
     rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
-    result = model(rgb, mask, InpaintRequest())
-    # Same channel handling as the original Qt tab.
+    result = mm(rgb, mask, InpaintRequest())
     return cv2.cvtColor(np.clip(result, 0, 255).astype(np.uint8), cv2.COLOR_RGB2BGR)
+
 
 
 def inpaint_array(img: np.ndarray, mask: np.ndarray, method: str) -> tuple:
@@ -148,6 +215,8 @@ def remove(ctx: JobContext, image_path: str, mask_png: str, method: str = "telea
     return {
         "resultPath": str(result_path),
         "dataUrl": thumbs.to_data_url(rgb, max_size=None, fmt="PNG"),
+        "width": int(result.shape[1]),
+        "height": int(result.shape[0]),
         "notice": notice,
     }
 
