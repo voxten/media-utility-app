@@ -17,7 +17,7 @@ Pełny plan pierwotny: `C:\Users\Jakub\.claude\plans\napisz-mi-plan-przepisania-
 | 3+4: wspólne komponenty + wszystkie 7 narzędzi | ✅ | `64a1b26` |
 | 5: dopracowanie | ✅ (szczegóły w sekcji 5) | `b2a7353` + kolejny commit |
 | 6: pakowanie .exe | ✅ (szczegóły w sekcji 6) | commit „Package the app…” |
-| **7: sprzątanie starego Qt** | ⏳ do zrobienia | |
+| 7: sprzątanie starego Qt | ✅ (szczegóły w sekcji 7) | commit „Remove the legacy PyQt UI…” |
 
 Weryfikacja ostatnich faz:
 - `pytest`: 41/41 testów zielonych.
@@ -25,7 +25,7 @@ Weryfikacja ostatnich faz:
 - `scripts/e2e_ui.py` przeszedł dla converter, pdf, duplicates, watermark, progress i tts.
 - Pobieranie wideo: sprawdzenie linku (probe) działa, ale samo pobranie dostało **HTTP 403 od YouTube**. To raczej problem yt-dlp/YouTube niż nowego kodu (logika przeniesiona 1:1), ale nie zostało to potwierdzone.
 
-Stara aplikacja (`app.py` + `features/*/*_tab.py`) **dalej działa i jest nietknięta**. Usuwa się ją dopiero w fazie 7.
+**Migracja zakończona.** Stara aplikacja PyQt została usunięta w fazie 7 (jest w historii gita, np. w commicie `a6d2760`).
 
 ---
 
@@ -183,27 +183,41 @@ Wynik: `dist/MediaStudio/MediaStudio.exe` (one-folder, **221 MB**).
 
 ---
 
-## 7. Faza 7: sprzątanie (do zrobienia, najpierw zapytaj użytkownika)
+## 7. Faza 7: sprzątanie (ZROBIONE)
 
-1. Usuń `app.py` i stare zakładki Qt:
-   - `features/converter/converter_tab.py`
-   - `features/pdf_merger/pdf_merger.py`
-   - `features/duplicates/{video,image}_duplicate_tab.py`
-   - `features/tts/tts_tab.py`
-   - `features/download/yt_tab.py`
-   - `features/watermark/watermark_remover_tab.py`
-   - `features/progress_generator/progress_generator_tab.py` + `index.html` + `style.css` (wygląd jest przeniesiony do `frontend/src/features/progress/ProgressCard.tsx`)
-2. **Uwaga na `features/download/`:** `backend/core/settings.py::LEGACY_COOKIES` czyta stamtąd cookies jako fallback.
-   - Nie usuwaj plików cookies bez decyzji użytkownika.
-   - Najlepiej: zaproponuj ustawienie ścieżek w Ustawieniach → Pliki cookies, a dopiero potem usuń fallback.
-   - Przypomnij, że cookies były w historii gita, więc sesje YouTube/X warto wylogować.
-3. **Przed usunięciem zapytaj o:**
-   - `features/ui_generator/` (generatory sprite'ów Survival UI; nie są używane przez aplikację);
-   - `features/duplicates/folder_checker.py` (luźny skrypt CLI).
-4. Po usunięciu katalog `features/` może zniknąć cały. Wtedy sprawdź, czy nic nie importuje `features.*`: `backend/` nie importuje; jedyna zależność to `LEGACY_COOKIES`.
-5. `requirements.txt`: usuń `PyQt6`, `playwright`, `pypdf` (nieużywany, PDF robi PyMuPDF). Sprawdź `qtgui`/`qtwidgets` w `.venv` (śmieci).
-6. Nowy `README.md`: instalacja (`pip install -r requirements-dev.txt`, `npm ci`), dev (`npm run dev` + `python main.py --dev`), build (`python scripts/build.py`), testy.
-7. Po wszystkim: `pytest`, `npm run build`, `python scripts/e2e_ui.py`, zbudowany exe uruchomiony z innego katalogu. Potem commit.
+**Decyzje użytkownika:**
+- `ui_generator` i `folder_checker` przeniesione do `tools/`;
+- cookies zostają w `features/download/` z zapasowym odczytem;
+- stare buildy w `dist/` zostają.
+
+**Usunięte:** `app.py` i wszystkie zakładki Qt (`features/*/*_tab.py`, `pdf_merger.py`), `features/progress_generator/` (HTML/CSS przeniesione do `ProgressCard.tsx`) oraz wszystkie `features/**/__init__.py`.
+
+**W `features/` zostało tylko:**
+- `download/*_cookies.txt`, używane przez `settings.LEGACY_COOKIES`;
+- `duplicates/*_similarity_report.csv`, stare raporty użytkownika.
+
+**`requirements.txt`:** bez PyQt6, playwright i pypdf. LaMa (iopaint/torch) jest opisana jako opcjonalna.
+
+**README** przepisane: instalacja, dev, testy, build, układ projektu.
+
+**Nieruszane** (decyzja użytkownika albo pliki nieśledzone):
+- `Assets_Export/`, `*Survival_UI/`, `Modular_Item_Slots/`;
+- `venv/`, `qml/`, `controllers/`;
+- `video_similarity_report.csv`;
+- stare, ignorowane przez gita `app.spec` i `MediaUtilityApp.spec` w katalogu głównym (odnoszą się do usuniętego `app.py`, są nieaktualne).
+
+`.venv` nadal ma zainstalowane PyQt6 i playwright; spec je wyklucza, więc nie trafiają do exe. Można je odinstalować ręcznie.
+
+**Weryfikacja końcowa:**
+- `pytest` 43/43;
+- `npm run build`;
+- `scripts/build.py`: 221 MB, self-test PASSED;
+- `scripts/e2e_ui.py converter pdf duplicates watermark progress tts`: wszystko OK.
+
+**Ewentualne dalsze kroki:**
+- push i PR `feature/modern-ui` → `main` (tylko na prośbę użytkownika);
+- zasób wersji exe i instalator;
+- przeniesienie cookies do `%APPDATA%` i wylogowanie sesji (były w historii gita).
 
 ---
 
