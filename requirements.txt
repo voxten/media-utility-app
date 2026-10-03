@@ -1,0 +1,21 @@
+# Runtime dependencies (backend services). The old Qt UI additionally needs PyQt6 + playwright
+# until it is removed in the final migration phase.
+yt-dlp
+requests
+Pillow
+PyMuPDF
+pypdf
+opencv-python
+numpy
+imagehash
+pymediainfo
+edge-tts
+pyttsx3
+pydub
+audioop-lts; python_version >= "3.13"
+pywin32; sys_platform == "win32"
+send2trash
+
+# Legacy Qt UI (app.py)
+PyQt6
+playwright

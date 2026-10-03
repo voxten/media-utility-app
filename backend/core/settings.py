@@ -1,0 +1,94 @@
+"""Persistent user settings stored as JSON in the per-user app data directory."""
+
+import copy
+import json
+import threading
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+from backend.core.paths import app_data_dir, default_output_dir, resource_path
+
+MAX_RECENT = 8
+
+# Cookie files that used to live next to the downloader; still honoured when no path is configured.
+LEGACY_COOKIES = {
+    "youtube": resource_path("features", "download", "youtube_cookies.txt"),
+    "x": resource_path("features", "download", "x.com_cookies.txt"),
+}
+
+
+def default_settings() -> Dict[str, Any]:
+    return {
+        "theme": "system",  # system | light | dark
+        "language": "pl",  # pl | en
+        "outputDir": str(default_output_dir()),
+        "cookies": {"youtube": "", "x": ""},
+        "recentFolders": [],
+    }
+
+
+def _merge(defaults: Dict[str, Any], stored: Dict[str, Any]) -> Dict[str, Any]:
+    merged = copy.deepcopy(defaults)
+    for key, value in stored.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = _merge(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
+class Settings:
+    def __init__(self, path: Optional[Path] = None) -> None:
+        self.path = path or app_data_dir() / "settings.json"
+        self._lock = threading.Lock()
+        self._data = self._load()
+
+    def _load(self) -> Dict[str, Any]:
+        try:
+            stored = json.loads(self.path.read_text(encoding="utf-8"))
+            if isinstance(stored, dict):
+                return _merge(default_settings(), stored)
+        except (OSError, ValueError):
+            pass
+        return default_settings()
+
+    def _save(self) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = self.path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(self._data, indent=2, ensure_ascii=False), encoding="utf-8")
+        tmp.replace(self.path)
+
+    def all(self) -> Dict[str, Any]:
+        with self._lock:
+            return copy.deepcopy(self._data)
+
+    def get(self, key: str, default: Any = None) -> Any:
+        with self._lock:
+            return copy.deepcopy(self._data.get(key, default))
+
+    def update(self, patch: Dict[str, Any]) -> Dict[str, Any]:
+        """Deep-merge ``patch`` into the settings, persist and return the new state."""
+        with self._lock:
+            self._data = _merge(self._data, patch)
+            self._save()
+            return copy.deepcopy(self._data)
+
+    def add_recent_folder(self, folder: str) -> None:
+        with self._lock:
+            recent = [f for f in self._data.get("recentFolders", []) if f != folder]
+            self._data["recentFolders"] = [folder, *recent][:MAX_RECENT]
+            self._save()
+
+    def cookie_files(self) -> Dict[str, Optional[str]]:
+        """Resolved cookie file per site; configured path wins, legacy file is the fallback."""
+        configured = self.get("cookies", {})
+        result: Dict[str, Optional[str]] = {}
+        for site, legacy in LEGACY_COOKIES.items():
+            candidate = configured.get(site) or ""
+            if candidate and Path(candidate).is_file():
+                result[site] = candidate
+            elif legacy.is_file():
+                result[site] = str(legacy)
+            else:
+                result[site] = None
+        return result
