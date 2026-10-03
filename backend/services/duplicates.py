@@ -25,6 +25,22 @@ HASH_THRESHOLD = 12
 SAMPLE_POINTS = [0.1, 0.3, 0.5, 0.7, 0.9]
 THUMB_SIZE = (240, 160)
 
+PHASH_SIZE = 8
+PHASH_IMAGE = PHASH_SIZE * 4
+# Unnormalised DCT-II basis, identical to scipy.fftpack.dct(type=2, norm=None):
+# y[k] = 2 * sum_n x[n] * cos(pi * k * (2n + 1) / (2N)).
+_n = np.arange(PHASH_IMAGE)
+_DCT = 2 * np.cos(np.pi * _n[:, None] * (2 * _n[None, :] + 1) / (2 * PHASH_IMAGE))
+
+
+def phash(image: Image.Image) -> imagehash.ImageHash:
+    """Same result as imagehash.phash, without pulling SciPy (~70 MB) into the bundle."""
+    small = image.convert("L").resize((PHASH_IMAGE, PHASH_IMAGE), Image.Resampling.LANCZOS)
+    pixels = np.asarray(small, dtype=np.float64)
+    dct = _DCT @ pixels @ _DCT.T  # DCT along axis 0, then axis 1
+    low = dct[:PHASH_SIZE, :PHASH_SIZE]
+    return imagehash.ImageHash(low > np.median(low))
+
 
 @dataclass
 class MediaItem:
@@ -78,7 +94,7 @@ class ImageHasher:
                 size=path.stat().st_size,
                 width=width,
                 height=height,
-                hashes=[imagehash.phash(pil_img)],
+                hashes=[phash(pil_img)],
                 thumb=thumbs.to_data_url(pil_img, THUMB_SIZE),
             )
         except Exception:  # noqa: BLE001 - corrupted files are reported by the caller
@@ -123,7 +139,7 @@ class VideoHasher:
                 if not ok:
                     continue
                 img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-                hashes.append(imagehash.phash(img))
+                hashes.append(phash(img))
                 if idx == len(SAMPLE_POINTS) // 2:
                     middle = img
             return hashes, middle

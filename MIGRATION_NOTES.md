@@ -16,7 +16,7 @@ Pełny plan pierwotny: `C:\Users\Jakub\.claude\plans\napisz-mi-plan-przepisania-
 | 2: shell pywebview, most Python↔JS, Home, Ustawienia | ✅ | `b14b3a1` |
 | 3+4: wspólne komponenty + wszystkie 7 narzędzi | ✅ | `64a1b26` |
 | 5: dopracowanie | ✅ (szczegóły w sekcji 5) | `b2a7353` + kolejny commit |
-| **6: pakowanie .exe** | ⏳ do zrobienia | |
+| 6: pakowanie .exe | ✅ (szczegóły w sekcji 6) | commit „Package the app…” |
 | **7: sprzątanie starego Qt** | ⏳ do zrobienia | |
 
 Weryfikacja ostatnich faz:
@@ -152,25 +152,34 @@ Pomysły na później (niezrobione):
 
 ---
 
-## 6. Faza 6: pakowanie .exe (do zrobienia)
+## 6. Faza 6: pakowanie .exe (ZROBIONE)
 
-1. **`scripts/build.py`:**
-   - `npm ci && npm run build` w `frontend/`;
-   - potem PyInstaller z nowym `.spec`;
-   - na koniec opcjonalnie odpal zbudowany exe z **innego katalogu niż repo**, żeby wyłapać ścieżki względne.
-2. **`MediaUtilityApp.spec`** (stary dotyczy `app.py`; uwaga: `*.spec` jest w `.gitignore`, więc trzeba dodać wyjątek albo generować spec w skrypcie):
-   - entry: `main.py`, `--windowed`, nazwa np. `MediaStudio`;
-   - `datas`: `("frontend/dist", "frontend/dist")`; `resource_path()` szuka tam (`sys._MEIPASS`);
-   - `hiddenimports` / hooki: `webview.platforms.winforms`, `webview.platforms.edgechromium`, `clr_loader`, `pythonnet` (sprawdź `pyinstaller-hooks-contrib`, który ma hook dla pywebview);
-   - **wyklucz** `PyQt6`, `playwright` i `tkinter`, bo bardzo zmniejszają rozmiar;
-   - `pymediainfo` potrzebuje `MediaInfo.dll`: sprawdź, czy hook ją bierze, inaczej dodaj do `binaries`;
-   - `edge_tts`, `yt_dlp`, `imagehash`, `cv2`, `fitz`: sprawdź po buildzie, czy importy działają (`deps.check_dependencies` + ręczny test narzędzi).
-3. **ffmpeg** nie jest bundlowany (u użytkownika jest w `C:\ffmpeg\bin`). Ustawienia pokazują jego brak. Decyzję o bundlowaniu zostaw użytkownikowi.
-4. **WebView2 Runtime** jest w Windows 11; na Windows 10 może być potrzebny bootstrapper. Dodaj notkę w README.
-5. Wersja: `backend/__init__.py::APP_VERSION`, `pyproject.toml` i `frontend/package.json` (dziś wszystkie 0.5.0).
-6. `requirements.txt` ma jeszcze PyQt6 i playwright (dla starego UI); usuwasz je w fazie 7.
-7. Ikona exe: `--icon assets/app.ico`. Dołącz też `assets/app.ico` do `datas`, bo `main.py` ustawia ją oknu przez `resource_path("assets", "app.ico")`.
-8. Mica wymaga pythonnet (`System.Drawing`). Po zamrożeniu sprawdź, że `enable_mica` dalej działa; jeśli nie, aplikacja wraca do nieprzezroczystego tła przez event `app:mica`.
+```bash
+python scripts/build.py                  # npm build → PyInstaller → self-test spoza repo
+python scripts/build.py --skip-frontend  # gdy frontend/dist jest aktualny
+```
+
+Wynik: `dist/MediaStudio/MediaStudio.exe` (one-folder, **221 MB**).
+
+- Spec: `packaging/MediaStudio.spec`. Ma wyjątek `!packaging/*.spec` w `.gitignore`.
+  - `datas`: `frontend/dist`, `assets/app.ico`, `assets/app.png`;
+  - ikona exe: `assets/app.ico`;
+  - UPX wyłączony (fałszywe alarmy antywirusów);
+  - **excludes**: PyQt*, playwright, `features`, **scipy, pywt**, tkinter, matplotlib, pytest.
+- **SciPy wycięty** (−73 MB): `services/duplicates.py::phash` to własna implementacja DCT-II (numpy), **bit w bit zgodna** z `imagehash.phash` (test `test_phash_matches_imagehash_reference`).
+  - `imagehash` importuje scipy/pywt leniwie, więc nie wolno wołać `imagehash.phash/whash/dhash...`, bo w exe zabraknie scipy.
+- **Self-test:** `MediaStudio.exe --selftest raport.json` (`backend/selftest.py`).
+  - Sprawdza importy (webview, clr, cv2, fitz, imagehash, pymediainfo, yt_dlp, edge_tts, pyttsx3, pydub, send2trash).
+  - Uruchamia offline konwerter, PDF, duplikaty (obrazy), znak wodny, MediaInfo, obecność frontendu i ikony oraz zapis do stdout/stderr.
+  - `build.py` odpala go z katalogu tymczasowego.
+- `main.ensure_output_streams()`: jeśli `sys.stdout/stderr` są `None` (stare zachowanie trybu `--windowed`), wyjście idzie do `%APPDATA%MediaStudiologsapp.log`.
+  - W obecnym PyInstallerze 6.21 + Python 3.14 strumienie istnieją nawet przy uruchomieniu bez uchwytów, co sprawdzono przez `DETACHED_PROCESS`. To zabezpieczenie na przyszłość.
+- **Sprawdzone ręcznie:** exe uruchomiony spoza repo pokazuje okno z ikoną i **Mica działa po zamrożeniu**; zamyka się czysto (kod 0).
+- **Niesprawdzone w exe:** TTS (Edge/pyttsx3), pobieranie, skan duplikatów **wideo** (cv2 + ffmpeg DLL z opencv) i eksport PNG generatora. Kod jest ten sam co w trybie źródłowym, gdzie to działa.
+- **ffmpeg nie jest bundlowany**, bo jest potrzebny tylko yt-dlp/pydub. Brak widać w Ustawieniach → Zależności.
+- WebView2 Runtime jest wbudowany w Windows 11; na Windows 10 może wymagać instalacji (do README).
+- `dist/` zawiera też **stare** buildy użytkownika (`dist/MediaUtilityApp`, `dist/app.exe`), których nie ruszano.
+- Do zrobienia opcjonalnie: zasób wersji pliku exe (`version=` w EXE), instalator (Inno Setup / MSIX).
 
 ---
 

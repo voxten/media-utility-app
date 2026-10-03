@@ -2,6 +2,7 @@
 
     python main.py          # production: serves frontend/dist
     python main.py --dev    # development: loads the Vite dev server (npm run dev) with HMR + DevTools
+    MediaStudio.exe --selftest report.json   # bundle smoke test (used by scripts/build.py)
 """
 
 import argparse
@@ -48,11 +49,33 @@ def resolve_dark(theme: str) -> bool:
     return system_prefers_dark() if theme == "system" else theme == "dark"
 
 
+def ensure_output_streams() -> None:
+    """A --windowed PyInstaller build has no stdout/stderr (None); send them to a log file.
+
+    Without this, any print() or traceback.print_exc() in a worker raises and the job would
+    never report its error to the UI.
+    """
+    if sys.stdout is not None and sys.stderr is not None:
+        return
+    log_dir = app_data_dir() / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log = open(log_dir / "app.log", "a", encoding="utf-8", buffering=1)  # noqa: SIM115 - lives for the process
+    sys.stdout = sys.stdout or log
+    sys.stderr = sys.stderr or log
+
+
 def main() -> None:
+    ensure_output_streams()
     parser = argparse.ArgumentParser(description=APP_NAME)
     parser.add_argument("--dev", action="store_true", help="load the Vite dev server")
     parser.add_argument("--url", default=DEV_URL, help="dev server URL (with --dev)")
+    parser.add_argument("--selftest", metavar="REPORT", help="run the bundle smoke test, write JSON and exit")
     args = parser.parse_args()
+
+    if args.selftest:
+        from backend import selftest
+
+        sys.exit(0 if selftest.run(args.selftest) else 1)
 
     settings = Settings()
     bus = EventBus()

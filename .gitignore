@@ -182,3 +182,4 @@ cython_debug/
 .cursorindexingignore
 # Frontend sources (the generic "lib/" rule above targets Python build dirs)
 !frontend/src/lib/
+!packaging/*.spec

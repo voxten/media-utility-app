@@ -71,3 +71,13 @@ def test_export_csv(tmp_path):
 
 def test_empty_folder(tmp_path, ctx):
     assert duplicates.scan(ctx, str(tmp_path), "video")["groups"] == []
+
+
+def test_phash_matches_imagehash_reference():
+    import imagehash
+
+    rng = np.random.default_rng(7)
+    images = [_pattern(seed) for seed in range(5)]
+    images += [Image.fromarray(rng.integers(0, 255, (h, w, 3), dtype=np.uint8)) for h, w in ((50, 80), (300, 200), (33, 33))]
+    for img in images:
+        assert duplicates.phash(img) == imagehash.phash(img)
