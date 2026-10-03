@@ -9,6 +9,7 @@ const SETTINGS_KEY = "mock-settings";
 const DEFAULT_SETTINGS: Settings = {
   theme: "system",
   language: "pl",
+  mica: false,
   outputDir: "C:\\Users\\demo\\Downloads",
   cookies: { youtube: "", x: "" },
   recentFolders: ["C:\\Users\\demo\\Pictures", "C:\\Users\\demo\\Videos"],

@@ -29,6 +29,7 @@ class _Context:
         self.settings = settings
         self.jobs = JobManager(bus.emit)
         self.window: Any = None
+        self.mica = False  # set by main.py once the backdrop is active
 
 
 class _Namespace:
@@ -48,6 +49,8 @@ class AppApi(_Namespace):
             "version": APP_VERSION,
             "python": sys.version.split()[0],
             "platform": platform.platform(),
+            "mica": self._ctx.mica,
+            "micaSupported": win_theme.mica_supported(),
         }
 
     def set_title_bar_theme(self, dark: bool) -> bool:
@@ -253,6 +256,9 @@ class Api:
     def _attach_window(self, window: Any) -> None:
         self._ctx.window = window
         self._ctx.bus.attach(window)
+
+    def _set_mica(self, active: bool) -> None:
+        self._ctx.mica = active
 
     def _detach_window(self) -> None:
         self._ctx.bus.detach()

@@ -108,3 +108,17 @@ def test_progress_image_save_png(tmp_path):
     result = progress_image.save_png(url, str(tmp_path / "card"))
     assert result["outPath"].endswith("card.png")
     assert Image.open(result["outPath"]).size == (10, 10)
+
+
+def test_watermark_mask_is_dilated_to_cover_edges(tmp_path, ctx, monkeypatch):
+    # A hand-painted mask usually stops just short of the watermark's edge; without
+    # dilation those edge pixels bleed back into the inpainted area.
+    monkeypatch.setattr(watermark, "cache_dir", lambda: tmp_path)
+    img = np.full((240, 320, 3), 140, dtype=np.uint8)
+    img[100:130, 120:220] = (220, 40, 40)
+    src = tmp_path / "wm.png"
+    watermark.write_image(img, str(src))
+
+    result = watermark.remove(ctx, str(src), _mask_png((240, 320), (121, 101, 219, 129)), "telea")
+    out = watermark.read_image(result["resultPath"]).astype(int)
+    assert np.abs(out[100:130, 120:220] - 140).max() < 20

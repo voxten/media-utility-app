@@ -93,7 +93,11 @@
     "about": "About",
     "version": "Version {{version}}",
     "python": "Python {{version}}",
-    "backendMock": "Preview mode (no Python backend)"
+    "backendMock": "Preview mode (no Python backend)",
+    "mica": "Mica effect",
+    "micaDescription": "Windows 11 translucent window background tinted by your wallpaper.",
+    "micaRestart": "The change takes effect after restarting the app.",
+    "micaUnsupported": "Requires Windows 11 (22H2 or later)."
   },
   "common": {
     "browse": "Browse",

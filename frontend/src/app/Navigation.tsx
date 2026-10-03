@@ -49,14 +49,7 @@ const useStyles = makeStyles({
   },
   header: { display: "flex", alignItems: "center", gap: "8px", padding: "10px 12px 6px 10px" },
   brand: { display: "flex", alignItems: "center", gap: "10px", minWidth: 0 },
-  logo: {
-    width: "26px",
-    height: "26px",
-    borderRadius: "7px",
-    background: `linear-gradient(135deg, ${tokens.colorBrandBackground}, #8a5cf6)`,
-    flexShrink: 0,
-    boxShadow: tokens.shadow4,
-  },
+  logo: { width: "26px", height: "26px", flexShrink: 0, display: "block" },
   brandText: { flexGrow: 1 },
   search: { marginLeft: "auto" },
   jobsLabel: { display: "flex", alignItems: "center", gap: "8px", width: "100%" },
@@ -162,7 +155,7 @@ export function Navigation({ route, collapsed, onToggle }: NavigationProps) {
           <Hamburger onClick={onToggle} />
         </Tooltip>
         <div className={styles.brand}>
-          <div className={styles.logo} />
+          <img className={styles.logo} src="./app.png" alt="" />
           <Subtitle2 className={styles.brandText}>{t("app.name")}</Subtitle2>
         </div>
         <Tooltip content={searchLabel} relationship="label">

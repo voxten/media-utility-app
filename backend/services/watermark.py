@@ -14,6 +14,7 @@ from backend.core.paths import cache_dir
 
 METHODS = ("telea", "ns", "lama")
 OUTPUT_FORMATS = (".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff")
+MASK_DILATE_PX = 3
 
 
 def lama_available() -> bool:
@@ -57,7 +58,10 @@ def decode_mask(mask_png: str, shape: tuple) -> np.ndarray:
     if mask.shape[:2] != shape[:2]:
         mask = cv2.resize(mask, (shape[1], shape[0]), interpolation=cv2.INTER_NEAREST)
     _, binary = cv2.threshold(mask, 10, 255, cv2.THRESH_BINARY)
-    return binary
+    # Painted masks tend to stop just short of the watermark; uncovered edge pixels would
+    # otherwise be used as source colour and bleed into the filled area.
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * MASK_DILATE_PX + 1, 2 * MASK_DILATE_PX + 1))
+    return cv2.dilate(binary, kernel)
 
 
 def _split_alpha(img: np.ndarray) -> tuple:

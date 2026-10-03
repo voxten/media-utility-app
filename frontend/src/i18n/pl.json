@@ -95,7 +95,11 @@
     "about": "O aplikacji",
     "version": "Wersja {{version}}",
     "python": "Python {{version}}",
-    "backendMock": "Tryb podglądu (bez backendu Python)"
+    "backendMock": "Tryb podglądu (bez backendu Python)",
+    "mica": "Efekt Mica",
+    "micaDescription": "Półprzezroczyste tło okna w stylu Windows 11, dopasowane do tapety.",
+    "micaRestart": "Zmiana zostanie zastosowana po ponownym uruchomieniu aplikacji.",
+    "micaUnsupported": "Wymaga Windows 11 (22H2 lub nowszego)."
   },
   "common": {
     "browse": "Przeglądaj",

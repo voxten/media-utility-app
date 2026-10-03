@@ -8,6 +8,7 @@ import {
   Option,
   Skeleton,
   SkeletonItem,
+  Switch,
   tokens,
 } from "@fluentui/react-components";
 import {
@@ -20,6 +21,7 @@ import {
   Info24Regular,
   LocalLanguage24Regular,
   Settings24Filled,
+  Sparkle24Regular,
   Video24Regular,
   Warning16Filled,
   WrenchScrewdriver24Regular,
@@ -31,6 +33,7 @@ import { SettingGroup, SettingRow } from "../../components/SettingRow";
 import { api, getBackendMode } from "../../lib/bridge";
 import type { AppInfo, Dependency, Language, ThemePreference } from "../../lib/types";
 import { useSettings } from "../../stores/settings";
+import { useUi } from "../../stores/ui";
 
 const useStyles = makeStyles({
   dropdown: { minWidth: "180px" },
@@ -113,6 +116,8 @@ export default function SettingsPage() {
   const settings = useSettings((s) => s.settings)!;
   const update = useSettings((s) => s.update);
   const [info, setInfo] = useState<AppInfo | null>(null);
+  const micaSupported = useUi((s) => s.micaSupported);
+  const micaActive = useUi((s) => s.mica);
 
   useEffect(() => {
     api.app.info().then(setInfo).catch(() => undefined);
@@ -155,6 +160,19 @@ export default function SettingsPage() {
                 </Option>
               ))}
             </Dropdown>
+          </SettingRow>
+          <SettingRow
+            icon={Sparkle24Regular}
+            title={t("settings.mica")}
+            description={
+              !micaSupported
+                ? t("settings.micaUnsupported")
+                : settings.mica !== micaActive
+                  ? t("settings.micaRestart")
+                  : t("settings.micaDescription")
+            }
+          >
+            <Switch checked={!!settings.mica} disabled={!micaSupported} onChange={(_, d) => update({ mica: d.checked })} />
           </SettingRow>
         </SettingGroup>
       </Section>

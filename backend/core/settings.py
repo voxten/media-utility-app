@@ -21,6 +21,7 @@ def default_settings() -> Dict[str, Any]:
     return {
         "theme": "system",  # system | light | dark
         "language": "pl",  # pl | en
+        "mica": True,  # Windows 11 backdrop; applied on next start
         "outputDir": str(default_output_dir()),
         "cookies": {"youtube": "", "x": ""},
         "recentFolders": [],

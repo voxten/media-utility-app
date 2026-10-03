@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { FluentProvider, makeStyles, Spinner, tokens } from "@fluentui/react-components";
 import i18n from "../i18n";
-import { api, ready } from "../lib/bridge";
+import { api, on, ready } from "../lib/bridge";
 import { initJobEvents } from "../stores/jobs";
 import { useSettings } from "../stores/settings";
+import { useUi } from "../stores/ui";
 import { Shell } from "./Shell";
 import { darkTheme, lightTheme, useIsDark } from "./theme";
 
@@ -14,8 +15,12 @@ const useStyles = makeStyles({
 async function boot(load: () => Promise<unknown>) {
   const mode = await ready;
   initJobEvents(); // subscribe before the backend starts delivering events
+  on("app:mica", ({ active }) => useUi.setState({ mica: active }));
   await load();
-  if (mode === "native") await api.app.ready();
+  if (mode === "native") {
+    const info = await api.app.ready();
+    useUi.setState({ mica: !!info.mica, micaSupported: !!info.micaSupported });
+  }
 }
 
 export function App() {
@@ -24,6 +29,7 @@ export function App() {
   const load = useSettings((s) => s.load);
   const [bootError, setBootError] = useState<string | null>(null);
   const dark = useIsDark(settings?.theme ?? "system");
+  const mica = useUi((s) => s.mica);
   const theme = dark ? darkTheme : lightTheme;
 
   useEffect(() => {
@@ -37,10 +43,11 @@ export function App() {
   }, [settings?.language]);
 
   useEffect(() => {
-    document.body.style.backgroundColor = theme.colorNeutralBackground2;
+    // With Mica the window base must stay transparent so DWM's backdrop shows through.
+    document.body.style.backgroundColor = mica ? "transparent" : theme.colorNeutralBackground2;
     document.documentElement.style.colorScheme = dark ? "dark" : "light";
     api.app.setTitleBarTheme(dark).catch(() => undefined);
-  }, [dark, theme]);
+  }, [dark, theme, mica]);
 
   return (
     <FluentProvider theme={theme}>

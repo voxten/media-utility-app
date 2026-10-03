@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState, type ComponentType, type LazyExoticComponent } from "react";
-import { makeStyles, Spinner, tokens, Toaster } from "@fluentui/react-components";
+import { makeStyles, mergeClasses, Spinner, tokens, Toaster } from "@fluentui/react-components";
 import { ConfirmHost } from "../components/ConfirmDialog";
 import { TOASTER_ID } from "../components/notify";
 import { useRoute } from "../lib/router";
@@ -24,6 +24,14 @@ const TOOL_PAGES: Record<string, LazyExoticComponent<ComponentType>> = {
 
 const NAV_COLLAPSED_KEY = "nav-collapsed";
 
+// Overrides of the tokens Fluent's Nav paints with, scoped to the shell (portals unaffected).
+const MICA_TOKENS = {
+  "--colorNeutralBackground4": "transparent",
+  "--colorNeutralBackground4Hover": "rgba(128, 128, 128, 0.12)",
+  "--colorNeutralBackground4Pressed": "rgba(128, 128, 128, 0.18)",
+  "--colorNeutralBackground4Selected": "rgba(128, 128, 128, 0.14)",
+} as React.CSSProperties;
+
 const useStyles = makeStyles({
   shell: {
     display: "flex",
@@ -42,6 +50,8 @@ const useStyles = makeStyles({
     overflow: "hidden",
     position: "relative",
   },
+  // Mica: transparent base; nav surfaces become translucent overlays instead of solid greys.
+  mica: { backgroundColor: "transparent" },
   loading: { height: "100%", display: "grid", placeItems: "center" },
   // Subtle WinUI-like page entrance; disabled by prefers-reduced-motion in global.css.
   page: {
@@ -71,6 +81,7 @@ export function Shell() {
   const styles = useStyles();
   const route = useRoute();
   const [collapsed, setCollapsed] = useState(readCollapsed);
+  const mica = useUi((s) => s.mica);
 
   useEffect(() => {
     try {
@@ -95,7 +106,7 @@ export function Shell() {
   }, []);
 
   return (
-    <div className={styles.shell}>
+    <div className={mergeClasses(styles.shell, mica && styles.mica)} style={mica ? MICA_TOKENS : undefined}>
       <Navigation route={route} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
       <main className={styles.content}>
         <Suspense

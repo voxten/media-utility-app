@@ -6,6 +6,7 @@ export type Language = "pl" | "en";
 export interface Settings {
   theme: ThemePreference;
   language: Language;
+  mica: boolean;
   outputDir: string;
   cookies: { youtube: string; x: string };
   recentFolders: string[];
@@ -16,6 +17,8 @@ export interface AppInfo {
   version: string;
   python: string;
   platform: string;
+  mica?: boolean;
+  micaSupported?: boolean;
 }
 
 export interface Dependency {
@@ -66,6 +69,7 @@ export interface BridgeEvents {
   "job:error": { jobId: string; error: string };
   "job:cancelled": { jobId: string };
   "files:dropped": { paths: string[] };
+  "app:mica": { active: boolean };
 }
 
 export type BridgeEventName = keyof BridgeEvents;

@@ -15,7 +15,7 @@ Pełny plan pierwotny: `C:\Users\Jakub\.claude\plans\napisz-mi-plan-przepisania-
 | 1: logika w `backend/services` + testy | ✅ | `2dc248b` |
 | 2: shell pywebview, most Python↔JS, Home, Ustawienia | ✅ | `b14b3a1` |
 | 3+4: wspólne komponenty + wszystkie 7 narzędzi | ✅ | `64a1b26` |
-| **5: dopracowanie** | ⏳ do zrobienia | |
+| 5: dopracowanie | ✅ (szczegóły w sekcji 5) | `b2a7353` + kolejny commit |
 | **6: pakowanie .exe** | ⏳ do zrobienia | |
 | **7: sprzątanie starego Qt** | ⏳ do zrobienia | |
 
@@ -122,33 +122,33 @@ Tłumaczenia dodawaj przez `node scripts/merge-i18n.mjs plik.json`, gdzie plik m
 
 ---
 
-## 5. Faza 5: dopracowanie (do zrobienia)
+## 5. Faza 5: dopracowanie (ZROBIONE)
 
-1. **Panel zadań (Jobs drawer)**
-   - `OverlayDrawer` po prawej, otwierany ze stopki nawigacji (licznik „N zadań w toku” w `Navigation.tsx`).
-   - Pokazuje listę z `useJobs`: status, postęp, Anuluj, przejście do narzędzia.
-   - Można reużyć `JobStatusBadge`, `jobMessage`, układ wierszy z `HomePage.tsx` (`RecentJobs`).
-2. **Powiadomienia o zakończeniu zadania poza stroną narzędzia**
-   - `useJobRunner` celowo **nie** odpala callbacków dla zadań zakończonych, gdy strona była odmontowana.
-   - Dodaj globalny listener `job:done/error` w `App`/`Shell`, który pokaże toast z linkiem do narzędzia, jeśli bieżąca trasa ≠ narzędzie zadania (`job.kind.split(".")[0]`).
-   - Uważaj, żeby nie dublować toastu, gdy użytkownik jest na stronie narzędzia.
-3. **Command palette (Ctrl+K)**
-   - `Dialog` z `SearchBox` i listą `TOOLS` (`app/tools.tsx`) plus Ustawienia i Start, z nawigacją strzałkami.
-   - Skrót rejestruj globalnie w `Shell`.
-4. **Animacje przejść stron**
-   - Wystarczy lekki fade/slide na kontenerze strony w `Shell.tsx` (CSS `@keyframes` w `makeStyles` albo pakiet `motion`).
-   - Szanuj `prefers-reduced-motion`; jest już w `global.css`.
-5. **Mica / tło okna**
-   - `backend/core/win_theme.py` ma stałe `DWMWA_SYSTEMBACKDROP_TYPE` i `DWMSBT_MAINWINDOW`, ale nie są użyte.
-   - Mica wymaga przezroczystego tła WebView2; to niepewne w pywebview/WinForms, więc traktuj jako **spike**.
-   - Jeśli się nie uda, zostaw obecne tło `#202020` / `#f3f3f3`.
-6. **Drobne poprawki zauważone w trakcie**
-   - NavDrawer animuje wysunięcie przy starcie aplikacji. Wyłącz animację przy pierwszym renderze.
-   - Wskaźnik zaznaczenia w rozwiniętym menu jest mało widoczny.
-   - Znak wodny / Telea: dobrze byłoby **poszerzyć maskę (dilate) o 2–4 px** w `services/watermark.py::decode_mask` (`cv2.dilate`). Krawędzie znaku nieobjęte maską przenikają do środka. Dodaj test.
-   - `stores/jobs.ts` nigdy nie czyści starych zadań (`clearFinished` istnieje, ale nie jest używane). Podepnij je w panelu zadań.
-   - Strona startowa: „ostatnie zadania” znikają po restarcie (stan jest tylko w pamięci). To akceptowalne, ewentualnie trzymaj historię w settings.
-7. **Ikona aplikacji:** `.ico` do okna (`webview.start(icon=...)` działa tylko na części platform) i do PyInstallera.
+Co zostało zrobione:
+- **Panel zadań** (`app/JobsPanel.tsx`): OverlayDrawer z prawej, otwierany z pozycji „Zadania” w stopce nawigacji (badge z liczbą trwających) albo z palety.
+  - „Wyczyść zakończone” tylko **ukrywa** zadania (`dismissed`); strony narzędzi zachowują swoje wyniki.
+- **Toasty dla zadań zakończonych poza stroną narzędzia** (`app/useJobNotifications.ts`). `download.probe` i `pdf.inspect` są wyciszone.
+- **Paleta Ctrl+K** (`app/CommandPalette.tsx`): narzędzia, Start, Ustawienia, panel zadań, przełączanie motywu i języka.
+- Przycisk lupy w nagłówku nawigacji i w railu.
+- **Animacja wejścia strony** (`Shell.tsx`, klasa `page`).
+- NavDrawer bez animacji przy starcie (`surfaceMotion={null}`).
+- `useNotify` jest zmemoizowany.
+- **Znak wodny:** maska jest poszerzana o `MASK_DILATE_PX = 3` (`services/watermark.py`). Jest na to test.
+- **Ikona:** `scripts/make_icon.py` generuje `assets/app.ico`, `assets/app.png` i `frontend/public/app.png`.
+  - Ikona okna w trybie dev idzie przez `win_theme.set_window_icon` (`WM_SETICON`).
+  - Logo w nawigacji to `./app.png`.
+- **Mica** (Windows 11 22H2+, build ≥ 22621), ustawienie `mica` (domyślnie `true`):
+  - okno tworzone z `transparent=True`;
+  - `win_theme.enable_mica`: BackColor formularza = czarny (przez pythonnet `Invoke`), `DwmExtendFrameIntoClientArea(-1)`, `DWMWA_SYSTEMBACKDROP_TYPE=2`;
+  - backend wysyła event `app:mica`, a frontend (`stores/ui.ts`) robi przezroczyste tylko `body` i bazę Shell; tokeny `colorNeutralBackground4*` są nadpisane zmiennymi CSS na półprzezroczyste;
+  - zmiana przełącznika w Ustawieniach działa po restarcie;
+  - sprawdzone zrzutem prawdziwego okna.
+  - **Uwaga:** bez czarnego BackColor przezroczyste okno pywebview jest **białe**, a nie przezroczyste.
+
+Pomysły na później (niezrobione):
+- historia zadań między uruchomieniami;
+- wyraźniejszy wskaźnik zaznaczenia w menu;
+- jasny motyw z Mica sprawdzony tylko teoretycznie (DWM wybiera wariant według `DWMWA_USE_IMMERSIVE_DARK_MODE`, który ustawiamy przy zmianie motywu).
 
 ---
 
@@ -169,6 +169,8 @@ Tłumaczenia dodawaj przez `node scripts/merge-i18n.mjs plik.json`, gdzie plik m
 4. **WebView2 Runtime** jest w Windows 11; na Windows 10 może być potrzebny bootstrapper. Dodaj notkę w README.
 5. Wersja: `backend/__init__.py::APP_VERSION`, `pyproject.toml` i `frontend/package.json` (dziś wszystkie 0.5.0).
 6. `requirements.txt` ma jeszcze PyQt6 i playwright (dla starego UI); usuwasz je w fazie 7.
+7. Ikona exe: `--icon assets/app.ico`. Dołącz też `assets/app.ico` do `datas`, bo `main.py` ustawia ją oknu przez `resource_path("assets", "app.ico")`.
+8. Mica wymaga pythonnet (`System.Drawing`). Po zamrożeniu sprawdź, że `enable_mica` dalej działa; jeśli nie, aplikacja wraca do nieprzezroczystego tła przez event `app:mica`.
 
 ---
 
