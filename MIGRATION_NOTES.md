@@ -1,0 +1,207 @@
+# Przepisanie UI: notatka przekazania (fazy 5–7)
+
+Notatka dla agenta, który kończy migrację Media Utility App z PyQt6 na **pywebview + React + Fluent UI v9**.
+Branch roboczy: `feature/modern-ui`. Przeczytaj całość przed zmianami.
+
+Pełny plan pierwotny: `C:\Users\Jakub\.claude\plans\napisz-mi-plan-przepisania-memoized-octopus.md` (może już nie istnieć).
+
+---
+
+## 1. Stan na dziś
+
+| Faza | Status | Commit |
+|---|---|---|
+| 0: porządki, test pywebview na Py 3.14 | ✅ | `a6d2760` (commit stanu sprzed migracji) |
+| 1: logika w `backend/services` + testy | ✅ | `2dc248b` |
+| 2: shell pywebview, most Python↔JS, Home, Ustawienia | ✅ | `b14b3a1` |
+| 3+4: wspólne komponenty + wszystkie 7 narzędzi | ✅ | `64a1b26` |
+| **5: dopracowanie** | ⏳ do zrobienia | |
+| **6: pakowanie .exe** | ⏳ do zrobienia | |
+| **7: sprzątanie starego Qt** | ⏳ do zrobienia | |
+
+Weryfikacja ostatnich faz:
+- `pytest`: 41/41 testów zielonych.
+- `npm run build` przechodzi.
+- `scripts/e2e_ui.py` przeszedł dla converter, pdf, duplicates, watermark, progress i tts.
+- Pobieranie wideo: sprawdzenie linku (probe) działa, ale samo pobranie dostało **HTTP 403 od YouTube**. To raczej problem yt-dlp/YouTube niż nowego kodu (logika przeniesiona 1:1), ale nie zostało to potwierdzone.
+
+Stara aplikacja (`app.py` + `features/*/*_tab.py`) **dalej działa i jest nietknięta**. Usuwa się ją dopiero w fazie 7.
+
+---
+
+## 2. Architektura (skrót)
+
+```
+main.py                      entry: okno pywebview; --dev ładuje Vite (http://localhost:5173)
+backend/
+  bridge/api.py              window.pywebview.api.<namespace>.<metoda>; tylko delegacja
+  bridge/events.py           EventBus: Python→JS batchowo przez run_js("window.__bridge.emitBatch(...)")
+  core/jobs.py               JobManager + JobContext (progress/log/partial/cancel), throttling 10/s
+  core/settings.py           %APPDATA%\MediaStudio\settings.json (+ LEGACY_COOKIES fallback)
+  core/paths.py              resource_path() działa też po zamrożeniu (sys._MEIPASS)
+  core/{thumbs,system,deps,win_theme}.py
+  services/{converter,pdf,duplicates,tts,download,watermark,progress_image}.py
+frontend/ (React 19 + TS 5.9 + Vite 8 + Fluent UI v9 + zustand + react-i18next + dnd-kit + html-to-image)
+  src/lib/bridge.ts          typowane API + on(event) + mock backendu (src/lib/mock.ts) poza pywebview
+  src/lib/useJobRunner.ts    start/cancel/callbacki zadania na stronie
+  src/stores/jobs.ts         globalny rejestr zadań z eventów job:*
+  src/app/{App,Shell,Navigation,tools,theme}.tsx
+  src/components/            ActionBar, DropZone, LogPanel, Panel, PathPicker, SettingRow, ...
+  src/features/<tool>/       strony narzędzi
+  src/i18n/{pl,en}.json
+tests/                       pytest dla backendu
+scripts/e2e_ui.py            test E2E w prawdziwym oknie (podmienia natywne dialogi w JS)
+```
+
+**Przepływ zadania:**
+1. Strona woła `api.x.start(...)` i od razu dostaje `jobId`.
+2. Backend wysyła eventy `job:started|progress|log|partial|done|error|cancelled`.
+3. `stores/jobs.ts` je zbiera, a strona czyta stan przez `useJobRunner(key)`.
+
+**Komunikaty z backendu to klucze i18n**, np. `ctx.progress(50, "converter.status.converting", {"file": name})`. Frontend tłumaczy je przez `t(key, params)`.
+
+---
+
+## 3. Uruchamianie i testy
+
+```bash
+.venv/Scripts/python.exe -m pytest                      # backend
+cd frontend && npm run dev                              # UI w przeglądarce z mockiem backendu
+python main.py --dev                                    # prawdziwe okno + Vite HMR + DevTools
+cd frontend && npm run build                            # check-i18n + tsc + vite build → frontend/dist
+python main.py                                          # prod: serwuje frontend/dist
+python scripts/e2e_ui.py converter pdf                  # E2E (wymaga buildu); bez argumentów = wszystko
+```
+
+W `frontend/package.json` są skrypty `check-i18n` i `build`.
+
+Tłumaczenia dodawaj przez `node scripts/merge-i18n.mjs plik.json`, gdzie plik ma postać `{ "pl": {...}, "en": {...} }`.
+
+---
+
+## 4. Pułapki (nauczone na błędach, czytaj!)
+
+**Bezpieczeństwo i pliki użytkownika**
+- **Pliki cookies** `features/download/youtube_cookies.txt` i `x.com_cookies.txt`:
+  - są w gicie (to znany problem; użytkownik zdecydował „zostaw na razie”);
+  - **yt-dlp nadpisuje je przy każdym pobraniu**, bo zapisuje odświeżone cookies.
+
+  Zasady:
+  - **nigdy ich nie commituj**;
+  - po testach pobierania przywróć je przez `git checkout -- features/download/youtube_cookies.txt`;
+  - `x.com_cookies.txt` był zmodyfikowany przez użytkownika **przed** migracją, więc go nie ruszaj.
+- Folderów `Assets_Export/`, `HighRes_Survival_UI/`, `ModernSurvival_UI/`, `Modular_Item_Slots/`, `SurvivalUI_Export/`, `venv/`, `qml/`, `controllers/` oraz pliku `video_similarity_report.csv` **nie ruszaj**. Użytkownik wybrał „Nie ruszaj”.
+
+**Frontend / Fluent UI**
+- Nie dawaj `className` z wysokością na `FluentProvider`. Portale (toasty, dropdowny) dziedziczą tę klasę i przewijają całą aplikację poza ekran.
+- Griffel (`makeStyles`) nie przyjmuje skrótów `borderColor` ani `borderStyle` w zagnieżdżonych selektorach. Używaj `...shorthands.borderColor(x)`.
+- Fluent `Dropdown` ma `min-width: 250px`. W wąskich miejscach daj klasę `{ minWidth: 0, width: "100%" }`.
+- Komponenty Nav malują tło `colorNeutralBackground4`. W `theme.ts` jest ono nadpisane na kolor bazy okna.
+- Selektor zustand zwracający nową tablicę wymaga `useShallow`, inaczej wpadasz w nieskończoną pętlę.
+- Polskie liczby mnogie wymagają kluczy `_one/_few/_many/_other`. Brak któregoś daje angielski fallback. Pilnuje tego `npm run check-i18n`.
+- Nazwy ikon `@fluentui/react-icons` mają ograniczone rozmiary: np. `ArrowReset` ma 20, a nie 16. Weryfikuj przez `node -e "console.log('X16Regular' in require('@fluentui/react-icons'))"`.
+- Celowo **nie** użyto React Router (v8) ani TypeScript 7: są za świeże. Routing robi własny hash-router (`src/lib/router.ts`).
+
+**pywebview**
+- `window.evaluate_js` **nie czeka na Promise** (zwraca `{}`). W testach odpytuj DOM w pętli.
+- Zagnieżdżone obiekty w `js_api` działają (`api.converter.start`). Atrybuty z `_` nie są wystawiane, więc stan wewnętrzny trzymaj jako `_ctx`.
+- Drag & drop:
+  - pełne ścieżki daje tylko natywny handler w `main.py` (event `files:dropped`);
+  - `lib/drop.ts` kieruje je do strefy, która dostała DOM-owy `drop`.
+- Okno przy zamykaniu: `events.closing` odpina EventBus, żeby nie było `ObjectDisposedException`.
+- Python 3.14 + pythonnet 3.2 działa (sprawdzone).
+
+**Panel podglądu w Claude Code (Browser pane)**
+- `requestAnimationFrame` **nie odpala**, gdy panel jest ukryty. Przez to eksport `html-to-image` wisi **tylko tam**. W prawdziwym oknie działa (sprawdzone E2E).
+- Zrzuty ekranu często się zawieszają; ponów albo użyj `get_page_text`.
+- Vite HMR potrafił podać nieaktualny moduł `mock.ts`. Gdy mock zachowuje się dziwnie, zrestartuj serwer.
+
+**Git**
+- Root `.gitignore` ma regułę `lib/` (z szablonu Pythona). Dodano wyjątek `!frontend/src/lib/`. Uważaj przy nowych katalogach `lib`.
+- Ostrzeżenia LF→CRLF są nieszkodliwe.
+
+---
+
+## 5. Faza 5: dopracowanie (do zrobienia)
+
+1. **Panel zadań (Jobs drawer)**
+   - `OverlayDrawer` po prawej, otwierany ze stopki nawigacji (licznik „N zadań w toku” w `Navigation.tsx`).
+   - Pokazuje listę z `useJobs`: status, postęp, Anuluj, przejście do narzędzia.
+   - Można reużyć `JobStatusBadge`, `jobMessage`, układ wierszy z `HomePage.tsx` (`RecentJobs`).
+2. **Powiadomienia o zakończeniu zadania poza stroną narzędzia**
+   - `useJobRunner` celowo **nie** odpala callbacków dla zadań zakończonych, gdy strona była odmontowana.
+   - Dodaj globalny listener `job:done/error` w `App`/`Shell`, który pokaże toast z linkiem do narzędzia, jeśli bieżąca trasa ≠ narzędzie zadania (`job.kind.split(".")[0]`).
+   - Uważaj, żeby nie dublować toastu, gdy użytkownik jest na stronie narzędzia.
+3. **Command palette (Ctrl+K)**
+   - `Dialog` z `SearchBox` i listą `TOOLS` (`app/tools.tsx`) plus Ustawienia i Start, z nawigacją strzałkami.
+   - Skrót rejestruj globalnie w `Shell`.
+4. **Animacje przejść stron**
+   - Wystarczy lekki fade/slide na kontenerze strony w `Shell.tsx` (CSS `@keyframes` w `makeStyles` albo pakiet `motion`).
+   - Szanuj `prefers-reduced-motion`; jest już w `global.css`.
+5. **Mica / tło okna**
+   - `backend/core/win_theme.py` ma stałe `DWMWA_SYSTEMBACKDROP_TYPE` i `DWMSBT_MAINWINDOW`, ale nie są użyte.
+   - Mica wymaga przezroczystego tła WebView2; to niepewne w pywebview/WinForms, więc traktuj jako **spike**.
+   - Jeśli się nie uda, zostaw obecne tło `#202020` / `#f3f3f3`.
+6. **Drobne poprawki zauważone w trakcie**
+   - NavDrawer animuje wysunięcie przy starcie aplikacji. Wyłącz animację przy pierwszym renderze.
+   - Wskaźnik zaznaczenia w rozwiniętym menu jest mało widoczny.
+   - Znak wodny / Telea: dobrze byłoby **poszerzyć maskę (dilate) o 2–4 px** w `services/watermark.py::decode_mask` (`cv2.dilate`). Krawędzie znaku nieobjęte maską przenikają do środka. Dodaj test.
+   - `stores/jobs.ts` nigdy nie czyści starych zadań (`clearFinished` istnieje, ale nie jest używane). Podepnij je w panelu zadań.
+   - Strona startowa: „ostatnie zadania” znikają po restarcie (stan jest tylko w pamięci). To akceptowalne, ewentualnie trzymaj historię w settings.
+7. **Ikona aplikacji:** `.ico` do okna (`webview.start(icon=...)` działa tylko na części platform) i do PyInstallera.
+
+---
+
+## 6. Faza 6: pakowanie .exe (do zrobienia)
+
+1. **`scripts/build.py`:**
+   - `npm ci && npm run build` w `frontend/`;
+   - potem PyInstaller z nowym `.spec`;
+   - na koniec opcjonalnie odpal zbudowany exe z **innego katalogu niż repo**, żeby wyłapać ścieżki względne.
+2. **`MediaUtilityApp.spec`** (stary dotyczy `app.py`; uwaga: `*.spec` jest w `.gitignore`, więc trzeba dodać wyjątek albo generować spec w skrypcie):
+   - entry: `main.py`, `--windowed`, nazwa np. `MediaStudio`;
+   - `datas`: `("frontend/dist", "frontend/dist")`; `resource_path()` szuka tam (`sys._MEIPASS`);
+   - `hiddenimports` / hooki: `webview.platforms.winforms`, `webview.platforms.edgechromium`, `clr_loader`, `pythonnet` (sprawdź `pyinstaller-hooks-contrib`, który ma hook dla pywebview);
+   - **wyklucz** `PyQt6`, `playwright` i `tkinter`, bo bardzo zmniejszają rozmiar;
+   - `pymediainfo` potrzebuje `MediaInfo.dll`: sprawdź, czy hook ją bierze, inaczej dodaj do `binaries`;
+   - `edge_tts`, `yt_dlp`, `imagehash`, `cv2`, `fitz`: sprawdź po buildzie, czy importy działają (`deps.check_dependencies` + ręczny test narzędzi).
+3. **ffmpeg** nie jest bundlowany (u użytkownika jest w `C:\ffmpeg\bin`). Ustawienia pokazują jego brak. Decyzję o bundlowaniu zostaw użytkownikowi.
+4. **WebView2 Runtime** jest w Windows 11; na Windows 10 może być potrzebny bootstrapper. Dodaj notkę w README.
+5. Wersja: `backend/__init__.py::APP_VERSION`, `pyproject.toml` i `frontend/package.json` (dziś wszystkie 0.5.0).
+6. `requirements.txt` ma jeszcze PyQt6 i playwright (dla starego UI); usuwasz je w fazie 7.
+
+---
+
+## 7. Faza 7: sprzątanie (do zrobienia, najpierw zapytaj użytkownika)
+
+1. Usuń `app.py` i stare zakładki Qt:
+   - `features/converter/converter_tab.py`
+   - `features/pdf_merger/pdf_merger.py`
+   - `features/duplicates/{video,image}_duplicate_tab.py`
+   - `features/tts/tts_tab.py`
+   - `features/download/yt_tab.py`
+   - `features/watermark/watermark_remover_tab.py`
+   - `features/progress_generator/progress_generator_tab.py` + `index.html` + `style.css` (wygląd jest przeniesiony do `frontend/src/features/progress/ProgressCard.tsx`)
+2. **Uwaga na `features/download/`:** `backend/core/settings.py::LEGACY_COOKIES` czyta stamtąd cookies jako fallback.
+   - Nie usuwaj plików cookies bez decyzji użytkownika.
+   - Najlepiej: zaproponuj ustawienie ścieżek w Ustawieniach → Pliki cookies, a dopiero potem usuń fallback.
+   - Przypomnij, że cookies były w historii gita, więc sesje YouTube/X warto wylogować.
+3. **Przed usunięciem zapytaj o:**
+   - `features/ui_generator/` (generatory sprite'ów Survival UI; nie są używane przez aplikację);
+   - `features/duplicates/folder_checker.py` (luźny skrypt CLI).
+4. Po usunięciu katalog `features/` może zniknąć cały. Wtedy sprawdź, czy nic nie importuje `features.*`: `backend/` nie importuje; jedyna zależność to `LEGACY_COOKIES`.
+5. `requirements.txt`: usuń `PyQt6`, `playwright`, `pypdf` (nieużywany, PDF robi PyMuPDF). Sprawdź `qtgui`/`qtwidgets` w `.venv` (śmieci).
+6. Nowy `README.md`: instalacja (`pip install -r requirements-dev.txt`, `npm ci`), dev (`npm run dev` + `python main.py --dev`), build (`python scripts/build.py`), testy.
+7. Po wszystkim: `pytest`, `npm run build`, `python scripts/e2e_ui.py`, zbudowany exe uruchomiony z innego katalogu. Potem commit.
+
+---
+
+## 8. Ustalenia z użytkownikiem
+
+- Technologia: pywebview + React + Fluent UI v9.
+- Wygląd: Windows 11 Fluent.
+- Motyw jasny/ciemny/systemowy, języki PL/EN.
+- Cookies: na razie zostają w repo, nie ruszać.
+- Śmieciowe foldery: nie ruszać.
+- Commity po każdej fazie na `feature/modern-ui`. Bez pushowania i PR, chyba że użytkownik poprosi.
+- Commity kończą się linią `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
