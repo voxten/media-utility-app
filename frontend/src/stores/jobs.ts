@@ -9,6 +9,8 @@ const MAX_LOGS = 2000;
 
 export interface JobState extends JobInfo {
   logs: LogEntry[];
+  /** Intermediate results streamed with ctx.partial (kept here so none are missed before a page learns its job id). */
+  partials: unknown[];
   result?: unknown;
   /** Extra fields from the last progress event (download speed, eta, ...). */
   extra: Record<string, unknown>;
@@ -46,7 +48,7 @@ export function initJobEvents() {
 
   on("job:started", (info) =>
     useJobs.setState((state) => ({
-      jobs: { ...state.jobs, [info.id]: { ...info, logs: [], extra: {} } },
+      jobs: { ...state.jobs, [info.id]: { ...info, logs: [], partials: [], extra: {} } },
       order: [info.id, ...state.order.filter((id) => id !== info.id)],
     })),
   );
@@ -64,10 +66,13 @@ export function initJobEvents() {
     patch(jobId, (job) => ({ logs: [...job.logs, entry].slice(-MAX_LOGS) })),
   );
 
+  on("job:partial", ({ jobId, data }) => patch(jobId, (job) => ({ partials: [...job.partials, data] })));
+
   const finish = (jobId: string, status: JobState["status"], fields: Partial<JobState> = {}) =>
     patch(jobId, () => ({ status, finishedAt: Date.now() / 1000, ...fields }));
 
-  on("job:done", ({ jobId, result }) => finish(jobId, "done", { result, percent: 100 }));
+  // Partials are only needed while a job streams; the final result supersedes them.
+  on("job:done", ({ jobId, result }) => finish(jobId, "done", { result, percent: 100, partials: [] }));
   on("job:error", ({ jobId, error }) => finish(jobId, "error", { error }));
   on("job:cancelled", ({ jobId }) => finish(jobId, "cancelled"));
 }

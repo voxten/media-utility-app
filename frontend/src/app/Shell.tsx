@@ -1,17 +1,23 @@
 import { lazy, Suspense, useEffect, useState, type ComponentType, type LazyExoticComponent } from "react";
 import { makeStyles, Spinner, tokens, Toaster } from "@fluentui/react-components";
+import { ConfirmHost } from "../components/ConfirmDialog";
+import { TOASTER_ID } from "../components/notify";
 import { useRoute } from "../lib/router";
 import { Navigation } from "./Navigation";
-import { toolById } from "./tools";
 
 const HomePage = lazy(() => import("../features/home/HomePage"));
 const SettingsPage = lazy(() => import("../features/settings/SettingsPage"));
-const ComingSoon = lazy(() => import("../features/ComingSoon"));
 
-// Tool pages are registered here as they are ported (phase 4).
-const TOOL_PAGES: Record<string, LazyExoticComponent<ComponentType>> = {};
+const TOOL_PAGES: Record<string, LazyExoticComponent<ComponentType>> = {
+  converter: lazy(() => import("../features/converter/ConverterPage")),
+  pdf: lazy(() => import("../features/pdf/PdfPage")),
+  duplicates: lazy(() => import("../features/duplicates/DuplicatesPage")),
+  tts: lazy(() => import("../features/tts/TtsPage")),
+  download: lazy(() => import("../features/download/DownloadPage")),
+  watermark: lazy(() => import("../features/watermark/WatermarkPage")),
+  progress: lazy(() => import("../features/progress/ProgressPage")),
+};
 
-export const TOASTER_ID = "app-toaster";
 const NAV_COLLAPSED_KEY = "nav-collapsed";
 
 const useStyles = makeStyles({
@@ -47,9 +53,7 @@ function PageForRoute({ route }: { route: string }) {
   if (route === "home") return <HomePage />;
   if (route === "settings") return <SettingsPage />;
   const ToolPage = TOOL_PAGES[route];
-  if (ToolPage) return <ToolPage />;
-  const tool = toolById(route);
-  return tool ? <ComingSoon toolId={tool.id} /> : <HomePage />;
+  return ToolPage ? <ToolPage /> : <HomePage />;
 }
 
 export function Shell() {
@@ -79,7 +83,8 @@ export function Shell() {
           <PageForRoute key={route} route={route} />
         </Suspense>
       </main>
-      <Toaster toasterId={TOASTER_ID} position="bottom-end" pauseOnHover />
+      <Toaster toasterId={TOASTER_ID} position="top-end" offset={{ vertical: 16 }} pauseOnHover />
+      <ConfirmHost />
     </div>
   );
 }

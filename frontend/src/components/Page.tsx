@@ -17,6 +17,7 @@ const useStyles = makeStyles({
     flexDirection: "column",
     gap: "24px",
     boxSizing: "border-box",
+    minHeight: "100%",
   },
   header: {
     display: "flex",

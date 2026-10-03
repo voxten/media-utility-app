@@ -20,13 +20,34 @@
     "generators": "Generators"
   },
   "tools": {
-    "download": { "name": "Video downloader", "description": "Download video and audio from YouTube, X and more." },
-    "converter": { "name": "Image converter", "description": "Convert whole folders of images between formats." },
-    "watermark": { "name": "Watermark remover", "description": "Paint over a watermark and remove it with OpenCV or AI." },
-    "tts": { "name": "Text to speech", "description": "Turn text into natural-sounding speech in many languages." },
-    "pdf": { "name": "PDF merger", "description": "Arrange pages from several PDFs and merge them into one." },
-    "duplicates": { "name": "Duplicate finder", "description": "Find similar photos and videos, even after resizing." },
-    "progress": { "name": "Progress generator", "description": "Create project progress-bar graphics." }
+    "download": {
+      "name": "Video downloader",
+      "description": "Download video and audio from YouTube, X and more."
+    },
+    "converter": {
+      "name": "Image converter",
+      "description": "Convert whole folders of images between formats."
+    },
+    "watermark": {
+      "name": "Watermark remover",
+      "description": "Paint over a watermark and remove it with OpenCV or AI."
+    },
+    "tts": {
+      "name": "Text to speech",
+      "description": "Turn text into natural-sounding speech in many languages."
+    },
+    "pdf": {
+      "name": "PDF merger",
+      "description": "Arrange pages from several PDFs and merge them into one."
+    },
+    "duplicates": {
+      "name": "Duplicate finder",
+      "description": "Find similar photos and videos, even after resizing."
+    },
+    "progress": {
+      "name": "Progress generator",
+      "description": "Create project progress-bar graphics."
+    }
   },
   "home": {
     "greeting": "Welcome to Media Studio",
@@ -42,7 +63,11 @@
     "appearance": "Appearance",
     "theme": "Theme",
     "themeDescription": "Choose an app theme or follow the system.",
-    "themes": { "system": "System", "light": "Light", "dark": "Dark" },
+    "themes": {
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
+    },
     "language": "Language",
     "languageDescription": "Language of the user interface.",
     "files": "Files",
@@ -77,12 +102,31 @@
     "close": "Close",
     "save": "Save",
     "openFolder": "Open folder",
-    "comingSoon": "This tool is being moved to the new interface.",
-    "comingSoonTitle": "Coming soon",
     "selectFolder": "Select a folder…",
     "notSet": "Not set",
-    "status": { "working": "Working…" },
-    "jobStatus": { "running": "Running", "done": "Completed", "error": "Failed", "cancelled": "Cancelled" }
+    "status": {
+      "working": "Working…"
+    },
+    "jobStatus": {
+      "running": "Running",
+      "done": "Completed",
+      "error": "Failed",
+      "cancelled": "Cancelled"
+    },
+    "ok": "OK",
+    "log": "Log",
+    "logEmpty": "No entries.",
+    "copy": "Copy",
+    "remove": "Remove",
+    "clearAll": "Clear all",
+    "add": "Add",
+    "showInFolder": "Show in folder",
+    "open": "Open",
+    "delete": "Delete",
+    "retry": "Retry",
+    "errorsCount_one": "{{count}} error",
+    "errorsCount_other": "{{count}} errors",
+    "more": "More"
   },
   "converter": {
     "status": {
@@ -94,6 +138,47 @@
     "log": {
       "converted": "{{src}} → {{dst}} ({{kb}} KB)",
       "failed": "Failed to convert {{src}}: {{error}}"
+    },
+    "source": "Source",
+    "sourceFolder": "Folder",
+    "sourceFiles": "Files",
+    "inputFolder": "Input folder",
+    "fromFormat": "Source format",
+    "swap": "Swap formats",
+    "folderHint": "Files directly inside the selected folder are converted (not subfolders).",
+    "matching_one": "Found {{count}} {{format}} file.",
+    "matching_other": "Found {{count}} {{format}} files.",
+    "dropTitle": "Drop images here",
+    "dropHint": "or click to choose files (PNG, JPG, WEBP, GIF, TIFF, BMP)",
+    "images": "Images",
+    "output": "Output",
+    "toFormat": "Target format",
+    "quality": "Quality",
+    "qualityHint": "Lower quality = smaller file.",
+    "qualityNA": "Not applicable to {{format}}.",
+    "method": "WEBP compression method",
+    "methodHint": "0 = fastest, 6 = best compression.",
+    "outputFolder": "Output folder",
+    "start": "Convert",
+    "idle": {
+      "pickFolder": "Choose a folder with images.",
+      "pickFiles": "Add images to convert.",
+      "ready_one": "{{count}} file ready to convert",
+      "ready_other": "{{count}} files ready to convert"
+    },
+    "summary": {
+      "title": "Summary",
+      "converted": "Converted",
+      "failed": "Errors",
+      "size": "Size",
+      "saved": "Saved"
+    },
+    "toast": {
+      "done_one": "Converted {{count}} file",
+      "done_other": "Converted {{count}} files",
+      "failed_one": "{{count}} file could not be converted.",
+      "failed_other": "{{count}} files could not be converted.",
+      "error": "Conversion failed"
     }
   },
   "pdf": {
@@ -103,7 +188,33 @@
       "saving": "Saving file…",
       "done": "PDF saved."
     },
-    "log": { "readFailed": "Cannot read {{file}}: {{error}}" }
+    "log": {
+      "readFailed": "Cannot read {{file}}: {{error}}"
+    },
+    "dropTitle": "Drop PDF files here",
+    "dropMore": "Add more PDF files",
+    "dropHint": "or click to choose documents",
+    "pages_one": "{{count}} page",
+    "pages_other": "{{count}} pages",
+    "pageShort": "p. {{page}}",
+    "preview": "Preview",
+    "removePage": "Remove page",
+    "sortByFile": "Sort by file and page number",
+    "loading": "Loading pages…",
+    "reorderHint": "Drag pages to reorder them. Pages are merged left to right.",
+    "merge": "Merge & save",
+    "defaultName": "merged.pdf",
+    "idle": {
+      "empty": "Add PDF files to get started.",
+      "ready_one": "{{count}} page from {{files}} file(s) ready to merge",
+      "ready_other": "{{count}} pages from {{files}} file(s) ready to merge"
+    },
+    "toast": {
+      "merged_one": "Merged {{count}} page",
+      "merged_other": "Merged {{count}} pages",
+      "mergeError": "Could not merge the files",
+      "readError": "Cannot read {{file}}"
+    }
   },
   "duplicates": {
     "status": {
@@ -113,13 +224,97 @@
       "grouping": "Grouping similar files…",
       "done": "Done. Groups found: {{groups}}"
     },
-    "log": { "corrupted": "Cannot read (corrupted?): {{file}}" }
+    "log": {
+      "corrupted": "Cannot read (corrupted?): {{file}}"
+    },
+    "setup": "Scan",
+    "images": "Images",
+    "videos": "Videos",
+    "folder": "Folder to scan",
+    "folderHint": "Subfolders are included.",
+    "sensitivity": "Similarity tolerance",
+    "sensitivityHint": "Lower = only near-identical files. Higher = also cropped or edited copies.",
+    "results": "Results",
+    "autoSelect": "Select duplicates",
+    "exportCsv": "Export CSV",
+    "csvName": "duplicates.csv",
+    "noneTitle": "No duplicates found",
+    "noneBody_one": "Analysed {{count}} file.",
+    "noneBody_other": "Analysed {{count}} files.",
+    "statGroups_one": "{{count}} group",
+    "statGroups_other": "{{count}} groups",
+    "statFiles_one": "{{count}} file",
+    "statFiles_other": "{{count}} files",
+    "statWasted": "Reclaimable: {{size}}",
+    "scannedOf_one": "out of {{count}} analysed file",
+    "scannedOf_other": "out of {{count}} analysed files",
+    "best": "Best",
+    "select": "Select",
+    "moveToTrash": "Move to Recycle Bin",
+    "trashHint": "Files go to the Recycle Bin and can be restored.",
+    "trashSelected": "Recycle ({{count}})",
+    "confirmTitle_one": "Move {{count}} file to the Recycle Bin?",
+    "confirmTitle_other": "Move {{count}} files to the Recycle Bin?",
+    "confirmBody": "The files will be moved to the Windows Recycle Bin. You can restore them from there.",
+    "logTitle": "Scan log",
+    "scan": "Scan",
+    "idle": {
+      "pickFolder": "Choose a folder to scan.",
+      "ready": "Ready to scan.",
+      "selected_one": "{{count}} file selected ({{size}})",
+      "selected_other": "{{count}} files selected ({{size}})"
+    },
+    "toast": {
+      "found_one": "Found {{count}} duplicate group",
+      "found_other": "Found {{count}} duplicate groups",
+      "none": "No duplicates found",
+      "error": "Scan failed",
+      "exported": "CSV report saved",
+      "trashed_one": "Moved {{count}} file to the Recycle Bin",
+      "trashed_other": "Moved {{count}} files to the Recycle Bin",
+      "trashError_one": "Could not move {{count}} file",
+      "trashError_other": "Could not move {{count}} files"
+    },
+    "groupTitle_one": "Group {{index}} · {{count}} file",
+    "groupTitle_other": "Group {{index}} · {{count}} files"
   },
   "tts": {
     "status": {
       "synthesizing": "Generating speech…",
       "encoding": "Encoding audio…",
       "done": "Audio saved."
+    },
+    "text": "Text",
+    "placeholder": "Type or paste the text to be read aloud…",
+    "counter": "{{chars}} characters · {{words}} words",
+    "voice": "Voice",
+    "engineEdge": "Edge (neural)",
+    "engineLocal": "System",
+    "engineEdgeHint": "Natural-sounding Microsoft voices in 70+ languages. Requires internet.",
+    "engineLocalHint": "Voices installed in Windows. Works offline.",
+    "loadingVoices": "Loading voices…",
+    "language": "Language",
+    "voiceLabel": "Voice",
+    "searchVoice": "Search voices…",
+    "allVoices": "All voices",
+    "noVoices": "No voices available for this engine.",
+    "gender": {
+      "male": "male",
+      "female": "female"
+    },
+    "rate": "Speaking rate",
+    "output": "Output file",
+    "format": "Format",
+    "defaultName": "speech",
+    "preview": "Preview",
+    "generate": "Generate speech",
+    "idle": {
+      "empty": "Enter some text to get started.",
+      "ready": "Ready · voice: {{voice}}"
+    },
+    "toast": {
+      "done": "Audio ready",
+      "error": "Speech generation failed"
     }
   },
   "download": {
@@ -132,7 +327,58 @@
       "done": "Download finished.",
       "batchDone": "Queue finished."
     },
-    "log": { "itemFailed": "Failed to download {{url}}: {{error}}" }
+    "log": {
+      "itemFailed": "Failed to download {{url}}: {{error}}"
+    },
+    "single": "Single link",
+    "batch": "Queue",
+    "urlPlaceholder": "Paste a link from YouTube, X or another site…",
+    "paste": "Paste from clipboard",
+    "check": "Check",
+    "urlHint": "Hundreds of sites are supported (yt-dlp). X links are fixed automatically.",
+    "emptyTitle": "Paste a link to see available formats",
+    "emptyBody": "After checking the link you can choose a video quality or audio only.",
+    "modeVideo": "Video",
+    "modeAudio": "Audio only",
+    "modeMuxed": "Ready-made files",
+    "audioCodec": "Audio format",
+    "formats": "Available formats",
+    "colQuality": "Quality",
+    "colFormat": "Format",
+    "colCodec": "Codecs",
+    "colSize": "Size",
+    "auto": "Best available quality",
+    "recommended": "Recommended",
+    "audioOnly": "Audio",
+    "noFormats": "No formats in this category.",
+    "queueTitle": "Links",
+    "urlCount_one": "{{count}} link",
+    "urlCount_other": "{{count}} links",
+    "batchHint": "One link per line. Every video is downloaded in the best quality (MP4).",
+    "itemStatus": {
+      "running": "Waiting",
+      "done": "Downloaded",
+      "error": "Failed",
+      "cancelled": "Cancelled"
+    },
+    "output": "Save",
+    "outdir": "Output folder",
+    "template": "File name template",
+    "download": "Download",
+    "downloadAll": "Download all",
+    "idle": {
+      "empty": "Paste a link and click “Check”.",
+      "ready": "Choose a format and click “Download”.",
+      "batchEmpty": "Add links to the queue.",
+      "batch_one": "{{count}} link queued",
+      "batch_other": "{{count}} links queued"
+    },
+    "toast": {
+      "done": "Download finished",
+      "error": "Download failed",
+      "probeError": "Could not read the link",
+      "batchDone": "Queue finished: {{ok}} downloaded, {{failed}} failed"
+    }
   },
   "watermark": {
     "status": {
@@ -142,6 +388,83 @@
     },
     "notice": {
       "lamaMissing": "IOPaint/PyTorch not installed – OpenCV (Telea) was used instead. To use LaMa: pip install iopaint torch torchvision"
+    },
+    "dropTitle": "Drop an image with a watermark",
+    "dropHint": "or click to choose a file (PNG, JPG, WEBP, BMP, TIFF)",
+    "howTitle": "How does it work?",
+    "howBody": "Paint over the watermark with the brush, then click “Remove watermark”. The algorithm rebuilds the background from its surroundings. The optional LaMa AI model gives the best results.",
+    "changeImage": "Change image",
+    "tools": "Mask tools",
+    "brush": "Brush",
+    "eraser": "Eraser",
+    "size": "Size",
+    "undo": "Undo",
+    "redo": "Redo",
+    "clearMask": "Clear mask",
+    "method": "Method",
+    "methods": {
+      "telea": "OpenCV · Telea (fast)",
+      "ns": "OpenCV · Navier-Stokes",
+      "lama": "AI · LaMa (best quality)",
+      "lamaMissing": "AI · LaMa (not installed)"
+    },
+    "paintHint": "Paint over the watermark. Shortcuts: B – brush, E – eraser, [ ] – size, Ctrl+Z – undo.",
+    "compareHint": "Drag the slider to compare before and after.",
+    "before": "Before",
+    "after": "After",
+    "suffix": "_clean",
+    "backToMask": "Back to mask",
+    "continue": "Keep editing the result",
+    "save": "Save as…",
+    "remove": "Remove watermark",
+    "idle": {
+      "paint": "Paint over the watermark.",
+      "ready": "Mask ready.",
+      "done": "Done – compare and save the result."
+    },
+    "toast": {
+      "done": "Watermark removed",
+      "fallback": "A fallback method was used",
+      "error": "Could not remove the watermark",
+      "loadError": "Cannot open the image",
+      "emptyMask": "Paint over the watermark first",
+      "saved": "Image saved",
+      "saveError": "Could not save the image"
+    }
+  },
+  "progress": {
+    "bars": "Progress bars",
+    "reset": "Restore sample",
+    "newBar": "New stage",
+    "noBars": "Add your first bar.",
+    "color": "Colour",
+    "custom": "Custom",
+    "colorFrom": "Start colour",
+    "colorTo": "End colour",
+    "reorder": "Drag to reorder",
+    "name": "Name",
+    "value": "Progress",
+    "appearance": "Appearance",
+    "title": "Title",
+    "titlePlaceholder": "e.g. Project progress – October",
+    "banner": "Header banner",
+    "noBanner": "No banner (optional)",
+    "width": "Width",
+    "barHeight": "Bar height",
+    "background": "Background",
+    "rounded": "Rounded corners",
+    "showPercent": "Show percentages",
+    "preview": "Live preview",
+    "previewHint": "Exported in high resolution ({{width}} px wide).",
+    "defaultName": "progress.png",
+    "export": "Export PNG",
+    "exporting": "Exporting…",
+    "idle_one": "{{count}} bar · {{average}}% on average",
+    "idle_other": "{{count}} bars · {{average}}% on average",
+    "toast": {
+      "saved": "Image saved",
+      "error": "Could not export the image",
+      "bannerError": "Cannot load the banner"
     }
   }
 }

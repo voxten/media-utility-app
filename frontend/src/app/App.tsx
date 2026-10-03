@@ -8,7 +8,6 @@ import { Shell } from "./Shell";
 import { darkTheme, lightTheme, useIsDark } from "./theme";
 
 const useStyles = makeStyles({
-  provider: { height: "100vh" },
   splash: { height: "100vh", display: "grid", placeItems: "center", backgroundColor: tokens.colorNeutralBackground2 },
 });
 
@@ -44,7 +43,7 @@ export function App() {
   }, [dark, theme]);
 
   return (
-    <FluentProvider theme={theme} className={styles.provider}>
+    <FluentProvider theme={theme}>
       {settings ? (
         <Shell />
       ) : (

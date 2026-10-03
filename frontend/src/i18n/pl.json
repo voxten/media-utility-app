@@ -22,13 +22,34 @@
     "generators": "Generatory"
   },
   "tools": {
-    "download": { "name": "Pobieranie wideo", "description": "Pobieraj filmy i audio z YouTube, X i innych serwisów." },
-    "converter": { "name": "Konwerter obrazów", "description": "Konwertuj całe foldery obrazów między formatami." },
-    "watermark": { "name": "Usuwanie znaku wodnego", "description": "Zamaluj znak wodny i usuń go algorytmem lub AI." },
-    "tts": { "name": "Tekst na mowę", "description": "Zamieniaj tekst w nagranie głosowe w wielu językach." },
-    "pdf": { "name": "Łączenie PDF", "description": "Układaj strony z wielu plików PDF i łącz je w jeden." },
-    "duplicates": { "name": "Wyszukiwarka duplikatów", "description": "Znajdź podobne zdjęcia i filmy, nawet po zmianie rozmiaru." },
-    "progress": { "name": "Generator postępu", "description": "Twórz grafiki z paskami postępu projektu." }
+    "download": {
+      "name": "Pobieranie wideo",
+      "description": "Pobieraj filmy i audio z YouTube, X i innych serwisów."
+    },
+    "converter": {
+      "name": "Konwerter obrazów",
+      "description": "Konwertuj całe foldery obrazów między formatami."
+    },
+    "watermark": {
+      "name": "Usuwanie znaku wodnego",
+      "description": "Zamaluj znak wodny i usuń go algorytmem lub AI."
+    },
+    "tts": {
+      "name": "Tekst na mowę",
+      "description": "Zamieniaj tekst w nagranie głosowe w wielu językach."
+    },
+    "pdf": {
+      "name": "Łączenie PDF",
+      "description": "Układaj strony z wielu plików PDF i łącz je w jeden."
+    },
+    "duplicates": {
+      "name": "Wyszukiwarka duplikatów",
+      "description": "Znajdź podobne zdjęcia i filmy, nawet po zmianie rozmiaru."
+    },
+    "progress": {
+      "name": "Generator postępu",
+      "description": "Twórz grafiki z paskami postępu projektu."
+    }
   },
   "home": {
     "greeting": "Witaj w Media Studio",
@@ -44,7 +65,11 @@
     "appearance": "Wygląd",
     "theme": "Motyw",
     "themeDescription": "Wybierz motyw aplikacji lub dopasuj go do systemu.",
-    "themes": { "system": "Systemowy", "light": "Jasny", "dark": "Ciemny" },
+    "themes": {
+      "system": "Systemowy",
+      "light": "Jasny",
+      "dark": "Ciemny"
+    },
     "language": "Język",
     "languageDescription": "Język interfejsu aplikacji.",
     "files": "Pliki",
@@ -79,12 +104,33 @@
     "close": "Zamknij",
     "save": "Zapisz",
     "openFolder": "Otwórz folder",
-    "comingSoon": "To narzędzie jest właśnie przenoszone do nowego interfejsu.",
-    "comingSoonTitle": "Wkrótce",
     "selectFolder": "Wybierz folder…",
     "notSet": "Nie ustawiono",
-    "status": { "working": "Przetwarzanie…" },
-    "jobStatus": { "running": "W toku", "done": "Zakończono", "error": "Błąd", "cancelled": "Anulowano" }
+    "status": {
+      "working": "Przetwarzanie…"
+    },
+    "jobStatus": {
+      "running": "W toku",
+      "done": "Zakończono",
+      "error": "Błąd",
+      "cancelled": "Anulowano"
+    },
+    "ok": "OK",
+    "log": "Dziennik",
+    "logEmpty": "Brak wpisów.",
+    "copy": "Kopiuj",
+    "remove": "Usuń",
+    "clearAll": "Wyczyść wszystko",
+    "add": "Dodaj",
+    "showInFolder": "Pokaż w folderze",
+    "open": "Otwórz",
+    "delete": "Usuń",
+    "retry": "Spróbuj ponownie",
+    "errorsCount_one": "{{count}} błąd",
+    "errorsCount_few": "{{count}} błędy",
+    "errorsCount_many": "{{count}} błędów",
+    "errorsCount_other": "{{count}} błędu",
+    "more": "Więcej"
   },
   "converter": {
     "status": {
@@ -96,6 +142,55 @@
     "log": {
       "converted": "{{src}} → {{dst}} ({{kb}} KB)",
       "failed": "Nie udało się przekonwertować {{src}}: {{error}}"
+    },
+    "source": "Źródło",
+    "sourceFolder": "Folder",
+    "sourceFiles": "Pliki",
+    "inputFolder": "Folder wejściowy",
+    "fromFormat": "Format źródłowy",
+    "swap": "Zamień formaty",
+    "folderHint": "Konwertowane są pliki z wybranego folderu (bez podfolderów).",
+    "matching_one": "Znaleziono {{count}} plik {{format}}.",
+    "matching_few": "Znaleziono {{count}} pliki {{format}}.",
+    "matching_many": "Znaleziono {{count}} plików {{format}}.",
+    "matching_other": "Znaleziono {{count}} pliku {{format}}.",
+    "dropTitle": "Upuść obrazy tutaj",
+    "dropHint": "lub kliknij, aby wybrać pliki (PNG, JPG, WEBP, GIF, TIFF, BMP)",
+    "images": "Obrazy",
+    "output": "Wynik",
+    "toFormat": "Format docelowy",
+    "quality": "Jakość",
+    "qualityHint": "Niższa jakość = mniejszy plik.",
+    "qualityNA": "Nie dotyczy formatu {{format}}.",
+    "method": "Metoda kompresji WEBP",
+    "methodHint": "0 = najszybciej, 6 = najlepsza kompresja.",
+    "outputFolder": "Folder docelowy",
+    "start": "Konwertuj",
+    "idle": {
+      "pickFolder": "Wybierz folder z obrazami.",
+      "pickFiles": "Dodaj obrazy do konwersji.",
+      "ready_one": "{{count}} plik gotowy do konwersji",
+      "ready_few": "{{count}} pliki gotowe do konwersji",
+      "ready_many": "{{count}} plików gotowych do konwersji",
+      "ready_other": "{{count}} pliku gotowego do konwersji"
+    },
+    "summary": {
+      "title": "Podsumowanie",
+      "converted": "Przekonwertowano",
+      "failed": "Błędy",
+      "size": "Rozmiar",
+      "saved": "Oszczędność"
+    },
+    "toast": {
+      "done_one": "Przekonwertowano {{count}} plik",
+      "done_few": "Przekonwertowano {{count}} pliki",
+      "done_many": "Przekonwertowano {{count}} plików",
+      "done_other": "Przekonwertowano {{count}} pliku",
+      "failed_one": "{{count}} plik nie został przekonwertowany.",
+      "failed_few": "{{count}} pliki nie zostały przekonwertowane.",
+      "failed_many": "{{count}} plików nie zostało przekonwertowanych.",
+      "failed_other": "{{count}} pliku nie przekonwertowano.",
+      "error": "Konwersja nie powiodła się"
     }
   },
   "pdf": {
@@ -105,7 +200,39 @@
       "saving": "Zapisywanie pliku…",
       "done": "Plik PDF zapisany."
     },
-    "log": { "readFailed": "Nie można odczytać {{file}}: {{error}}" }
+    "log": {
+      "readFailed": "Nie można odczytać {{file}}: {{error}}"
+    },
+    "dropTitle": "Upuść pliki PDF tutaj",
+    "dropMore": "Dodaj kolejne pliki PDF",
+    "dropHint": "lub kliknij, aby wybrać dokumenty",
+    "pages_one": "{{count}} strona",
+    "pages_few": "{{count}} strony",
+    "pages_many": "{{count}} stron",
+    "pages_other": "{{count}} strony",
+    "pageShort": "str. {{page}}",
+    "preview": "Podgląd",
+    "removePage": "Usuń stronę",
+    "sortByFile": "Sortuj według pliku i numeru strony",
+    "loading": "Wczytywanie stron…",
+    "reorderHint": "Przeciągnij strony, aby zmienić kolejność. Strony zostaną połączone w kolejności od lewej do prawej.",
+    "merge": "Połącz i zapisz",
+    "defaultName": "polaczony.pdf",
+    "idle": {
+      "empty": "Dodaj pliki PDF, aby zacząć.",
+      "ready_one": "{{count}} strona z {{files}} plików gotowa do połączenia",
+      "ready_few": "{{count}} strony z {{files}} plików gotowe do połączenia",
+      "ready_many": "{{count}} stron z {{files}} plików gotowych do połączenia",
+      "ready_other": "{{count}} strony z {{files}} plików gotowe do połączenia"
+    },
+    "toast": {
+      "merged_one": "Połączono {{count}} stronę",
+      "merged_few": "Połączono {{count}} strony",
+      "merged_many": "Połączono {{count}} stron",
+      "merged_other": "Połączono {{count}} strony",
+      "mergeError": "Nie udało się połączyć plików",
+      "readError": "Nie można odczytać pliku {{file}}"
+    }
   },
   "duplicates": {
     "status": {
@@ -115,13 +242,117 @@
       "grouping": "Grupowanie podobnych plików…",
       "done": "Gotowe. Znalezione grupy: {{groups}}"
     },
-    "log": { "corrupted": "Nie można odczytać (uszkodzony?): {{file}}" }
+    "log": {
+      "corrupted": "Nie można odczytać (uszkodzony?): {{file}}"
+    },
+    "setup": "Skanowanie",
+    "images": "Obrazy",
+    "videos": "Wideo",
+    "folder": "Folder do przeszukania",
+    "folderHint": "Przeszukiwane są również podfoldery.",
+    "sensitivity": "Tolerancja podobieństwa",
+    "sensitivityHint": "Mniej = tylko niemal identyczne pliki. Więcej = także przycięte i edytowane.",
+    "results": "Wyniki",
+    "autoSelect": "Zaznacz duplikaty",
+    "exportCsv": "Eksportuj CSV",
+    "csvName": "duplikaty.csv",
+    "noneTitle": "Nie znaleziono duplikatów",
+    "noneBody_one": "Przeanalizowano {{count}} plik.",
+    "noneBody_few": "Przeanalizowano {{count}} pliki.",
+    "noneBody_many": "Przeanalizowano {{count}} plików.",
+    "noneBody_other": "Przeanalizowano {{count}} pliku.",
+    "statGroups_one": "{{count}} grupa",
+    "statGroups_few": "{{count}} grupy",
+    "statGroups_many": "{{count}} grup",
+    "statGroups_other": "{{count}} grupy",
+    "statFiles_one": "{{count}} plik",
+    "statFiles_few": "{{count}} pliki",
+    "statFiles_many": "{{count}} plików",
+    "statFiles_other": "{{count}} pliku",
+    "statWasted": "Do odzyskania: {{size}}",
+    "scannedOf_one": "z {{count}} przeanalizowanego pliku",
+    "scannedOf_other": "z {{count}} przeanalizowanych plików",
+    "best": "Najlepszy",
+    "select": "Zaznacz",
+    "moveToTrash": "Przenieś do Kosza",
+    "trashHint": "Pliki trafią do Kosza systemu – można je przywrócić.",
+    "trashSelected": "Do Kosza ({{count}})",
+    "confirmTitle_one": "Przenieść {{count}} plik do Kosza?",
+    "confirmTitle_few": "Przenieść {{count}} pliki do Kosza?",
+    "confirmTitle_many": "Przenieść {{count}} plików do Kosza?",
+    "confirmTitle_other": "Przenieść {{count}} pliku do Kosza?",
+    "confirmBody": "Pliki zostaną przeniesione do Kosza systemu Windows. Możesz je stamtąd przywrócić.",
+    "logTitle": "Dziennik skanowania",
+    "scan": "Skanuj",
+    "idle": {
+      "pickFolder": "Wybierz folder do przeszukania.",
+      "ready": "Gotowe do skanowania.",
+      "selected_one": "Zaznaczono {{count}} plik ({{size}})",
+      "selected_few": "Zaznaczono {{count}} pliki ({{size}})",
+      "selected_many": "Zaznaczono {{count}} plików ({{size}})",
+      "selected_other": "Zaznaczono {{count}} pliku ({{size}})"
+    },
+    "toast": {
+      "found_one": "Znaleziono {{count}} grupę duplikatów",
+      "found_few": "Znaleziono {{count}} grupy duplikatów",
+      "found_many": "Znaleziono {{count}} grup duplikatów",
+      "found_other": "Znaleziono {{count}} grupy duplikatów",
+      "none": "Nie znaleziono duplikatów",
+      "error": "Skanowanie nie powiodło się",
+      "exported": "Raport CSV zapisany",
+      "trashed_one": "Przeniesiono {{count}} plik do Kosza",
+      "trashed_few": "Przeniesiono {{count}} pliki do Kosza",
+      "trashed_many": "Przeniesiono {{count}} plików do Kosza",
+      "trashed_other": "Przeniesiono {{count}} pliku do Kosza",
+      "trashError_one": "Nie udało się przenieść {{count}} pliku",
+      "trashError_other": "Nie udało się przenieść {{count}} plików",
+      "trashError_few": "Nie udało się przenieść {{count}} plików",
+      "trashError_many": "Nie udało się przenieść {{count}} plików"
+    },
+    "scannedOf_few": "z {{count}} przeanalizowanych plików",
+    "scannedOf_many": "z {{count}} przeanalizowanych plików",
+    "groupTitle_one": "Grupa {{index}} · {{count}} plik",
+    "groupTitle_few": "Grupa {{index}} · {{count}} pliki",
+    "groupTitle_many": "Grupa {{index}} · {{count}} plików",
+    "groupTitle_other": "Grupa {{index}} · {{count}} pliku"
   },
   "tts": {
     "status": {
       "synthesizing": "Generowanie mowy…",
       "encoding": "Kodowanie pliku audio…",
       "done": "Nagranie zapisane."
+    },
+    "text": "Tekst",
+    "placeholder": "Wpisz lub wklej tekst, który ma zostać przeczytany…",
+    "counter": "{{chars}} znaków · {{words}} słów",
+    "voice": "Głos",
+    "engineEdge": "Edge (neuronowe)",
+    "engineLocal": "Systemowe",
+    "engineEdgeHint": "Naturalnie brzmiące głosy Microsoft w ponad 70 językach. Wymaga internetu.",
+    "engineLocalHint": "Głosy zainstalowane w Windows. Działa offline.",
+    "loadingVoices": "Wczytywanie głosów…",
+    "language": "Język",
+    "voiceLabel": "Głos",
+    "searchVoice": "Szukaj głosu…",
+    "allVoices": "Wszystkie głosy",
+    "noVoices": "Brak dostępnych głosów dla tego silnika.",
+    "gender": {
+      "male": "męski",
+      "female": "żeński"
+    },
+    "rate": "Tempo mowy",
+    "output": "Plik wynikowy",
+    "format": "Format",
+    "defaultName": "mowa",
+    "preview": "Odsłuch",
+    "generate": "Generuj mowę",
+    "idle": {
+      "empty": "Wpisz tekst, aby zacząć.",
+      "ready": "Gotowe · głos: {{voice}}"
+    },
+    "toast": {
+      "done": "Nagranie gotowe",
+      "error": "Nie udało się wygenerować mowy"
     }
   },
   "download": {
@@ -134,7 +365,62 @@
       "done": "Pobieranie zakończone.",
       "batchDone": "Kolejka zakończona."
     },
-    "log": { "itemFailed": "Nie udało się pobrać {{url}}: {{error}}" }
+    "log": {
+      "itemFailed": "Nie udało się pobrać {{url}}: {{error}}"
+    },
+    "single": "Pojedynczy link",
+    "batch": "Kolejka",
+    "urlPlaceholder": "Wklej link do filmu z YouTube, X lub innego serwisu…",
+    "paste": "Wklej ze schowka",
+    "check": "Sprawdź",
+    "urlHint": "Obsługiwane są setki serwisów (yt-dlp). Linki do X są automatycznie poprawiane.",
+    "emptyTitle": "Wklej link, aby zobaczyć dostępne formaty",
+    "emptyBody": "Po sprawdzeniu linku wybierzesz jakość wideo albo samą ścieżkę audio.",
+    "modeVideo": "Wideo",
+    "modeAudio": "Tylko audio",
+    "modeMuxed": "Gotowe pliki",
+    "audioCodec": "Format audio",
+    "formats": "Dostępne formaty",
+    "colQuality": "Jakość",
+    "colFormat": "Format",
+    "colCodec": "Kodeki",
+    "colSize": "Rozmiar",
+    "auto": "Najlepsza dostępna jakość",
+    "recommended": "Zalecane",
+    "audioOnly": "Audio",
+    "noFormats": "Brak formatów w tej kategorii.",
+    "queueTitle": "Lista linków",
+    "urlCount_one": "{{count}} link",
+    "urlCount_few": "{{count}} linki",
+    "urlCount_many": "{{count}} linków",
+    "urlCount_other": "{{count}} linku",
+    "batchHint": "Jeden link w wierszu. Każdy film zostanie pobrany w najlepszej jakości (MP4).",
+    "itemStatus": {
+      "running": "Oczekuje",
+      "done": "Pobrano",
+      "error": "Błąd",
+      "cancelled": "Anulowano"
+    },
+    "output": "Zapis",
+    "outdir": "Folder docelowy",
+    "template": "Wzorzec nazwy pliku",
+    "download": "Pobierz",
+    "downloadAll": "Pobierz wszystkie",
+    "idle": {
+      "empty": "Wklej link i kliknij „Sprawdź”.",
+      "ready": "Wybierz format i kliknij „Pobierz”.",
+      "batchEmpty": "Dodaj linki do kolejki.",
+      "batch_one": "{{count}} link w kolejce",
+      "batch_few": "{{count}} linki w kolejce",
+      "batch_many": "{{count}} linków w kolejce",
+      "batch_other": "{{count}} linku w kolejce"
+    },
+    "toast": {
+      "done": "Pobieranie zakończone",
+      "error": "Pobieranie nie powiodło się",
+      "probeError": "Nie udało się odczytać linku",
+      "batchDone": "Kolejka zakończona: {{ok}} pobrano, {{failed}} błędów"
+    }
   },
   "watermark": {
     "status": {
@@ -144,6 +430,85 @@
     },
     "notice": {
       "lamaMissing": "Brak IOPaint/PyTorch – użyto algorytmu OpenCV (Telea). Aby użyć modelu LaMa: pip install iopaint torch torchvision"
+    },
+    "dropTitle": "Upuść obraz ze znakiem wodnym",
+    "dropHint": "lub kliknij, aby wybrać plik (PNG, JPG, WEBP, BMP, TIFF)",
+    "howTitle": "Jak to działa?",
+    "howBody": "Zamaluj pędzlem obszar ze znakiem wodnym, a następnie kliknij „Usuń znak wodny”. Algorytm odtworzy tło na podstawie otoczenia. Najlepsze efekty daje model AI LaMa (opcjonalny).",
+    "changeImage": "Zmień obraz",
+    "tools": "Narzędzia maski",
+    "brush": "Pędzel",
+    "eraser": "Gumka",
+    "size": "Rozmiar",
+    "undo": "Cofnij",
+    "redo": "Ponów",
+    "clearMask": "Wyczyść maskę",
+    "method": "Metoda",
+    "methods": {
+      "telea": "OpenCV · Telea (szybka)",
+      "ns": "OpenCV · Navier-Stokes",
+      "lama": "AI · LaMa (najlepsza jakość)",
+      "lamaMissing": "AI · LaMa (niezainstalowany)"
+    },
+    "paintHint": "Zamaluj znak wodny. Skróty: B – pędzel, E – gumka, [ ] – rozmiar, Ctrl+Z – cofnij.",
+    "compareHint": "Przeciągnij suwak, aby porównać obraz przed i po.",
+    "before": "Przed",
+    "after": "Po",
+    "suffix": "_bez_znaku",
+    "backToMask": "Wróć do maski",
+    "continue": "Edytuj dalej na wyniku",
+    "save": "Zapisz jako…",
+    "remove": "Usuń znak wodny",
+    "idle": {
+      "paint": "Zamaluj obszar znaku wodnego.",
+      "ready": "Maska gotowa.",
+      "done": "Gotowe – porównaj i zapisz wynik."
+    },
+    "toast": {
+      "done": "Znak wodny usunięty",
+      "fallback": "Użyto metody zastępczej",
+      "error": "Nie udało się usunąć znaku wodnego",
+      "loadError": "Nie można otworzyć obrazu",
+      "emptyMask": "Najpierw zamaluj znak wodny",
+      "saved": "Obraz zapisany",
+      "saveError": "Nie udało się zapisać obrazu"
+    }
+  },
+  "progress": {
+    "bars": "Paski postępu",
+    "reset": "Przywróć przykładowe",
+    "newBar": "Nowy etap",
+    "noBars": "Dodaj pierwszy pasek.",
+    "color": "Kolor",
+    "custom": "Własny",
+    "colorFrom": "Kolor początkowy",
+    "colorTo": "Kolor końcowy",
+    "reorder": "Przeciągnij, aby zmienić kolejność",
+    "name": "Nazwa",
+    "value": "Postęp",
+    "appearance": "Wygląd",
+    "title": "Tytuł",
+    "titlePlaceholder": "np. Postęp projektu – październik",
+    "banner": "Baner nagłówka",
+    "noBanner": "Brak banera (opcjonalny)",
+    "width": "Szerokość",
+    "barHeight": "Wysokość paska",
+    "background": "Tło",
+    "rounded": "Zaokrąglone rogi",
+    "showPercent": "Pokaż procenty",
+    "preview": "Podgląd na żywo",
+    "previewHint": "Eksport w wysokiej rozdzielczości ({{width}} px szerokości).",
+    "defaultName": "postep.png",
+    "export": "Eksportuj PNG",
+    "exporting": "Eksportowanie…",
+    "idle_one": "{{count}} pasek · średnio {{average}}%",
+    "idle_few": "{{count}} paski · średnio {{average}}%",
+    "idle_many": "{{count}} pasków · średnio {{average}}%",
+    "idle_other": "{{count}} paska · średnio {{average}}%",
+    "toast": {
+      "saved": "Grafika zapisana",
+      "error": "Nie udało się wyeksportować grafiki",
+      "bannerError": "Nie można wczytać banera"
     }
   }
 }

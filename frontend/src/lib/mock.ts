@@ -32,6 +32,20 @@ function saveSettings(settings: Settings) {
   }
 }
 
+function fakePageThumb(fileIndex: number, page: number): string {
+  const hue = (fileIndex * 67 + 200) % 360;
+  const lines = Array.from({ length: 9 }, (_, i) => `<rect x="14" y="${40 + i * 9}" width="${60 + ((i * 13 + page * 7) % 30)}" height="4" rx="2" fill="#ccc"/>`).join("");
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="170"><rect width="120" height="170" fill="#fff"/><rect x="14" y="14" width="70" height="12" rx="3" fill="hsl(${hue},60%,55%)"/>${lines}<text x="106" y="160" font-size="10" text-anchor="end" fill="#999">${page + 1}</text></svg>`;
+  return `data:image/svg+xml;base64,${btoa(svg)}`;
+}
+
+function fakePhoto(seed: number): string {
+  const skies = ["#7fb3e6", "#f0a35e", "#9ad0c2"];
+  const grounds = ["#4f7a3a", "#a0522d", "#2e6f8e"];
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200"><rect width="320" height="200" fill="${skies[seed % 3]}"/><circle cx="${240 - seed * 40}" cy="60" r="26" fill="#fff6c8"/><path d="M0 150 L80 90 L150 140 L230 80 L320 140 L320 200 L0 200Z" fill="${grounds[seed % 3]}"/></svg>`;
+  return `data:image/svg+xml;base64,${btoa(svg)}`;
+}
+
 export function createMockBackend(emit: Emit) {
   let settings = loadSettings();
   const running = new Map<string, number>();
@@ -79,7 +93,12 @@ export function createMockBackend(emit: Emit) {
       },
     },
     dialogs: {
-      open_files: () => ok(["C:\\Users\\demo\\Documents\\example.pdf"]),
+      open_files: (types: string[] = []) =>
+        ok(
+          types.some((t) => t.toLowerCase().includes("pdf"))
+            ? ["C:\\Users\\demo\\Documents\\raport.pdf", "C:\\Users\\demo\\Documents\\umowa.pdf"]
+            : ["C:\\Users\\demo\\Pictures\\photo.png"],
+        ),
       open_folder: () => ok("C:\\Users\\demo\\Pictures"),
       save_file: (filename: string) => ok(`C:\\Users\\demo\\Downloads\\${filename || "output"}`),
     },
@@ -113,28 +132,78 @@ export function createMockBackend(emit: Emit) {
       start: () => simulateJob("converter", "WEBP", { total: 12, converted: 12, failed: 0, inputBytes: 9_000_000, outputBytes: 2_100_000, outputDir: "C:\\out" }),
     },
     pdf: {
-      inspect: () => simulateJob("pdf.inspect", "", { pages: [], errors: [] }, 800),
-      render_page: () => ok(""),
+      inspect: (paths: string[]) => {
+        const pages = paths.flatMap((file, f) =>
+          Array.from({ length: 3 }, (_, page) => ({
+            file,
+            fileName: file.split("\\").pop(),
+            page,
+            width: 595,
+            height: 842,
+            thumb: fakePageThumb(f, page),
+          })),
+        );
+        return simulateJob("pdf.inspect", "", { pages, errors: [] }, 800);
+      },
+      render_page: (_path: string, page: number) => ok(fakePageThumb(0, page)),
       merge: () => simulateJob("pdf.merge", "merged.pdf", { outPath: "C:\\merged.pdf", pageCount: 3, bytes: 1000 }),
     },
     duplicates: {
-      scan: () => simulateJob("duplicates.image", "Pictures", { groups: [], scanned: 40, failed: 0, mode: "image" }),
+      scan: (_folder: string, mode: string) => {
+        const groups = [0, 1, 2].map((g) =>
+          Array.from({ length: g === 1 ? 3 : 2 }, (_, i) => ({
+            path: `C:\\Users\\demo\\Pictures\\${g === 1 ? "wakacje" : "2024"}\\IMG_${1040 + g * 7}${i ? `_kopia${i}` : ""}.jpg`,
+            filename: `IMG_${1040 + g * 7}${i ? `_kopia${i}` : ""}.jpg`,
+            size: 3_400_000 - i * 900_000 + g * 120_000,
+            width: 4032 - i * 1000,
+            height: 3024 - i * 750,
+            duration: mode === "video" ? 61_000 : null,
+            thumb: fakePhoto(g),
+          })),
+        );
+        return simulateJob(`duplicates.${mode}`, "Pictures", { groups, scanned: 148, failed: 1, mode }, 1500);
+      },
       export_csv: (_groups: unknown, outPath: string) => ok(outPath),
     },
     tts: {
-      voices: () => ok([{ id: "pl-PL-ZofiaNeural", name: "Zofia", locale: "pl-PL", gender: "Female" }]),
+      voices: () =>
+        ok([
+          { id: "pl-PL-MarekNeural", name: "Marek", locale: "pl-PL", gender: "Male" },
+          { id: "pl-PL-ZofiaNeural", name: "Zofia", locale: "pl-PL", gender: "Female" },
+          { id: "en-US-AriaNeural", name: "Aria", locale: "en-US", gender: "Female" },
+          { id: "en-US-GuyNeural", name: "Guy", locale: "en-US", gender: "Male" },
+          { id: "en-GB-RyanNeural", name: "Ryan", locale: "en-GB", gender: "Male" },
+        ]),
       synthesize: () => simulateJob("tts", "speech.mp3", { outPath: "C:\\speech.mp3", bytes: 1000 }),
       audio_data_url: () => ok(""),
     },
     download: {
-      probe: () => simulateJob("download.probe", "", { url: "", title: "Demo video", uploader: "Demo", duration: 60, thumbnail: null, formats: { video: [], audio: [], muxed: [] } }, 800),
+      probe: (url: string) => {
+        const auto = { id: "bestvideo+bestaudio/best", kind: "auto", ext: "mp4", height: null, fps: null, vcodec: "auto", acodec: "auto", filesize: null, note: "" };
+        const v = (id: string, height: number, size: number, fps = 30) => ({ id, kind: "video", ext: "mp4", height, fps, vcodec: "avc1.640028", acodec: "none", filesize: size, note: "" });
+        const a = (id: string, abr: number, ext: string, size: number) => ({ id, kind: "audio", ext, height: null, fps: null, vcodec: "none", acodec: ext === "m4a" ? "mp4a.40.2" : "opus", filesize: size, abr, note: "" });
+        const muxed = { id: "18", kind: "muxed", ext: "mp4", height: 360, fps: 30, vcodec: "avc1.42001E", acodec: "mp4a.40.2", filesize: 21_000_000, note: "" };
+        return simulateJob("download.probe", url, {
+          url,
+          title: "Jak działa Media Studio – przegląd funkcji",
+          uploader: "Demo Channel",
+          duration: 754,
+          viewCount: 128_400,
+          thumbnail: fakePhoto(1),
+          formats: {
+            video: [auto, v("401", 2160, 610_000_000, 60), v("137", 1080, 142_000_000), v("136", 720, 64_000_000), muxed],
+            audio: [a("251", 160, "webm", 13_000_000), a("140", 129, "m4a", 12_100_000)],
+            muxed: [auto, muxed],
+          },
+        }, 900);
+      },
       start: () => simulateJob("download", "Demo video", { title: "Demo video", path: "", outdir: "C:\\Downloads" }),
       batch: () => simulateJob("download.batch", "2 URL", { items: [], succeeded: 2, failed: 0, outdir: "C:\\Downloads" }),
     },
     watermark: {
-      load: () => ok({ path: "", width: 0, height: 0, dataUrl: "" }),
+      load: (path: string) => ok({ path, width: 1280, height: 800, dataUrl: fakePhoto(0) }),
       lama_available: () => ok(false),
-      remove: () => simulateJob("watermark", "image.png", { resultPath: "", dataUrl: "", notice: null }),
+      remove: () => simulateJob("watermark", "image.png", { resultPath: "C:\\cache\\result.png", dataUrl: fakePhoto(2), notice: null }, 1200),
       save: (_r: string, out: string) => ok(out),
     },
     progress: {
