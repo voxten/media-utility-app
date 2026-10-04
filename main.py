@@ -6,12 +6,14 @@
 """
 
 import argparse
+import os
+import shutil
 import sys
 
 import webview
 from webview.dom import DOMEventHandler
 
-from backend import APP_NAME
+from backend import APP_NAME, APP_VERSION
 from backend.bridge.api import Api
 from backend.bridge.events import EventBus
 from backend.core import win_theme
@@ -20,6 +22,33 @@ from backend.core.settings import Settings
 
 DEV_URL = "http://localhost:5173"
 BACKGROUND = {"dark": "#1f1f1f", "light": "#fafafa"}
+
+
+def cleanup_webview_cache() -> None:
+    """Ensure WebView2 does not serve stale assets from disk cache when the app updates."""
+    # Instruct Chromium/WebView2 not to cache HTTP responses from the local pywebview server
+    flags = os.environ.get("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", "")
+    if "--disable-http-cache" not in flags:
+        os.environ["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"] = f"{flags} --disable-http-cache".strip()
+
+    webview_dir = app_data_dir() / "webview"
+    # Always clear the HTTP and code caches on launch so fresh code is loaded immediately
+    cache_dirs = [
+        webview_dir / "EBWebView" / "Default" / "Cache",
+        webview_dir / "EBWebView" / "Default" / "Code Cache",
+        webview_dir / "EBWebView" / "Default" / "GPUCache",
+        webview_dir / "EBWebView" / "ShaderCache",
+    ]
+    for d in cache_dirs:
+        if d.is_dir():
+            shutil.rmtree(d, ignore_errors=True)
+
+    try:
+        webview_dir.mkdir(parents=True, exist_ok=True)
+        (webview_dir / "app_version.txt").write_text(APP_VERSION, encoding="utf-8")
+    except Exception:
+        pass
+
 
 MISSING_BUILD_HTML = """
 <body style="font-family:Segoe UI,sans-serif;background:#1f1f1f;color:#fff;padding:40px">
@@ -66,6 +95,7 @@ def ensure_output_streams() -> None:
 
 def main() -> None:
     ensure_output_streams()
+    cleanup_webview_cache()
     parser = argparse.ArgumentParser(description=APP_NAME)
     parser.add_argument("--dev", action="store_true", help="load the Vite dev server")
     parser.add_argument("--url", default=DEV_URL, help="dev server URL (with --dev)")

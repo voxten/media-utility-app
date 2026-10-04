@@ -18,19 +18,23 @@ logger = logging.getLogger(__name__)
 
 from backend import APP_NAME, APP_VERSION
 from backend.bridge.events import EventBus
-from backend.core import deps, system, win_theme
+from backend.core import deps, paths, system, win_theme
 from backend.core.jobs import JobManager
 from backend.core.settings import Settings
 from backend.services import (
+    compressor,
     converter,
     deps_installer,
     download,
     duplicates,
+    image_editor,
     pdf,
     progress_image,
     rembg_service,
+    system_info,
     tts,
     upscale,
+    video_sync,
     watermark,
 )
 
@@ -82,6 +86,12 @@ class SettingsApi(_Namespace):
         if folder:
             self._ctx.settings.add_recent_folder(folder)
 
+    def clear_recent_folders(self) -> Dict[str, Any]:
+        return self._ctx.settings.clear_recent_folders()
+
+    def reset(self) -> Dict[str, Any]:
+        return self._ctx.settings.reset()
+
 
 class DialogsApi(_Namespace):
     """Native file dialogs. ``file_types`` use pywebview syntax: ``"PDF (*.pdf)"``."""
@@ -126,7 +136,23 @@ class SystemApi(_Namespace):
             logger.warning("Could not move to trash %s: %s", path, e)
 
     def dependencies(self) -> List[Dict[str, Any]]:
-        return deps.check_dependencies()
+        custom_ffmpeg = self._ctx.settings.get("customFfmpegPath")
+        return deps.check_dependencies(custom_ffmpeg=custom_ffmpeg)
+
+    def storage_info(self) -> Dict[str, Any]:
+        return system_info.get_storage_info()
+
+    def clear_cache(self) -> Dict[str, Any]:
+        return system_info.clear_cache()
+
+    def hardware_info(self) -> Dict[str, Any]:
+        return system_info.get_hardware_info()
+
+    def open_app_data(self) -> None:
+        try:
+            system.open_path(str(paths.app_data_dir()))
+        except Exception as e:
+            logger.warning("Could not open app data directory: %s", e)
 
     def install_dependency(self, dep_id: str) -> str:
         if dep_id.startswith("upscale"):
@@ -183,6 +209,48 @@ class PdfApi(_Namespace):
 
     def merge(self, pages: List[Dict[str, Any]], out_path: str) -> str:
         return self._ctx.jobs.submit("pdf.merge", lambda ctx: pdf.merge(ctx, pages, out_path), title=Path(out_path).name)
+
+    def compress(self, path: str, out_path: str, quality: str = "balanced") -> str:
+        return self._ctx.jobs.submit(
+            "pdf.compress",
+            lambda ctx: pdf.compress(ctx, path, out_path, quality_preset=quality),
+            title=Path(path).name,
+        )
+
+    def split(self, path: str, out_dir: str, mode: str = "all", range_spec: str = "") -> str:
+        return self._ctx.jobs.submit(
+            "pdf.split",
+            lambda ctx: pdf.split(ctx, path, out_dir, mode=mode, range_spec=range_spec),
+            title=Path(path).name,
+        )
+
+    def pdf_to_images(self, path: str, out_dir: str, fmt: str = "png", dpi: int = 150) -> str:
+        return self._ctx.jobs.submit(
+            "pdf.to_images",
+            lambda ctx: pdf.pdf_to_images(ctx, path, out_dir, fmt=fmt, dpi=int(dpi)),
+            title=Path(path).name,
+        )
+
+    def images_to_pdf(self, paths: List[str], out_path: str) -> str:
+        return self._ctx.jobs.submit(
+            "pdf.from_images",
+            lambda ctx: pdf.images_to_pdf(ctx, paths, out_path),
+            title=Path(out_path).name,
+        )
+
+    def rotate_pages(self, path: str, pages: List[int], angle: int, out_path: str) -> str:
+        return self._ctx.jobs.submit(
+            "pdf.rotate",
+            lambda ctx: pdf.rotate_pages(ctx, path, pages, angle, out_path),
+            title=Path(path).name,
+        )
+
+    def extract_text(self, path: str, out_path: str) -> str:
+        return self._ctx.jobs.submit(
+            "pdf.extract_text",
+            lambda ctx: pdf.extract_text(ctx, path, out_path),
+            title=Path(path).name,
+        )
 
 
 class DuplicatesApi(_Namespace):
@@ -334,6 +402,98 @@ class RemBgApi(_Namespace):
         return rembg_service.save_result(result_path, out_path)
 
 
+class CompressorApi(_Namespace):
+    def load_preview(self, path: str) -> Dict[str, Any]:
+        return compressor.load_preview(path)
+
+    def preview(self, path: str, params: Dict[str, Any]) -> Dict[str, Any]:
+        return compressor.preview_compress(path, params)
+
+    def start(self, params: Dict[str, Any]) -> str:
+        files = params.get("files") or ([params["path"]] if params.get("path") else [])
+        title = Path(files[0]).name if len(files) == 1 else f"{len(files)} files"
+        return self._ctx.jobs.submit(
+            "compressor",
+            lambda ctx: compressor.compress(ctx, params),
+            title=title,
+        )
+
+
+class ImageEditorApi(_Namespace):
+    def load_preview(self, path: str) -> Dict[str, Any]:
+        return image_editor.load_preview(path)
+
+    def preview_transform(self, path: str, operations: Dict[str, Any]) -> Dict[str, Any]:
+        return image_editor.preview_transform(path, operations)
+
+    def save_transformed(
+        self,
+        src_path: str,
+        target_path: str,
+        operations: Dict[str, Any],
+        out_fmt: Optional[str] = None,
+        quality: int = 90,
+    ) -> Dict[str, Any]:
+        return image_editor.save_transformed(src_path, target_path, operations, out_fmt=out_fmt, quality=quality)
+
+    def start_batch(
+        self,
+        files: List[str],
+        output_dir: str,
+        operations: Dict[str, Any],
+        out_fmt: Optional[str] = None,
+        quality: int = 90,
+    ) -> str:
+        title = f"{len(files)} files"
+        return self._ctx.jobs.submit(
+            "image_editor",
+            lambda ctx: image_editor.batch_process(
+                ctx, files, output_dir, operations, out_fmt=out_fmt, quality=quality
+            ),
+            title=title,
+        )
+
+
+class VideoSyncApi(_Namespace):
+    def probe(self, path: str) -> Dict[str, Any]:
+        return video_sync.probe_media(path)
+
+    def waveform(
+        self,
+        path: str,
+        points: int = 1200,
+        start_sec: float = 0.0,
+        duration: Optional[float] = None,
+        stream_idx: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        return video_sync.extract_waveform(
+            path,
+            stream_index=stream_idx,
+            points=int(points),
+            start_sec=float(start_sec),
+            duration=float(duration) if duration is not None else None,
+        )
+
+    def preview(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        return video_sync.generate_preview(
+            video_path=params["videoPath"],
+            offset_sec=float(params.get("offsetSec", 0.0)),
+            start_sec=float(params.get("startSec", 0.0)),
+            duration=float(params.get("duration", 30.0)),
+            audio_path=params.get("audioPath"),
+            audio_stream_idx=int(params.get("audioTrackIndex", 0)),
+        )
+
+    def start(self, params: Dict[str, Any]) -> str:
+        v_path = params["videoPath"]
+        title = Path(v_path).name
+        return self._ctx.jobs.submit(
+            "video_sync",
+            lambda ctx: video_sync.sync_video(ctx, params),
+            title=title,
+        )
+
+
 class Api:
     def __init__(self, bus: EventBus, settings: Settings) -> None:
         self._ctx = _Context(bus, settings)
@@ -351,6 +511,9 @@ class Api:
         self.progress = ProgressApi(self._ctx)
         self.upscale = UpscaleApi(self._ctx)
         self.rembg = RemBgApi(self._ctx)
+        self.compressor = CompressorApi(self._ctx)
+        self.image_editor = ImageEditorApi(self._ctx)
+        self.video_sync = VideoSyncApi(self._ctx)
 
     def _attach_window(self, window: Any) -> None:
         self._ctx.window = window

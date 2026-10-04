@@ -25,6 +25,7 @@ import {
   ImageEdit20Regular,
   Save16Regular,
   Sparkle16Filled,
+  ArrowRight16Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { create } from "zustand";
@@ -42,6 +43,8 @@ import type { UpscaleOptions, UpscalePreview, UpscaleResult } from "../../lib/ty
 import { useJob } from "../../stores/jobs";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useSettings } from "../../stores/settings";
+import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
+import { useTransferStore } from "../../stores/transfer";
 
 const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"];
 
@@ -343,6 +346,10 @@ export default function UpscalePage() {
     }
   };
 
+  useIncomingTransfer("upscale", (files) => {
+    if (files[0]) load(files[0]);
+  });
+
   const browse = async () => {
     const [path] = await api.dialogs.openFiles(
       [`${t("converter.images")} (${IMAGE_EXTENSIONS.map((e) => `*${e}`).join(";")})`],
@@ -489,9 +496,18 @@ export default function UpscalePage() {
           </span>
         }
         actions={
-          <Button appearance="subtle" icon={<ImageEdit20Regular />} onClick={browse}>
-            {t("upscale.changeImage")}
-          </Button>
+          <div style={{ display: "flex", gap: "6px" }}>
+            <Button appearance="subtle" icon={<ImageEdit20Regular />} onClick={browse}>
+              {t("upscale.changeImage")}
+            </Button>
+            <Button
+              appearance="subtle"
+              icon={<ArrowRight16Regular />}
+              onClick={() => useTransferStore.getState().openModal([form.sourcePath], "upscale")}
+            >
+              {t("transfer.sendTo")}
+            </Button>
+          </div>
         }
       >
         {!currentModelReady && (
@@ -641,6 +657,13 @@ export default function UpscalePage() {
             <Button onClick={() => form.set({ result: null })}>{t("upscale.backToOptions")}</Button>
             <Button onClick={() => load(form.result!.resultPath, true)}>
               {t("upscale.continueWithThis")}
+            </Button>
+            <Button
+              appearance="subtle"
+              icon={<ArrowRight16Regular />}
+              onClick={() => useTransferStore.getState().openModal([form.result!.resultPath], "upscale")}
+            >
+              {t("transfer.sendTo")}
             </Button>
             <Button appearance="primary" icon={<Save16Regular />} onClick={saveDirect}>
               {t("common.saveBtn")}

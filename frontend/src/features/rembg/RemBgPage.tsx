@@ -18,15 +18,16 @@ import {
 } from "@fluentui/react-components";
 import {
   ArrowDownload16Regular,
+  ArrowForward16Regular,
   Bot24Regular,
   Checkmark16Regular,
-  Cut16Filled,
   Dismiss16Regular,
   FolderOpen16Regular,
   Image24Regular,
   ImageEdit20Regular,
   Save16Regular,
   Sparkle16Filled,
+  Wand16Filled,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { create } from "zustand";
@@ -44,6 +45,8 @@ import type { RemBgOptions, RemBgPreview, RemBgResult } from "../../lib/types";
 import { useJob } from "../../stores/jobs";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useSettings } from "../../stores/settings";
+import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
+import { useTransferStore } from "../../stores/transfer";
 
 const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"];
 
@@ -374,6 +377,13 @@ export default function RemBgPage() {
     }
   };
 
+  const openTransferModal = useTransferStore((s) => s.openModal);
+
+  // Consume incoming file transfers from other tools
+  useIncomingTransfer("rembg", (files) => {
+    if (files[0]) load(files[0]);
+  });
+
   const browse = async () => {
     const files = await api.dialogs.openFiles(["Image files (*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.tiff)"], false);
     if (files.length > 0) load(files[0]);
@@ -498,9 +508,21 @@ export default function RemBgPage() {
           </span>
         }
         actions={
-          <Button appearance="subtle" icon={<ImageEdit20Regular />} onClick={browse}>
-            {t("rembg.changeImage")}
-          </Button>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            {form.sourcePath && (
+              <Button
+                appearance="subtle"
+                icon={<ArrowForward16Regular />}
+                onClick={() => openTransferModal(form.result?.resultPath || form.sourcePath, "rembg")}
+                title={t("transfer.buttonTooltip")}
+              >
+                {t("transfer.button")}
+              </Button>
+            )}
+            <Button appearance="subtle" icon={<ImageEdit20Regular />} onClick={browse}>
+              {t("rembg.changeImage")}
+            </Button>
+          </div>
         }
       >
         {modelAvailable === false && <ModelBanner onInstalled={() => setModelAvailable(true)} />}
@@ -693,9 +715,19 @@ export default function RemBgPage() {
             <Button appearance="subtle" icon={<FolderOpen16Regular />} onClick={saveAsDialog}>
               {t("common.saveAs")}
             </Button>
+            {form.result.resultPath && (
+              <Button
+                appearance="subtle"
+                icon={<ArrowForward16Regular />}
+                onClick={() => openTransferModal(form.result!.resultPath, "rembg")}
+                title={t("transfer.buttonTooltip")}
+              >
+                {t("transfer.button")}
+              </Button>
+            )}
           </>
         ) : (
-          <Button appearance="primary" icon={<Cut16Filled />} disabled={runner.running} onClick={run}>
+          <Button appearance="primary" icon={<Wand16Filled />} disabled={runner.running} onClick={run}>
             {t("rembg.actions.remove")}
           </Button>
         )}

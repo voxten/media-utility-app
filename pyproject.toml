@@ -1,7 +1,10 @@
 [project]
 name = "media-utility-app"
-version = "0.5.0"
+dynamic = ["version"]
 requires-python = ">=3.12"
+
+[tool.setuptools.dynamic]
+version = {attr = "backend.APP_VERSION"}
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

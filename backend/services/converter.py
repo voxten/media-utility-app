@@ -90,6 +90,8 @@ def convert(ctx: JobContext, opts: ConvertOptions) -> Dict[str, Any]:
         "inputBytes": 0,
         "outputBytes": 0,
         "outputDir": str(output_dir),
+        "files": [],
+        "items": [],
     }
     if not sources:
         ctx.progress(100, "converter.status.noFiles")
@@ -97,7 +99,11 @@ def convert(ctx: JobContext, opts: ConvertOptions) -> Dict[str, Any]:
 
     output_dir.mkdir(parents=True, exist_ok=True)
     for idx, src in enumerate(sources):
+        ctx.partial({"index": idx, "name": src.name, "status": "pending"})
+
+    for idx, src in enumerate(sources):
         ctx.check_cancelled()
+        ctx.partial({"index": idx, "name": src.name, "status": "running"})
         ctx.progress(idx / len(sources) * 100, "converter.status.converting", {"file": src.name})
         try:
             target = convert_image(src, output_dir, opts.out_fmt, opts.quality, opts.method)
@@ -105,10 +111,20 @@ def convert(ctx: JobContext, opts: ConvertOptions) -> Dict[str, Any]:
             result["converted"] += 1
             result["inputBytes"] += in_size
             result["outputBytes"] += out_size
+            result["files"].append(str(target))
+            result["items"].append({
+                "source": str(src),
+                "dest": str(target),
+                "name": target.name,
+                "size": out_size,
+                "originalSize": in_size,
+            })
             ctx.log("converter.log.converted", "info", src=src.name, dst=target.name, kb=out_size // 1024)
+            ctx.partial({"index": idx, "name": src.name, "status": "done"})
         except Exception as exc:  # noqa: BLE001 - one broken file must not stop the batch
             result["failed"] += 1
             ctx.log("converter.log.failed", "error", src=src.name, error=str(exc))
+            ctx.partial({"index": idx, "name": src.name, "status": "error", "error": str(exc)})
 
     ctx.progress(100, "converter.status.done")
     return result

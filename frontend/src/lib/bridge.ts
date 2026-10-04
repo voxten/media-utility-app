@@ -10,13 +10,20 @@ import type {
   AppInfo,
   BridgeEventName,
   BridgeEvents,
+  ClearCacheResult,
   Dependency,
+  HardwareInfo,
   JobInfo,
   RemBgOptions,
   RemBgPreview,
   Settings,
+  StorageInfo,
+  SyncPreviewResult,
   UpscaleOptions,
   UpscalePreview,
+  VideoInfo,
+  VideoSyncParams,
+  WaveformData,
 } from "./types";
 import { createMockBackend } from "./mock";
 
@@ -106,6 +113,8 @@ export const api = {
     get: () => call<Settings>("settings", "get"),
     update: (patch: Partial<Settings>) => call<Settings>("settings", "update", patch),
     addRecentFolder: (folder: string) => call<void>("settings", "add_recent_folder", folder),
+    clearRecentFolders: () => call<Settings>("settings", "clear_recent_folders"),
+    reset: () => call<Settings>("settings", "reset"),
   },
   dialogs: {
     openFiles: (fileTypes: string[] = [], multiple = true, directory = "") =>
@@ -120,6 +129,10 @@ export const api = {
     trash: (path: string) => call<void>("system", "trash", path),
     dependencies: () => call<Dependency[]>("system", "dependencies"),
     installDependency: (id: string) => call<JobId>("system", "install_dependency", id),
+    storageInfo: () => call<StorageInfo>("system", "storage_info"),
+    clearCache: () => call<ClearCacheResult>("system", "clear_cache"),
+    hardwareInfo: () => call<HardwareInfo>("system", "hardware_info"),
+    openAppData: () => call<void>("system", "open_app_data"),
     pathInfo: (path: string) =>
       call<{ exists: boolean; isDir: boolean; isFile: boolean; name: string; parent: string }>("system", "path_info", path),
   },
@@ -145,6 +158,16 @@ export const api = {
     inspect: (paths: string[]) => call<JobId>("pdf", "inspect", paths),
     renderPage: (path: string, page: number) => call<string>("pdf", "render_page", path, page),
     merge: (pages: { file: string; page: number }[], outPath: string) => call<JobId>("pdf", "merge", pages, outPath),
+    compress: (path: string, outPath: string, quality: "low" | "balanced" | "high") =>
+      call<JobId>("pdf", "compress", path, outPath, quality),
+    split: (path: string, outDir: string, mode: "all" | "range", rangeSpec?: string) =>
+      call<JobId>("pdf", "split", path, outDir, mode, rangeSpec ?? ""),
+    toImages: (path: string, outDir: string, fmt: "png" | "jpeg" | "webp", dpi: number) =>
+      call<JobId>("pdf", "pdf_to_images", path, outDir, fmt, dpi),
+    fromImages: (paths: string[], outPath: string) => call<JobId>("pdf", "images_to_pdf", paths, outPath),
+    rotate: (path: string, pages: number[], angle: number, outPath: string) =>
+      call<JobId>("pdf", "rotate_pages", path, pages, angle, outPath),
+    extractText: (path: string, outPath: string) => call<JobId>("pdf", "extract_text", path, outPath),
   },
   duplicates: {
     scan: (folder: string, mode: "video" | "image", threshold?: number) =>
@@ -194,4 +217,100 @@ export const api = {
     remove: (params: RemBgOptions) => call<JobId>("rembg", "remove", params),
     save: (resultPath: string, outPath: string) => call<string>("rembg", "save", resultPath, outPath),
   },
+  compressor: {
+    loadPreview: (path: string) =>
+      call<{
+        path: string;
+        fileName: string;
+        size: number;
+        width: number;
+        height: number;
+        format: string;
+        hasAlpha: boolean;
+        dataUrl: string;
+      }>("compressor", "load_preview", path),
+    preview: (
+      path: string,
+      params: {
+        format?: string;
+        mode?: string;
+        quality?: number;
+        targetKb?: number;
+      },
+    ) =>
+      call<{
+        compressedBytes: number;
+        savedBytes: number;
+        savedPercent: number;
+        dataUrl: string;
+      }>("compressor", "preview", path, params),
+    start: (params: {
+      files?: string[];
+      path?: string;
+      outputDir?: string;
+      outPath?: string;
+      format: string;
+      mode: string;
+      quality?: number;
+      targetKb?: number;
+    }) => call<JobId>("compressor", "start", params),
+  },
+  image_editor: {
+    loadPreview: (path: string) =>
+      call<{
+        path: string;
+        fileName: string;
+        size: number;
+        width: number;
+        height: number;
+        format: string;
+        hasAlpha: boolean;
+        dataUrl: string;
+      }>("image_editor", "load_preview", path),
+    previewTransform: (
+      path: string,
+      operations: Record<string, unknown>,
+    ) =>
+      call<{
+        width: number;
+        height: number;
+        hasAlpha: boolean;
+        dataUrl: string;
+      }>("image_editor", "preview_transform", path, operations),
+    saveTransformed: (
+      srcPath: string,
+      targetPath: string,
+      operations: Record<string, unknown>,
+      outFmt?: string,
+      quality?: number,
+    ) =>
+      call<{
+        outPath: string;
+        width: number;
+        height: number;
+        bytes: number;
+      }>("image_editor", "save_transformed", srcPath, targetPath, operations, outFmt, quality ?? 90),
+    startBatch: (
+      files: string[],
+      outputDir: string,
+      operations: Record<string, unknown> | Record<string, Record<string, unknown>>,
+      outFmt?: string,
+      quality?: number,
+    ) => call<JobId>("image_editor", "start_batch", files, outputDir, operations, outFmt, quality ?? 90),
+  },
+  video_sync: {
+    probe: (path: string) => call<VideoInfo>("video_sync", "probe", path),
+    waveform: (path: string, points = 1200, startSec = 0, duration?: number, streamIdx?: number) =>
+      call<WaveformData>("video_sync", "waveform", path, points, startSec, duration, streamIdx),
+    preview: (params: {
+      videoPath: string;
+      offsetSec: number;
+      startSec?: number;
+      duration?: number;
+      audioPath?: string;
+      audioTrackIndex?: number;
+    }) => call<SyncPreviewResult>("video_sync", "preview", params),
+    start: (params: VideoSyncParams) => call<JobId>("video_sync", "start", params),
+  },
 };
+

@@ -242,15 +242,17 @@ interface NavItemProps {
   trailing?: ReactNode;
   /** Rendered over the icon (visible only in the rail). */
   iconOverlay?: ReactNode;
+  dataJobsTrigger?: boolean;
   onClick: () => void;
 }
 
-function NavItem({ collapsed, tooltipEnabled, icon, label, tooltip, selected, className, trailing, iconOverlay, onClick }: NavItemProps) {
+function NavItem({ collapsed, tooltipEnabled, icon, label, tooltip, selected, className, trailing, iconOverlay, dataJobsTrigger, onClick }: NavItemProps) {
   const styles = useStyles();
   return (
     <RailTooltip enabled={tooltipEnabled ?? collapsed} content={tooltip ?? label}>
       <button
         type="button"
+        data-jobs-trigger={dataJobsTrigger ? "true" : undefined}
         className={mergeClasses(styles.item, selected && styles.selected, className)}
         aria-current={selected ? "page" : undefined}
         onClick={(e) => {
@@ -283,6 +285,8 @@ export function Navigation({ route, collapsed, onToggle }: NavigationProps) {
   const { t } = useTranslation();
   const styles = useStyles();
   const running = useRunningJobCount();
+  const jobsPopupOpen = useUi((s) => s.jobsPopupOpen);
+  const toggleJobsPopup = useUi((s) => s.toggleJobsPopup);
   const toggleLabel = collapsed ? t("nav.expand") : t("nav.collapse");
   const runningLabel = running > 0 ? t("nav.runningJobs", { count: running }) : t("jobs.title");
   const fade = collapsed ? styles.hidden : styles.shown;
@@ -379,6 +383,8 @@ export function Navigation({ route, collapsed, onToggle }: NavigationProps) {
           icon={running > 0 ? <Spinner size="extra-tiny" /> : <JobsIcon />}
           label={t("jobs.title")}
           tooltip={runningLabel}
+          selected={jobsPopupOpen}
+          dataJobsTrigger
           trailing={
             running > 0 && (
               <Badge size="small" className={styles.trailing}>
@@ -387,7 +393,7 @@ export function Navigation({ route, collapsed, onToggle }: NavigationProps) {
             )
           }
           iconOverlay={running > 0 && <Badge size="small">{running}</Badge>}
-          onClick={() => useUi.getState().setJobsOpen(true)}
+          onClick={toggleJobsPopup}
         />
         {routeItem("settings", SettingsIcon, t("nav.settings"))}
       </div>

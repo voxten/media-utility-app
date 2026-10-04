@@ -22,8 +22,8 @@ import {
   ArrowDownload16Regular,
   CheckmarkStarburst16Filled,
   Delete16Regular,
-  DocumentSearch24Regular,
   FolderOpen16Regular,
+  FolderSearch24Regular,
   Image24Regular,
   MoreHorizontal16Regular,
   Open16Regular,
@@ -328,7 +328,7 @@ export default function DuplicatesPage() {
           }
         >
           {groups.length === 0 ? (
-            <EmptyState icon={DocumentSearch24Regular} title={t("duplicates.noneTitle")}>
+            <EmptyState icon={FolderSearch24Regular} title={t("duplicates.noneTitle")}>
               {t("duplicates.noneBody", { count: form.scanned })}
             </EmptyState>
           ) : (

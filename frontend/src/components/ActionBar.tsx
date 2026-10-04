@@ -11,7 +11,7 @@ const useStyles = makeStyles({
   bar: {
     position: "sticky",
     bottom: "16px",
-    zIndex: 2,
+    zIndex: 50,
     display: "flex",
     alignItems: "center",
     gap: "16px",

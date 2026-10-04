@@ -10,6 +10,47 @@ export interface Settings {
   outputDir: string;
   cookies: { youtube: string; x: string };
   recentFolders: string[];
+  hardwareAcceleration: boolean;
+  maxConcurrency: number;
+  desktopNotifications: boolean;
+  completionSound: boolean;
+  customFfmpegPath: string;
+  confirmExitOnActiveJobs: boolean;
+}
+
+export interface StorageInfo {
+  appDataDir: string;
+  cacheDir: string;
+  modelsDir: string;
+  binDir: string;
+  cacheBytes: number;
+  cacheFiles: number;
+  modelsBytes: number;
+  modelsFiles: number;
+  binBytes: number;
+  binFiles: number;
+  totalAppDataBytes: number;
+  totalAppDataFiles: number;
+}
+
+export interface ClearCacheResult {
+  freedBytes: number;
+  filesDeleted: number;
+  errors: string[];
+  success: boolean;
+}
+
+export interface HardwareInfo {
+  cpuName: string;
+  cpuThreads: number;
+  cpuArchitecture: string;
+  gpus: string[];
+  cudaAvailable: boolean;
+  cudaDeviceName: string;
+  cudaVersion: string;
+  ramTotalBytes: number;
+  ramAvailBytes: number;
+  osName: string;
 }
 
 export interface AppInfo {
@@ -124,3 +165,56 @@ export interface RemBgOptions {
   despeckle: boolean;
   userMask?: string;
 }
+
+export interface AudioTrackInfo {
+  index: number;
+  streamIndex: number;
+  codec: string;
+  channels: number;
+  sampleRate: number;
+  bitrate: number;
+  title: string;
+  language: string;
+}
+
+export interface VideoInfo {
+  path: string;
+  fileName: string;
+  size: number;
+  format: string;
+  duration: number;
+  hasVideo: boolean;
+  hasAudio: boolean;
+  width: number;
+  height: number;
+  fps: number;
+  videoCodec: string;
+  audioTracks: AudioTrackInfo[];
+  thumbnail: string;
+}
+
+export interface WaveformData {
+  points: number[];
+  sampleCount: number;
+  duration: number;
+  startSec: number;
+  maxPeak: number;
+}
+
+export interface SyncPreviewResult {
+  previewUrl: string;
+  duration: number;
+  offsetSec: number;
+  startSec: number;
+  sizeBytes: number;
+}
+
+export interface VideoSyncParams {
+  videoPath: string;
+  audioPath?: string;
+  audioTrackIndex: number;
+  offsetSec: number;
+  outputPath: string;
+  mode: "fast_copy" | "reencode";
+}
+

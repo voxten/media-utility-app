@@ -19,14 +19,22 @@ def _has_module(name: str) -> bool:
         return False
 
 
-def ensure_app_paths() -> None:
-    """Ensure portable binaries in %APPDATA%\\MediaStudio\\bin are on PATH."""
+def ensure_app_paths(custom_ffmpeg: Optional[str] = None) -> None:
+    """Ensure custom binaries and portable binaries in %APPDATA%\\MediaStudio\\bin are on PATH."""
+    current_path = os.environ.get("PATH", "")
+    paths_to_add: List[str] = []
+    if custom_ffmpeg:
+        cfp = Path(custom_ffmpeg)
+        cdir = cfp if cfp.is_dir() else cfp.parent
+        if cdir.is_dir():
+            paths_to_add.append(str(cdir))
     bin_dir = app_data_dir() / "bin"
     if bin_dir.is_dir():
-        bin_str = str(bin_dir)
-        current_path = os.environ.get("PATH", "")
-        if bin_str not in current_path.split(os.pathsep):
-            os.environ["PATH"] = bin_str + os.pathsep + current_path
+        paths_to_add.append(str(bin_dir))
+    for p in paths_to_add:
+        if p not in current_path.split(os.pathsep):
+            current_path = p + os.pathsep + current_path
+    os.environ["PATH"] = current_path
 
 
 def lama_model_path() -> Optional[Path]:
@@ -82,8 +90,8 @@ def _mediainfo_ok() -> bool:
         return False
 
 
-def check_dependencies() -> List[Dict[str, Any]]:
-    ensure_app_paths()
+def check_dependencies(custom_ffmpeg: Optional[str] = None) -> List[Dict[str, Any]]:
+    ensure_app_paths(custom_ffmpeg)
     ffmpeg = shutil.which("ffmpeg")
     ffmpeg_ok = ffmpeg is not None
 

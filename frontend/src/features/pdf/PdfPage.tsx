@@ -9,7 +9,13 @@ import {
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { arrayMove, rectSortingStrategy, SortableContext, sortableKeyboardCoordinates, useSortable } from "@dnd-kit/sortable";
+import {
+  arrayMove,
+  rectSortingStrategy,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+} from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
   Badge,
@@ -27,13 +33,15 @@ import {
   Tooltip,
 } from "@fluentui/react-components";
 import {
+  ArrowRotateClockwise16Regular,
+  ArrowSortDown16Regular,
   Delete16Regular,
   DocumentPdf24Regular,
   Eye16Regular,
   FolderOpen16Regular,
   Merge16Filled,
   ReOrderDotsVertical16Regular,
-  ArrowSortDown16Regular,
+  ArrowRight16Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { create } from "zustand";
@@ -47,6 +55,8 @@ import { Panel } from "../../components/Panel";
 import { api } from "../../lib/bridge";
 import { fileName } from "../../lib/format";
 import { useJobRunner } from "../../lib/useJobRunner";
+import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
+import { useTransferStore } from "../../stores/transfer";
 
 interface PdfPageItem {
   key: string;
@@ -56,6 +66,7 @@ interface PdfPageItem {
   thumb: string;
   width: number;
   height: number;
+  rotation?: number;
 }
 
 interface InspectResult {
@@ -77,12 +88,10 @@ const useForm = create<{ pages: PdfPageItem[]; setPages: (pages: PdfPageItem[]) 
   setPages: (pages) => set({ pages }),
 }));
 
-// Each source file gets its own colour so mixed pages stay recognisable.
 const FILE_COLORS = ["#2f8fd8", "#d9480f", "#14a37f", "#8a5cf6", "#c2851a", "#e0475b", "#0e9aa7", "#5b6b7f"];
 
 const useStyles = makeStyles({
   toolbar: { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" },
-  grow: { flexGrow: 1 },
   legend: { display: "flex", gap: "6px", flexWrap: "wrap" },
   dot: { width: "8px", height: "8px", borderRadius: "50%", display: "inline-block", marginRight: "6px" },
   grid: {
@@ -116,9 +125,22 @@ const useStyles = makeStyles({
     backgroundColor: tokens.colorNeutralBackground3,
     overflow: "hidden",
   },
-  thumb: { maxWidth: "100%", maxHeight: "100%", boxShadow: tokens.shadow4, backgroundColor: "#fff" },
+  thumb: {
+    maxWidth: "100%",
+    maxHeight: "100%",
+    boxShadow: tokens.shadow4,
+    backgroundColor: "#fff",
+    transition: "transform 0.2s ease-in-out",
+  },
   meta: { display: "flex", alignItems: "center", gap: "6px", minWidth: 0 },
-  name: { flexGrow: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: tokens.colorNeutralForeground2 },
+  name: {
+    flexGrow: 1,
+    minWidth: 0,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    color: tokens.colorNeutralForeground2,
+  },
   pageNumber: { flexShrink: 0, whiteSpace: "nowrap", color: tokens.colorNeutralForeground3 },
   colorBar: { position: "absolute", left: "10px", right: "10px", top: "0", height: "3px", borderRadius: "0 0 3px 3px" },
   actions: {
@@ -148,7 +170,13 @@ const useStyles = makeStyles({
     backgroundColor: "rgba(0,0,0,0.55)",
   },
   preview: { maxWidth: "min(80vw, 900px)" },
-  previewImg: { width: "100%", maxHeight: "75vh", objectFit: "contain", backgroundColor: "#fff", borderRadius: tokens.borderRadiusMedium },
+  previewImg: {
+    width: "100%",
+    maxHeight: "75vh",
+    objectFit: "contain",
+    backgroundColor: "#fff",
+    borderRadius: tokens.borderRadiusMedium,
+  },
   muted: { color: tokens.colorNeutralForeground3 },
 });
 
@@ -158,26 +186,54 @@ interface CardProps {
   color: string;
   onRemove?: () => void;
   onPreview?: () => void;
+  onRotate?: () => void;
   overlay?: boolean;
 }
 
-function PageCardView({ item, index, color, onRemove, onPreview, overlay }: CardProps) {
+function PageCardView({ item, index, color, onRemove, onPreview, onRotate, overlay }: CardProps) {
   const styles = useStyles();
   const { t } = useTranslation();
   return (
     <div className={mergeClasses(styles.card, overlay && styles.overlay)}>
       <span className={styles.colorBar} style={{ backgroundColor: color }} />
       <div className={styles.thumbBox}>
-        <img className={styles.thumb} src={item.thumb} alt="" draggable={false} />
+        <img
+          className={styles.thumb}
+          style={{ transform: item.rotation ? `rotate(${item.rotation}deg)` : undefined }}
+          src={item.thumb}
+          alt=""
+          draggable={false}
+        />
       </div>
       <span className={styles.index}>{index + 1}</span>
       {!overlay && (
         <div className={`${styles.actions} page-actions`}>
+          <Tooltip content={t("pdf.rotateRight")} relationship="label">
+            <Button
+              size="small"
+              className={styles.actionButton}
+              icon={<ArrowRotateClockwise16Regular />}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={onRotate}
+            />
+          </Tooltip>
           <Tooltip content={t("pdf.preview")} relationship="label">
-            <Button size="small" className={styles.actionButton} icon={<Eye16Regular />} onPointerDown={(e) => e.stopPropagation()} onClick={onPreview} />
+            <Button
+              size="small"
+              className={styles.actionButton}
+              icon={<Eye16Regular />}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={onPreview}
+            />
           </Tooltip>
           <Tooltip content={t("pdf.removePage")} relationship="label">
-            <Button size="small" className={styles.actionButton} icon={<Delete16Regular />} onPointerDown={(e) => e.stopPropagation()} onClick={onRemove} />
+            <Button
+              size="small"
+              className={styles.actionButton}
+              icon={<Delete16Regular />}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={onRemove}
+            />
           </Tooltip>
         </div>
       )}
@@ -186,9 +242,7 @@ function PageCardView({ item, index, color, onRemove, onPreview, overlay }: Card
         <Caption1 className={styles.name} title={`${item.fileName} · ${t("pdf.pageShort", { page: item.page + 1 })}`}>
           {item.fileName}
         </Caption1>
-        <Caption1 className={styles.pageNumber}>
-          {t("pdf.pageShort", { page: item.page + 1 })}
-        </Caption1>
+        <Caption1 className={styles.pageNumber}>{t("pdf.pageShort", { page: item.page + 1 })}</Caption1>
       </div>
     </div>
   );
@@ -215,6 +269,7 @@ export default function PdfPage() {
   const styles = useStyles();
   const notify = useNotify();
   const tool = toolById("pdf")!;
+
   const { pages, setPages } = useForm();
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [preview, setPreview] = useState<{ item: PdfPageItem; src: string | null } | null>(null);
@@ -246,11 +301,16 @@ export default function PdfPage() {
   const colorOf = (file: string) => FILE_COLORS[Math.max(0, files.indexOf(file)) % FILE_COLORS.length];
   const streaming = (inspect.job?.status === "running" ? inspect.job.partials : []) as Omit<PdfPageItem, "key">[];
 
-  const addFiles = (paths: string[]) => {
+  const addMergeFiles = (paths: string[]) => {
     const pdfs = paths.filter((p) => p.toLowerCase().endsWith(".pdf"));
     if (pdfs.length) inspect.start(() => api.pdf.inspect(pdfs)).catch((err) => notify.error(String(err)));
   };
-  const browse = async () => addFiles(await api.dialogs.openFiles(["PDF (*.pdf)"]));
+
+  useIncomingTransfer("pdf", (files) => {
+    addMergeFiles(files);
+  });
+
+  const browseMerge = async () => addMergeFiles(await api.dialogs.openFiles(["PDF (*.pdf)"]));
 
   const onDragEnd = ({ active, over }: DragEndEvent) => {
     setActiveKey(null);
@@ -268,11 +328,22 @@ export default function PdfPage() {
       .catch(() => setPreview((p) => (p ? { ...p, src: item.thumb } : p)));
   };
 
+  const rotatePage = (key: string) => {
+    setPages(pages.map((p) => (p.key === key ? { ...p, rotation: ((p.rotation ?? 0) + 90) % 360 } : p)));
+  };
+
   const startMerge = async () => {
     const outPath = await api.dialogs.saveFile(t("pdf.defaultName"), ["PDF (*.pdf)"]);
     if (!outPath) return;
     const target = outPath.toLowerCase().endsWith(".pdf") ? outPath : `${outPath}.pdf`;
-    merge.start(() => api.pdf.merge(pages.map(({ file, page }) => ({ file, page })), target)).catch((err) => notify.error(String(err)));
+    merge
+      .start(() =>
+        api.pdf.merge(
+          pages.map(({ file, page, rotation }) => ({ file, page, rotation: rotation ?? 0 })),
+          target,
+        ),
+      )
+      .catch((err) => notify.error(String(err)));
   };
 
   const sortByFile = () =>
@@ -289,8 +360,8 @@ export default function PdfPage() {
         title={pages.length ? t("pdf.dropMore") : t("pdf.dropTitle")}
         hint={t("pdf.dropHint")}
         accept={[".pdf"]}
-        onFiles={addFiles}
-        onBrowse={browse}
+        onFiles={addMergeFiles}
+        onBrowse={browseMerge}
       />
 
       {(pages.length > 0 || streaming.length > 0) && (
@@ -300,8 +371,21 @@ export default function PdfPage() {
             <div className={styles.toolbar}>
               {inspect.running && <Spinner size="tiny" label={t("pdf.loading")} />}
               <Tooltip content={t("pdf.sortByFile")} relationship="label">
-                <Button appearance="subtle" icon={<ArrowSortDown16Regular />} disabled={busy || files.length < 2} onClick={sortByFile} />
+                <Button
+                  appearance="subtle"
+                  icon={<ArrowSortDown16Regular />}
+                  disabled={busy || files.length < 2}
+                  onClick={sortByFile}
+                />
               </Tooltip>
+              <Button
+                appearance="subtle"
+                icon={<ArrowRight16Regular />}
+                disabled={busy || files.length === 0}
+                onClick={() => useTransferStore.getState().openModal(files, "pdf")}
+              >
+                {t("transfer.sendTo")}
+              </Button>
               <Button appearance="subtle" icon={<Delete16Regular />} disabled={busy} onClick={() => setPages([])}>
                 {t("common.clearAll")}
               </Button>
@@ -335,17 +419,30 @@ export default function PdfPage() {
                     color={colorOf(item.file)}
                     onRemove={() => setPages(pages.filter((p) => p.key !== item.key))}
                     onPreview={() => openPreview(item)}
+                    onRotate={() => rotatePage(item.key)}
                   />
                 ))}
                 {streaming.map((item, i) => (
                   <div key={`s${i}`} style={{ opacity: 0.6 }}>
-                    <PageCardView item={{ ...item, key: `s${i}` }} index={pages.length + i} color={tokens.colorNeutralStroke1} overlay />
+                    <PageCardView
+                      item={{ ...item, key: `s${i}` }}
+                      index={pages.length + i}
+                      color={tokens.colorNeutralStroke1}
+                      overlay
+                    />
                   </div>
                 ))}
               </div>
             </SortableContext>
             <DragOverlay>
-              {activeItem && <PageCardView item={activeItem} index={pages.indexOf(activeItem)} color={colorOf(activeItem.file)} overlay />}
+              {activeItem && (
+                <PageCardView
+                  item={activeItem}
+                  index={pages.indexOf(activeItem)}
+                  color={colorOf(activeItem.file)}
+                  overlay
+                />
+              )}
             </DragOverlay>
           </DndContext>
           <Caption1 className={styles.muted}>{t("pdf.reorderHint")}</Caption1>
@@ -360,9 +457,21 @@ export default function PdfPage() {
         onCancel={merge.running ? merge.cancel : inspect.cancel}
       >
         {merge.result && (
-          <Button icon={<FolderOpen16Regular />} onClick={() => api.system.reveal(merge.result!.outPath).catch(() => undefined)}>
-            {t("common.showInFolder")}
-          </Button>
+          <>
+            <Button
+              icon={<FolderOpen16Regular />}
+              onClick={() => api.system.reveal(merge.result!.outPath).catch(() => undefined)}
+            >
+              {t("common.showInFolder")}
+            </Button>
+            <Button
+              appearance="subtle"
+              icon={<ArrowRight16Regular />}
+              onClick={() => useTransferStore.getState().openModal([merge.result!.outPath], "pdf")}
+            >
+              {t("transfer.sendTo")}
+            </Button>
+          </>
         )}
         <Button appearance="primary" icon={<Merge16Filled />} disabled={!pages.length || busy} onClick={startMerge}>
           {t("pdf.merge")}

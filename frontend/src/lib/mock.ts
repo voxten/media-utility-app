@@ -13,6 +13,12 @@ const DEFAULT_SETTINGS: Settings = {
   outputDir: "C:\\Users\\demo\\Downloads",
   cookies: { youtube: "", x: "" },
   recentFolders: ["C:\\Users\\demo\\Pictures", "C:\\Users\\demo\\Videos"],
+  hardwareAcceleration: true,
+  maxConcurrency: 4,
+  desktopNotifications: true,
+  completionSound: true,
+  customFfmpegPath: "",
+  confirmExitOnActiveJobs: true,
 };
 
 function loadSettings(): Settings {
@@ -76,8 +82,8 @@ export function createMockBackend(emit: Emit) {
 
   return {
     app: {
-      ready: () => ok({ name: "Media Studio", version: "0.5.0-mock", python: "—", platform: navigator.userAgent }),
-      info: () => ok({ name: "Media Studio", version: "0.5.0-mock", python: "—", platform: navigator.userAgent }),
+      ready: () => ok({ name: "Media Studio", version: "dev-mock", python: "—", platform: navigator.userAgent }),
+      info: () => ok({ name: "Media Studio", version: "dev-mock", python: "—", platform: navigator.userAgent }),
       set_title_bar_theme: () => ok(false),
     },
     settings: {
@@ -91,6 +97,16 @@ export function createMockBackend(emit: Emit) {
         settings = { ...settings, recentFolders: [folder, ...settings.recentFolders.filter((f) => f !== folder)].slice(0, 8) };
         saveSettings(settings);
         return ok(undefined);
+      },
+      clear_recent_folders: () => {
+        settings = { ...settings, recentFolders: [] };
+        saveSettings(settings);
+        return ok(settings);
+      },
+      reset: () => {
+        settings = { ...DEFAULT_SETTINGS };
+        saveSettings(settings);
+        return ok(settings);
       },
     },
     dialogs: {
@@ -115,6 +131,42 @@ export function createMockBackend(emit: Emit) {
         ]),
       install_dependency: (id: string) =>
         simulateJob(id === "lama" ? "watermark.install" : "download.install", id, { id, ok: true }, 2500),
+      storage_info: () =>
+        ok({
+          appDataDir: "C:\\Users\\demo\\AppData\\Roaming\\MediaStudio",
+          cacheDir: "C:\\Users\\demo\\AppData\\Roaming\\MediaStudio\\cache",
+          modelsDir: "C:\\Users\\demo\\AppData\\Roaming\\MediaStudio\\models",
+          binDir: "C:\\Users\\demo\\AppData\\Roaming\\MediaStudio\\bin",
+          cacheBytes: 52_428_800,
+          cacheFiles: 28,
+          modelsBytes: 1_468_006_400,
+          modelsFiles: 4,
+          binBytes: 73_400_320,
+          binFiles: 2,
+          totalAppDataBytes: 1_650_000_000,
+          totalAppDataFiles: 350,
+        }),
+      clear_cache: () =>
+        ok({
+          freedBytes: 52_428_800,
+          filesDeleted: 28,
+          errors: [],
+          success: true,
+        }),
+      hardware_info: () =>
+        ok({
+          cpuName: "AMD Ryzen 7 7800X3D 8-Core Processor",
+          cpuThreads: 16,
+          cpuArchitecture: "AMD64",
+          gpus: ["NVIDIA GeForce RTX 4080 (16 GB)"],
+          cudaAvailable: true,
+          cudaDeviceName: "NVIDIA GeForce RTX 4080",
+          cudaVersion: "12.1",
+          ramTotalBytes: 34_359_738_368,
+          ramAvailBytes: 21_474_836_480,
+          osName: "Windows 11 Pro",
+        }),
+      open_app_data: () => ok(undefined),
       path_info: (path: string) => ok({ exists: true, isDir: !path.includes("."), isFile: path.includes("."), name: path.split("\\").pop(), parent: "" }),
     },
     jobs: {
@@ -150,6 +202,18 @@ export function createMockBackend(emit: Emit) {
       },
       render_page: (_path: string, page: number) => ok(fakePageThumb(0, page)),
       merge: () => simulateJob("pdf.merge", "merged.pdf", { outPath: "C:\\merged.pdf", pageCount: 3, bytes: 1000 }),
+      compress: (path: string, outPath: string) =>
+        simulateJob("pdf.compress", "compressed.pdf", { inPath: path, outPath, inBytes: 15_000_000, outBytes: 2_400_000, savedBytes: 12_600_000, savedPercent: 84.0 }),
+      split: (_path: string, outDir: string) =>
+        simulateJob("pdf.split", "split", { files: [`${outDir}\\strona_001.pdf`, `${outDir}\\strona_002.pdf`], count: 2, outDir }),
+      pdf_to_images: (_path: string, outDir: string) =>
+        simulateJob("pdf.to_images", "images", { files: [`${outDir}\\page_001.png`, `${outDir}\\page_002.png`], count: 2, outDir }),
+      images_to_pdf: (_paths: string[], outPath: string) =>
+        simulateJob("pdf.from_images", "doc.pdf", { outPath, pageCount: 2, bytes: 500_000 }),
+      rotate_pages: (_path: string, _pages: number[], _angle: number, outPath: string) =>
+        simulateJob("pdf.rotate", "rotated.pdf", { outPath, rotatedCount: 1, bytes: 200_000 }),
+      extract_text: (_path: string, outPath: string) =>
+        simulateJob("pdf.extract_text", "text.txt", { outPath, charCount: 1200, bytes: 1200 }),
     },
     duplicates: {
       scan: (_folder: string, mode: string) => {
@@ -201,7 +265,68 @@ export function createMockBackend(emit: Emit) {
         }, 900);
       },
       start: () => simulateJob("download", "Demo video", { title: "Demo video", path: "", outdir: "C:\\Downloads" }),
-      batch: () => simulateJob("download.batch", "2 URL", { items: [], succeeded: 2, failed: 0, outdir: "C:\\Downloads" }),
+      batch: (params?: { urls?: string[]; outdir?: string }) => {
+        const urls = params?.urls?.filter((u) => u.trim()) ?? [
+          "https://youtube.com/watch?v=demo1",
+          "https://youtube.com/watch?v=demo2",
+        ];
+        const total = urls.length;
+        const jobId = `mock${++counter}`;
+        const started = Date.now();
+        const durationMs = 4500;
+        emit("job:started", {
+          id: jobId,
+          kind: "download.batch",
+          title: `${total} URL`,
+          status: "running",
+          startedAt: started / 1000,
+          finishedAt: null,
+          error: null,
+          percent: 0,
+          message: null,
+          params: {},
+        });
+        urls.forEach((url, i) => {
+          emit("job:partial", { jobId, data: { index: i, url, status: "pending" } });
+        });
+        const timer = window.setInterval(() => {
+          const elapsed = Date.now() - started;
+          const overallPercent = Math.min(100, (elapsed / durationMs) * 100);
+          const currentItem = Math.min(total - 1, Math.floor((overallPercent / 100) * total));
+          const itemPercent = Math.min(100, ((overallPercent % (100 / total)) / (100 / total)) * 100);
+
+          for (let i = 0; i < currentItem; i++) {
+            emit("job:partial", { jobId, data: { index: i, url: urls[i], status: "done", title: `Film #${i + 1}` } });
+          }
+          emit("job:partial", {
+            jobId,
+            data: { index: currentItem, url: urls[currentItem], status: "running", title: `Film #${currentItem + 1}` },
+          });
+
+          emit("job:progress", {
+            jobId,
+            percent: overallPercent,
+            message: "download.status.downloading",
+            params: {},
+            item: currentItem,
+            itemPercent,
+            speed: 5_200_000,
+            eta: Math.max(0, Math.round((durationMs - elapsed) / 1000)),
+          });
+
+          if (overallPercent >= 100) {
+            window.clearInterval(timer);
+            running.delete(jobId);
+            const items = urls.map((u, i) => ({ index: i, url: u, status: "done", title: `Film #${i + 1}` }));
+            emit("job:done", {
+              jobId,
+              result: { items, succeeded: total, failed: 0, outdir: params?.outdir || "C:\\Downloads" },
+            });
+          }
+        }, 150);
+        running.set(jobId, timer);
+        return Promise.resolve(jobId);
+      },
     },
     watermark: {
       load: (path: string) => ok({ path, width: 1280, height: 800, dataUrl: fakePhoto(0) }),
@@ -238,6 +363,131 @@ export function createMockBackend(emit: Emit) {
           elapsed: 1.2,
         }, 1500),
       save: (_r: string, out: string) => ok(out),
+    },
+    compressor: {
+      load_preview: (path: string) =>
+        ok({
+          path,
+          fileName: path.split(/[\\/]/).pop() || "image.png",
+          size: 3_500_000,
+          width: 1920,
+          height: 1080,
+          format: "PNG",
+          hasAlpha: false,
+          dataUrl: fakePhoto(0),
+        }),
+      preview: (_path: string, _params: unknown) =>
+        ok({
+          compressedBytes: 650_000,
+          savedBytes: 2_850_000,
+          savedPercent: 81.4,
+          dataUrl: fakePhoto(1),
+        }),
+      start: (_params: unknown) =>
+        simulateJob("compressor", "image.png", {
+          total: 1,
+          processed: 1,
+          failed: 0,
+          inBytes: 3_500_000,
+          outBytes: 650_000,
+          savedBytes: 2_850_000,
+          savedPercent: 81.4,
+          outputDir: "C:\\out",
+        }, 1200),
+    },
+    image_editor: {
+      load_preview: (path: string) =>
+        ok({
+          path,
+          fileName: path.split(/[\\/]/).pop() || "photo.png",
+          size: 2_400_000,
+          width: 1920,
+          height: 1080,
+          format: "PNG",
+          hasAlpha: false,
+          dataUrl: fakePhoto(0),
+        }),
+      preview_transform: (_path: string, _ops: unknown) =>
+        ok({
+          width: 1280,
+          height: 720,
+          hasAlpha: false,
+          dataUrl: fakePhoto(1),
+        }),
+      save_transformed: (_src: string, target: string, _ops: unknown) =>
+        ok({
+          outPath: target,
+          width: 1280,
+          height: 720,
+          bytes: 1_200_000,
+        }),
+      start_batch: (_files: string[], outDir: string, _ops: unknown) =>
+        simulateJob("image_editor", "Batch transforms", {
+          total: 2,
+          processed: 2,
+          failed: 0,
+          outputDir: outDir,
+          results: [],
+        }, 1200),
+    },
+    video_sync: {
+      probe: (path: string) =>
+        ok({
+          path,
+          fileName: path.split(/[\\/]/).pop() || "clip.mp4",
+          size: 45_000_000,
+          format: "mp4",
+          duration: 184.5,
+          hasVideo: true,
+          hasAudio: true,
+          width: 1920,
+          height: 1080,
+          fps: 60.0,
+          videoCodec: "h264",
+          audioTracks: [
+            {
+              index: 1,
+              streamIndex: 1,
+              codec: "aac",
+              channels: 2,
+              sampleRate: 48000,
+              bitrate: 192000,
+              title: "Stereo Master",
+              language: "eng",
+            },
+          ],
+          thumbnail: fakePhoto(2),
+        }),
+      waveform: (_path: string, points = 1200, startSec = 0, duration = 30) => {
+        const pts: number[] = [];
+        for (let i = 0; i < points; i++) {
+          const t = i / points;
+          const beat = Math.sin(t * 50) * 0.4 + Math.sin(t * 12) * 0.3;
+          pts.push(Math.max(0.05, Math.min(1.0, Math.abs(beat) + Math.random() * 0.2)));
+        }
+        return ok({
+          points: pts,
+          sampleCount: points * 10,
+          duration,
+          startSec,
+          maxPeak: 0.95,
+        });
+      },
+      preview: (params: { videoPath: string; offsetSec: number; startSec?: number; duration?: number }) =>
+        ok({
+          previewUrl: "",
+          duration: params.duration || 30,
+          offsetSec: params.offsetSec,
+          startSec: params.startSec || 0,
+          sizeBytes: 1_500_000,
+        }),
+      start: (params: { outputPath: string; offsetSec: number }) =>
+        simulateJob("video_sync", "Audio-Video Sync", {
+          outputPath: params.outputPath,
+          fileName: params.outputPath.split(/[\\/]/).pop() || "synced.mp4",
+          bytes: 45_200_000,
+          offsetSec: params.offsetSec,
+        }, 1500),
     },
   };
 }

@@ -26,6 +26,18 @@
       "name": "Pobieranie wideo",
       "description": "Pobieraj filmy i audio z YouTube, X i innych serwisów."
     },
+    "video_sync": {
+      "name": "Synchronizacja Audio-Wideo",
+      "description": "Synchronizuj rozjechane ścieżki dźwiękowe z obrazem, dopasowuj po amplitudzie i twórz podgląd."
+    },
+    "compressor": {
+      "name": "Kompresor obrazów",
+      "description": "Zmniejszaj rozmiar plików PNG, JPEG i WebP z podglądem na żywo i dopasowaniem do limitu."
+    },
+    "image_tools": {
+      "name": "Narzędzia obrazu",
+      "description": "Zmieniaj rozmiar, kadruj, obracaj i odbijaj lustrzanie pojedyncze zdjęcia oraz całe foldery."
+    },
     "converter": {
       "name": "Konwerter obrazów",
       "description": "Konwertuj całe foldery obrazów między formatami."
@@ -48,7 +60,23 @@
     },
     "pdf": {
       "name": "Łączenie PDF",
-      "description": "Układaj strony z wielu plików PDF i łącz je w jeden."
+      "description": "Układaj i łącz strony z wielu plików PDF w jeden dokument."
+    },
+    "pdf_compress": {
+      "name": "Kompresor PDF",
+      "description": "Zmniejszaj rozmiar plików PDF poprzez optymalizację grafik i struktury."
+    },
+    "pdf_split": {
+      "name": "Podział PDF",
+      "description": "Podziel dokument na pojedyncze strony lub wyodrębnij wskazany zakres."
+    },
+    "pdf_convert": {
+      "name": "PDF ↔ Obrazy",
+      "description": "Konwertuj strony PDF na grafiki lub twórz PDF z kolekcji zdjęć."
+    },
+    "pdf_extract": {
+      "name": "Ekstrakcja tekstu PDF",
+      "description": "Wyciągaj tekst z dokumentów PDF do plików tekstowych .txt."
     },
     "duplicates": {
       "name": "Wyszukiwarka duplikatów",
@@ -120,7 +148,64 @@
     "mica": "Efekt Mica",
     "micaDescription": "Półprzezroczyste tło okna w stylu Windows 11, dopasowane do tapety.",
     "micaRestart": "Zmiana zostanie zastosowana po ponownym uruchomieniu aplikacji.",
-    "micaUnsupported": "Wymaga Windows 11 (22H2 lub nowszego)."
+    "micaUnsupported": "Wymaga Windows 11 (22H2 lub nowszego).",
+    "storage": {
+      "title": "Pamięć i pamięć podręczna",
+      "subtitle": "Zarządzaj przestrzenią dyskową zajmowaną przez pliki tymczasowe, miniatury i pobrane modele.",
+      "cacheTitle": "Pamięć podręczna (Cache)",
+      "cacheDesc": "Tymczasowe pliki konwersji, pobrane archiwa i miniatury robocze.",
+      "modelsTitle": "Modele sztucznej inteligencji (AI)",
+      "modelsDesc": "Pobrane wagi sieci neuronowych (LaMa inpainting, Real-ESRGAN, BiRefNet).",
+      "appDataTitle": "Folder aplikacji (%APPDATA%)",
+      "appDataDesc": "Główny katalog Media Studio zawierający konfigurację i pliki tymczasowe.",
+      "recentFoldersTitle": "Historia ostatnich folderów",
+      "recentFoldersDesc": "Historia ostatnio używanych katalogów w oknach wyboru.",
+      "clearCache": "Wyczyść pamięć podręczną",
+      "clearingCache": "Czyszczenie…",
+      "cacheCleared": "Wyczyszczono pamięć podręczną: zwolniono {{size}}",
+      "openFolder": "Otwórz w Eksploratorze",
+      "clearRecent": "Wyczyść historię",
+      "recentCleared": "Wyczyszczono historię ostatnich folderów"
+    },
+    "hardware": {
+      "title": "Wydajność i sprzęt",
+      "cpu": "Procesor (CPU)",
+      "cpuDetails": "{{threads}} wątków logicznych · architektura {{arch}}",
+      "gpu": "Karta graficzna (GPU)",
+      "noGpu": "Zintegrowana grafika lub brak dedykowanego GPU",
+      "cudaActive": "Akceleracja PyTorch CUDA aktywna (v{{version}})",
+      "cudaInactive": "Tryb CPU (Brak środowiska PyTorch CUDA)",
+      "ram": "Pamięć operacyjna RAM",
+      "ramDetails": "{{avail}} wolne z {{total}} całkowitej pamięci",
+      "concurrency": "Maksymalna współbieżność zadań",
+      "concurrencyDesc": "Liczba zadań w tle i wątków roboczych wykonywanych równolegle.",
+      "concurrencyThreads": "{{count}} wątków",
+      "acceleration": "Akceleracja sprzętowa (GPU)",
+      "accelerationDesc": "Używaj procesora graficznego do akceleracji obliczeń AI i wideo."
+    },
+    "notifications": {
+      "title": "Powiadomienia i dźwięki",
+      "desktop": "Powiadomienia na pulpicie (Windows)",
+      "desktopDesc": "Wyświetla powiadomienia w systemie po zakończeniu długotrwałych zadań w tle.",
+      "sound": "Dźwięk ukończenia zadania",
+      "soundDesc": "Odtwarza subtelny sygnał dźwiękowy po ukończeniu lub błędzie zadania.",
+      "test": "Przetestuj dźwięk i powiadomienie",
+      "testSent": "Wysłano testowe powiadomienie!"
+    },
+    "advanced": {
+      "title": "Narzędzia i zaawansowane",
+      "customFfmpeg": "Niestandardowa ścieżka do FFmpeg",
+      "customFfmpegDesc": "Wskaż własny plik ffmpeg.exe jeśli chcesz użyć innej instalacji niż wbudowana w Media Studio.",
+      "confirmExit": "Potwierdzenie zamykania okna",
+      "confirmExitDesc": "Wyświetla ostrzeżenie przy próbie zamknięcia programu, gdy w tle trwają aktywne zadania.",
+      "resetSettings": "Przywracanie ustawień fabrycznych",
+      "resetSettingsDesc": "Przywraca wszystkie ustawienia do wartości domyślnych.",
+      "resetBtn": "Przywróć domyślne",
+      "resetConfirmTitle": "Czy na pewno chcesz zresetować ustawienia?",
+      "resetConfirmBody": "Wszystkie Twoje preferencje zostaną przywrócone do wartości domyślnych. Pobrane modele AI i dane nie zostaną usunięte.",
+      "resetConfirmAction": "Tak, zresetuj wszystko",
+      "resetSuccess": "Ustawienia zostały przywrócone do domyślnych."
+    }
   },
   "common": {
     "browse": "Przeglądaj",
@@ -162,13 +247,15 @@
     "outputFolder": "Folder zapisu",
     "fileName": "Nazwa pliku",
     "savedSuccess": "Zapisano plik",
+    "loading": "Ładowanie...",
     "view": "Widok",
     "viewSplit": "Suwak",
     "viewSide": "Obok siebie",
     "viewAfter": "Tylko wynik",
     "viewBefore": "Tylko oryginał",
     "before": "Przed (Oryginał)",
-    "after": "Po (Wynik)"
+    "after": "Po (Wynik)",
+    "preview": "Podgląd"
   },
   "converter": {
     "changeImage": "Zmień obraz",
@@ -205,6 +292,12 @@
     "methodHint": "0 = najszybciej, 6 = najlepsza kompresja.",
     "outputFolder": "Folder docelowy",
     "start": "Konwertuj",
+    "saved": "Zaoszczędzono",
+    "fileSelected": "Wybrano plik",
+    "filesSelected_one": "Wybrano {{count}} plik",
+    "filesSelected_few": "Wybrano {{count}} pliki",
+    "filesSelected_many": "Wybrano {{count}} plików",
+    "filesSelected_other": "Wybrano {{count}} pliku",
     "idle": {
       "pickFolder": "Wybierz folder z obrazami.",
       "pickFiles": "Dodaj obrazy do konwersji.",
@@ -232,19 +325,86 @@
       "error": "Konwersja nie powiodła się"
     }
   },
+  "compressor": {
+    "changeImage": "Zmień obraz",
+    "status": {
+      "processing": "Kompresja: {{file}} ({{index}}/{{total}})",
+      "done": "Kompresja zakończona pomyślnie."
+    },
+    "log": {
+      "done": "{{name}} skompresowano ({{saved}})",
+      "error": "Błąd kompresji {{file}}: {{error}}"
+    },
+    "tabs": {
+      "single": "Pojedynczy plik z podglądem",
+      "batch": "Kompresja seryjna (wiele plików)"
+    },
+    "dropSingleTitle": "Upuść grafikę do kompresji tutaj",
+    "dropSingleHint": "lub kliknij, aby wybrać obraz (PNG, JPEG, WebP)",
+    "dropBatchTitle": "Upuść wiele grafik lub folder",
+    "dropBatchHint": "lub kliknij, aby wybrać grupę plików do masowej kompresji",
+    "mode": "Tryb kompresji",
+    "modeSmart": "Zrównoważona (Smart Lossy)",
+    "modeSmartHint": "Znakomity kompromis między niewidoczną utratą jakości a małym rozmiarem",
+    "modeLossless": "Bezstratna (Lossless)",
+    "modeLosslessHint": "100% zachowania pikseli, optymalizacja kompresji i usunięcie zbędnych metadanych",
+    "modeTarget": "Dopasuj do limitu (Target Size)",
+    "modeTargetHint": "Automatyczny dobór parametrów, by plik nie przekroczył podanej wagi w KB",
+    "format": "Format wyjściowy",
+    "formatOriginal": "Taki sam jak oryginał",
+    "formatWebp": "Nowoczesny WebP (zalecany, największa oszczędność)",
+    "formatJpeg": "Standardowy JPEG",
+    "formatPng": "PNG (kwantyzacja do palety 256 kolorów)",
+    "quality": "Jakość",
+    "targetKb": "Docelowy rozmiar (KB)",
+    "targetKbPlaceholder": "np. 500",
+    "targetKbHint": "Maksymalny dozwolony rozmiar pliku wyjściowego w kilobajtach",
+    "before": "Oryginał",
+    "after": "Po kompresji",
+    "saved": "Zaoszczędzono: {{saved}} (-{{percent}}%)",
+    "compressAction": "Kompresuj i zapisz",
+    "compressBatchAction": "Kompresuj wszystkie pliki",
+    "outputDir": "Katalog docelowy",
+    "summary": "Podsumowanie: {{processed}}/{{total}} plików, zaoszczędzono {{saved}} (-{{percent}}%)",
+    "toast": {
+      "success": "Skompresowano obraz",
+      "batchSuccess": "Skompresowano {{count}} plików (zaoszczędzono {{saved}})",
+      "error": "Nie udało się skompresować pliku"
+    }
+  },
   "pdf": {
     "status": {
       "rendering": "Renderowanie: {{file}}, strona {{page}}",
       "merging": "Łączenie stron {{current}}/{{total}}",
       "saving": "Zapisywanie pliku…",
+      "compressing": "Kompresja dokumentu PDF…",
+      "rewritingImages": "Optymalizacja osadzonych obrazów…",
+      "splitting": "Zapisywanie stron…",
+      "convertingImages": "Konwersja obrazów na strony PDF…",
+      "extractingText": "Ekstrakcja tekstu…",
       "done": "Plik PDF zapisany."
     },
     "log": {
-      "readFailed": "Nie można odczytać {{file}}: {{error}}"
+      "readFailed": "Nie można odczytać {{file}}: {{error}}",
+      "rewriteWarning": "Ostrzeżenie przy optymalizacji obrazów: {{error}}"
+    },
+    "tabs": {
+      "merge": "Łączenie i strony",
+      "compress": "Kompresja",
+      "split": "Podział",
+      "convert": "PDF ↔ Obrazy",
+      "extract": "Ekstrakcja tekstu"
     },
     "dropTitle": "Upuść pliki PDF tutaj",
     "dropMore": "Dodaj kolejne pliki PDF",
     "dropHint": "lub kliknij, aby wybrać dokumenty",
+    "dropSingleTitle": "Upuść dokument PDF tutaj",
+    "dropSingleHint": "lub kliknij, aby wybrać pojedynczy plik PDF",
+    "dropImagesTitle": "Upuść pliki graficzne tutaj",
+    "dropImagesHint": "lub kliknij, aby wybrać zdjęcia (PNG, JPG, WebP)",
+    "dropChange": "Zmień plik PDF (upuść lub kliknij)",
+    "selectedFile": "Wybrany dokument",
+    "settings": "Ustawienia",
     "pages_one": "{{count}} strona",
     "pages_few": "{{count}} strony",
     "pages_many": "{{count}} stron",
@@ -252,11 +412,49 @@
     "pageShort": "str. {{page}}",
     "preview": "Podgląd",
     "removePage": "Usuń stronę",
+    "rotateRight": "Obróć o 90° w prawo",
     "sortByFile": "Sortuj według pliku i numeru strony",
     "loading": "Wczytywanie stron…",
     "reorderHint": "Przeciągnij strony, aby zmienić kolejność. Strony zostaną połączone w kolejności od lewej do prawej.",
     "merge": "Połącz i zapisz",
     "defaultName": "polaczony.pdf",
+    "compress": {
+      "title": "Zmniejsz rozmiar dokumentu PDF",
+      "subtitle": "Optymalizacja wagi plików skanów i dokumentów przez rekompresję osadzonych grafik i czyszczenie struktury.",
+      "preset": "Poziom kompresji",
+      "presetLow": "Lekka (wysoka jakość, 200 DPI)",
+      "presetBalanced": "Zrównoważona (zalecana, 150 DPI)",
+      "presetHigh": "Maksymalna (najmniejszy plik, 100 DPI)",
+      "action": "Kompresuj i zapisz",
+      "defaultName": "skompresowany.pdf",
+      "result": "Oryginał: {{before}} ➔ Po kompresji: {{after}} (oszczędność: -{{percent}}%)"
+    },
+    "split": {
+      "title": "Podziel dokument PDF na mniejsze pliki",
+      "subtitle": "Podziel wielostronicowy dokument na pojedyncze strony lub wyciągnij wskazany fragment.",
+      "mode": "Sposób podziału",
+      "modeAll": "Każda strona jako osobny plik PDF",
+      "modeRange": "Wyodrębnij określony zakres stron",
+      "rangeLabel": "Zakres stron (np. 1-3, 5, 8-10)",
+      "rangePlaceholder": "1-3, 5, 8",
+      "rangeHint": "Podaj numery stron oddzielone przecinkami lub zakresy myślnikiem",
+      "action": "Podziel do folderu"
+    },
+    "convert": {
+      "pdfToImages": "PDF ➔ Pliki graficzne",
+      "imagesToPdf": "Grafiki ➔ Dokument PDF",
+      "format": "Format obrazu",
+      "dpi": "Rozdzielczość (DPI)",
+      "actionToImages": "Eksportuj strony do folderu",
+      "actionFromImages": "Utwórz PDF ze zdjęć",
+      "defaultPdfName": "z_obrazow.pdf"
+    },
+    "extract": {
+      "title": "Wyciągnij tekst z dokumentu PDF",
+      "subtitle": "Zapisuje całą zawartość tekstową dokumentu z podziałem na strony do pliku .txt.",
+      "action": "Eksportuj do .txt",
+      "defaultName": "tekst_z_pdf.txt"
+    },
     "idle": {
       "empty": "Dodaj pliki PDF, aby zacząć.",
       "ready_one": "{{count}} strona z {{files}} plików gotowa do połączenia",
@@ -270,7 +468,17 @@
       "merged_many": "Połączono {{count}} stron",
       "merged_other": "Połączono {{count}} strony",
       "mergeError": "Nie udało się połączyć plików",
-      "readError": "Nie można odczytać pliku {{file}}"
+      "readError": "Nie można odczytać pliku {{file}}",
+      "compressSuccess": "Skompresowano dokument PDF",
+      "compressError": "Nie udało się skompresować pliku",
+      "splitSuccess": "Podzielono dokument na {{count}} plików",
+      "splitError": "Nie udało się podzielić pliku",
+      "toImagesSuccess": "Wyeksportowano {{count}} stron do grafik",
+      "toImagesError": "Nie udało się wyeksportować stron",
+      "fromImagesSuccess": "Utworzono PDF z {{count}} grafik",
+      "fromImagesError": "Nie udało się utworzyć pliku PDF",
+      "extractSuccess": "Wyodrębniono tekst do pliku",
+      "extractError": "Nie udało się wyodrębnić tekstu"
     }
   },
   "duplicates": {
@@ -430,14 +638,28 @@
     "recommended": "Zalecane",
     "audioOnly": "Audio",
     "noFormats": "Brak formatów w tej kategorii.",
+    "playlistBadge_one": "Playlista / Folder ({{count}} film)",
+    "playlistBadge_few": "Playlista / Folder ({{count}} filmy)",
+    "playlistBadge_many": "Playlista / Folder ({{count}} filmów)",
+    "playlistBadge_other": "Playlista / Folder ({{count}} filmów)",
+    "playlistHint": "Wykryto playlistę lub folder. Po kliknięciu „Pobierz” wszystkie filmy zostaną dodane do kolejki pobierania.",
+    "downloadPlaylist_one": "Pobierz playlistę ({{count}} film)",
+    "downloadPlaylist_few": "Pobierz playlistę ({{count}} filmy)",
+    "downloadPlaylist_many": "Pobierz playlistę ({{count}} filmów)",
+    "downloadPlaylist_other": "Pobierz playlistę ({{count}} filmów)",
+    "retryFailed_one": "Ponów niepobrany ({{count}})",
+    "retryFailed_few": "Ponów niepobrane ({{count}})",
+    "retryFailed_many": "Ponów niepobrane ({{count}})",
+    "retryFailed_other": "Ponów niepobrane ({{count}})",
     "queueTitle": "Lista linków",
-    "urlCount_one": "{{count}} link",
-    "urlCount_few": "{{count}} linki",
-    "urlCount_many": "{{count}} linków",
-    "urlCount_other": "{{count}} linku",
+    "urlCount_one": "{{count}} element",
+    "urlCount_few": "{{count}} elementy",
+    "urlCount_many": "{{count}} elementów",
+    "urlCount_other": "{{count}} elementu",
     "batchHint": "Jeden link w wierszu. Każdy film zostanie pobrany w najlepszej jakości (MP4).",
     "itemStatus": {
-      "running": "Oczekuje",
+      "pending": "Oczekuje",
+      "running": "Pobieranie",
       "done": "Pobrano",
       "error": "Błąd",
       "cancelled": "Anulowano"
@@ -624,11 +846,26 @@
   },
   "jobs": {
     "title": "Zadania",
+    "popupTitle": "Zadania w toku",
+    "showMore": "Pokaż więcej",
+    "showMoreTooltip": "Otwórz pełny panel zadań",
+    "overallProgress": "Postęp całości",
+    "subtasksTitle": "Konkretne akcje",
+    "pending": "W kolejce",
+    "activeCount": "{{count}} w toku",
+    "completedCount": "{{count}} ukończonych",
+    "errorCount": "{{count}} z błędem",
+    "cancelledCount": "{{count}} anulowano",
+    "itemCount": "{{done}}/{{total}} ukończono",
+    "noActiveJobs": "Brak aktywnych zadań",
+    "noActiveJobsBody": "Wszystkie operacje zostały ukończone lub nie ma żadnych w toku.",
     "openTool": "Przejdź",
     "emptyTitle": "Brak zadań",
     "emptyBody": "Tu pojawią się operacje uruchomione w dowolnym narzędziu.",
     "clearFinished": "Wyczyść zakończone",
     "clearHint": "Ukrywa zakończone zadania z listy. Wyniki w narzędziach zostają.",
+    "collapseDetails": "Zwiń szczegóły",
+    "expandDetails": "Rozwiń szczegóły",
     "toastDone": "{{tool}}: zakończono",
     "toastError": "{{tool}}: błąd"
   },
@@ -733,6 +970,227 @@
       "rembg": "Model AI BiRefNet (Usuwanie tła)",
       "upscale_general": "Model AI Real-ESRGAN General",
       "upscale_anime": "Model AI Real-ESRGAN Anime"
+    }
+  },
+  "imageTools": {
+    "tabs": {
+      "single": "Pojedynczy obraz",
+      "batch": "Przetwarzanie wsadowe"
+    },
+    "subtabs": {
+      "resize": "Zmień rozmiar",
+      "crop": "Kadrowanie",
+      "transform": "Obrót i odbicie"
+    },
+    "dropSingleTitle": "Upuść obraz do edycji",
+    "dropSingleHint": "lub kliknij, aby wybrać plik (PNG, JPG, WebP, BMP, TIFF)",
+    "dropBatchTitle": "Upuść obrazy do edycji wsadowej",
+    "dropBatchHint": "lub kliknij, aby wybrać pliki graficzne",
+    "width": "Szerokość (px)",
+    "height": "Wysokość (px)",
+    "lockAspect": "Zachowaj proporcje",
+    "scalePercent": "Skala procentowa",
+    "presets": "Popularne formaty",
+    "presetOriginal": "Oryginalny",
+    "presetFullHd": "Full HD (1920×1080)",
+    "preset4k": "4K UHD (3840×2160)",
+    "presetSquare": "Kwadrat 1:1 (1080×1080)",
+    "presetStory": "Relacja / Stories 9:16 (1080×1920)",
+    "presetClassic": "Klasyczny 4:3 (1600×1200)",
+    "filter": "Algorytm skalowania",
+    "filterLanczos": "Lanczos (najlepsza ostrość)",
+    "filterBicubic": "Bikubiczny (gładki)",
+    "filterBilinear": "Bilinearny (szybki)",
+    "filterNearest": "Najbliższy sąsiad (Pixel Art)",
+    "cropPreset": "Proporcje kadru",
+    "cropFree": "Dowolne",
+    "crop1_1": "Kwadrat 1:1",
+    "crop16_9": "Panoramiczny 16:9",
+    "crop9_16": "Pionowy 9:16",
+    "crop4_3": "Standardowy 4:3",
+    "crop3_2": "Fotografia 3:2",
+    "cropX": "Pozycja X",
+    "cropY": "Pozycja Y",
+    "cropW": "Szerokość kadru",
+    "cropH": "Wysokość kadru",
+    "rotation": "Obrót",
+    "flip": "Odbicie",
+    "rotateLeft": "Obróć o 90° w lewo",
+    "rotateRight": "Obróć o 90° w prawo",
+    "rotate180": "Obróć o 180°",
+    "flipH": "Odbij w poziomie (lustro)",
+    "flipV": "Odbij w pionie",
+    "toolbox": {
+      "title": "Przybornik",
+      "select": "Wskaźnik / Podgląd",
+      "crop": "Kadrowanie",
+      "resize": "Zmień rozmiar",
+      "transform": "Obrót i odbicie",
+      "reset": "Przywróć oryginalny",
+      "hint": "Wybierz narzędzie z przybornika po lewej: [C] Kadrowanie, [R] Zmiana rozmiaru, [T] Obrót i odbicie."
+    },
+    "cropApply": "Zatwierdź kadr",
+    "cropCancel": "Anuluj kadr",
+    "cropReset": "Pełny obraz",
+    "cropHelper": "Zaznacz kadr przeciągając myszą lub użyj uchwytów na krawędziach",
+    "cropDimensions": "Wymiary kadru",
+    "cropAppliedToast": "Zastosowano kadr",
+    "resizeDelta": "Rozmiar",
+    "filterTooltip": "Algorytm interpolacji pikseli podczas skalowania",
+    "reset": "Przywróć oryginalny",
+    "copyClipboard": "Kopiuj do schowka",
+    "copied": "Skopiowano obraz do schowka!",
+    "saveAction": "Zapisz obraz jako…",
+    "batchAction": "Zastosuj do wszystkich ({{count}})",
+    "batchOutputFolder": "Folder zapisu",
+    "applyToAll": "Zastosuj do wszystkich",
+    "appliedToAll": "Zastosowano ustawienia do wszystkich obrazów w kolejce",
+    "processBatch": "Przetwórz i zapisz ({{count}})",
+    "selectedFile": "Edytowany plik",
+    "batchHint": "Wybierz plik z listy, aby dostosować jego rozmiar, kadr i obrót",
+    "status": {
+      "starting": "Rozpoczynanie przetwarzania…",
+      "processing": "Przetwarzanie obrazu…",
+      "done": "Przetwarzanie zakończone."
+    },
+    "toast": {
+      "saveSuccess": "Zapisano zmodyfikowany obraz",
+      "batchSuccess": "Pomyślnie przetworzono {{count}} obrazów",
+      "copyError": "Nie udało się skopiować obrazu do schowka",
+      "error": "Błąd podczas modyfikacji obrazu"
+    }
+  },
+  "transfer": {
+    "sendTo": "Prześlij do...",
+    "sendAllTo": "Prześlij wszystkie do...",
+    "button": "Prześlij do...",
+    "buttonTooltip": "Otwórz ten plik w innym narzędziu",
+    "modalTitle": "Prześlij plik do innego narzędzia",
+    "modalDesc": "Wybierz narzędzie, w którym chcesz kontynuować pracę z tym plikiem.",
+    "sourceFile": "Przesyłany plik",
+    "sourceFiles": "Przesyłane pliki ({{count}})",
+    "compatibleTools": "Dostępne narzędzia (zgodne z typem pliku)",
+    "noCompatibleTools": "Brak kompatybilnych narzędzi dla tego typu pliku.",
+    "asImagesToPdf": "Otworzy się w trybie: Obrazy do PDF",
+    "asPdfToImages": "Otworzy się w trybie: PDF do obrazów",
+    "toastLoaded": "Plik został pomyślnie załadowany do narzędzia",
+    "toastLoadedFrom": "Załadowano plik z narzędzia: {{source}}",
+    "currentTool": "Bieżące narzędzie",
+    "sendAction": "Prześlij plik",
+    "afterTitle": "Przetworzone obrazy",
+    "convertedTitle": "Przekonwertowane obrazy",
+    "compressedTitle": "Skompresowane obrazy",
+    "processedTitle": "Wyniki przetwarzania",
+    "extractedTitle": "Wyodrębnione obrazy",
+    "savedTitle": "Zapisany obraz",
+    "openOutputFolder": "Pokaż folder wyjściowy",
+    "outputFilesCount": "Liczba wygenerowanych plików: {{count}}"
+  },
+  "video_sync": {
+    "title": "Synchronizacja Audio-Wideo",
+    "subtitle": "Wyrównuj rozjechane ścieżki dźwiękowe z obrazem, dopasowuj po amplitudzie i twórz podgląd",
+    "dropTitle": "Upuść plik wideo tutaj lub kliknij, aby wybrać",
+    "dropHint": "Obsługuje MP4, MKV, MOV, AVI, WEBM, FLV, WMV i inne formaty wideo",
+    "changeVideo": "Zmień wideo",
+    "errors": {
+      "loadVideo": "Błąd ładowania wideo",
+      "loadAudio": "Błąd ładowania pliku audio",
+      "preview": "Błąd generowania podglądu"
+    },
+    "timeline": {
+      "title": "Oś czasu & Amplituda dźwięku (Przeciągaj track, aby przesunąć)",
+      "zoom": "Zoom:",
+      "zoomIn": "Powiększ",
+      "zoomOut": "Pomniejsz",
+      "trackAudio": "Audio wideo",
+      "trackExternal": "Audio zewn.",
+      "generatingWaveform": "Generowanie podglądu fali dźwiękowej...",
+      "silenceDelay": "(Cisza/Delay)",
+      "trimmedStart": "(Przycięty początek)",
+      "previewBadge": "Podgląd"
+    },
+    "offset": {
+      "inSync": "Brak przesunięcia (0.000s)",
+      "reset": "Zresetuj przesunięcie do 0"
+    },
+    "legend": {
+      "waveform": "Fala dźwiękowa (Amplituda)",
+      "delay": "Obszar opóźnienia dźwięku (+)",
+      "lead": "Obszar przycięcia/wyprzedzenia (-)",
+      "playhead": "Głowica odtwarzania",
+      "previewRange": "Obszar wycinka podglądu (np. 30s)",
+      "hint": "Wskazówka: Przytrzymaj Shift podczas przeciągania dla mikro-precyzji"
+    },
+    "controls": {
+      "title": "Przesunięcie i Synchronizacja Ścieżki",
+      "currentOffset": "Wartość przesunięcia (Audio Delay / Lead)"
+    },
+    "status": {
+      "synced": "Ścieżki są idealnie w fazie zerowej",
+      "delayed": "Dźwięk opóźniony (rozbrzmiewa później niż obraz)",
+      "early": "Dźwięk wyprzedza obraz (rozbrzmiewa wcześniej)",
+      "preparing": "Przygotowywanie synchronizacji...",
+      "syncing": "Eksportowanie zsynchronizowanego wideo...",
+      "done": "Synchronizacja ukończona"
+    },
+    "nudge": {
+      "sub1s": "Odejmij 1 sekundę",
+      "sub250ms": "Odejmij 250 milisekund",
+      "sub50ms": "Odejmij 50 milisekund",
+      "zero": "Zresetuj do 0",
+      "add50ms": "Dodaj 50 milisekund",
+      "add250ms": "Dodaj 250 milisekund",
+      "add1s": "Dodaj 1 sekundę"
+    },
+    "slider": {
+      "label": "Suwak przesunięcia",
+      "rangeWide": "Zakres: ±30s",
+      "rangeFine": "Zakres: ±5s (precyzyjny)"
+    },
+    "input": {
+      "seconds": "Wpisz w sekundach (s)",
+      "millis": "Wpisz w milisekundach (ms)"
+    },
+    "sources": {
+      "title": "Źródło dźwięku do synchronizacji",
+      "embedded": "Ścieżka z pliku wideo",
+      "external": "Zewnętrzny plik audio",
+      "noExternal": "Nie wybrano pliku audio",
+      "pickAudio": "Wybierz audio",
+      "changeAudio": "Zmień audio"
+    },
+    "tracks": {
+      "select": "Wybierz ścieżkę dźwiękową z wideo",
+      "trackNum": "Ścieżka {{num}}"
+    },
+    "preview": {
+      "title": "Odtwarzacz & Szybki Podgląd",
+      "noClipPrompt": "Kliknij 'Wygeneruj podgląd', aby zobaczyć zsynchronizowany fragment wideo z naniesionym opóźnieniem dźwięku.",
+      "startPos": "Miejsce podglądu w filmie:",
+      "startDesc": "Możesz wybrać dowolny fragment nawet w 3-godzinnym filmie",
+      "length": "Długość:",
+      "generateBtn": "Wygeneruj podgląd",
+      "generating": "Generowanie podglądu...",
+      "startPosTooltip": "Początek podglądu:",
+      "startOfVideo": "00:00 (Początek filmu)",
+      "sub30s": "-30 sekund",
+      "add30s": "+30 sekund",
+      "loopOn": "✓ Pętla (Loop) włączona",
+      "loopOff": "Pętla (Loop) wyłączona"
+    },
+    "export": {
+      "title": "Eksport zsynchronizowanego wideo",
+      "fastCopy": "Szybki bezstratny (Kopiowanie strumienia wideo - natychmiastowe)",
+      "reencode": "Pełne przekodowanie (Wysoka jakość x264/AAC)",
+      "saveAs": "Zapisz jako:",
+      "browse": "Przeglądaj",
+      "startExport": "Eksportuj zsynchronizowane wideo",
+      "success": "Pomyślnie wyeksportowano zsynchronizowane wideo!",
+      "error": "Błąd podczas eksportu zsynchronizowanego wideo"
+    },
+    "log": {
+      "starting": "Rozpoczynanie synchronizacji audio dla {{path}} z przesunięciem {{offset}}",
+      "finished": "Zapisano {{out}} ({{size}} bajtów)"
     }
   }
 }

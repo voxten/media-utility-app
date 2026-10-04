@@ -27,6 +27,7 @@ import {
   Tooltip,
 } from "@fluentui/react-components";
 import {
+  ArrowClockwise16Regular,
   ArrowDownload16Filled,
   CheckmarkCircle16Filled,
   Clock16Regular,
@@ -72,6 +73,13 @@ interface Format {
   note: string;
 }
 
+interface PlaylistEntry {
+  url: string;
+  title: string;
+  id: string;
+  duration: number | null;
+}
+
 interface ProbeResult {
   url: string;
   title: string;
@@ -79,15 +87,18 @@ interface ProbeResult {
   duration: number | null;
   viewCount: number | null;
   thumbnail: string | null;
+  isPlaylist?: boolean;
+  entries?: PlaylistEntry[];
   formats: Record<Mode, Format[]>;
 }
 
 interface BatchItem {
   index: number;
   url: string;
-  status: "running" | "done" | "error" | "cancelled";
+  status: "pending" | "running" | "done" | "error" | "cancelled";
   title?: string;
   error?: string;
+  percent?: number;
 }
 
 const AUDIO_CODECS = ["mp3", "m4a", "flac", "wav", "aac", "opus"];
@@ -174,6 +185,28 @@ const useStyles = makeStyles({
   ok: { color: tokens.colorPaletteGreenForeground1 },
   bad: { color: tokens.colorPaletteRedForeground1 },
   muted: { color: tokens.colorNeutralForeground3 },
+  playlistHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap", marginBottom: "8px" },
+  playlistEntriesList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "6px",
+    maxHeight: "260px",
+    overflowY: "auto",
+    marginTop: "12px",
+    padding: "8px",
+    borderRadius: tokens.borderRadiusMedium,
+    backgroundColor: tokens.colorNeutralBackground2,
+    border: `1px solid ${tokens.colorNeutralStroke3}`,
+  },
+  playlistEntryItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "6px 10px",
+    borderRadius: tokens.borderRadiusSmall,
+    backgroundColor: tokens.colorNeutralBackground1,
+  },
+  entryIdx: { color: tokens.colorNeutralForeground3, fontVariantNumeric: "tabular-nums", minWidth: "28px" },
 });
 
 function formatLabel(f: Format, t: (k: string, o?: Record<string, unknown>) => string) {
@@ -231,9 +264,11 @@ export default function DownloadPage() {
   // Batch queue view: merge streamed per-item partials with the per-item progress.
   const queue = useMemo<(BatchItem & { percent?: number })[]>(() => {
     const items = new Map<number, BatchItem & { percent?: number }>();
-    const source = batch.job?.status === "running" ? (batch.job.partials as BatchItem[]) : lastBatch ?? [];
-    urls.forEach((url, index) => items.set(index, { index, url, status: "running", percent: 0 }));
-    if (batch.job?.status !== "running" && !lastBatch) return [];
+    const source = (batch.job?.partials && batch.job.partials.length > 0 ? (batch.job.partials as BatchItem[]) : lastBatch) ?? [];
+    if (!batch.job && !lastBatch) {
+      urls.forEach((url, index) => items.set(index, { index, url, status: "pending", percent: 0 }));
+      return Array.from(items.values());
+    }
     source.forEach((p) => items.set(p.index, { ...items.get(p.index), ...p }));
     const extra = batch.job?.status === "running" ? batch.job.extra : {};
     if (typeof extra.item === "number") {
@@ -242,6 +277,15 @@ export default function DownloadPage() {
     }
     return Array.from(items.values()).sort((a, b) => a.index - b.index);
   }, [batch.job, lastBatch, urls]);
+
+  const failedItems = useMemo(() => queue.filter((i) => i.status === "error"), [queue]);
+
+  const retryFailed = () => {
+    const targetUrls = failedItems.length > 0 ? failedItems.map((i) => i.url) : urls;
+    if (targetUrls.length === 0) return;
+    setLastBatch(null);
+    batch.start(() => api.download.batch({ urls: targetUrls, outdir, template: form.template })).catch((err) => notify.error(String(err)));
+  };
 
   const activeJob = form.tab === "batch" ? batch.job : download.running ? download.job : probe.running ? probe.job : download.job;
   const running = probe.running || download.running || batch.running;
@@ -273,6 +317,13 @@ export default function DownloadPage() {
       return;
     }
     if (!form.probe) return;
+    if (form.probe.isPlaylist && form.probe.entries && form.probe.entries.length > 0) {
+      const playlistUrls = form.probe.entries.map((e) => e.url);
+      form.set({ tab: "batch", batchText: playlistUrls.join("\n") });
+      setLastBatch(null);
+      batch.start(() => api.download.batch({ urls: playlistUrls, outdir, template: form.template })).catch((err) => notify.error(String(err)));
+      return;
+    }
     download
       .start(() =>
         api.download.start({
@@ -289,7 +340,8 @@ export default function DownloadPage() {
   };
 
   const formats = form.probe?.formats[form.mode] ?? [];
-  const canDownload = !running && !!outdir && (form.tab === "batch" ? urls.length > 0 : !!form.probe && !!form.formatId);
+  const canDownload =
+    !running && !!outdir && (form.tab === "batch" ? urls.length > 0 : !!form.probe && (form.probe.isPlaylist || !!form.formatId));
 
   return (
     <Page title={t("tools.download.name")} description={t("tools.download.description")} icon={tool.icon} accent={tool.accent}>
@@ -350,78 +402,103 @@ export default function DownloadPage() {
                       </span>
                     )}
                   </div>
-                  <div className={styles.formatsHead}>
-                    <TabList
-                      size="small"
-                      selectedValue={form.mode}
-                      onTabSelect={(_, d) => {
-                        const mode = d.value as Mode;
-                        form.set({ mode, formatId: form.probe!.formats[mode][0]?.id ?? "" });
-                      }}
-                    >
-                      <Tab value="video" icon={<Video24Regular />}>
-                        {t("download.modeVideo")}
-                      </Tab>
-                      <Tab value="audio" icon={<MusicNote224Regular />}>
-                        {t("download.modeAudio")}
-                      </Tab>
-                      <Tab value="muxed" icon={<VideoClipMultiple24Regular />}>
-                        {t("download.modeMuxed")}
-                      </Tab>
-                    </TabList>
-                    <span className={styles.grow} />
-                    {form.mode === "audio" && (
-                      <Dropdown
-                        className={styles.codec}
-                        value={form.audioCodec.toUpperCase()}
-                        selectedOptions={[form.audioCodec]}
-                        onOptionSelect={(_, d) => form.set({ audioCodec: d.optionValue! })}
-                        aria-label={t("download.audioCodec")}
-                      >
-                        {AUDIO_CODECS.map((c) => (
-                          <Option key={c} value={c}>
-                            {c.toUpperCase()}
-                          </Option>
-                        ))}
-                      </Dropdown>
-                    )}
-                  </div>
-                  {formats.length === 0 ? (
-                    <Body1 className={styles.muted}>{t("download.noFormats")}</Body1>
-                  ) : (
-                    <div className={styles.tableWrap}>
-                      <Table size="small" aria-label={t("download.formats")}>
-                        <TableHeader>
-                          <TableRow>
-                            <TableSelectionCell type="radio" invisible />
-                            <TableHeaderCell>{t("download.colQuality")}</TableHeaderCell>
-                            <TableHeaderCell>{t("download.colFormat")}</TableHeaderCell>
-                            <TableHeaderCell>{t("download.colCodec")}</TableHeaderCell>
-                            <TableHeaderCell>{t("download.colSize")}</TableHeaderCell>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {formats.map((f) => (
-                            <TableRow key={f.id} className={styles.row} onClick={() => form.set({ formatId: f.id })} aria-selected={form.formatId === f.id}>
-                              <TableSelectionCell type="radio" checked={form.formatId === f.id} />
-                              <TableCell>
-                                <Text weight={f.kind === "auto" ? "semibold" : "regular"}>{formatLabel(f, t)}</Text>
-                                {f.kind === "auto" && (
-                                  <Badge appearance="tint" color="brand" size="small" style={{ marginLeft: 8 }}>
-                                    {t("download.recommended")}
-                                  </Badge>
-                                )}
-                              </TableCell>
-                              <TableCell>{f.ext.toUpperCase()}</TableCell>
-                              <TableCell>
-                                <span className={styles.mono}>{codecLabel(f)}</span>
-                              </TableCell>
-                              <TableCell>{f.filesize ? formatBytes(f.filesize) : "—"}</TableCell>
-                            </TableRow>
+                  {form.probe.isPlaylist ? (
+                    <div>
+                      <div className={styles.playlistHeader}>
+                        <Badge appearance="tint" color="brand">
+                          {t("download.playlistBadge", { count: form.probe.entries?.length ?? 0 })}
+                        </Badge>
+                      </div>
+                      <Caption1 className={styles.muted}>{t("download.playlistHint")}</Caption1>
+                      {form.probe.entries && form.probe.entries.length > 0 && (
+                        <div className={styles.playlistEntriesList}>
+                          {form.probe.entries.map((entry, idx) => (
+                            <div key={entry.url + idx} className={styles.playlistEntryItem}>
+                              <Text weight="semibold" className={styles.entryIdx}>
+                                #{idx + 1}
+                              </Text>
+                              <Text className={styles.ellipsis}>{entry.title || entry.url}</Text>
+                            </div>
                           ))}
-                        </TableBody>
-                      </Table>
+                        </div>
+                      )}
                     </div>
+                  ) : (
+                    <>
+                      <div className={styles.formatsHead}>
+                        <TabList
+                          size="small"
+                          selectedValue={form.mode}
+                          onTabSelect={(_, d) => {
+                            const mode = d.value as Mode;
+                            form.set({ mode, formatId: form.probe!.formats[mode][0]?.id ?? "" });
+                          }}
+                        >
+                          <Tab value="video" icon={<Video24Regular />}>
+                            {t("download.modeVideo")}
+                          </Tab>
+                          <Tab value="audio" icon={<MusicNote224Regular />}>
+                            {t("download.modeAudio")}
+                          </Tab>
+                          <Tab value="muxed" icon={<VideoClipMultiple24Regular />}>
+                            {t("download.modeMuxed")}
+                          </Tab>
+                        </TabList>
+                        <span className={styles.grow} />
+                        {form.mode === "audio" && (
+                          <Dropdown
+                            className={styles.codec}
+                            value={form.audioCodec.toUpperCase()}
+                            selectedOptions={[form.audioCodec]}
+                            onOptionSelect={(_, d) => form.set({ audioCodec: d.optionValue! })}
+                            aria-label={t("download.audioCodec")}
+                          >
+                            {AUDIO_CODECS.map((c) => (
+                              <Option key={c} value={c}>
+                                {c.toUpperCase()}
+                              </Option>
+                            ))}
+                          </Dropdown>
+                        )}
+                      </div>
+                      {formats.length === 0 ? (
+                        <Body1 className={styles.muted}>{t("download.noFormats")}</Body1>
+                      ) : (
+                        <div className={styles.tableWrap}>
+                          <Table size="small" aria-label={t("download.formats")}>
+                            <TableHeader>
+                              <TableRow>
+                                <TableSelectionCell type="radio" invisible />
+                                <TableHeaderCell>{t("download.colQuality")}</TableHeaderCell>
+                                <TableHeaderCell>{t("download.colFormat")}</TableHeaderCell>
+                                <TableHeaderCell>{t("download.colCodec")}</TableHeaderCell>
+                                <TableHeaderCell>{t("download.colSize")}</TableHeaderCell>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {formats.map((f) => (
+                                <TableRow key={f.id} className={styles.row} onClick={() => form.set({ formatId: f.id })} aria-selected={form.formatId === f.id}>
+                                  <TableSelectionCell type="radio" checked={form.formatId === f.id} />
+                                  <TableCell>
+                                    <Text weight={f.kind === "auto" ? "semibold" : "regular"}>{formatLabel(f, t)}</Text>
+                                    {f.kind === "auto" && (
+                                      <Badge appearance="tint" color="brand" size="small" style={{ marginLeft: 8 }}>
+                                        {t("download.recommended")}
+                                      </Badge>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>{f.ext.toUpperCase()}</TableCell>
+                                  <TableCell>
+                                    <span className={styles.mono}>{codecLabel(f)}</span>
+                                  </TableCell>
+                                  <TableCell>{f.filesize ? formatBytes(f.filesize) : "—"}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -440,7 +517,16 @@ export default function DownloadPage() {
         <Panel
           className={styles.batchPanel}
           title={t("download.queueTitle")}
-          actions={<Badge appearance="tint">{t("download.urlCount", { count: urls.length })}</Badge>}
+          actions={
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              {failedItems.length > 0 && !batch.running && (
+                <Button size="small" appearance="subtle" icon={<ArrowClockwise16Regular />} onClick={retryFailed}>
+                  {t("download.retryFailed", { count: failedItems.length })}
+                </Button>
+              )}
+              <Badge appearance="tint">{t("download.urlCount", { count: queue.length || urls.length })}</Badge>
+            </div>
+          }
         >
           <Textarea
             className={styles.batchArea}
@@ -514,8 +600,17 @@ export default function DownloadPage() {
         <Button icon={<FolderOpen16Regular />} disabled={!outdir} onClick={() => api.system.openPath(outdir).catch(() => undefined)}>
           {t("common.openFolder")}
         </Button>
+        {form.tab === "batch" && failedItems.length > 0 && !running && (
+          <Button icon={<ArrowClockwise16Regular />} onClick={retryFailed}>
+            {t("download.retryFailed", { count: failedItems.length })}
+          </Button>
+        )}
         <Button appearance="primary" icon={<ArrowDownload16Filled />} disabled={!canDownload} onClick={startDownload}>
-          {form.tab === "batch" ? t("download.downloadAll") : t("download.download")}
+          {form.tab === "batch"
+            ? t("download.downloadAll")
+            : form.probe?.isPlaylist
+              ? t("download.downloadPlaylist", { count: form.probe.entries?.length ?? 0 })
+              : t("download.download")}
         </Button>
       </ActionBar>
     </Page>

@@ -2,6 +2,7 @@
 
 import copy
 import json
+import os
 import threading
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -25,6 +26,12 @@ def default_settings() -> Dict[str, Any]:
         "outputDir": str(default_output_dir()),
         "cookies": {"youtube": "", "x": ""},
         "recentFolders": [],
+        "hardwareAcceleration": True,
+        "maxConcurrency": min(4, os.cpu_count() or 4),
+        "desktopNotifications": True,
+        "completionSound": True,
+        "customFfmpegPath": "",
+        "confirmExitOnActiveJobs": True,
     }
 
 
@@ -79,6 +86,18 @@ class Settings:
             recent = [f for f in self._data.get("recentFolders", []) if f != folder]
             self._data["recentFolders"] = [folder, *recent][:MAX_RECENT]
             self._save()
+
+    def clear_recent_folders(self) -> Dict[str, Any]:
+        with self._lock:
+            self._data["recentFolders"] = []
+            self._save()
+            return copy.deepcopy(self._data)
+
+    def reset(self) -> Dict[str, Any]:
+        with self._lock:
+            self._data = default_settings()
+            self._save()
+            return copy.deepcopy(self._data)
 
     def cookie_files(self) -> Dict[str, Optional[str]]:
         """Resolved cookie file per site; configured path wins, legacy file is the fallback."""

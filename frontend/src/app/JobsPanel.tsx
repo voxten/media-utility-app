@@ -1,5 +1,4 @@
-// Right-hand drawer listing every background job across tools.
-
+import { useMemo } from "react";
 import {
   Button,
   Caption1,
@@ -18,10 +17,12 @@ import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import { EmptyState } from "../components/EmptyState";
 import { JobStatusBadge, jobMessage } from "../components/JobStatusBadge";
+import { LiveElapsed } from "../components/LiveElapsed";
 import { api } from "../lib/bridge";
 import { navigate } from "../lib/router";
 import { useJobs, type JobState } from "../stores/jobs";
 import { useUi } from "../stores/ui";
+import { useTransferStore } from "../stores/transfer";
 import { toolById } from "./tools";
 
 const useStyles = makeStyles({
@@ -45,11 +46,6 @@ const useStyles = makeStyles({
   footer: { display: "flex", justifyContent: "flex-end", paddingTop: "8px" },
 });
 
-function elapsed(job: JobState): string {
-  const end = job.finishedAt ?? Date.now() / 1000;
-  const s = Math.max(0, Math.round(end - job.startedAt));
-  return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`;
-}
 
 function JobItem({ job }: { job: JobState }) {
   const styles = useStyles();
@@ -58,6 +54,15 @@ function JobItem({ job }: { job: JobState }) {
   const tool = toolById(job.kind.split(".")[0]);
   const Icon = tool?.icon;
   const message = jobMessage(t, job);
+
+  const resultFiles: string[] = useMemo(() => {
+    if (job.status !== "done" || !job.result || typeof job.result !== "object") return [];
+    const r = job.result as Record<string, unknown>;
+    if (typeof r.outPath === "string" && r.outPath) return [r.outPath];
+    if (typeof r.resultPath === "string" && r.resultPath) return [r.resultPath];
+    if (Array.isArray(r.files) && r.files.length > 0 && typeof r.files[0] === "string") return r.files as string[];
+    return [];
+  }, [job.status, job.result]);
 
   return (
     <div className={styles.item}>
@@ -68,8 +73,8 @@ function JobItem({ job }: { job: JobState }) {
             {tool ? t(`tools.${tool.id}.name`) : job.kind}
           </Text>
           {job.title && job.title !== job.kind && (
-            <Caption1 className={`${styles.muted} ${styles.ellipsis}`} title={job.title}>
-              {job.title}
+            <Caption1 className={`${styles.muted} ${styles.ellipsis}`} title={t(job.title)}>
+              {t(job.title)}
             </Caption1>
           )}
         </div>
@@ -79,11 +84,24 @@ function JobItem({ job }: { job: JobState }) {
       {message && <Caption1 className={job.status === "error" ? styles.error : styles.muted}>{message}</Caption1>}
       <div className={styles.actions}>
         <Caption1 className={styles.muted} style={{ marginRight: "auto", alignSelf: "center" }}>
-          {elapsed(job)}
+          <LiveElapsed startedAt={job.startedAt} finishedAt={job.finishedAt} active={job.status === "running"} />
         </Caption1>
         {job.status === "running" && (
           <Button size="small" appearance="subtle" icon={<Dismiss16Regular />} onClick={() => api.jobs.cancel(job.id)}>
             {t("common.cancel")}
+          </Button>
+        )}
+        {resultFiles.length > 0 && (
+          <Button
+            size="small"
+            appearance="subtle"
+            icon={<ArrowRight16Regular />}
+            onClick={() => {
+              useTransferStore.getState().openModal(resultFiles, tool?.id);
+              setOpen(false);
+            }}
+          >
+            {t("transfer.sendTo")}
           </Button>
         )}
         {tool && (

@@ -31,6 +31,7 @@ import {
   ImageEdit20Regular,
   Save16Regular,
   Sparkle16Filled,
+  ArrowRight16Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { create } from "zustand";
@@ -48,6 +49,8 @@ import { useJob } from "../../stores/jobs";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useSettings } from "../../stores/settings";
 import { MaskCanvas, type MaskCanvasHandle } from "./MaskCanvas";
+import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
+import { useTransferStore } from "../../stores/transfer";
 
 type Method = "telea" | "ns" | "lama";
 const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"];
@@ -289,6 +292,10 @@ export default function WatermarkPage() {
     }
   };
 
+  useIncomingTransfer("watermark", (files) => {
+    if (files[0]) load(files[0]);
+  });
+
   const browse = async () => {
     const [path] = await api.dialogs.openFiles([`${t("converter.images")} (${IMAGE_EXTENSIONS.map((e) => `*${e}`).join(";")})`], false);
     if (path) load(path);
@@ -391,9 +398,18 @@ export default function WatermarkPage() {
           </span>
         }
         actions={
-          <Button appearance="subtle" icon={<ImageEdit20Regular />} onClick={browse}>
-            {t("watermark.changeImage")}
-          </Button>
+          <div style={{ display: "flex", gap: "6px" }}>
+            <Button appearance="subtle" icon={<ImageEdit20Regular />} onClick={browse}>
+              {t("watermark.changeImage")}
+            </Button>
+            <Button
+              appearance="subtle"
+              icon={<ArrowRight16Regular />}
+              onClick={() => useTransferStore.getState().openModal([form.sourcePath], "watermark")}
+            >
+              {t("transfer.sendTo")}
+            </Button>
+          </div>
         }
       >
         {!lama && <LamaBanner onInstalled={() => { setLama(true); form.set({ method: "lama" }); }} />}
@@ -492,6 +508,13 @@ export default function WatermarkPage() {
           <>
             <Button onClick={() => form.set({ result: null })}>{t("watermark.backToMask")}</Button>
             <Button onClick={() => load(form.result!.resultPath, true)}>{t("watermark.continue")}</Button>
+            <Button
+              appearance="subtle"
+              icon={<ArrowRight16Regular />}
+              onClick={() => useTransferStore.getState().openModal([form.result!.resultPath], "watermark")}
+            >
+              {t("transfer.sendTo")}
+            </Button>
             <Button appearance="primary" icon={<Save16Regular />} onClick={saveDirect}>
               {t("common.saveBtn")}
             </Button>

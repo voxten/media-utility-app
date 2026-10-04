@@ -128,6 +128,69 @@ def _check_icon(_: Path) -> Any:
     return True
 
 
+def _check_compressor(tmp: Path) -> Any:
+    from PIL import Image
+
+    from backend.services import compressor
+
+    path = tmp / "comp.png"
+    Image.new("RGB", (64, 64), (100, 150, 200)).save(path)
+    res = compressor.load_preview(str(path))
+    assert res["width"] == 64
+    preview = compressor.preview_compress(str(path), {"mode": "lossless"})
+    assert preview["compressedBytes"] > 0
+    return True
+
+
+def _check_image_editor(tmp: Path) -> Any:
+    from PIL import Image
+
+    from backend.services import image_editor
+
+    path = tmp / "edit.png"
+    Image.new("RGB", (80, 80), (200, 100, 50)).save(path)
+    res = image_editor.load_preview(str(path))
+    assert res["width"] == 80
+    transformed = image_editor.preview_transform(str(path), {"rotate": 90})
+    assert transformed["width"] == 80
+    return True
+
+
+def _check_system_info(_: Path) -> Any:
+    from backend.services import system_info
+
+    storage = system_info.get_storage_info()
+    assert "cacheBytes" in storage
+    hw = system_info.get_hardware_info()
+    assert "cpuThreads" in hw
+    return True
+
+
+def _check_video_sync(tmp: Path) -> Any:
+    import shutil
+    import subprocess
+    from backend.services import video_sync
+
+    if not shutil.which("ffmpeg") or not shutil.which("ffprobe"):
+        return "skipped (no ffmpeg)"
+
+    test_video = tmp / "sync_smoke.mp4"
+    cmd = [
+        "ffmpeg", "-y",
+        "-f", "lavfi", "-i", "testsrc=duration=2:size=320x240:rate=15",
+        "-f", "lavfi", "-i", "sine=frequency=440:duration=2",
+        "-c:v", "libx264", "-pix_fmt", "yuv420p",
+        "-c:a", "aac",
+        str(test_video),
+    ]
+    subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    meta = video_sync.probe_media(str(test_video))
+    assert meta["duration"] > 0
+    wave = video_sync.extract_waveform(str(test_video), points=50)
+    assert len(wave["points"]) == 50
+    return {"duration": meta["duration"], "hasAudio": meta["hasAudio"]}
+
+
 CHECKS: Dict[str, Callable[[Path], Any]] = {
     "streams": _check_streams,
     "frontend": _check_frontend,
@@ -137,6 +200,10 @@ CHECKS: Dict[str, Callable[[Path], Any]] = {
     "pdf": _check_pdf,
     "duplicates": _check_duplicates,
     "watermark": _check_watermark,
+    "compressor": _check_compressor,
+    "image_editor": _check_image_editor,
+    "system_info": _check_system_info,
+    "video_sync": _check_video_sync,
 }
 
 

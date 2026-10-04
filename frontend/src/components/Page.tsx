@@ -39,7 +39,15 @@ const useStyles = makeStyles({
   description: { color: tokens.colorNeutralForeground3 },
   actions: { display: "flex", gap: "8px", alignItems: "center" },
   section: { display: "flex", flexDirection: "column", gap: "8px" },
-  sectionTitle: { marginTop: "4px" },
+  sectionHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "12px",
+    minHeight: "32px",
+  },
+  sectionTitle: { marginTop: "4px", marginBottom: "0" },
+  sectionActions: { display: "flex", gap: "8px", alignItems: "center" },
 });
 
 interface PageProps {
@@ -78,14 +86,25 @@ export function Page({ title, description, icon: Icon, accent, actions, children
   );
 }
 
-export function Section({ title, children }: { title?: string; children: ReactNode }) {
+export interface SectionProps {
+  title?: ReactNode;
+  actions?: ReactNode;
+  children: ReactNode;
+}
+
+export function Section({ title, actions, children }: SectionProps) {
   const styles = useStyles();
   return (
     <section className={styles.section}>
-      {title && (
-        <Subtitle2 as="h2" className={styles.sectionTitle}>
-          {title}
-        </Subtitle2>
+      {(title || actions) && (
+        <div className={styles.sectionHeader}>
+          {title && (
+            <Subtitle2 as="h2" className={styles.sectionTitle}>
+              {title}
+            </Subtitle2>
+          )}
+          {actions && <div className={styles.sectionActions}>{actions}</div>}
+        </div>
       )}
       {children}
     </section>

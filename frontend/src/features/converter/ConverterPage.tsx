@@ -38,6 +38,9 @@ import { api } from "../../lib/bridge";
 import { fileName, formatBytes } from "../../lib/format";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useSettings } from "../../stores/settings";
+import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
+import { useTransferStore } from "../../stores/transfer";
+import { AfterGallery } from "../../components/AfterGallery";
 
 const FORMATS = ["PNG", "WEBP", "JPEG", "GIF", "TIFF", "BMP", "PDF"] as const;
 const LOSSY = new Set(["WEBP", "JPEG"]);
@@ -50,6 +53,14 @@ interface ConvertResult {
   inputBytes: number;
   outputBytes: number;
   outputDir: string;
+  files?: string[];
+  items?: Array<{
+    source: string;
+    dest: string;
+    name: string;
+    size: number;
+    originalSize: number;
+  }>;
 }
 
 interface ConverterForm {
@@ -211,6 +222,12 @@ export default function ConverterPage() {
 
   const addFiles = (paths: string[]) => form.set({ files: Array.from(new Set([...form.files, ...paths])) });
 
+  useIncomingTransfer("converter", (files) => {
+    if (files.length > 0) {
+      form.set({ source: "files", files: Array.from(new Set([...form.files, ...files])) });
+    }
+  });
+
   const start = () =>
     runner
       .start(() =>
@@ -293,6 +310,14 @@ export default function ConverterPage() {
                         <Button
                           appearance="subtle"
                           size="small"
+                          icon={<ArrowRight16Regular />}
+                          aria-label={t("transfer.sendTo")}
+                          title={t("transfer.sendTo")}
+                          onClick={() => useTransferStore.getState().openModal([file], "converter")}
+                        />
+                        <Button
+                          appearance="subtle"
+                          size="small"
                           icon={<Delete16Regular />}
                           aria-label={t("common.remove")}
                           onClick={() => form.set({ files: form.files.filter((f) => f !== file) })}
@@ -300,9 +325,17 @@ export default function ConverterPage() {
                       </div>
                     ))}
                   </div>
-                  <div>
+                  <div style={{ display: "flex", gap: "8px" }}>
                     <Button appearance="subtle" size="small" onClick={() => form.set({ files: [] })}>
                       {t("common.clearAll")}
+                    </Button>
+                    <Button
+                      appearance="subtle"
+                      size="small"
+                      icon={<ArrowRight16Regular />}
+                      onClick={() => useTransferStore.getState().openModal(form.files, "converter")}
+                    >
+                      {t("transfer.sendTo")}
                     </Button>
                   </div>
                 </>
@@ -353,7 +386,30 @@ export default function ConverterPage() {
         </Panel>
       </div>
 
-      {runner.result && <Summary result={runner.result} />}
+      {runner.result && (
+        <>
+          <Summary result={runner.result} />
+          {runner.result.files && runner.result.files.length > 0 && (
+            <AfterGallery
+              title={t("transfer.convertedTitle")}
+              files={runner.result.files}
+              items={runner.result.items?.map((it) => ({
+                file: it.source,
+                dest: it.dest,
+                name: it.name,
+                originalSize: it.originalSize,
+                size: it.size,
+                savedPercent:
+                  it.originalSize > 0
+                    ? Math.round((1 - it.size / it.originalSize) * 100)
+                    : 0,
+              }))}
+              outputDir={runner.result.outputDir}
+              sourceToolId="converter"
+            />
+          )}
+        </>
+      )}
       {runner.job && runner.job.logs.length > 0 && <LogPanel logs={runner.job.logs} />}
 
       <ActionBar job={runner.job} idleText={idleText} onCancel={runner.cancel}>

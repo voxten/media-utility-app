@@ -26,7 +26,7 @@ export function useJobNotifications(route: string) {
       if (!tool || routeRef.current === tool.id) return;
       const name = t(`tools.${tool.id}.name`);
       const options = {
-        body: ok ? job.title : error,
+        body: ok ? (job.title ? t(job.title) : undefined) : error,
         action: { label: t("jobs.openTool"), onClick: () => navigate(tool.id) },
       };
       if (ok) notify.success(t("jobs.toastDone", { tool: name }), options);

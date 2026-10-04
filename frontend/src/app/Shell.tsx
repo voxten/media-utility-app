@@ -1,11 +1,13 @@
 import { lazy, Suspense, useEffect, useState, type ComponentType, type LazyExoticComponent } from "react";
 import { makeStyles, mergeClasses, Spinner, tokens, Toaster } from "@fluentui/react-components";
 import { ConfirmHost } from "../components/ConfirmDialog";
+import { TransferModal } from "../components/TransferModal";
 import { TOASTER_ID } from "../components/notify";
 import { useRoute } from "../lib/router";
 import { useUi } from "../stores/ui";
 import { CommandPalette } from "./CommandPalette";
 import { JobsPanel } from "./JobsPanel";
+import { JobsPopup } from "./JobsPopup";
 import { Navigation } from "./Navigation";
 import { useJobNotifications } from "./useJobNotifications";
 
@@ -13,13 +15,20 @@ const HomePage = lazy(() => import("../features/home/HomePage"));
 const SettingsPage = lazy(() => import("../features/settings/SettingsPage"));
 
 const TOOL_PAGES: Record<string, LazyExoticComponent<ComponentType>> = {
+  compressor: lazy(() => import("../features/compressor/CompressorPage")),
+  image_tools: lazy(() => import("../features/image_tools/ImageToolsPage")),
   converter: lazy(() => import("../features/converter/ConverterPage")),
   rembg: lazy(() => import("../features/rembg/RemBgPage")),
   upscale: lazy(() => import("../features/upscale/UpscalePage")),
   pdf: lazy(() => import("../features/pdf/PdfPage")),
+  pdf_compress: lazy(() => import("../features/pdf/PdfCompressPage")),
+  pdf_split: lazy(() => import("../features/pdf/PdfSplitPage")),
+  pdf_convert: lazy(() => import("../features/pdf/PdfConvertPage")),
+  pdf_extract: lazy(() => import("../features/pdf/PdfExtractPage")),
   duplicates: lazy(() => import("../features/duplicates/DuplicatesPage")),
   tts: lazy(() => import("../features/tts/TtsPage")),
   download: lazy(() => import("../features/download/DownloadPage")),
+  video_sync: lazy(() => import("../features/video_sync/VideoSyncPage")),
   watermark: lazy(() => import("../features/watermark/WatermarkPage")),
   progress: lazy(() => import("../features/progress/ProgressPage")),
 };
@@ -125,7 +134,9 @@ export function Shell() {
       </main>
       <Toaster toasterId={TOASTER_ID} position="top-end" offset={{ vertical: 16 }} pauseOnHover />
       <ConfirmHost />
+      <TransferModal />
       <JobsPanel />
+      <JobsPopup collapsed={collapsed} />
       <CommandPalette />
     </div>
   );

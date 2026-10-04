@@ -102,7 +102,7 @@ function RecentJobs() {
             <div className={styles.jobText}>
               <Text weight="semibold" className={styles.ellipsis}>
                 {tool ? t(`tools.${tool.id}.name`) : job.kind}
-                {job.title && job.title !== job.kind ? ` · ${job.title}` : ""}
+                {job.title && job.title !== job.kind ? ` · ${t(job.title)}` : ""}
               </Text>
               {job.status === "running" ? (
                 <ProgressBar value={job.percent == null ? undefined : job.percent / 100} thickness="medium" />

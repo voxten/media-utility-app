@@ -6,6 +6,8 @@ interface SettingsState {
   settings: Settings | null;
   load: () => Promise<Settings>;
   update: (patch: Partial<Settings>) => Promise<void>;
+  reset: () => Promise<void>;
+  clearRecentFolders: () => Promise<void>;
 }
 
 export const useSettings = create<SettingsState>((set, get) => ({
@@ -25,5 +27,13 @@ export const useSettings = create<SettingsState>((set, get) => ({
       set({ settings: previous });
       throw err;
     }
+  },
+  reset: async () => {
+    const settings = await api.settings.reset();
+    set({ settings });
+  },
+  clearRecentFolders: async () => {
+    const settings = await api.settings.clearRecentFolders();
+    set({ settings });
   },
 }));
