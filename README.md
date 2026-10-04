@@ -109,6 +109,4 @@ tools/                  standalone helper scripts (UI sprite generators, folder 
 
 Settings live in `%APPDATA%\MediaStudio\settings.json`.
 
-Cookie files for sites that need a login can be chosen in **Settings → Cookie files**. If none is set, the app falls back to `features/download/*_cookies.txt`.
-
-See `MIGRATION_NOTES.md` for the history of the PyQt → web UI rewrite and known pitfalls.
+Cookie files for sites that need a login can be chosen in **Settings → Cookie files**. If none is set, the app falls back to `cookies/*_cookies.txt`.

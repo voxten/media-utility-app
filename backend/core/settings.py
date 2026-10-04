@@ -11,10 +11,23 @@ from backend.core.paths import app_data_dir, default_output_dir, resource_path
 
 MAX_RECENT = 8
 
-# Cookie files that used to live next to the downloader; still honoured when no path is configured.
+# Default cookie files: project cookies/ dir, app data dir, or legacy fallback.
+DEFAULT_COOKIES = {
+    "youtube": [
+        resource_path("cookies", "youtube_cookies.txt"),
+        app_data_dir() / "cookies" / "youtube_cookies.txt",
+        resource_path("features", "download", "youtube_cookies.txt"),
+    ],
+    "x": [
+        resource_path("cookies", "x.com_cookies.txt"),
+        resource_path("cookies", "x_cookies.txt"),
+        app_data_dir() / "cookies" / "x.com_cookies.txt",
+        resource_path("features", "download", "x.com_cookies.txt"),
+    ],
+}
 LEGACY_COOKIES = {
-    "youtube": resource_path("features", "download", "youtube_cookies.txt"),
-    "x": resource_path("features", "download", "x.com_cookies.txt"),
+    "youtube": resource_path("cookies", "youtube_cookies.txt"),
+    "x": resource_path("cookies", "x.com_cookies.txt"),
 }
 
 
@@ -100,15 +113,18 @@ class Settings:
             return copy.deepcopy(self._data)
 
     def cookie_files(self) -> Dict[str, Optional[str]]:
-        """Resolved cookie file per site; configured path wins, legacy file is the fallback."""
+        """Resolved cookie file per site; configured path wins, default cookies/ directory is the fallback."""
         configured = self.get("cookies", {})
         result: Dict[str, Optional[str]] = {}
-        for site, legacy in LEGACY_COOKIES.items():
+        for site, fallbacks in DEFAULT_COOKIES.items():
             candidate = configured.get(site) or ""
             if candidate and Path(candidate).is_file():
                 result[site] = candidate
-            elif legacy.is_file():
-                result[site] = str(legacy)
-            else:
-                result[site] = None
+                continue
+            found = None
+            for p in fallbacks:
+                if p.is_file():
+                    found = str(p)
+                    break
+            result[site] = found
         return result

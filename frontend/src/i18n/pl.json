@@ -115,7 +115,7 @@
     "cookiesDescription": "Pliki cookies (format Netscape) potrzebne do pobierania treści wymagających zalogowania.",
     "cookiesYoutube": "YouTube",
     "cookiesX": "X (Twitter)",
-    "cookiesHint": "Pozostaw puste, aby użyć pliku z folderu features/download (jeśli istnieje).",
+    "cookiesHint": "Pozostaw puste, aby użyć pliku z folderu cookies/ (jeśli istnieje).",
     "dependencies": "Zależności",
     "dependenciesDescription": "Zewnętrzne programy i biblioteki używane przez narzędzia.",
     "deps": {

@@ -113,7 +113,7 @@
     "cookiesDescription": "Netscape-format cookie files for downloading content that requires signing in.",
     "cookiesYoutube": "YouTube",
     "cookiesX": "X (Twitter)",
-    "cookiesHint": "Leave empty to use the file in features/download (if present).",
+    "cookiesHint": "Leave empty to use the file in cookies/ (if present).",
     "dependencies": "Dependencies",
     "dependenciesDescription": "External programs and libraries used by the tools.",
     "deps": {
