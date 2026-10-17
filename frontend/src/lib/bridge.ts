@@ -64,7 +64,6 @@ export function on<E extends BridgeEventName>(event: E, handler: Handler<E>): ()
 }
 
 // ---------------------------------------------------------------------------
-// Backend resolution
 
 export type BackendMode = "native" | "mock";
 const NATIVE_WAIT_MS = 1500;

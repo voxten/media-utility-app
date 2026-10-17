@@ -105,6 +105,9 @@ const useStyles = makeStyles({
     borderTop: `1px solid ${tokens.colorNeutralStroke3}`,
     backgroundColor: tokens.colorNeutralBackground2,
   },
+  headerIconRunning: { color: tokens.colorPaletteBlueForeground2 },
+  headerIconError: { color: tokens.colorPaletteRedForeground1 },
+  emptyIcon: { fontSize: "32px" },
 });
 
 export function JobsPopup({ collapsed }: { collapsed: boolean }) {
@@ -165,9 +168,9 @@ export function JobsPopup({ collapsed }: { collapsed: boolean }) {
       <div className={styles.header}>
         <div className={styles.headerTitle}>
           {runningJobs.length > 0 ? (
-            <TaskListLtr20Regular style={{ color: tokens.colorPaletteBlueForeground2 }} />
+            <TaskListLtr20Regular className={styles.headerIconRunning} />
           ) : errorJobs.length > 0 ? (
-            <TaskListLtr20Regular style={{ color: tokens.colorPaletteRedForeground1 }} />
+            <TaskListLtr20Regular className={styles.headerIconError} />
           ) : (
             <TaskListLtr20Regular />
           )}
@@ -221,7 +224,7 @@ export function JobsPopup({ collapsed }: { collapsed: boolean }) {
       <div className={styles.body}>
         {jobs.length === 0 ? (
           <div className={styles.empty}>
-            <TaskListLtr24Regular className={styles.muted} style={{ fontSize: "32px" }} />
+            <TaskListLtr24Regular className={mergeClasses(styles.muted, styles.emptyIcon)} />
             <Text weight="semibold">{t("jobs.noActiveJobs")}</Text>
             <Caption1 className={styles.muted}>{t("jobs.noActiveJobsBody")}</Caption1>
           </div>
@@ -232,11 +235,9 @@ export function JobsPopup({ collapsed }: { collapsed: boolean }) {
 
       {finishedCount > 0 && (
         <div className={styles.footer}>
-          <Tooltip content={t("jobs.clearHint")} relationship="description">
-            <Button size="small" appearance="subtle" icon={<Delete16Regular />} onClick={clearFinished}>
-              {t("jobs.clearFinished")}
-            </Button>
-          </Tooltip>
+          <Button size="small" appearance="subtle" icon={<Delete16Regular />} onClick={clearFinished}>
+            {t("jobs.clearFinished")}
+          </Button>
         </div>
       )}
     </div>

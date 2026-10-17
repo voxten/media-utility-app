@@ -5,6 +5,7 @@ import {
   Divider,
   Dropdown,
   makeStyles,
+  mergeClasses,
   Option,
   shorthands,
   Switch,
@@ -184,10 +185,9 @@ const useStyles = makeStyles({
     gap: "8px",
     color: tokens.colorNeutralForeground3,
   },
-  infoText: {
-    lineHeight: "1.6",
-    color: tokens.colorNeutralForeground2,
-  },
+  checkDark: { color: tokens.colorNeutralForeground1Static },
+  checkLight: { color: tokens.colorNeutralForegroundStaticInverted },
+  divider: { height: "40px" },
 });
 
 function RemBgModelBanner({ onInstalled }: { onInstalled: () => void }) {
@@ -249,7 +249,6 @@ export default function RemBgPage() {
 
   const openTransferModal = useTransferStore((s) => s.openModal);
 
-  // Consume incoming file transfers from other tools
   useIncomingTransfer("rembg", (files) => {
     if (files[0]) load(files[0]);
   });
@@ -285,10 +284,7 @@ export default function RemBgPage() {
           onFiles={(paths) => load(paths[0])}
           onBrowse={browse}
         />
-        <Panel title={t("rembg.howTitle")}>
-          <Text className={styles.infoText}>{t("rembg.howBody")}</Text>
-          {modelAvailable === false && <RemBgModelBanner onInstalled={() => setModelAvailable(true)} />}
-        </Panel>
+        {modelAvailable === false && <RemBgModelBanner onInstalled={() => setModelAvailable(true)} />}
       </Page>
     );
   }
@@ -331,7 +327,7 @@ export default function RemBgPage() {
           </span>
         }
         actions={
-          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <>
             {form.sourcePath && (
               <Button
                 appearance="subtle"
@@ -345,13 +341,12 @@ export default function RemBgPage() {
             <Button appearance="subtle" icon={<ImageEdit20Regular />} onClick={browse}>
               {t("rembg.changeImage")}
             </Button>
-          </div>
+          </>
         }
       >
         {modelAvailable === false && <RemBgModelBanner onInstalled={() => setModelAvailable(true)} />}
 
         <Toolbar className={styles.toolbar}>
-          {/* Model selection */}
           <div className={styles.optionItem}>
             <Text size={200} weight="semibold">
               {t("rembg.options.model")}
@@ -370,7 +365,6 @@ export default function RemBgPage() {
             </Dropdown>
           </div>
 
-          {/* Choke (Edge shaving) */}
           <div className={styles.optionItem}>
             <Tooltip content={t("rembg.options.chokeHint")} relationship="label">
               <Text size={200} weight="semibold">
@@ -391,7 +385,6 @@ export default function RemBgPage() {
             </Dropdown>
           </div>
 
-          {/* Background Switcher for Preview */}
           <div className={styles.optionItem}>
             <Text size={200} weight="semibold">
               {t("rembg.options.previewBg")}
@@ -401,48 +394,47 @@ export default function RemBgPage() {
                 <button
                   type="button"
                   aria-label={t("rembg.options.bgChecker")}
-                  className={`${styles.bgBtn} ${styles.bgChecker} ${form.bgMode === "checker" ? styles.bgBtnActive : ""}`}
+                  className={mergeClasses(styles.bgBtn, styles.bgChecker, form.bgMode === "checker" && styles.bgBtnActive)}
                   onClick={() => form.set({ bgMode: "checker" })}
                 >
-                  {form.bgMode === "checker" && <Checkmark16Regular style={{ color: "#333" }} />}
+                  {form.bgMode === "checker" && <Checkmark16Regular className={styles.checkDark} />}
                 </button>
               </Tooltip>
               <Tooltip content={t("rembg.options.bgBlack")} relationship="label">
                 <button
                   type="button"
                   aria-label={t("rembg.options.bgBlack")}
-                  className={`${styles.bgBtn} ${styles.bgBlack} ${form.bgMode === "black" ? styles.bgBtnActive : ""}`}
+                  className={mergeClasses(styles.bgBtn, styles.bgBlack, form.bgMode === "black" && styles.bgBtnActive)}
                   onClick={() => form.set({ bgMode: "black" })}
                 >
-                  {form.bgMode === "black" && <Checkmark16Regular style={{ color: "#fff" }} />}
+                  {form.bgMode === "black" && <Checkmark16Regular className={styles.checkLight} />}
                 </button>
               </Tooltip>
               <Tooltip content={t("rembg.options.bgWhite")} relationship="label">
                 <button
                   type="button"
                   aria-label={t("rembg.options.bgWhite")}
-                  className={`${styles.bgBtn} ${styles.bgWhite} ${form.bgMode === "white" ? styles.bgBtnActive : ""}`}
+                  className={mergeClasses(styles.bgBtn, styles.bgWhite, form.bgMode === "white" && styles.bgBtnActive)}
                   onClick={() => form.set({ bgMode: "white" })}
                 >
-                  {form.bgMode === "white" && <Checkmark16Regular style={{ color: "#000" }} />}
+                  {form.bgMode === "white" && <Checkmark16Regular className={styles.checkDark} />}
                 </button>
               </Tooltip>
               <Tooltip content={t("rembg.options.bgCustom")} relationship="label">
                 <button
                   type="button"
                   aria-label={t("rembg.options.bgCustom")}
-                  className={`${styles.bgBtn} ${styles.bgGreen} ${form.bgMode === "green" ? styles.bgBtnActive : ""}`}
+                  className={mergeClasses(styles.bgBtn, styles.bgGreen, form.bgMode === "green" && styles.bgBtnActive)}
                   onClick={() => form.set({ bgMode: "green" })}
                 >
-                  {form.bgMode === "green" && <Checkmark16Regular style={{ color: "#fff" }} />}
+                  {form.bgMode === "green" && <Checkmark16Regular className={styles.checkLight} />}
                 </button>
               </Tooltip>
             </div>
           </div>
 
-          <Divider vertical style={{ height: "40px" }} />
+          <Divider vertical className={styles.divider} />
 
-          {/* Switches */}
           <div className={styles.switchGroup}>
             <Tooltip content={t("rembg.options.antiHaloHint")} relationship="label">
               <div className={styles.switchItem}>
@@ -474,8 +466,7 @@ export default function RemBgPage() {
           </div>
         </Toolbar>
 
-        {/* Visual Stage with Before / After ImageComparison */}
-        <div className={`${styles.stage} ${getStageClass()}`}>
+        <div className={mergeClasses(styles.stage, getStageClass())}>
           {form.result ? (
             <ImageComparison
               before={form.image.dataUrl}

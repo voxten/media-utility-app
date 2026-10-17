@@ -24,7 +24,6 @@ import {
   Image24Regular,
   ImageEdit20Regular,
   Save16Regular,
-  Sparkle16Filled,
   ArrowRight16Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
@@ -202,10 +201,7 @@ export default function WatermarkPage() {
     return (
       <Page title={t("tools.watermark.name")} description={t("tools.watermark.description")} icon={tool.icon} accent={tool.accent}>
         <DropZone icon={Image24Regular} title={t("watermark.dropTitle")} hint={t("watermark.dropHint")} accept={IMAGE_EXTENSIONS} onFiles={(paths) => load(paths[0])} onBrowse={browse} />
-        <Panel title={t("watermark.howTitle")}>
-          <Text>{t("watermark.howBody")}</Text>
-          {!lama && <LamaBanner onInstalled={() => { setLama(true); form.set({ method: "lama" }); }} />}
-        </Panel>
+        {!lama && <LamaBanner onInstalled={() => { setLama(true); form.set({ method: "lama" }); }} />}
       </Page>
     );
   }
@@ -229,7 +225,7 @@ export default function WatermarkPage() {
           </span>
         }
         actions={
-          <div style={{ display: "flex", gap: "6px" }}>
+          <>
             <Button appearance="subtle" icon={<ImageEdit20Regular />} onClick={browse}>
               {t("watermark.changeImage")}
             </Button>
@@ -240,7 +236,7 @@ export default function WatermarkPage() {
             >
               {t("transfer.sendTo")}
             </Button>
-          </div>
+          </>
         }
       >
         {!lama && <LamaBanner onInstalled={() => { setLama(true); form.set({ method: "lama" }); }} />}
@@ -333,7 +329,7 @@ export default function WatermarkPage() {
             </Button>
           </>
         ) : (
-          <Button appearance="primary" icon={<Sparkle16Filled />} disabled={!history.hasMask || runner.running} onClick={run}>
+          <Button appearance="primary" icon={<Eraser20Regular />} disabled={!history.hasMask || runner.running} onClick={run}>
             {t("watermark.remove")}
           </Button>
         )}

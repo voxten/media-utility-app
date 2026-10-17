@@ -1,14 +1,12 @@
 import {
   Badge,
   Button,
-  Caption1,
   Divider,
   Dropdown,
   Field,
   Input,
   makeStyles,
   Option,
-  Text,
   tokens,
   Tooltip,
 } from "@fluentui/react-components";
@@ -116,6 +114,9 @@ const useStyles = makeStyles({
     color: tokens.colorNeutralForeground3,
     fontSize: "12px",
   },
+  fill: { minWidth: 0, width: "100%" },
+  divider: { height: "32px", alignSelf: "flex-end", marginBottom: "4px" },
+  badgeGap: { marginLeft: "4px" },
 });
 
 interface ToolOptionsBarProps {
@@ -138,7 +139,6 @@ export function ToolOptionsBar({
   const { t } = useTranslation();
   const styles = useStyles();
 
-  // Resize Handlers
   const handleWidthChange = (val: number) => {
     onOpsChange((prev) => {
       const nextH = prev.lockAspect && prev.aspectRatio ? Math.max(1, Math.round(val / prev.aspectRatio)) : prev.targetHeight;
@@ -210,14 +210,13 @@ export function ToolOptionsBar({
     }));
   };
 
-  // 1. CROP TOOL OPTIONS (Clean & uncluttered - actions & dimensions are directly on the crop frame)
   if (activeTool === "crop") {
     return (
       <div className={styles.container}>
         <div className={styles.cropRow}>
           <Field label={t("imageTools.cropPreset")} className={styles.cropPresetField}>
             <Dropdown
-              style={{ minWidth: 0, width: "100%" }}
+              className={styles.fill}
               value={
                 ops.cropPreset === "free"
                   ? t("imageTools.cropFree")
@@ -248,17 +247,11 @@ export function ToolOptionsBar({
             </Dropdown>
           </Field>
 
-          <Divider vertical style={{ height: "32px", alignSelf: "flex-end", marginBottom: "4px" }} />
-
-          <Caption1 className={styles.muted} style={{ marginBottom: "8px" }}>
-            {t("imageTools.cropHelper")}
-          </Caption1>
         </div>
       </div>
     );
   }
 
-  // 2. RESIZE TOOL OPTIONS (All in one non-overlapping row with Dropdowns for Scale and Presets)
   if (activeTool === "resize") {
     const currentW = ops.targetWidth ?? naturalWidth;
     const currentH = ops.targetHeight ?? naturalHeight;
@@ -267,12 +260,11 @@ export function ToolOptionsBar({
     return (
       <div className={styles.container}>
         <div className={styles.resizeRow}>
-          {/* Dimensions: Width & Height with locked aspect ratio button */}
           <div className={styles.dimensionGroup}>
             <Field label={t("imageTools.width")} className={styles.dimField}>
               <Input
                 type="number"
-                style={{ minWidth: 0, width: "100%" }}
+                className={styles.fill}
                 value={String(currentW)}
                 onChange={(_, d) => handleWidthChange(Math.max(1, Number(d.value) || 1))}
               />
@@ -297,17 +289,16 @@ export function ToolOptionsBar({
             <Field label={t("imageTools.height")} className={styles.dimField}>
               <Input
                 type="number"
-                style={{ minWidth: 0, width: "100%" }}
+                className={styles.fill}
                 value={String(currentH)}
                 onChange={(_, d) => handleHeightChange(Math.max(1, Number(d.value) || 1))}
               />
             </Field>
           </div>
 
-          {/* Scale % Dropdown */}
           <Field label={t("imageTools.scalePercent")} className={styles.scaleField}>
             <Dropdown
-              style={{ minWidth: 0, width: "100%" }}
+              className={styles.fill}
               value={ops.scalePercent ? `${ops.scalePercent}%` : `${scaleDiff}%`}
               selectedOptions={[String(ops.scalePercent ?? "")]}
               onOptionSelect={(_, d) => {
@@ -324,10 +315,9 @@ export function ToolOptionsBar({
             </Dropdown>
           </Field>
 
-          {/* Resolution Presets Dropdown */}
           <Field label={t("imageTools.presets")} className={styles.presetField}>
             <Dropdown
-              style={{ minWidth: 0, width: "100%" }}
+              className={styles.fill}
               placeholder={t("imageTools.presets")}
               onOptionSelect={(_, d) => {
                 if (d.optionValue) applyResolutionPreset(d.optionValue);
@@ -342,10 +332,9 @@ export function ToolOptionsBar({
             </Dropdown>
           </Field>
 
-          {/* Resampling Filter Dropdown */}
           <Field label={t("imageTools.filter")} className={styles.filterField}>
             <Dropdown
-              style={{ minWidth: 0, width: "100%" }}
+              className={styles.fill}
               value={
                 ops.filter === "lanczos"
                   ? t("imageTools.filterLanczos")
@@ -374,7 +363,6 @@ export function ToolOptionsBar({
     );
   }
 
-  // 3. TRANSFORM TOOL OPTIONS (Rotate & Flip)
   if (activeTool === "transform") {
     return (
       <div className={styles.container}>
@@ -419,7 +407,7 @@ export function ToolOptionsBar({
             </div>
           </Field>
 
-          <Divider vertical style={{ height: "32px", alignSelf: "flex-end", marginBottom: "4px" }} />
+          <Divider vertical className={styles.divider} />
 
           <Field label={t("imageTools.flip")}>
             <div className={styles.buttonGroup}>
@@ -450,7 +438,7 @@ export function ToolOptionsBar({
               </Button>
 
               {ops.rotation !== 0 && (
-                <Badge appearance="outline" color="informative" style={{ marginLeft: "4px" }}>
+                <Badge appearance="outline" color="informative" className={styles.badgeGap}>
                   {ops.rotation}°
                 </Badge>
               )}
@@ -461,15 +449,5 @@ export function ToolOptionsBar({
     );
   }
 
-  // 4. SELECT / POINTER TOOL (Default Inspection View)
-  return (
-    <div className={styles.container}>
-      <div className={styles.row}>
-        <Text size={200} weight="semibold">{t("imageTools.toolbox.title")}:</Text>
-        <Caption1 className={styles.muted}>
-          {t("imageTools.toolbox.hint")}
-        </Caption1>
-      </div>
-    </div>
-  );
+  return null;
 }

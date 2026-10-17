@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { Button, Tooltip, tokens } from "@fluentui/react-components";
+import { Button, makeStyles, mergeClasses, Tooltip, tokens } from "@fluentui/react-components";
 import { Checkmark16Filled, Dismiss16Regular, ArrowReset24Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 
@@ -22,6 +22,80 @@ interface InteractiveCropOverlayProps {
   onCancelCrop: () => void;
   onResetCrop: () => void;
 }
+
+// Overlay colours sit on top of the photo itself, so they are fixed rather than theme tokens.
+const SHROUD = "rgba(0, 0, 0, 0.58)";
+const GUIDE = "rgba(255, 255, 255, 0.7)";
+const CHROME = "rgba(18, 18, 18, 0.9)";
+const HANDLE_OFFSET = "-5px";
+const HANDLE_CENTER = "calc(50% - 5px)";
+
+const useStyles = makeStyles({
+  root: { position: "absolute", top: 0, left: 0, cursor: "crosshair", userSelect: "none", touchAction: "none", overflow: "hidden" },
+  shroud: { position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", fill: SHROUD },
+  box: {
+    position: "absolute",
+    boxSizing: "border-box",
+    border: `1.5px solid ${tokens.colorNeutralForegroundStaticInverted}`,
+    boxShadow: "0 0 0 1px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(0, 0, 0, 0.3)",
+    cursor: "move",
+  },
+  grid: { position: "absolute", inset: 0, pointerEvents: "none", opacity: 0.45, transitionProperty: "opacity", transitionDuration: tokens.durationFaster },
+  gridActive: { opacity: 0.75 },
+  lineV: { position: "absolute", top: 0, bottom: 0, width: "1px", backgroundColor: GUIDE },
+  lineH: { position: "absolute", left: 0, right: 0, height: "1px", backgroundColor: GUIDE },
+  third1V: { left: "33.33%" },
+  third2V: { left: "66.66%" },
+  third1H: { top: "33.33%" },
+  third2H: { top: "66.66%" },
+  handle: {
+    position: "absolute",
+    width: "10px",
+    height: "10px",
+    boxSizing: "border-box",
+    backgroundColor: tokens.colorNeutralForegroundStaticInverted,
+    border: `1.5px solid ${tokens.colorNeutralForeground1Static}`,
+    borderRadius: tokens.borderRadiusSmall,
+    zIndex: 15,
+  },
+  nw: { top: HANDLE_OFFSET, left: HANDLE_OFFSET, cursor: "nwse-resize" },
+  ne: { top: HANDLE_OFFSET, right: HANDLE_OFFSET, cursor: "nesw-resize" },
+  se: { bottom: HANDLE_OFFSET, right: HANDLE_OFFSET, cursor: "nwse-resize" },
+  sw: { bottom: HANDLE_OFFSET, left: HANDLE_OFFSET, cursor: "nesw-resize" },
+  n: { top: HANDLE_OFFSET, left: HANDLE_CENTER, cursor: "ns-resize" },
+  s: { bottom: HANDLE_OFFSET, left: HANDLE_CENTER, cursor: "ns-resize" },
+  w: { top: HANDLE_CENTER, left: HANDLE_OFFSET, cursor: "ew-resize" },
+  e: { top: HANDLE_CENTER, right: HANDLE_OFFSET, cursor: "ew-resize" },
+  pill: {
+    position: "absolute",
+    left: "6px",
+    padding: "2px 8px",
+    borderRadius: tokens.borderRadiusSmall,
+    backgroundColor: CHROME,
+    color: tokens.colorNeutralForegroundStaticInverted,
+    fontSize: tokens.fontSizeBase100,
+    fontWeight: tokens.fontWeightSemibold,
+    whiteSpace: "nowrap",
+    pointerEvents: "none",
+    zIndex: 10,
+  },
+  pillAbove: { top: "-28px" },
+  pillInside: { top: "6px" },
+  toolbar: {
+    position: "absolute",
+    right: "8px",
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+    padding: "3px 6px",
+    borderRadius: tokens.borderRadiusMedium,
+    backgroundColor: CHROME,
+    boxShadow: tokens.shadow8,
+    zIndex: 20,
+  },
+  toolbarBelow: { bottom: "-38px" },
+  toolbarInside: { bottom: "8px" },
+});
 
 type DragMode =
   | "create"
@@ -48,10 +122,10 @@ export function InteractiveCropOverlay({
   onCancelCrop,
   onResetCrop,
 }: InteractiveCropOverlayProps) {
+  const styles = useStyles();
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Drag interaction state
   const [dragMode, setDragMode] = useState<DragMode>(null);
   const dragStartRef = useRef<{
     pointerX: number;
@@ -70,13 +144,11 @@ export function InteractiveCropOverlay({
     [scale]
   );
 
-  // Current crop in screen pixels
   const boxX = toScreen(crop.x);
   const boxY = toScreen(crop.y);
   const boxW = Math.max(1, toScreen(crop.w));
   const boxH = Math.max(1, toScreen(crop.h));
 
-  // Determine aspect ratio constraint
   const getAspectRatio = useCallback((): number | null => {
     switch (cropPreset) {
       case "1_1":
@@ -109,7 +181,6 @@ export function InteractiveCropOverlay({
     const pointerY = e.clientY - rect.top;
 
     if (mode === "create") {
-      // Start a fresh box from the pointer location
       const natX = Math.max(0, Math.min(naturalWidth - 10, toNatural(pointerX)));
       const natY = Math.max(0, Math.min(naturalHeight - 10, toNatural(pointerY)));
       const initial: CropRect = { x: natX, y: natY, w: 10, h: 10 };
@@ -144,11 +215,9 @@ export function InteractiveCropOverlay({
       let newH = init.h;
 
       if (dragMode === "move") {
-        // Move entire crop box
         newX = Math.max(0, Math.min(naturalWidth - init.w, init.x + deltaX));
         newY = Math.max(0, Math.min(naturalHeight - init.h, init.y + deltaY));
       } else if (dragMode === "create") {
-        // Creating a new box from initial click point
         const startX = init.x;
         const startY = init.y;
         const currNatX = Math.max(0, Math.min(naturalWidth, toNatural(currentX)));
@@ -170,7 +239,6 @@ export function InteractiveCropOverlay({
         newW = Math.max(10, Math.min(naturalWidth - newX, rawW));
         newH = Math.max(10, Math.min(naturalHeight - newY, rawH));
       } else {
-        // Resize via handles
         const right = init.x + init.w;
         const bottom = init.y + init.h;
 
@@ -202,7 +270,6 @@ export function InteractiveCropOverlay({
           newY = candidateY;
         }
 
-        // Keep within bounds
         if (newX + newW > naturalWidth) newW = naturalWidth - newX;
         if (newY + newH > naturalHeight) newH = naturalHeight - newY;
         if (aspect) {
@@ -232,7 +299,6 @@ export function InteractiveCropOverlay({
     };
   }, [dragMode, getAspectRatio, naturalHeight, naturalWidth, onCropChange, toNatural]);
 
-  // Handle double-click inside box to apply crop
   const handleDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onApplyCrop();
@@ -240,198 +306,54 @@ export function InteractiveCropOverlay({
 
   if (displayedWidth <= 0 || displayedHeight <= 0) return null;
 
-  // SVG mask path with fillRule="evenodd" to dim outside and keep inside transparent
-  const maskPath = `
-    M 0 0
-    H ${displayedWidth}
-    V ${displayedHeight}
-    H 0
-    Z
-    M ${boxX} ${boxY}
-    V ${boxY + boxH}
-    H ${boxX + boxW}
-    V ${boxY}
-    Z
-  `;
+  // Even-odd path: dims everything outside the crop box.
+  const maskPath = `M 0 0 H ${displayedWidth} V ${displayedHeight} H 0 Z M ${boxX} ${boxY} V ${boxY + boxH} H ${boxX + boxW} V ${boxY} Z`;
+
+  const handles: [DragMode, string][] = [
+    ["handle-nw", styles.nw],
+    ["handle-ne", styles.ne],
+    ["handle-se", styles.se],
+    ["handle-sw", styles.sw],
+    ["handle-n", styles.n],
+    ["handle-s", styles.s],
+    ["handle-w", styles.w],
+    ["handle-e", styles.e],
+  ];
 
   return (
     <div
       ref={containerRef}
-      style={{
-        position: "absolute",
-        top: 0,
-        left: 0,
-        width: `${displayedWidth}px`,
-        height: `${displayedHeight}px`,
-        cursor: "crosshair",
-        userSelect: "none",
-        touchAction: "none",
-        overflow: "hidden",
-      }}
+      className={styles.root}
+      style={{ width: displayedWidth, height: displayedHeight }}
       onPointerDown={(e) => handlePointerDown(e, "create")}
     >
-      {/* SVG Shroud (Dark overlay outside crop box) */}
-      <svg
-        style={{
-          position: "absolute",
-          inset: 0,
-          width: "100%",
-          height: "100%",
-          pointerEvents: "none",
-        }}
-      >
-        <path d={maskPath} fill="rgba(0, 0, 0, 0.58)" fillRule="evenodd" />
+      <svg className={styles.shroud}>
+        <path d={maskPath} fillRule="evenodd" />
       </svg>
 
-      {/* The Active Crop Box */}
       <div
-        style={{
-          position: "absolute",
-          left: `${boxX}px`,
-          top: `${boxY}px`,
-          width: `${boxW}px`,
-          height: `${boxH}px`,
-          boxSizing: "border-box",
-          border: "1.5px solid #ffffff",
-          boxShadow: "0 0 0 1px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(0, 0, 0, 0.3)",
-          cursor: "move",
-        }}
+        className={styles.box}
+        style={{ left: boxX, top: boxY, width: boxW, height: boxH }}
         onPointerDown={(e) => handlePointerDown(e, "move")}
         onDoubleClick={handleDoubleClick}
       >
-        {/* Rule of Thirds Grid (3x3) */}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            pointerEvents: "none",
-            opacity: dragMode ? 0.75 : 0.45,
-            transition: "opacity 0.15s ease",
-          }}
-        >
-          {/* Vertical grid lines */}
-          <div
-            style={{
-              position: "absolute",
-              top: 0,
-              bottom: 0,
-              left: "33.33%",
-              width: "1px",
-              backgroundColor: "rgba(255, 255, 255, 0.7)",
-              boxShadow: "0 0 1px rgba(0,0,0,0.8)",
-            }}
-          />
-          <div
-            style={{
-              position: "absolute",
-              top: 0,
-              bottom: 0,
-              left: "66.66%",
-              width: "1px",
-              backgroundColor: "rgba(255, 255, 255, 0.7)",
-              boxShadow: "0 0 1px rgba(0,0,0,0.8)",
-            }}
-          />
-          {/* Horizontal grid lines */}
-          <div
-            style={{
-              position: "absolute",
-              left: 0,
-              right: 0,
-              top: "33.33%",
-              height: "1px",
-              backgroundColor: "rgba(255, 255, 255, 0.7)",
-              boxShadow: "0 0 1px rgba(0,0,0,0.8)",
-            }}
-          />
-          <div
-            style={{
-              position: "absolute",
-              left: 0,
-              right: 0,
-              top: "66.66%",
-              height: "1px",
-              backgroundColor: "rgba(255, 255, 255, 0.7)",
-              boxShadow: "0 0 1px rgba(0,0,0,0.8)",
-            }}
-          />
+        <div className={mergeClasses(styles.grid, dragMode !== null && styles.gridActive)}>
+          <div className={mergeClasses(styles.lineV, styles.third1V)} />
+          <div className={mergeClasses(styles.lineV, styles.third2V)} />
+          <div className={mergeClasses(styles.lineH, styles.third1H)} />
+          <div className={mergeClasses(styles.lineH, styles.third2H)} />
         </div>
 
-        {/* 8 Resize Handles */}
-        {/* Corners */}
-        <div
-          style={{ ...handleBaseStyle, top: "-5px", left: "-5px", cursor: "nwse-resize" }}
-          onPointerDown={(e) => handlePointerDown(e, "handle-nw")}
-        />
-        <div
-          style={{ ...handleBaseStyle, top: "-5px", right: "-5px", cursor: "nesw-resize" }}
-          onPointerDown={(e) => handlePointerDown(e, "handle-ne")}
-        />
-        <div
-          style={{ ...handleBaseStyle, bottom: "-5px", right: "-5px", cursor: "nwse-resize" }}
-          onPointerDown={(e) => handlePointerDown(e, "handle-se")}
-        />
-        <div
-          style={{ ...handleBaseStyle, bottom: "-5px", left: "-5px", cursor: "nesw-resize" }}
-          onPointerDown={(e) => handlePointerDown(e, "handle-sw")}
-        />
+        {handles.map(([mode, position]) => (
+          <div key={mode} className={mergeClasses(styles.handle, position)} onPointerDown={(e) => handlePointerDown(e, mode)} />
+        ))}
 
-        {/* Edges */}
-        <div
-          style={{ ...handleBaseStyle, top: "-5px", left: "calc(50% - 5px)", cursor: "ns-resize" }}
-          onPointerDown={(e) => handlePointerDown(e, "handle-n")}
-        />
-        <div
-          style={{ ...handleBaseStyle, bottom: "-5px", left: "calc(50% - 5px)", cursor: "ns-resize" }}
-          onPointerDown={(e) => handlePointerDown(e, "handle-s")}
-        />
-        <div
-          style={{ ...handleBaseStyle, top: "calc(50% - 5px)", left: "-5px", cursor: "ew-resize" }}
-          onPointerDown={(e) => handlePointerDown(e, "handle-w")}
-        />
-        <div
-          style={{ ...handleBaseStyle, top: "calc(50% - 5px)", right: "-5px", cursor: "ew-resize" }}
-          onPointerDown={(e) => handlePointerDown(e, "handle-e")}
-        />
-
-        {/* Dimension Pill (Floating at top-left inside or above crop box) */}
-        <div
-          style={{
-            position: "absolute",
-            top: boxY > 30 ? "-28px" : "6px",
-            left: "6px",
-            backgroundColor: "rgba(18, 18, 18, 0.85)",
-            backdropFilter: "blur(6px)",
-            color: "#ffffff",
-            fontSize: "11px",
-            fontWeight: 600,
-            padding: "2px 8px",
-            borderRadius: tokens.borderRadiusSmall,
-            boxShadow: tokens.shadow4,
-            pointerEvents: "none",
-            whiteSpace: "nowrap",
-            zIndex: 10,
-          }}
-        >
+        <div className={mergeClasses(styles.pill, boxY > 30 ? styles.pillAbove : styles.pillInside)}>
           {crop.w} × {crop.h} px
         </div>
 
-        {/* Floating Mini Action Toolbar (Apply / Cancel buttons right below crop box) */}
         <div
-          style={{
-            position: "absolute",
-            bottom: boxY + boxH + 40 < displayedHeight ? "-38px" : "8px",
-            right: "8px",
-            display: "flex",
-            alignItems: "center",
-            gap: "4px",
-            backgroundColor: "rgba(18, 18, 18, 0.9)",
-            backdropFilter: "blur(8px)",
-            padding: "3px 6px",
-            borderRadius: tokens.borderRadiusMedium,
-            boxShadow: tokens.shadow8,
-            zIndex: 20,
-          }}
+          className={mergeClasses(styles.toolbar, boxY + boxH + 40 < displayedHeight ? styles.toolbarBelow : styles.toolbarInside)}
           onPointerDown={(e) => e.stopPropagation()}
         >
           <Tooltip content={`${t("imageTools.cropApply")} (Enter)`} relationship="label">
@@ -476,15 +398,3 @@ export function InteractiveCropOverlay({
     </div>
   );
 }
-
-const handleBaseStyle: React.CSSProperties = {
-  position: "absolute",
-  width: "10px",
-  height: "10px",
-  backgroundColor: "#ffffff",
-  border: "1.5px solid #111111",
-  borderRadius: "2px",
-  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.5)",
-  boxSizing: "border-box",
-  zIndex: 15,
-};

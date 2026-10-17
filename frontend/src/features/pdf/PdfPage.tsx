@@ -179,6 +179,8 @@ const useStyles = makeStyles({
     borderRadius: tokens.borderRadiusMedium,
   },
   muted: { color: tokens.colorNeutralForeground3 },
+  streaming: { opacity: 0.6 },
+  previewBody: { gridColumn: "1 / -1" },
 });
 
 interface CardProps {
@@ -424,7 +426,7 @@ export default function PdfPage() {
                   />
                 ))}
                 {streaming.map((item, i) => (
-                  <div key={`s${i}`} style={{ opacity: 0.6 }}>
+                  <div key={`s${i}`} className={styles.streaming}>
                     <PageCardView
                       item={{ ...item, key: `s${i}` }}
                       index={pages.length + i}
@@ -446,7 +448,6 @@ export default function PdfPage() {
               )}
             </DragOverlay>
           </DndContext>
-          <Caption1 className={styles.muted}>{t("pdf.reorderHint")}</Caption1>
         </Panel>
       )}
 
@@ -489,7 +490,7 @@ export default function PdfPage() {
                 </Text>
               )}
             </DialogTitle>
-            <div style={{ gridColumn: "1 / -1" }}>
+            <div className={styles.previewBody}>
               {preview?.src ? <img className={styles.previewImg} src={preview.src} alt="" /> : <Spinner />}
             </div>
           </DialogBody>

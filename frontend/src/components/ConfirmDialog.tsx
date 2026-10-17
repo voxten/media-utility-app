@@ -9,9 +9,14 @@ import {
   DialogContent,
   DialogSurface,
   DialogTitle,
+  makeStyles,
 } from "@fluentui/react-components";
 import { useTranslation } from "react-i18next";
 import { create } from "zustand";
+
+const useStyles = makeStyles({
+  body: { wordBreak: "break-word" },
+});
 
 interface ConfirmRequest {
   title: string;
@@ -28,6 +33,7 @@ export function confirm(options: Omit<ConfirmRequest, "resolve">): Promise<boole
 }
 
 export function ConfirmHost() {
+  const styles = useStyles();
   const { t } = useTranslation();
   const request = useConfirmStore((s) => s.request);
   const close = (ok: boolean) => {
@@ -40,7 +46,7 @@ export function ConfirmHost() {
       <DialogSurface>
         <DialogBody>
           <DialogTitle>{request?.title}</DialogTitle>
-          {request?.body && <DialogContent style={{ wordBreak: "break-word" }}>{request.body}</DialogContent>}
+          {request?.body && <DialogContent className={styles.body}>{request.body}</DialogContent>}
           <DialogActions>
             <Button appearance="secondary" onClick={() => close(false)}>
               {t("common.cancel")}

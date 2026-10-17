@@ -1,7 +1,7 @@
 // Sticky bottom bar of a tool page: live job status + progress on the left, actions on the right.
 
 import type { ReactNode } from "react";
-import { Button, Caption1, makeStyles, ProgressBar, Text, tokens } from "@fluentui/react-components";
+import { Button, Caption1, makeStyles, mergeClasses, ProgressBar, Text, tokens } from "@fluentui/react-components";
 import { Dismiss16Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import type { JobState } from "../stores/jobs";
@@ -54,7 +54,7 @@ export function ActionBar({ job, idleText, detail, onCancel, children }: ActionB
         {job ? (
           <>
             <div className={styles.line}>
-              <Text className={`${styles.message} ${job.status === "error" ? styles.error : ""}`}>{jobMessage(t, job) || t("common.status.working")}</Text>
+              <Text className={mergeClasses(styles.message, job.status === "error" && styles.error)}>{jobMessage(t, job) || t("common.status.working")}</Text>
               <Caption1 className={styles.percent}>
                 {detail}
                 {running && job.percent != null && `  ${Math.round(job.percent)}%`}

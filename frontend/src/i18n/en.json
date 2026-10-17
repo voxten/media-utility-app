@@ -1,7 +1,6 @@
 {
   "app": {
-    "name": "Media Studio",
-    "tagline": "Media, document and text tools in one place"
+    "name": "Media Studio"
   },
   "nav": {
     "home": "Home",
@@ -90,8 +89,7 @@
     "subtitle": "Pick a tool to get started. Tasks run in the background, so you can switch between tools freely.",
     "allTools": "All tools",
     "recentJobs": "Recent tasks",
-    "noJobs": "No tasks have been run yet.",
-    "open": "Open"
+    "noJobs": "No tasks have been run yet."
   },
   "settings": {
     "title": "Settings",
@@ -115,7 +113,6 @@
     "cookiesX": "X (Twitter)",
     "cookiesHint": "Leave empty to use the file in cookies/ (if present).",
     "dependencies": "Dependencies",
-    "dependenciesDescription": "External programs and libraries used by the tools.",
     "deps": {
       "ffmpeg": "FFmpeg",
       "mediainfo": "MediaInfo",
@@ -149,11 +146,9 @@
     "micaUnsupported": "Requires Windows 11 (22H2 or later).",
     "storage": {
       "title": "Storage & Cache",
-      "subtitle": "Manage disk space occupied by temporary conversion files, thumbnails and downloaded models.",
       "cacheTitle": "Cache & Temporary Files",
       "cacheDesc": "Temporary conversion files, downloaded archives and cached thumbnails.",
       "modelsTitle": "AI Neural Models",
-      "modelsDesc": "Downloaded weights for neural networks (LaMa inpainting, Real-ESRGAN, BiRefNet).",
       "appDataTitle": "App Data Folder (%APPDATA%)",
       "appDataDesc": "Primary Media Studio directory containing settings and app data.",
       "recentFoldersTitle": "Recent Folders History",
@@ -169,7 +164,6 @@
       "title": "Hardware & Performance",
       "cpu": "Processor (CPU)",
       "cpuDetails": "{{threads}} logical threads · {{arch}} architecture",
-      "gpu": "Graphics Card (GPU)",
       "noGpu": "Integrated graphics or no dedicated GPU detected",
       "cudaActive": "PyTorch CUDA acceleration active (v{{version}})",
       "cudaInactive": "CPU Mode (PyTorch CUDA not available)",
@@ -210,7 +204,6 @@
     "clear": "Clear",
     "cancel": "Cancel",
     "close": "Close",
-    "save": "Save",
     "openFolder": "Open folder",
     "selectFolder": "Select a folder…",
     "notSet": "Not set",
@@ -232,26 +225,21 @@
     "add": "Add",
     "showInFolder": "Show in folder",
     "open": "Open",
-    "delete": "Delete",
-    "retry": "Retry",
     "errorsCount_one": "{{count}} error",
     "errorsCount_other": "{{count}} errors",
     "more": "More",
     "saveAs": "Save as…",
     "saveBtn": "Save",
-    "saveLocation": "Save location",
     "outputFolder": "Output folder",
     "fileName": "File name",
     "savedSuccess": "File saved",
     "loading": "Loading...",
-    "view": "View",
     "viewSplit": "Split slider",
     "viewSide": "Side by side",
     "viewAfter": "Result only",
     "viewBefore": "Original only",
     "before": "Before (Original)",
     "after": "After (Result)",
-    "preview": "Preview",
     "saveError": "Could not save the file",
     "andMore": "+ {{count}} more",
     "addFiles": "Add files",
@@ -273,7 +261,6 @@
     "all": "All files"
   },
   "converter": {
-    "changeImage": "Change image",
     "status": {
       "scanning": "Looking for files…",
       "noFiles": "No matching files found.",
@@ -290,7 +277,6 @@
     "inputFolder": "Input folder",
     "fromFormat": "Source format",
     "swap": "Swap formats",
-    "folderHint": "Files directly inside the selected folder are converted (not subfolders).",
     "matching_one": "Found {{count}} {{format}} file.",
     "matching_other": "Found {{count}} {{format}} files.",
     "dropTitle": "Drop images here",
@@ -298,14 +284,10 @@
     "output": "Output",
     "toFormat": "Target format",
     "quality": "Quality",
-    "qualityHint": "Lower quality = smaller file.",
-    "qualityNA": "Not applicable to {{format}}.",
     "method": "WEBP compression method",
     "methodHint": "0 = fastest, 6 = best compression.",
     "outputFolder": "Output folder",
     "start": "Convert",
-    "saved": "Saved",
-    "fileSelected": "File selected",
     "filesSelected_one": "{{count}} file selected",
     "filesSelected_other": "{{count}} files selected",
     "idle": {
@@ -377,13 +359,6 @@
       "readFailed": "Cannot read {{file}}: {{error}}",
       "rewriteWarning": "Image optimization warning: {{error}}"
     },
-    "tabs": {
-      "merge": "Merge & Organize",
-      "compress": "Compress",
-      "split": "Split",
-      "convert": "PDF ↔ Images",
-      "extract": "Extract Text"
-    },
     "dropTitle": "Drop PDF files here",
     "dropMore": "Add more PDF files",
     "dropHint": "or click to choose documents",
@@ -392,7 +367,6 @@
     "dropImagesTitle": "Drop image files here",
     "dropImagesHint": "or click to select images (PNG, JPG, WebP)",
     "dropChange": "Change PDF file (drop or click)",
-    "settings": "Settings",
     "pages_one": "{{count}} page",
     "pages_other": "{{count}} pages",
     "pageShort": "p. {{page}}",
@@ -401,29 +375,22 @@
     "rotateRight": "Rotate 90° clockwise",
     "sortByFile": "Sort by file and page number",
     "loading": "Loading pages…",
-    "reorderHint": "Drag pages to reorder them. Pages are merged left to right.",
     "merge": "Merge & save",
     "defaultName": "merged.pdf",
     "compress": {
-      "title": "Reduce PDF file size",
-      "subtitle": "Optimize document size by recompressing embedded images and cleaning structure.",
       "preset": "Compression level",
       "presetLow": "Low (high quality, 200 DPI)",
       "presetBalanced": "Balanced (recommended, 150 DPI)",
       "presetHigh": "High (smallest file, 100 DPI)",
       "action": "Compress & save",
-      "defaultName": "compressed.pdf",
       "result": "Original: {{before}} ➔ Compressed: {{after}} (savings: -{{percent}}%)"
     },
     "split": {
-      "title": "Split PDF into smaller files",
-      "subtitle": "Split a multi-page document into single pages or extract a specific range.",
       "mode": "Split mode",
       "modeAll": "Every page as a separate PDF",
       "modeRange": "Extract specific page range",
       "rangeLabel": "Page range (e.g. 1-3, 5, 8-10)",
       "rangePlaceholder": "1-3, 5, 8",
-      "rangeHint": "Enter page numbers separated by commas or ranges with a hyphen",
       "action": "Split to folder"
     },
     "convert": {
@@ -439,10 +406,7 @@
       "dpiPrint": "Print"
     },
     "extract": {
-      "title": "Extract text from PDF document",
-      "subtitle": "Saves all text content with page separators into a .txt file.",
       "action": "Export to .txt",
-      "defaultName": "extracted_text.txt",
       "chars_one": "{{count}} character",
       "chars_other": "{{count}} characters"
     },
@@ -555,7 +519,6 @@
       "female": "female"
     },
     "rate": "Speaking rate",
-    "output": "Output file",
     "outputFolder": "Output folder",
     "fileName": "File name",
     "format": "Format",
@@ -589,7 +552,6 @@
     "urlPlaceholder": "Paste a link from YouTube, X or another site…",
     "paste": "Paste from clipboard",
     "check": "Check",
-    "urlHint": "Hundreds of sites are supported (yt-dlp). X links are fixed automatically.",
     "emptyTitle": "Paste a link to see available formats",
     "emptyBody": "After checking the link you can choose a video quality or audio only.",
     "modeVideo": "Video",
@@ -607,7 +569,6 @@
     "noFormats": "No formats in this category.",
     "playlistBadge_one": "Playlist / Folder ({{count}} video)",
     "playlistBadge_other": "Playlist / Folder ({{count}} videos)",
-    "playlistHint": "Playlist or folder detected. Clicking 'Download' will queue all videos for batch download.",
     "downloadPlaylist_one": "Download playlist ({{count}} video)",
     "downloadPlaylist_other": "Download playlist ({{count}} videos)",
     "retryFailed_one": "Retry failed ({{count}})",
@@ -615,13 +576,9 @@
     "queueTitle": "Links",
     "urlCount_one": "{{count}} item",
     "urlCount_other": "{{count}} items",
-    "batchHint": "One link per line. Every video is downloaded in the best quality (MP4).",
     "itemStatus": {
       "pending": "Pending",
-      "running": "Downloading",
-      "done": "Downloaded",
-      "error": "Failed",
-      "cancelled": "Cancelled"
+      "error": "Failed"
     },
     "output": "Save",
     "outdir": "Output folder",
@@ -651,7 +608,6 @@
   "upscale": {
     "status": {
       "loading": "Loading image…",
-      "scaling": "Upscaling image with AI ({{percent}}%)…",
       "tiling": "Upscaling image tiles ({{percent}}%)…",
       "debleeding": "Cleaning edges (Anti-Halo)…",
       "modelInference": "Real-ESRGAN AI model inference…",
@@ -660,8 +616,6 @@
     },
     "dropTitle": "Drop image to upscale",
     "dropHint": "or click to choose a file (PNG, JPG, WEBP, BMP, TIFF)",
-    "howTitle": "How does AI upscaling work?",
-    "howBody": "The Real-ESRGAN model analyzes textures, contours, and fine details, synthesizing lost information at higher resolution (2x or 4x). Our algorithm fully supports the alpha channel (transparency), eliminating dark color fringes (halos) around transparent edges in PNG and WebP files.",
     "models": {
       "general": "Real-ESRGAN · Photos & Graphics (x4v3)",
       "anime": "Real-ESRGAN · Anime & Illustrations (x4plus)"
@@ -690,15 +644,12 @@
     "changeImage": "Change image",
     "before": "Before",
     "after": "After ({{scale}}×)",
-    "compareHint": "Drag the slider to compare original and upscaled image.",
-    "previewHint": "Preview of original image on transparent background.",
     "idle": {
       "ready": "Ready to upscale image.",
       "done": "Image successfully upscaled.",
       "needModel": "Download the selected AI model above to begin."
     },
     "runBtn": "Upscale image ({{scale}}×)",
-    "saveBtn": "Save upscaled image",
     "backToOptions": "Change options",
     "continueWithThis": "Continue with this image",
     "suffix": "_upscaled",
@@ -719,8 +670,6 @@
     },
     "dropTitle": "Drop an image with a watermark",
     "dropHint": "or click to choose a file (PNG, JPG, WEBP, BMP, TIFF)",
-    "howTitle": "How does it work?",
-    "howBody": "Paint over the watermark with the brush, then click “Remove watermark”. The algorithm rebuilds the background from its surroundings. The optional LaMa AI model gives the best results.",
     "lamaPromo": {
       "title": "LaMa AI Model (optional)",
       "desc": "Removes watermarks with photorealistic quality by reconstructing textures and background.",
@@ -742,14 +691,11 @@
       "lama": "AI · LaMa (best quality)",
       "lamaMissing": "AI · LaMa (not installed)"
     },
-    "paintHint": "Paint over the watermark. Shortcuts: B – brush, E – eraser, [ ] – size, Ctrl+Z – undo.",
-    "compareHint": "Drag the slider to compare before and after.",
     "before": "Before",
     "after": "After",
     "suffix": "_clean",
     "backToMask": "Back to mask",
     "continue": "Keep editing the result",
-    "save": "Save as…",
     "remove": "Remove watermark",
     "idle": {
       "paint": "Paint over the watermark.",
@@ -787,7 +733,6 @@
     "rounded": "Rounded corners",
     "showPercent": "Show percentages",
     "preview": "Live preview",
-    "previewHint": "Exported in high resolution ({{width}} px wide).",
     "defaultName": "progress.png",
     "export": "Export PNG",
     "exporting": "Exporting…",
@@ -802,19 +747,15 @@
   "jobs": {
     "title": "Tasks",
     "popupTitle": "Running Tasks",
-    "overallProgress": "Overall progress",
-    "subtasksTitle": "Specific actions",
     "pending": "Queued",
     "activeCount": "{{count}} in progress",
     "completedCount": "{{count}} completed",
     "errorCount": "{{count}} failed",
     "cancelledCount": "{{count}} cancelled",
-    "itemCount": "{{done}}/{{total}} completed",
     "noActiveJobs": "No active tasks",
     "noActiveJobsBody": "All operations have completed or none are running.",
     "openTool": "Open",
     "clearFinished": "Clear finished",
-    "clearHint": "Hides finished tasks from the list. Results stay in the tools.",
     "collapseDetails": "Collapse details",
     "expandDetails": "Expand details",
     "toastDone": "{{tool}}: finished",
@@ -844,8 +785,6 @@
     },
     "dropTitle": "Drop image here to remove background",
     "dropHint": "or click to browse (PNG, JPG, WEBP, BMP, TIFF)",
-    "howTitle": "How does AI background removal work?",
-    "howBody": "Powered by modern BiRefNet (Bilateral Reference Network) for sub-pixel boundary segmentation. Our built-in Anti-Halo debleed algorithm neutralizes bright/white edge halos and color bleeding (hair, fur, fine garments), ensuring your cutouts look flawless against any background.",
     "modelPromo": {
       "title": "BiRefNet / RMBG AI Model",
       "desc": "This tool requires rembg and ONNX Runtime. Click below to install in the background.",
@@ -862,8 +801,6 @@
       "antiHaloHint": "Replaces white/bright border bleed with the true foreground color",
       "choke": "Edge Choke / Erode",
       "chokeHint": "Shaves outermost boundary pixels (0-4 px) to eliminate fringe halos",
-      "feather": "Edge Feathering",
-      "featherHint": "Softens aliasing steps on sharp edges",
       "despeckle": "Remove Small Remnants (Despeckle)",
       "despeckleHint": "Automatically filters isolated background specks and noise",
       "previewBg": "Preview Background",
@@ -871,12 +808,6 @@
       "bgBlack": "Pure Black",
       "bgWhite": "Pure White",
       "bgCustom": "Custom Color",
-      "brushMode": "Manual Touch-up",
-      "brushErase": "Erase speck",
-      "brushRestore": "Restore detail",
-      "brushNone": "Preview / Pan",
-      "brushSize": "Brush Size",
-      "clearStrokes": "Clear strokes",
       "chokeNone": "None"
     },
     "preview": {
@@ -886,9 +817,7 @@
     },
     "actions": {
       "remove": "Remove background",
-      "processing": "Removing background…",
-      "savePng": "Save as PNG",
-      "savedSuccess": "Saved image to file"
+      "processing": "Removing background…"
     }
   },
   "deps": {
@@ -961,13 +890,11 @@
       "crop": "Crop",
       "resize": "Resize",
       "transform": "Rotate & Flip",
-      "reset": "Reset to original",
-      "hint": "Select a tool from the toolbox on the left: [C] Crop, [R] Resize, [T] Rotate & Flip."
+      "reset": "Reset to original"
     },
     "cropApply": "Apply crop",
     "cropCancel": "Cancel crop",
     "cropReset": "Full image",
-    "cropHelper": "Draw a crop box by dragging, or use edge handles to adjust",
     "copyClipboard": "Copy to clipboard",
     "copied": "Image copied to clipboard!",
     "saveAction": "Save image as…",
@@ -995,7 +922,6 @@
     "buttonTooltip": "Open this file in another tool",
     "modalTitle": "Send file to another tool",
     "modalDesc": "Choose a tool to continue working with this file.",
-    "sourceFile": "Selected file",
     "sourceFiles": "Selected files ({{count}})",
     "compatibleTools": "Compatible tools",
     "noCompatibleTools": "No compatible tools found for this file type.",
@@ -1003,16 +929,12 @@
     "asPdfToImages": "Will open in mode: PDF to Images",
     "toastLoaded": "File successfully loaded into tool",
     "toastLoadedFrom": "Loaded file from: {{source}}",
-    "currentTool": "Current tool",
-    "sendAction": "Send file",
     "afterTitle": "Processed images",
     "convertedTitle": "Converted images",
     "compressedTitle": "Compressed images",
     "processedTitle": "Processing results",
     "extractedTitle": "Extracted images",
-    "savedTitle": "Saved image",
-    "openOutputFolder": "Show output folder",
-    "outputFilesCount": "Generated files: {{count}}"
+    "openOutputFolder": "Show output folder"
   },
   "video_sync": {
     "dropTitle": "Drop a video file here or click to browse",

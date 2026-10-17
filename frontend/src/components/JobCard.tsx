@@ -45,7 +45,6 @@ export interface SubtaskAction {
 export function extractSubtasks(job: JobState): SubtaskAction[] {
   const items = new Map<number | string, SubtaskAction>();
 
-  // 1. Check job.partials
   if (Array.isArray(job.partials) && job.partials.length > 0) {
     for (const p of job.partials) {
       if (p && typeof p === "object") {
@@ -69,7 +68,6 @@ export function extractSubtasks(job: JobState): SubtaskAction[] {
     }
   }
 
-  // 2. Check job.result items if finished
   if (job.result && typeof job.result === "object" && "items" in job.result) {
     const resItems = (job.result as { items?: unknown[] }).items;
     if (Array.isArray(resItems)) {
@@ -95,7 +93,6 @@ export function extractSubtasks(job: JobState): SubtaskAction[] {
     }
   }
 
-  // 3. Live active item stats from extra
   if (job.status === "running" && typeof job.extra?.item === "number") {
     const curIdx = job.extra.item;
     const cur = items.get(curIdx);
@@ -297,6 +294,7 @@ const useStyles = makeStyles({
   },
   okIcon: { color: tokens.colorPaletteGreenForeground1 },
   badIcon: { color: tokens.colorPaletteRedForeground1 },
+  footer: { display: "flex", justifyContent: "flex-end", gap: "6px" },
 });
 
 function SubtaskRow({ item }: { item: SubtaskAction }) {
@@ -525,7 +523,7 @@ export function JobCard({ job, onNavigate }: { job: JobState; onNavigate?: () =>
         </div>
       )}
 
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: "6px" }}>
+      <div className={styles.footer}>
         {resultFiles.length > 0 && (
           <Button
             size="small"

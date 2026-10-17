@@ -91,7 +91,7 @@ export default function PdfSplitPage() {
         </Field>
 
         {mode === "range" && (
-          <Field label={t("pdf.split.rangeLabel")} hint={t("pdf.split.rangeHint")} className={styles.rangeField}>
+          <Field label={t("pdf.split.rangeLabel")} className={styles.rangeField}>
             <Input value={range} placeholder={t("pdf.split.rangePlaceholder")} onChange={(_, d) => setRange(d.value)} />
           </Field>
         )}

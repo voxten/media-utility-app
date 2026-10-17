@@ -297,7 +297,7 @@ export default function DuplicatesPage() {
         }
       >
         <div className={styles.setup}>
-          <Field label={t("duplicates.folder")} hint={t("duplicates.folderHint")}>
+          <Field label={t("duplicates.folder")}>
             <PathPicker value={form.folder} onChange={(folder) => form.set({ folder })} />
           </Field>
           <SliderField

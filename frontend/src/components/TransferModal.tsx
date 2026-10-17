@@ -194,6 +194,9 @@ const useStyles = makeStyles({
     color: tokens.colorNeutralForeground3,
     gap: "8px",
   },
+  muted: { color: tokens.colorNeutralForeground3 },
+  inlineRow: { display: "flex", alignItems: "center", gap: "6px" },
+  note: { marginTop: "2px", width: "fit-content" },
 });
 
 export function TransferModal() {
@@ -214,7 +217,6 @@ export function TransferModal() {
   const fileType = firstFile ? getFileType(firstFile) : "unknown";
   const ext = firstFile ? getExt(firstFile).replace(".", "").toUpperCase() : "";
 
-  // Load preview thumbnail for images
   useEffect(() => {
     if (!isModalOpen || !firstFile) {
       setThumbUrl(null);
@@ -238,7 +240,6 @@ export function TransferModal() {
     }
   }, [isModalOpen, firstFile, fileType]);
 
-  // Determine available target tools based on file type
   const targetTools: TargetToolItem[] = [];
 
   if (fileType === "image") {
@@ -301,11 +302,10 @@ export function TransferModal() {
 
           <div className={styles.header}>
             <DialogTitle className={styles.titleText}>{t("transfer.modalTitle")}</DialogTitle>
-            <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>{t("transfer.modalDesc")}</Caption1>
+            <Caption1 className={styles.muted}>{t("transfer.modalDesc")}</Caption1>
           </div>
 
           <DialogContent>
-            {/* Source file preview card */}
             {firstFile && (
               <div className={styles.sourceCard}>
                 <div className={styles.sourceThumbBox}>
@@ -332,17 +332,16 @@ export function TransferModal() {
                       ? t("transfer.sourceFiles", { count: modalFiles.length })
                       : fileName(firstFile)}
                   </Text>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <div className={styles.inlineRow}>
                     {ext && <Badge size="small" appearance="tint" color="brand">{ext}</Badge>}
                     {fileSize ? (
-                      <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>{formatBytes(fileSize)}</Caption1>
+                      <Caption1 className={styles.muted}>{formatBytes(fileSize)}</Caption1>
                     ) : null}
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Target Tools Selection Grid */}
             <div className={styles.sectionTitle}>{t("transfer.compatibleTools")}</div>
 
             {targetTools.length > 0 ? (
@@ -376,7 +375,7 @@ export function TransferModal() {
                           {t(target.descKey)}
                         </Caption1>
                         {target.subTabNoteKey && (
-                          <Badge size="tiny" color="informative" appearance="filled" style={{ marginTop: "2px", width: "fit-content" }}>
+                          <Badge size="tiny" color="informative" appearance="filled" className={styles.note}>
                             {t(target.subTabNoteKey)}
                           </Badge>
                         )}

@@ -158,7 +158,6 @@ export function AfterGallery({
   const { t } = useTranslation();
   const styles = useStyles();
 
-  // Normalize items list from items or raw files
   const normalizedItems = useMemo<AfterGalleryItem[]>(() => {
     if (items && items.length > 0) {
       return items;
@@ -180,7 +179,6 @@ export function AfterGallery({
       .filter((p): p is string => Boolean(p));
   }, [normalizedItems]);
 
-  // Cache thumbnails for files
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
 
   useEffect(() => {

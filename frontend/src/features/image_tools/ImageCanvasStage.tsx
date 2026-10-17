@@ -116,7 +116,6 @@ export function ImageCanvasStage({
             style={{ width: `${displaySize.w}px`, height: `${displaySize.h}px` }}
           />
 
-          {/* Interactive Crop overlay when crop tool is active */}
           {activeTool === "crop" && (
             <InteractiveCropOverlay
               naturalWidth={naturalWidth}

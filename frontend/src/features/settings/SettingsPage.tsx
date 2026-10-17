@@ -44,7 +44,8 @@ import {
   LocalLanguage24Regular,
   Server24Regular,
   Settings24Filled,
-  Sparkle24Regular,
+  Flash24Regular,
+  Color24Regular,
   Speaker216Regular,
   Speaker224Regular,
   Video24Regular,
@@ -129,7 +130,7 @@ const DEP_ICONS: Record<string, typeof Video24Regular> = {
   mediainfo: Info24Regular,
   lama: Bot24Regular,
   upscale_general: ArrowMaximize24Regular,
-  upscale_anime: Sparkle24Regular,
+  upscale_anime: ArrowMaximize24Regular,
   rembg: Bot24Regular,
 };
 
@@ -301,7 +302,7 @@ function StorageSection() {
       const data = await api.system.storageInfo();
       setStorage(data);
     } catch {
-      // Ignored
+      // Storage stats are optional; the section renders without them.
     }
   }, []);
 
@@ -498,7 +499,7 @@ function HardwareSection() {
         </SettingRow>
 
         <SettingRow
-          icon={Sparkle24Regular}
+          icon={Flash24Regular}
           title={t("settings.hardware.acceleration")}
           description={t("settings.hardware.accelerationDesc")}
         >
@@ -543,7 +544,7 @@ function NotificationsSection() {
           title={t("settings.notifications.sound")}
           description={t("settings.notifications.soundDesc")}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <>
             <Button
               appearance="subtle"
               size="small"
@@ -556,7 +557,7 @@ function NotificationsSection() {
               checked={settings.completionSound ?? true}
               onChange={(_, d) => update({ completionSound: d.checked })}
             />
-          </div>
+          </>
         </SettingRow>
       </SettingGroup>
     </Section>
@@ -705,7 +706,7 @@ export default function SettingsPage() {
             </Dropdown>
           </SettingRow>
           <SettingRow
-            icon={Sparkle24Regular}
+            icon={Color24Regular}
             title={t("settings.mica")}
             description={
               !micaSupported

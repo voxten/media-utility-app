@@ -1,7 +1,7 @@
 // Split view of ImageComparison (draggable divider). Pages use ImageComparison, not this directly.
 
 import React, { useEffect, useRef, useState } from "react";
-import { Caption1, makeStyles, tokens } from "@fluentui/react-components";
+import { Caption1, makeStyles, mergeClasses, tokens } from "@fluentui/react-components";
 import { ChevronLeft16Filled, ChevronRight16Filled } from "@fluentui/react-icons";
 
 const useStyles = makeStyles({
@@ -90,6 +90,8 @@ const useStyles = makeStyles({
     zIndex: 4,
     pointerEvents: "none",
   },
+  labelLeft: { left: "10px" },
+  labelRight: { right: "10px" },
 });
 
 interface CompareSliderProps {
@@ -116,7 +118,6 @@ export function CompareSlider({
   const [containerSize, setContainerSize] = useState<{ width: number; height: number } | null>(null);
   const [detectedAspect, setDetectedAspect] = useState<number | null>(aspectRatio ?? null);
 
-  // Measure container dimensions
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -143,7 +144,6 @@ export function CompareSlider({
     return () => ro.disconnect();
   }, []);
 
-  // Detect image aspect ratio if not passed as prop
   useEffect(() => {
     if (aspectRatio && aspectRatio > 0) {
       setDetectedAspect(aspectRatio);
@@ -239,7 +239,6 @@ export function CompareSlider({
         aria-valuemin={0}
         aria-valuemax={100}
       >
-        {/* Base layer: After (Result) */}
         <img
           className={styles.layerImg}
           src={after}
@@ -248,7 +247,6 @@ export function CompareSlider({
           onLoad={handleImageLoad}
         />
 
-        {/* Clipped top layer: Before (Original) */}
         <div
           className={styles.overlay}
           style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}
@@ -262,7 +260,6 @@ export function CompareSlider({
           />
         </div>
 
-        {/* Divider bar and drag handle */}
         <div className={styles.divider} style={{ left: `${pos}%` }}>
           <div className={styles.handle}>
             <ChevronLeft16Filled />
@@ -270,11 +267,10 @@ export function CompareSlider({
           </div>
         </div>
 
-        {/* Labels */}
-        <Caption1 className={styles.label} style={{ left: 10 }}>
+        <Caption1 className={mergeClasses(styles.label, styles.labelLeft)}>
           {beforeLabel}
         </Caption1>
-        <Caption1 className={styles.label} style={{ right: 10 }}>
+        <Caption1 className={mergeClasses(styles.label, styles.labelRight)}>
           {afterLabel}
         </Caption1>
       </div>

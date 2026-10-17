@@ -1,7 +1,6 @@
 {
   "app": {
-    "name": "Media Studio",
-    "tagline": "Narzędzia do multimediów, dokumentów i tekstu w jednym miejscu"
+    "name": "Media Studio"
   },
   "nav": {
     "home": "Start",
@@ -92,8 +91,7 @@
     "subtitle": "Wybierz narzędzie, aby zacząć. Zadania działają w tle, więc możesz przełączać się między nimi.",
     "allTools": "Wszystkie narzędzia",
     "recentJobs": "Ostatnie zadania",
-    "noJobs": "Nie uruchomiono jeszcze żadnego zadania.",
-    "open": "Otwórz"
+    "noJobs": "Nie uruchomiono jeszcze żadnego zadania."
   },
   "settings": {
     "title": "Ustawienia",
@@ -117,7 +115,6 @@
     "cookiesX": "X (Twitter)",
     "cookiesHint": "Pozostaw puste, aby użyć pliku z folderu cookies/ (jeśli istnieje).",
     "dependencies": "Zależności",
-    "dependenciesDescription": "Zewnętrzne programy i biblioteki używane przez narzędzia.",
     "deps": {
       "ffmpeg": "FFmpeg",
       "mediainfo": "MediaInfo",
@@ -151,11 +148,9 @@
     "micaUnsupported": "Wymaga Windows 11 (22H2 lub nowszego).",
     "storage": {
       "title": "Pamięć i pamięć podręczna",
-      "subtitle": "Zarządzaj przestrzenią dyskową zajmowaną przez pliki tymczasowe, miniatury i pobrane modele.",
       "cacheTitle": "Pamięć podręczna (Cache)",
       "cacheDesc": "Tymczasowe pliki konwersji, pobrane archiwa i miniatury robocze.",
       "modelsTitle": "Modele sztucznej inteligencji (AI)",
-      "modelsDesc": "Pobrane wagi sieci neuronowych (LaMa inpainting, Real-ESRGAN, BiRefNet).",
       "appDataTitle": "Folder aplikacji (%APPDATA%)",
       "appDataDesc": "Główny katalog Media Studio zawierający konfigurację i pliki tymczasowe.",
       "recentFoldersTitle": "Historia ostatnich folderów",
@@ -171,7 +166,6 @@
       "title": "Wydajność i sprzęt",
       "cpu": "Procesor (CPU)",
       "cpuDetails": "{{threads}} wątków logicznych · architektura {{arch}}",
-      "gpu": "Karta graficzna (GPU)",
       "noGpu": "Zintegrowana grafika lub brak dedykowanego GPU",
       "cudaActive": "Akceleracja PyTorch CUDA aktywna (v{{version}})",
       "cudaInactive": "Tryb CPU (Brak środowiska PyTorch CUDA)",
@@ -212,7 +206,6 @@
     "clear": "Wyczyść",
     "cancel": "Anuluj",
     "close": "Zamknij",
-    "save": "Zapisz",
     "openFolder": "Otwórz folder",
     "selectFolder": "Wybierz folder…",
     "notSet": "Nie ustawiono",
@@ -234,8 +227,6 @@
     "add": "Dodaj",
     "showInFolder": "Pokaż w folderze",
     "open": "Otwórz",
-    "delete": "Usuń",
-    "retry": "Spróbuj ponownie",
     "errorsCount_one": "{{count}} błąd",
     "errorsCount_few": "{{count}} błędy",
     "errorsCount_many": "{{count}} błędów",
@@ -243,19 +234,16 @@
     "more": "Więcej",
     "saveAs": "Zapisz jako…",
     "saveBtn": "Zapisz",
-    "saveLocation": "Miejsce zapisu",
     "outputFolder": "Folder zapisu",
     "fileName": "Nazwa pliku",
     "savedSuccess": "Zapisano plik",
     "loading": "Ładowanie...",
-    "view": "Widok",
     "viewSplit": "Suwak",
     "viewSide": "Obok siebie",
     "viewAfter": "Tylko wynik",
     "viewBefore": "Tylko oryginał",
     "before": "Przed (Oryginał)",
     "after": "Po (Wynik)",
-    "preview": "Podgląd",
     "saveError": "Nie udało się zapisać pliku",
     "andMore": "+ {{count}} więcej",
     "addFiles": "Dodaj pliki",
@@ -277,7 +265,6 @@
     "all": "Wszystkie pliki"
   },
   "converter": {
-    "changeImage": "Zmień obraz",
     "status": {
       "scanning": "Wyszukiwanie plików…",
       "noFiles": "Nie znaleziono pasujących plików.",
@@ -294,7 +281,6 @@
     "inputFolder": "Folder wejściowy",
     "fromFormat": "Format źródłowy",
     "swap": "Zamień formaty",
-    "folderHint": "Konwertowane są pliki z wybranego folderu (bez podfolderów).",
     "matching_one": "Znaleziono {{count}} plik {{format}}.",
     "matching_few": "Znaleziono {{count}} pliki {{format}}.",
     "matching_many": "Znaleziono {{count}} plików {{format}}.",
@@ -304,14 +290,10 @@
     "output": "Wynik",
     "toFormat": "Format docelowy",
     "quality": "Jakość",
-    "qualityHint": "Niższa jakość = mniejszy plik.",
-    "qualityNA": "Nie dotyczy formatu {{format}}.",
     "method": "Metoda kompresji WEBP",
     "methodHint": "0 = najszybciej, 6 = najlepsza kompresja.",
     "outputFolder": "Folder docelowy",
     "start": "Konwertuj",
-    "saved": "Zaoszczędzono",
-    "fileSelected": "Wybrano plik",
     "filesSelected_one": "Wybrano {{count}} plik",
     "filesSelected_few": "Wybrano {{count}} pliki",
     "filesSelected_many": "Wybrano {{count}} plików",
@@ -391,13 +373,6 @@
       "readFailed": "Nie można odczytać {{file}}: {{error}}",
       "rewriteWarning": "Ostrzeżenie przy optymalizacji obrazów: {{error}}"
     },
-    "tabs": {
-      "merge": "Łączenie i strony",
-      "compress": "Kompresja",
-      "split": "Podział",
-      "convert": "PDF ↔ Obrazy",
-      "extract": "Ekstrakcja tekstu"
-    },
     "dropTitle": "Upuść pliki PDF tutaj",
     "dropMore": "Dodaj kolejne pliki PDF",
     "dropHint": "lub kliknij, aby wybrać dokumenty",
@@ -406,7 +381,6 @@
     "dropImagesTitle": "Upuść pliki graficzne tutaj",
     "dropImagesHint": "lub kliknij, aby wybrać zdjęcia (PNG, JPG, WebP)",
     "dropChange": "Zmień plik PDF (upuść lub kliknij)",
-    "settings": "Ustawienia",
     "pages_one": "{{count}} strona",
     "pages_few": "{{count}} strony",
     "pages_many": "{{count}} stron",
@@ -417,29 +391,22 @@
     "rotateRight": "Obróć o 90° w prawo",
     "sortByFile": "Sortuj według pliku i numeru strony",
     "loading": "Wczytywanie stron…",
-    "reorderHint": "Przeciągnij strony, aby zmienić kolejność. Strony zostaną połączone w kolejności od lewej do prawej.",
     "merge": "Połącz i zapisz",
     "defaultName": "polaczony.pdf",
     "compress": {
-      "title": "Zmniejsz rozmiar dokumentu PDF",
-      "subtitle": "Optymalizacja wagi plików skanów i dokumentów przez rekompresję osadzonych grafik i czyszczenie struktury.",
       "preset": "Poziom kompresji",
       "presetLow": "Lekka (wysoka jakość, 200 DPI)",
       "presetBalanced": "Zrównoważona (zalecana, 150 DPI)",
       "presetHigh": "Maksymalna (najmniejszy plik, 100 DPI)",
       "action": "Kompresuj i zapisz",
-      "defaultName": "skompresowany.pdf",
       "result": "Oryginał: {{before}} ➔ Po kompresji: {{after}} (oszczędność: -{{percent}}%)"
     },
     "split": {
-      "title": "Podziel dokument PDF na mniejsze pliki",
-      "subtitle": "Podziel wielostronicowy dokument na pojedyncze strony lub wyciągnij wskazany fragment.",
       "mode": "Sposób podziału",
       "modeAll": "Każda strona jako osobny plik PDF",
       "modeRange": "Wyodrębnij określony zakres stron",
       "rangeLabel": "Zakres stron (np. 1-3, 5, 8-10)",
       "rangePlaceholder": "1-3, 5, 8",
-      "rangeHint": "Podaj numery stron oddzielone przecinkami lub zakresy myślnikiem",
       "action": "Podziel do folderu"
     },
     "convert": {
@@ -455,10 +422,7 @@
       "dpiPrint": "Druk"
     },
     "extract": {
-      "title": "Wyciągnij tekst z dokumentu PDF",
-      "subtitle": "Zapisuje całą zawartość tekstową dokumentu z podziałem na strony do pliku .txt.",
       "action": "Eksportuj do .txt",
-      "defaultName": "tekst_z_pdf.txt",
       "chars_one": "{{count}} znak",
       "chars_few": "{{count}} znaki",
       "chars_many": "{{count}} znaków",
@@ -597,7 +561,6 @@
       "female": "żeński"
     },
     "rate": "Tempo mowy",
-    "output": "Plik wynikowy",
     "outputFolder": "Folder docelowy",
     "fileName": "Nazwa pliku",
     "format": "Format",
@@ -631,7 +594,6 @@
     "urlPlaceholder": "Wklej link do filmu z YouTube, X lub innego serwisu…",
     "paste": "Wklej ze schowka",
     "check": "Sprawdź",
-    "urlHint": "Obsługiwane są setki serwisów (yt-dlp). Linki do X są automatycznie poprawiane.",
     "emptyTitle": "Wklej link, aby zobaczyć dostępne formaty",
     "emptyBody": "Po sprawdzeniu linku wybierzesz jakość wideo albo samą ścieżkę audio.",
     "modeVideo": "Wideo",
@@ -651,7 +613,6 @@
     "playlistBadge_few": "Playlista / Folder ({{count}} filmy)",
     "playlistBadge_many": "Playlista / Folder ({{count}} filmów)",
     "playlistBadge_other": "Playlista / Folder ({{count}} filmów)",
-    "playlistHint": "Wykryto playlistę lub folder. Po kliknięciu „Pobierz” wszystkie filmy zostaną dodane do kolejki pobierania.",
     "downloadPlaylist_one": "Pobierz playlistę ({{count}} film)",
     "downloadPlaylist_few": "Pobierz playlistę ({{count}} filmy)",
     "downloadPlaylist_many": "Pobierz playlistę ({{count}} filmów)",
@@ -665,13 +626,9 @@
     "urlCount_few": "{{count}} elementy",
     "urlCount_many": "{{count}} elementów",
     "urlCount_other": "{{count}} elementu",
-    "batchHint": "Jeden link w wierszu. Każdy film zostanie pobrany w najlepszej jakości (MP4).",
     "itemStatus": {
       "pending": "Oczekuje",
-      "running": "Pobieranie",
-      "done": "Pobrano",
-      "error": "Błąd",
-      "cancelled": "Anulowano"
+      "error": "Błąd"
     },
     "output": "Zapis",
     "outdir": "Folder docelowy",
@@ -703,7 +660,6 @@
   "upscale": {
     "status": {
       "loading": "Wczytywanie obrazu…",
-      "scaling": "Skalowanie obrazu z AI ({{percent}}%)…",
       "tiling": "Skalowanie fragmentów obrazu ({{percent}}%)…",
       "debleeding": "Oczyszczanie krawędzi (Anti-Halo)…",
       "modelInference": "Inferencja modelu AI Real-ESRGAN…",
@@ -712,8 +668,6 @@
     },
     "dropTitle": "Upuść obraz do przeskalowania",
     "dropHint": "lub kliknij, aby wybrać plik (PNG, JPG, WEBP, BMP, TIFF)",
-    "howTitle": "Jak działa skalowanie AI?",
-    "howBody": "Model AI Real-ESRGAN analizuje tekstury, krawędzie i detale, odtwarzając brakujące informacje w wyższej rozdzielczości (2x lub 4x). Nasz algorytm w pełni obsługuje kanał alfa (przezroczystość), eliminując ciemne obwódki (halo) na przezroczystych krawędziach PNG i WebP.",
     "models": {
       "general": "Real-ESRGAN · Zdjęcia i grafiki (x4v3)",
       "anime": "Real-ESRGAN · Anime i ilustracje (x4plus)"
@@ -742,15 +696,12 @@
     "changeImage": "Zmień obraz",
     "before": "Przed",
     "after": "Po ({{scale}}×)",
-    "compareHint": "Przesuń suwak, aby porównać oryginalny i przeskalowany obraz.",
-    "previewHint": "Podgląd oryginalnego obrazu na przezroczystym tle.",
     "idle": {
       "ready": "Gotowy do powiększenia obrazu.",
       "done": "Obraz został pomyślnie powiększony.",
       "needModel": "Pobierz wybrany model AI powyżej, aby rozpocząć."
     },
     "runBtn": "Powiększ obraz ({{scale}}×)",
-    "saveBtn": "Zapisz powiększony obraz",
     "backToOptions": "Zmień opcje",
     "continueWithThis": "Kontynuuj z tym obrazem",
     "suffix": "_upscaled",
@@ -771,8 +722,6 @@
     },
     "dropTitle": "Upuść obraz ze znakiem wodnym",
     "dropHint": "lub kliknij, aby wybrać plik (PNG, JPG, WEBP, BMP, TIFF)",
-    "howTitle": "Jak to działa?",
-    "howBody": "Zamaluj pędzlem obszar ze znakiem wodnym, a następnie kliknij „Usuń znak wodny”. Algorytm odtworzy tło na podstawie otoczenia. Najlepsze efekty daje model AI LaMa (opcjonalny).",
     "lamaPromo": {
       "title": "Model AI LaMa (opcjonalny)",
       "desc": "Usuwaj znaki wodne z fotorealistyczną jakością, precyzyjnie rekonstruując tło.",
@@ -794,14 +743,11 @@
       "lama": "AI · LaMa (najlepsza jakość)",
       "lamaMissing": "AI · LaMa (niezainstalowany)"
     },
-    "paintHint": "Zamaluj znak wodny. Skróty: B – pędzel, E – gumka, [ ] – rozmiar, Ctrl+Z – cofnij.",
-    "compareHint": "Przeciągnij suwak, aby porównać obraz przed i po.",
     "before": "Przed",
     "after": "Po",
     "suffix": "_bez_znaku",
     "backToMask": "Wróć do maski",
     "continue": "Edytuj dalej na wyniku",
-    "save": "Zapisz jako…",
     "remove": "Usuń znak wodny",
     "idle": {
       "paint": "Zamaluj obszar znaku wodnego.",
@@ -839,7 +785,6 @@
     "rounded": "Zaokrąglone rogi",
     "showPercent": "Pokaż procenty",
     "preview": "Podgląd na żywo",
-    "previewHint": "Eksport w wysokiej rozdzielczości ({{width}} px szerokości).",
     "defaultName": "postep.png",
     "export": "Eksportuj PNG",
     "exporting": "Eksportowanie…",
@@ -856,19 +801,15 @@
   "jobs": {
     "title": "Zadania",
     "popupTitle": "Zadania w toku",
-    "overallProgress": "Postęp całości",
-    "subtasksTitle": "Konkretne akcje",
     "pending": "W kolejce",
     "activeCount": "{{count}} w toku",
     "completedCount": "{{count}} ukończonych",
     "errorCount": "{{count}} z błędem",
     "cancelledCount": "{{count}} anulowano",
-    "itemCount": "{{done}}/{{total}} ukończono",
     "noActiveJobs": "Brak aktywnych zadań",
     "noActiveJobsBody": "Wszystkie operacje zostały ukończone lub nie ma żadnych w toku.",
     "openTool": "Przejdź",
     "clearFinished": "Wyczyść zakończone",
-    "clearHint": "Ukrywa zakończone zadania z listy. Wyniki w narzędziach zostają.",
     "collapseDetails": "Zwiń szczegóły",
     "expandDetails": "Rozwiń szczegóły",
     "toastDone": "{{tool}}: zakończono",
@@ -898,8 +839,6 @@
     },
     "dropTitle": "Upuść obraz do usunięcia tła",
     "dropHint": "lub kliknij, aby wybrać plik (PNG, JPG, WEBP, BMP, TIFF)",
-    "howTitle": "Jak działa precyzyjne usuwanie tła AI?",
-    "howBody": "Narzędzie wykorzystuje najnowszy model BiRefNet (Bilateral Reference Network) do subpikselowej segmentacji krawędzi. Dodatkowo wbudowany algorytm Anti-Halo debleed neutralizuje białe piksele zanieczyszczające krawędzie (włosy, sierść, brzegi ubrań), dzięki czemu wycięty obiekt wygląda idealnie na każdym, nawet najciemniejszym tle.",
     "modelPromo": {
       "title": "Model AI BiRefNet / RMBG",
       "desc": "Do działania narzędzia wymagana jest biblioteka rembg oraz ONNX Runtime. Kliknij poniżej, aby zainstalować w tle.",
@@ -916,8 +855,6 @@
       "antiHaloHint": "Zastępuje białe/jasne zabrudzenia na krawędziach prawdziwym kolorem obiektu",
       "choke": "Podcięcie krawędzi (Choke)",
       "chokeHint": "Ścina zewnętrzną warstwę pikseli (0-4 px), usuwając białą obwódkę",
-      "feather": "Wygładzanie krawędzi",
-      "featherHint": "Zmiękcza ząbkowanie na krawędziach",
       "despeckle": "Usuń drobne pozostałości tła (Despeckle)",
       "despeckleHint": "Automatycznie odfiltrowuje małe odizolowane plamki i pyłki",
       "previewBg": "Tło podglądu",
@@ -925,12 +862,6 @@
       "bgBlack": "Czysta czerń",
       "bgWhite": "Czysta biel",
       "bgCustom": "Własny kolor",
-      "brushMode": "Ręczna korekta",
-      "brushErase": "Wymaż plamkę",
-      "brushRestore": "Przywróć detal",
-      "brushNone": "Podgląd / Przesuwanie",
-      "brushSize": "Rozmiar pędzla",
-      "clearStrokes": "Wyczyść poprawki",
       "chokeNone": "Bez przycinania"
     },
     "preview": {
@@ -940,9 +871,7 @@
     },
     "actions": {
       "remove": "Usuń tło",
-      "processing": "Usuwanie tła…",
-      "savePng": "Zapisz jako PNG",
-      "savedSuccess": "Zapisano obraz do pliku"
+      "processing": "Usuwanie tła…"
     }
   },
   "deps": {
@@ -1015,13 +944,11 @@
       "crop": "Kadrowanie",
       "resize": "Zmień rozmiar",
       "transform": "Obrót i odbicie",
-      "reset": "Przywróć oryginalny",
-      "hint": "Wybierz narzędzie z przybornika po lewej: [C] Kadrowanie, [R] Zmiana rozmiaru, [T] Obrót i odbicie."
+      "reset": "Przywróć oryginalny"
     },
     "cropApply": "Zatwierdź kadr",
     "cropCancel": "Anuluj kadr",
     "cropReset": "Pełny obraz",
-    "cropHelper": "Zaznacz kadr przeciągając myszą lub użyj uchwytów na krawędziach",
     "copyClipboard": "Kopiuj do schowka",
     "copied": "Skopiowano obraz do schowka!",
     "saveAction": "Zapisz obraz jako…",
@@ -1049,7 +976,6 @@
     "buttonTooltip": "Otwórz ten plik w innym narzędziu",
     "modalTitle": "Prześlij plik do innego narzędzia",
     "modalDesc": "Wybierz narzędzie, w którym chcesz kontynuować pracę z tym plikiem.",
-    "sourceFile": "Przesyłany plik",
     "sourceFiles": "Przesyłane pliki ({{count}})",
     "compatibleTools": "Dostępne narzędzia (zgodne z typem pliku)",
     "noCompatibleTools": "Brak kompatybilnych narzędzi dla tego typu pliku.",
@@ -1057,16 +983,12 @@
     "asPdfToImages": "Otworzy się w trybie: PDF do obrazów",
     "toastLoaded": "Plik został pomyślnie załadowany do narzędzia",
     "toastLoadedFrom": "Załadowano plik z narzędzia: {{source}}",
-    "currentTool": "Bieżące narzędzie",
-    "sendAction": "Prześlij plik",
     "afterTitle": "Przetworzone obrazy",
     "convertedTitle": "Przekonwertowane obrazy",
     "compressedTitle": "Skompresowane obrazy",
     "processedTitle": "Wyniki przetwarzania",
     "extractedTitle": "Wyodrębnione obrazy",
-    "savedTitle": "Zapisany obraz",
-    "openOutputFolder": "Pokaż folder wyjściowy",
-    "outputFilesCount": "Liczba wygenerowanych plików: {{count}}"
+    "openOutputFolder": "Pokaż folder wyjściowy"
   },
   "video_sync": {
     "dropTitle": "Upuść plik wideo tutaj lub kliknij, aby wybrać",

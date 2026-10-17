@@ -247,10 +247,7 @@ export default function UpscalePage() {
           onFiles={(paths) => load(paths[0])}
           onBrowse={browse}
         />
-        <Panel title={t("upscale.howTitle")}>
-          <Text>{t("upscale.howBody")}</Text>
-          {!modelsReady.general && <UpscaleModelBanner model="general" onInstalled={checkModels} />}
-        </Panel>
+        {!modelsReady.general && <UpscaleModelBanner model="general" onInstalled={checkModels} />}
       </Page>
     );
   }
@@ -300,7 +297,7 @@ export default function UpscalePage() {
           </span>
         }
         actions={
-          <div style={{ display: "flex", gap: "6px" }}>
+          <>
             <Button appearance="subtle" icon={<ImageEdit20Regular />} onClick={browse}>
               {t("upscale.changeImage")}
             </Button>
@@ -311,7 +308,7 @@ export default function UpscalePage() {
             >
               {t("transfer.sendTo")}
             </Button>
-          </div>
+          </>
         }
       >
         {!currentModelReady && <UpscaleModelBanner model={form.model} onInstalled={checkModels} />}

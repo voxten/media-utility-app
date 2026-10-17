@@ -8,6 +8,7 @@ import {
   Field,
   Input,
   makeStyles,
+  mergeClasses,
   Option,
   ProgressBar,
   Spinner,
@@ -269,6 +270,12 @@ const useStyles = makeStyles({
     backgroundColor: tokens.colorNeutralBackground1,
   },
   entryIdx: { color: tokens.colorNeutralForeground3, fontVariantNumeric: "tabular-nums", minWidth: "28px" },
+  recommended: { marginLeft: "8px" },
+  queueActions: { display: "flex", alignItems: "center", gap: "8px" },
+  alignRight: { textAlign: "right" },
+  doneMeta: { display: "flex", alignItems: "center", gap: "10px" },
+  smallIcon: { fontSize: "12px" },
+  summaryStats: { display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" },
 });
 
 function formatLabel(f: Format, t: (k: string, o?: Record<string, unknown>) => string) {
@@ -471,7 +478,6 @@ export default function DownloadPage() {
                 {t("download.check")}
               </Button>
             </div>
-            <Caption1 className={styles.muted}>{t("download.urlHint")}</Caption1>
           </Panel>
 
           {form.probe ? (
@@ -504,7 +510,6 @@ export default function DownloadPage() {
                           {t("download.playlistBadge", { count: form.probe.entries?.length ?? 0 })}
                         </Badge>
                       </div>
-                      <Caption1 className={styles.muted}>{t("download.playlistHint")}</Caption1>
                       {form.probe.entries && form.probe.entries.length > 0 && (
                         <div className={styles.playlistEntriesList}>
                           {form.probe.entries.map((entry, idx) => (
@@ -577,7 +582,7 @@ export default function DownloadPage() {
                                   <TableCell>
                                     <Text weight={f.kind === "auto" ? "semibold" : "regular"}>{formatLabel(f, t)}</Text>
                                     {f.kind === "auto" && (
-                                      <Badge appearance="tint" color="brand" size="small" style={{ marginLeft: 8 }}>
+                                      <Badge appearance="tint" color="brand" size="small" className={styles.recommended}>
                                         {t("download.recommended")}
                                       </Badge>
                                     )}
@@ -613,7 +618,7 @@ export default function DownloadPage() {
           className={styles.batchPanel}
           title={t("download.queueTitle")}
           actions={
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <div className={styles.queueActions}>
               {failedItems.length > 0 && !batch.running && (
                 <Button size="small" appearance="subtle" icon={<ArrowClockwise16Regular />} onClick={retryFailed}>
                   {t("download.retryFailed", { count: failedItems.length })}
@@ -639,7 +644,6 @@ export default function DownloadPage() {
             }
             onChange={(_, d) => form.set({ batchText: d.value })}
           />
-          <Caption1 className={styles.muted}>{t("download.batchHint")}</Caption1>
           {queue.length > 0 && (
             <div className={styles.queue}>
               {queue.map((item) => {
@@ -673,13 +677,13 @@ export default function DownloadPage() {
                         <div className={styles.queueProgressWrap}>
                           <ProgressBar value={(item.percent ?? 0) / 100} thickness="medium" />
                           {extra.speed != null && typeof extra.speed === "number" && (
-                            <Caption1 className={styles.muted} style={{ textAlign: "right" }}>
+                            <Caption1 className={mergeClasses(styles.muted, styles.alignRight)}>
                               {formatBytes(extra.speed)}/s · {t("common.eta", { time: formatDuration(Number(extra.eta)) })}
                             </Caption1>
                           )}
                         </div>
                       ) : isDone ? (
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <div className={styles.doneMeta}>
                           {item.size != null && item.size > 0 && (
                             <Badge appearance="tint" color="informative" className={styles.queueItemSize}>
                               {formatBytes(item.size)}
@@ -687,7 +691,7 @@ export default function DownloadPage() {
                           )}
                           {item.duration != null && item.duration > 0 && (
                             <Caption1 className={styles.queueItemDuration}>
-                              <Clock16Regular style={{ fontSize: "12px" }} />
+                              <Clock16Regular className={styles.smallIcon} />
                               {formatDuration(item.duration)}
                             </Caption1>
                           )}
@@ -707,7 +711,7 @@ export default function DownloadPage() {
           )}
           {doneCount > 0 && (
             <div className={styles.batchSummaryBar}>
-              <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+              <div className={styles.summaryStats}>
                 <Text weight="semibold">
                   {t("download.summary", { done: doneCount, total: queue.length })}
                 </Text>

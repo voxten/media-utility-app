@@ -1,4 +1,4 @@
-import { Button, Divider, makeStyles, Tooltip, tokens } from "@fluentui/react-components";
+import { Button, Divider, makeStyles, mergeClasses, Tooltip, tokens } from "@fluentui/react-components";
 import {
   ArrowMaximize24Regular,
   ArrowReset24Regular,
@@ -40,6 +40,7 @@ const useStyles = makeStyles({
       color: tokens.colorNeutralForegroundOnBrand,
     },
   },
+  divider: { width: "28px", margin: "4px 0" },
 });
 
 interface ImageToolboxProps {
@@ -55,10 +56,9 @@ export function ImageToolbox({ activeTool, onSelectTool, onReset, disabled }: Im
 
   return (
     <div className={styles.toolbox} role="toolbar" aria-label={t("imageTools.toolbox.title")}>
-      {/* Select / View Tool */}
       <Tooltip content={`${t("imageTools.toolbox.select")} (V)`} relationship="label">
         <Button
-          className={`${styles.toolButton} ${activeTool === "select" ? styles.activeButton : ""}`}
+          className={mergeClasses(styles.toolButton, activeTool === "select" && styles.activeButton)}
           appearance={activeTool === "select" ? "primary" : "subtle"}
           icon={<Cursor20Regular />}
           disabled={disabled}
@@ -66,10 +66,9 @@ export function ImageToolbox({ activeTool, onSelectTool, onReset, disabled }: Im
         />
       </Tooltip>
 
-      {/* Crop Tool */}
       <Tooltip content={`${t("imageTools.toolbox.crop")} (C)`} relationship="label">
         <Button
-          className={`${styles.toolButton} ${activeTool === "crop" ? styles.activeButton : ""}`}
+          className={mergeClasses(styles.toolButton, activeTool === "crop" && styles.activeButton)}
           appearance={activeTool === "crop" ? "primary" : "subtle"}
           icon={<Crop24Regular />}
           disabled={disabled}
@@ -77,10 +76,9 @@ export function ImageToolbox({ activeTool, onSelectTool, onReset, disabled }: Im
         />
       </Tooltip>
 
-      {/* Resize Tool */}
       <Tooltip content={`${t("imageTools.toolbox.resize")} (R)`} relationship="label">
         <Button
-          className={`${styles.toolButton} ${activeTool === "resize" ? styles.activeButton : ""}`}
+          className={mergeClasses(styles.toolButton, activeTool === "resize" && styles.activeButton)}
           appearance={activeTool === "resize" ? "primary" : "subtle"}
           icon={<ArrowMaximize24Regular />}
           disabled={disabled}
@@ -88,10 +86,9 @@ export function ImageToolbox({ activeTool, onSelectTool, onReset, disabled }: Im
         />
       </Tooltip>
 
-      {/* Rotate / Flip Tool */}
       <Tooltip content={`${t("imageTools.toolbox.transform")} (T)`} relationship="label">
         <Button
-          className={`${styles.toolButton} ${activeTool === "transform" ? styles.activeButton : ""}`}
+          className={mergeClasses(styles.toolButton, activeTool === "transform" && styles.activeButton)}
           appearance={activeTool === "transform" ? "primary" : "subtle"}
           icon={<ArrowRotateClockwise24Regular />}
           disabled={disabled}
@@ -99,9 +96,8 @@ export function ImageToolbox({ activeTool, onSelectTool, onReset, disabled }: Im
         />
       </Tooltip>
 
-      <Divider style={{ width: "28px", margin: "4px 0" }} />
+      <Divider className={styles.divider} />
 
-      {/* Reset Tool */}
       <Tooltip content={t("imageTools.toolbox.reset")} relationship="label">
         <Button
           className={styles.toolButton}

@@ -9,14 +9,12 @@ export interface TransferPayload {
 }
 
 interface TransferStore {
-  // Modal state
   isModalOpen: boolean;
   modalFiles: string[];
   sourceToolId?: string;
   openModal: (files: string | string[], sourceToolId?: string) => void;
   closeModal: () => void;
 
-  // Pending transfer payload
   pendingTransfer: TransferPayload | null;
   sendToTool: (targetToolId: string, files: string[], targetSubTab?: string) => void;
   consumeTransfer: (toolId: string) => TransferPayload | null;

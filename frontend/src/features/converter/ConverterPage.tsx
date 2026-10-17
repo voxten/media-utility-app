@@ -135,6 +135,7 @@ const useStyles = makeStyles({
   statValue: { fontSize: tokens.fontSizeBase500, fontWeight: tokens.fontWeightSemibold, lineHeight: tokens.lineHeightBase500 },
   good: { color: tokens.colorPaletteGreenForeground1 },
   bad: { color: tokens.colorPaletteRedForeground1 },
+  fileActions: { display: "flex", gap: "8px" },
 });
 
 /** `showFolder` is off when the AfterGallery below already offers the output folder. */
@@ -286,11 +287,9 @@ export default function ConverterPage() {
                   />
                 </Tooltip>
               </div>
-              <Caption1 className={styles.muted}>
-                {form.inputDir && form.matching != null
-                  ? t("converter.matching", { count: form.matching, format: form.inFormat })
-                  : t("converter.folderHint")}
-              </Caption1>
+              {form.inputDir && form.matching != null && (
+                <Caption1 className={styles.muted}>{t("converter.matching", { count: form.matching, format: form.inFormat })}</Caption1>
+              )}
             </>
           ) : (
             <>
@@ -329,7 +328,7 @@ export default function ConverterPage() {
                       </div>
                     ))}
                   </div>
-                  <div style={{ display: "flex", gap: "8px" }}>
+                  <div className={styles.fileActions}>
                     <Button appearance="subtle" size="small" onClick={() => form.set({ files: [] })}>
                       {t("common.clearAll")}
                     </Button>
@@ -367,7 +366,6 @@ export default function ConverterPage() {
           </Field>
           <SliderField
             label={t("converter.quality")}
-            hint={LOSSY.has(form.outFormat) ? t("converter.qualityHint") : t("converter.qualityNA", { format: form.outFormat })}
             value={form.quality}
             min={1}
             max={100}

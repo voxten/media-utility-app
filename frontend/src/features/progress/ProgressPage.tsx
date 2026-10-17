@@ -8,6 +8,7 @@ import {
   Field,
   Input,
   makeStyles,
+  mergeClasses,
   Popover,
   PopoverSurface,
   PopoverTrigger,
@@ -135,6 +136,7 @@ const useStyles = makeStyles({
   },
   previewLight: { backgroundColor: "#e9e9ee" },
   muted: { color: tokens.colorNeutralForeground3 },
+  stack: { display: "flex", flexDirection: "column", gap: "16px" },
 });
 
 function ColorButton({ row: r, onChange }: { row: ProgressRow; onChange: (c: { from: string; to: string }) => void }) {
@@ -278,7 +280,7 @@ export default function ProgressPage() {
   return (
     <Page title={t("tools.progress.name")} description={t("tools.progress.description")} icon={tool.icon} accent={tool.accent}>
       <div className={styles.columns}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <div className={styles.stack}>
           <Panel
             title={t("progress.bars")}
             actions={
@@ -341,14 +343,13 @@ export default function ProgressPage() {
         </div>
 
         <Panel title={t("progress.preview")} className={styles.previewPanel}>
-          <div ref={previewRef} className={`${styles.previewBox} ${form.options.theme === "light" ? styles.previewLight : ""}`}>
+          <div ref={previewRef} className={mergeClasses(styles.previewBox, form.options.theme === "light" && styles.previewLight)}>
             <div style={{ width: form.options.width * scale, height: cardHeight * scale }}>
               <div style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: form.options.width }}>
                 <ProgressCard ref={cardRef} rows={form.rows} options={form.options} />
               </div>
             </div>
           </div>
-          <Caption1 className={styles.muted}>{t("progress.previewHint", { width: form.options.width * 2 })}</Caption1>
         </Panel>
       </div>
 

@@ -15,7 +15,7 @@ import {
   Textarea,
   tokens,
 } from "@fluentui/react-components";
-import { Cloud24Regular, Desktop24Regular, Dismiss16Regular, FolderOpen16Regular, MicSparkle16Filled } from "@fluentui/react-icons";
+import { Cloud24Regular, Desktop24Regular, Dismiss16Regular, FolderOpen16Regular, Speaker216Filled } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { create } from "zustand";
 import { toolById } from "../../app/tools";
@@ -333,7 +333,7 @@ export default function TtsPage() {
         <Panel
           title={t("tts.preview")}
           actions={
-            <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+            <>
               {form.lastOutput && (
                 <Button appearance="subtle" icon={<FolderOpen16Regular />} onClick={() => api.system.reveal(form.lastOutput!).catch(() => undefined)}>
                   {t("common.showInFolder")}
@@ -346,7 +346,7 @@ export default function TtsPage() {
                 onClick={() => form.set({ audioSrc: null, lastOutput: null })}
                 aria-label={t("common.clear")}
               />
-            </div>
+            </>
           }
         >
           <AudioPlayer src={form.audioSrc} autoPlay />
@@ -358,7 +358,7 @@ export default function TtsPage() {
         idleText={form.text.trim() ? t("tts.idle.ready", { voice: selectedVoice?.name ?? "—" }) : t("tts.idle.empty")}
         onCancel={runner.cancel}
       >
-        <Button appearance="primary" icon={<MicSparkle16Filled />} disabled={!form.text.trim() || !form.voice || runner.running} onClick={start}>
+        <Button appearance="primary" icon={<Speaker216Filled />} disabled={!form.text.trim() || !form.voice || runner.running} onClick={start}>
           {t("tts.generate")}
         </Button>
       </ActionBar>
