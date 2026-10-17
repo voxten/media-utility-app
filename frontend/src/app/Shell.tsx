@@ -6,7 +6,6 @@ import { TOASTER_ID } from "../components/notify";
 import { useRoute } from "../lib/router";
 import { useUi } from "../stores/ui";
 import { CommandPalette } from "./CommandPalette";
-import { JobsPanel } from "./JobsPanel";
 import { JobsPopup } from "./JobsPopup";
 import { Navigation } from "./Navigation";
 import { useJobNotifications } from "./useJobNotifications";
@@ -135,7 +134,6 @@ export function Shell() {
       <Toaster toasterId={TOASTER_ID} position="top-end" offset={{ vertical: 16 }} pauseOnHover />
       <ConfirmHost />
       <TransferModal />
-      <JobsPanel />
       <JobsPopup collapsed={collapsed} />
       <CommandPalette />
     </div>

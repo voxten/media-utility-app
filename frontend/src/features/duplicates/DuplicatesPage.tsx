@@ -44,6 +44,7 @@ import { Panel } from "../../components/Panel";
 import { PathPicker } from "../../components/PathPicker";
 import { SliderField } from "../../components/SliderField";
 import { api } from "../../lib/bridge";
+import { dialogFilter } from "../../lib/fileTypes";
 import { dirName, formatBytes, formatDuration } from "../../lib/format";
 import { useJobRunner } from "../../lib/useJobRunner";
 
@@ -267,7 +268,7 @@ export default function DuplicatesPage() {
   };
 
   const exportCsv = async () => {
-    const out = await api.dialogs.saveFile(t("duplicates.csvName"), ["CSV (*.csv)"]);
+    const out = await api.dialogs.saveFile(t("duplicates.csvName"), [dialogFilter(t, "csv")]);
     if (!out) return;
     try {
       const path = await api.duplicates.exportCsv(groups, out.toLowerCase().endsWith(".csv") ? out : `${out}.csv`);

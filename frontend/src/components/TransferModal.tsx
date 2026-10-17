@@ -25,13 +25,14 @@ import {
 import { useTranslation } from "react-i18next";
 import { toolById } from "../app/tools";
 import { api } from "../lib/bridge";
+import { IMAGE_EXTENSIONS, PDF_EXTENSIONS, VIDEO_EXTENSIONS } from "../lib/fileTypes";
 import { fileName, formatBytes } from "../lib/format";
 import { navigate } from "../lib/router";
 import { useTransferStore } from "../stores/transfer";
 
-const IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff", ".tif", ".gif"]);
-const PDF_EXTS = new Set([".pdf"]);
-const VIDEO_EXTS = new Set([".mp4", ".mkv", ".avi", ".mov", ".webm", ".flv", ".wmv", ".m4v"]);
+const IMAGE_EXTS = new Set([...IMAGE_EXTENSIONS, ".gif"]);
+const PDF_EXTS = new Set(PDF_EXTENSIONS);
+const VIDEO_EXTS = new Set(VIDEO_EXTENSIONS);
 
 function getExt(filePath: string): string {
   const match = filePath.match(/\.[^.]+$/);

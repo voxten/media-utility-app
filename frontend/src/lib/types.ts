@@ -201,6 +201,11 @@ export interface WaveformData {
   maxPeak: number;
 }
 
+export interface VideoFrame {
+  time: number;
+  dataUrl: string;
+}
+
 export interface SyncPreviewResult {
   previewUrl: string;
   duration: number;

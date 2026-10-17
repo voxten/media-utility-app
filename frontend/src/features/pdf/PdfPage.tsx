@@ -53,6 +53,7 @@ import { useNotify } from "../../components/notify";
 import { Page } from "../../components/Page";
 import { Panel } from "../../components/Panel";
 import { api } from "../../lib/bridge";
+import { dialogFilter, PDF_EXTENSIONS } from "../../lib/fileTypes";
 import { fileName } from "../../lib/format";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
@@ -310,7 +311,7 @@ export default function PdfPage() {
     addMergeFiles(files);
   });
 
-  const browseMerge = async () => addMergeFiles(await api.dialogs.openFiles(["PDF (*.pdf)"]));
+  const browseMerge = async () => addMergeFiles(await api.dialogs.openFiles([dialogFilter(t, "pdf")]));
 
   const onDragEnd = ({ active, over }: DragEndEvent) => {
     setActiveKey(null);
@@ -333,7 +334,7 @@ export default function PdfPage() {
   };
 
   const startMerge = async () => {
-    const outPath = await api.dialogs.saveFile(t("pdf.defaultName"), ["PDF (*.pdf)"]);
+    const outPath = await api.dialogs.saveFile(t("pdf.defaultName"), [dialogFilter(t, "pdf")]);
     if (!outPath) return;
     const target = outPath.toLowerCase().endsWith(".pdf") ? outPath : `${outPath}.pdf`;
     merge
@@ -359,7 +360,7 @@ export default function PdfPage() {
         icon={DocumentPdf24Regular}
         title={pages.length ? t("pdf.dropMore") : t("pdf.dropTitle")}
         hint={t("pdf.dropHint")}
-        accept={[".pdf"]}
+        accept={PDF_EXTENSIONS}
         onFiles={addMergeFiles}
         onBrowse={browseMerge}
       />

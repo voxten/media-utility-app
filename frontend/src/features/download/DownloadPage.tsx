@@ -27,6 +27,7 @@ import {
   Tooltip,
 } from "@fluentui/react-components";
 import {
+  Add16Regular,
   ArrowClockwise16Regular,
   ArrowDownload16Filled,
   CheckmarkCircle16Filled,
@@ -99,6 +100,8 @@ interface BatchItem {
   title?: string;
   error?: string;
   percent?: number;
+  size?: number;
+  duration?: number;
 }
 
 const AUDIO_CODECS = ["mp3", "m4a", "flac", "wav", "aac", "opus"];
@@ -170,15 +173,74 @@ const useStyles = makeStyles({
       height: "100%",
     },
   },
-  queue: { display: "flex", flexDirection: "column", gap: "6px" },
+  queue: { display: "flex", flexDirection: "column", gap: "6px", marginTop: "12px" },
   queueItem: {
-    display: "grid",
-    gridTemplateColumns: "20px minmax(0, 1fr) 140px",
+    display: "flex",
     alignItems: "center",
-    gap: "10px",
-    padding: "8px 12px",
+    gap: "12px",
+    padding: "10px 14px",
     borderRadius: tokens.borderRadiusMedium,
     backgroundColor: tokens.colorNeutralBackground1,
+    border: `1px solid ${tokens.colorNeutralStroke3}`,
+  },
+  queueItemIcon: {
+    display: "grid",
+    placeItems: "center",
+    flexShrink: 0,
+    width: "20px",
+  },
+  queueItemContent: {
+    flexGrow: 1,
+    minWidth: 0,
+    display: "flex",
+    flexDirection: "column",
+    gap: "2px",
+  },
+  queueItemTitle: {
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    fontSize: tokens.fontSizeBase300,
+  },
+  queueItemSub: {
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    color: tokens.colorNeutralForeground3,
+    fontSize: tokens.fontSizeBase100,
+  },
+  queueItemMeta: {
+    flexShrink: 0,
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+  },
+  queueItemSize: {
+    fontVariantNumeric: "tabular-nums",
+    fontWeight: tokens.fontWeightSemibold,
+  },
+  queueItemDuration: {
+    fontVariantNumeric: "tabular-nums",
+    color: tokens.colorNeutralForeground3,
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+  },
+  queueProgressWrap: {
+    width: "140px",
+    flexShrink: 0,
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+  },
+  batchSummaryBar: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "10px 14px",
+    marginTop: "10px",
+    borderRadius: tokens.borderRadiusMedium,
+    backgroundColor: tokens.colorNeutralBackground2,
     border: `1px solid ${tokens.colorNeutralStroke3}`,
   },
   ellipsis: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
@@ -248,7 +310,14 @@ export default function DownloadPage() {
     onError: (error) => notify.error(t("download.toast.error"), { body: error }),
   });
 
-  const batch = useJobRunner<{ items: BatchItem[]; succeeded: number; failed: number; outdir: string }>("download.batch", {
+  const batch = useJobRunner<{
+    items: BatchItem[];
+    succeeded: number;
+    failed: number;
+    totalSize?: number;
+    totalDuration?: number;
+    outdir: string;
+  }>("download.batch", {
     onDone: (result) => {
       setLastBatch(result.items);
       const notifyFn = result.failed ? notify.warning : notify.success;
@@ -279,6 +348,21 @@ export default function DownloadPage() {
   }, [batch.job, lastBatch, urls]);
 
   const failedItems = useMemo(() => queue.filter((i) => i.status === "error"), [queue]);
+  const doneCount = useMemo(() => queue.filter((i) => i.status === "done").length, [queue]);
+
+  const batchTotalSize = useMemo(() => {
+    const res = batch.job?.result as { totalSize?: number } | undefined;
+    if (typeof res?.totalSize === "number" && res.totalSize > 0) return res.totalSize;
+    const sum = queue.reduce((acc, it) => acc + (typeof it.size === "number" && it.status === "done" ? it.size : 0), 0);
+    return sum > 0 ? sum : undefined;
+  }, [batch.job?.result, queue]);
+
+  const batchTotalDuration = useMemo(() => {
+    const res = batch.job?.result as { totalDuration?: number } | undefined;
+    if (typeof res?.totalDuration === "number" && res.totalDuration > 0) return res.totalDuration;
+    const sum = queue.reduce((acc, it) => acc + (typeof it.duration === "number" && it.status === "done" ? it.duration : 0), 0);
+    return sum > 0 ? sum : undefined;
+  }, [batch.job?.result, queue]);
 
   const retryFailed = () => {
     const targetUrls = failedItems.length > 0 ? failedItems.map((i) => i.url) : urls;
@@ -312,8 +396,17 @@ export default function DownloadPage() {
 
   const startDownload = () => {
     if (form.tab === "batch") {
+      if (batch.running && batch.jobId) {
+        api.download.addToBatch({ jobId: batch.jobId, urls }).then(() => {
+          form.set({ batchText: "" });
+          notify.success(t("download.toast.addedToBatch", { count: urls.length }));
+        }).catch((err) => notify.error(String(err)));
+        return;
+      }
       setLastBatch(null);
-      batch.start(() => api.download.batch({ urls, outdir, template: form.template })).catch((err) => notify.error(String(err)));
+      batch.start(() => api.download.batch({ urls, outdir, template: form.template })).then(() => {
+        form.set({ batchText: "" });
+      }).catch((err) => notify.error(String(err)));
       return;
     }
     if (!form.probe) return;
@@ -341,7 +434,9 @@ export default function DownloadPage() {
 
   const formats = form.probe?.formats[form.mode] ?? [];
   const canDownload =
-    !running && !!outdir && (form.tab === "batch" ? urls.length > 0 : !!form.probe && (form.probe.isPlaylist || !!form.formatId));
+    form.tab === "batch"
+      ? urls.length > 0 && !!outdir
+      : !running && !!outdir && !!form.probe && (form.probe.isPlaylist || !!form.formatId);
 
   return (
     <Page title={t("tools.download.name")} description={t("tools.download.description")} icon={tool.icon} accent={tool.accent}>
@@ -524,6 +619,11 @@ export default function DownloadPage() {
                   {t("download.retryFailed", { count: failedItems.length })}
                 </Button>
               )}
+              {batch.running && urls.length > 0 && (
+                <Button size="small" appearance="primary" icon={<Add16Regular />} onClick={startDownload}>
+                  {t("download.addToBatch")}
+                </Button>
+              )}
               <Badge appearance="tint">{t("download.urlCount", { count: queue.length || urls.length })}</Badge>
             </div>
           }
@@ -532,32 +632,104 @@ export default function DownloadPage() {
             className={styles.batchArea}
             resize="vertical"
             value={form.batchText}
-            placeholder={"https://www.youtube.com/watch?v=…\nhttps://x.com/…/status/…"}
+            placeholder={
+              batch.running
+                ? t("download.batchPlaceholderRunning")
+                : "https://www.youtube.com/watch?v=…\nhttps://x.com/…/status/…"
+            }
             onChange={(_, d) => form.set({ batchText: d.value })}
-            disabled={batch.running}
           />
           <Caption1 className={styles.muted}>{t("download.batchHint")}</Caption1>
           {queue.length > 0 && (
             <div className={styles.queue}>
-              {queue.map((item) => (
-                <div key={item.index} className={styles.queueItem} title={item.error ?? item.url}>
-                  {item.status === "done" ? (
-                    <CheckmarkCircle16Filled className={styles.ok} />
-                  ) : item.status === "error" ? (
-                    <DismissCircle16Filled className={styles.bad} />
-                  ) : batch.running ? (
-                    <Spinner size="extra-tiny" />
-                  ) : (
-                    <Clock16Regular className={styles.muted} />
-                  )}
-                  <Text className={styles.ellipsis}>{item.title || item.url}</Text>
-                  {item.status === "running" && batch.running ? (
-                    <ProgressBar value={(item.percent ?? 0) / 100} />
-                  ) : (
-                    <Caption1 className={item.status === "error" ? styles.bad : styles.muted}>{t(`download.itemStatus.${item.status}`)}</Caption1>
-                  )}
-                </div>
-              ))}
+              {queue.map((item) => {
+                const isDone = item.status === "done";
+                const isError = item.status === "error";
+                const isRunning = item.status === "running" && batch.running;
+
+                return (
+                  <div key={item.index} className={styles.queueItem} title={item.error ?? item.url}>
+                    <div className={styles.queueItemIcon}>
+                      {isDone ? (
+                        <CheckmarkCircle16Filled className={styles.ok} />
+                      ) : isError ? (
+                        <DismissCircle16Filled className={styles.bad} />
+                      ) : isRunning ? (
+                        <Spinner size="extra-tiny" />
+                      ) : (
+                        <Clock16Regular className={styles.muted} />
+                      )}
+                    </div>
+                    <div className={styles.queueItemContent}>
+                      <Text weight={isRunning ? "semibold" : "medium"} className={styles.queueItemTitle}>
+                        {item.title || item.url}
+                      </Text>
+                      <Caption1 className={isError ? styles.bad : styles.queueItemSub}>
+                        {isError && item.error ? item.error : item.url}
+                      </Caption1>
+                    </div>
+                    <div className={styles.queueItemMeta}>
+                      {isRunning ? (
+                        <div className={styles.queueProgressWrap}>
+                          <ProgressBar value={(item.percent ?? 0) / 100} thickness="medium" />
+                          {extra.speed != null && typeof extra.speed === "number" && (
+                            <Caption1 className={styles.muted} style={{ textAlign: "right" }}>
+                              {formatBytes(extra.speed)}/s · ETA {formatDuration(Number(extra.eta))}
+                            </Caption1>
+                          )}
+                        </div>
+                      ) : isDone ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          {item.size != null && item.size > 0 && (
+                            <Badge appearance="tint" color="informative" className={styles.queueItemSize}>
+                              {formatBytes(item.size)}
+                            </Badge>
+                          )}
+                          {item.duration != null && item.duration > 0 && (
+                            <Caption1 className={styles.queueItemDuration}>
+                              <Clock16Regular style={{ fontSize: "12px" }} />
+                              {formatDuration(item.duration)}
+                            </Caption1>
+                          )}
+                        </div>
+                      ) : isError ? (
+                        <Badge appearance="tint" color="danger">
+                          {t("download.itemStatus.error")}
+                        </Badge>
+                      ) : (
+                        <Caption1 className={styles.muted}>{t("download.itemStatus.pending")}</Caption1>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {doneCount > 0 && (
+            <div className={styles.batchSummaryBar}>
+              <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+                <Text weight="semibold">
+                  {t("download.summary", { done: doneCount, total: queue.length })}
+                </Text>
+                {batchTotalSize != null && (
+                  <Caption1 className={styles.muted}>
+                    {t("download.totalSize", { size: formatBytes(batchTotalSize) })}
+                  </Caption1>
+                )}
+                {batchTotalDuration != null && (
+                  <Caption1 className={styles.muted}>
+                    {t("download.totalDuration", { duration: formatDuration(batchTotalDuration) })}
+                  </Caption1>
+                )}
+              </div>
+              <Button
+                size="small"
+                appearance="subtle"
+                icon={<FolderOpen16Regular />}
+                onClick={() => api.system.openPath(outdir).catch(() => undefined)}
+              >
+                {t("common.openFolder")}
+              </Button>
             </div>
           )}
         </Panel>
@@ -605,9 +777,14 @@ export default function DownloadPage() {
             {t("download.retryFailed", { count: failedItems.length })}
           </Button>
         )}
-        <Button appearance="primary" icon={<ArrowDownload16Filled />} disabled={!canDownload} onClick={startDownload}>
+        <Button
+          appearance="primary"
+          icon={form.tab === "batch" && batch.running ? <Add16Regular /> : <ArrowDownload16Filled />}
+          disabled={!canDownload}
+          onClick={startDownload}
+        >
           {form.tab === "batch"
-            ? t("download.downloadAll")
+            ? (batch.running ? t("download.addToBatch") : t("download.downloadAll"))
             : form.probe?.isPlaylist
               ? t("download.downloadPlaylist", { count: form.probe.entries?.length ?? 0 })
               : t("download.download")}

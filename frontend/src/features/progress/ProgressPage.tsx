@@ -39,6 +39,7 @@ import { Page } from "../../components/Page";
 import { Panel } from "../../components/Panel";
 import { SliderField } from "../../components/SliderField";
 import { api } from "../../lib/bridge";
+import { dialogFilter } from "../../lib/fileTypes";
 import { fileName } from "../../lib/format";
 import { ProgressCard, type CardOptions, type ProgressRow } from "./ProgressCard";
 
@@ -244,7 +245,7 @@ export default function ProgressPage() {
   };
 
   const pickBanner = async () => {
-    const [path] = await api.dialogs.openFiles([`${t("converter.images")} (*.png;*.jpg;*.jpeg;*.webp)`], false);
+    const [path] = await api.dialogs.openFiles([dialogFilter(t, "images", [".png", ".jpg", ".jpeg", ".webp"])], false);
     if (!path) return;
     try {
       form.set({ bannerPath: path, options: { ...form.options, banner: await api.progress.loadBanner(path) } });

@@ -317,15 +317,33 @@ export function createMockBackend(emit: Emit) {
           if (overallPercent >= 100) {
             window.clearInterval(timer);
             running.delete(jobId);
-            const items = urls.map((u, i) => ({ index: i, url: u, status: "done", title: `Film #${i + 1}` }));
+            const items = urls.map((u, i) => ({
+              index: i,
+              url: u,
+              status: "done",
+              title: `Film #${i + 1}`,
+              size: 24_500_000 + i * 5_000_000,
+              duration: 2.5,
+            }));
+            const totalSize = items.reduce((acc, it) => acc + it.size, 0);
             emit("job:done", {
               jobId,
-              result: { items, succeeded: total, failed: 0, outdir: params?.outdir || "C:\\Downloads" },
+              result: { items, succeeded: total, failed: 0, totalSize, totalDuration: 4.5, outdir: params?.outdir || "C:\\Downloads" },
             });
           }
         }, 150);
         running.set(jobId, timer);
         return Promise.resolve(jobId);
+      },
+      add_to_batch: (params: { jobId?: string; urls: string[] }) => {
+        const newUrls = params?.urls || [];
+        newUrls.forEach((u, i) => {
+          emit("job:partial", {
+            jobId: params?.jobId || "mock",
+            data: { index: 100 + i, url: u, status: "pending", title: u },
+          });
+        });
+        return ok({ success: true });
       },
     },
     watermark: {
@@ -473,6 +491,13 @@ export function createMockBackend(emit: Emit) {
           maxPeak: 0.95,
         });
       },
+      frames: (_path: string, startSec: number, duration: number, count: number) =>
+        ok({
+          frames: Array.from({ length: count }, (_, i) => {
+            const time = startSec + ((i + 0.5) * duration) / count;
+            return { time, dataUrl: fakePhoto(Math.floor(time / 20)) };
+          }),
+        }),
       preview: (params: { videoPath: string; offsetSec: number; startSec?: number; duration?: number }) =>
         ok({
           previewUrl: "",

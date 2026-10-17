@@ -1,4 +1,4 @@
-// Before/after image comparison with a draggable divider.
+// Split view of ImageComparison (draggable divider). Pages use ImageComparison, not this directly.
 
 import React, { useEffect, useRef, useState } from "react";
 import { Caption1, makeStyles, tokens } from "@fluentui/react-components";

@@ -35,6 +35,7 @@ import { Panel } from "../../components/Panel";
 import { PathPicker } from "../../components/PathPicker";
 import { SliderField } from "../../components/SliderField";
 import { api } from "../../lib/bridge";
+import { dialogFilter, IMAGE_EXTENSIONS } from "../../lib/fileTypes";
 import { fileName, formatBytes } from "../../lib/format";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useSettings } from "../../stores/settings";
@@ -44,7 +45,7 @@ import { AfterGallery } from "../../components/AfterGallery";
 
 const FORMATS = ["PNG", "WEBP", "JPEG", "GIF", "TIFF", "BMP", "PDF"] as const;
 const LOSSY = new Set(["WEBP", "JPEG"]);
-const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp", ".gif", ".tif", ".tiff", ".bmp"];
+const CONVERTIBLE_EXTENSIONS = [...IMAGE_EXTENSIONS, ".gif"];
 
 interface ConvertResult {
   total: number;
@@ -136,7 +137,8 @@ const useStyles = makeStyles({
   bad: { color: tokens.colorPaletteRedForeground1 },
 });
 
-function Summary({ result }: { result: ConvertResult }) {
+/** `showFolder` is off when the AfterGallery below already offers the output folder. */
+function Summary({ result, showFolder }: { result: ConvertResult; showFolder: boolean }) {
   const { t } = useTranslation();
   const styles = useStyles();
   const saved = result.inputBytes > 0 ? 1 - result.outputBytes / result.inputBytes : 0;
@@ -144,9 +146,11 @@ function Summary({ result }: { result: ConvertResult }) {
     <Panel
       title={t("converter.summary.title")}
       actions={
-        <Button icon={<FolderOpen16Regular />} onClick={() => api.system.openPath(result.outputDir)}>
-          {t("common.openFolder")}
-        </Button>
+        showFolder && (
+          <Button icon={<FolderOpen16Regular />} onClick={() => api.system.openPath(result.outputDir)}>
+            {t("common.openFolder")}
+          </Button>
+        )
       }
     >
       <div className={styles.summary}>
@@ -294,10 +298,10 @@ export default function ConverterPage() {
                 compact={form.files.length > 0}
                 title={t("converter.dropTitle")}
                 hint={t("converter.dropHint")}
-                accept={IMAGE_EXTENSIONS}
+                accept={CONVERTIBLE_EXTENSIONS}
                 onFiles={addFiles}
                 onBrowse={async () =>
-                  addFiles(await api.dialogs.openFiles([`${t("converter.images")} (${IMAGE_EXTENSIONS.map((e) => `*${e}`).join(";")})`]))
+                  addFiles(await api.dialogs.openFiles([dialogFilter(t, "images", CONVERTIBLE_EXTENSIONS)]))
                 }
               />
               {form.files.length > 0 && (
@@ -388,7 +392,7 @@ export default function ConverterPage() {
 
       {runner.result && (
         <>
-          <Summary result={runner.result} />
+          <Summary result={runner.result} showFolder={!runner.result.files?.length} />
           {runner.result.files && runner.result.files.length > 0 && (
             <AfterGallery
               title={t("transfer.convertedTitle")}

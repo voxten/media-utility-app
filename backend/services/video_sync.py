@@ -14,6 +14,7 @@ import struct
 import subprocess
 import tempfile
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -245,6 +246,53 @@ def extract_waveform(
         "startSec": round(start_sec, 3),
         "maxPeak": round(max_peak, 3),
     }
+
+
+def _grab_frame(ffmpeg: str, path: Path, time_sec: float, height: int) -> str:
+    cmd = [
+        ffmpeg,
+        "-v", "quiet",
+        "-ss", f"{time_sec:.3f}",
+        "-i", str(path),
+        "-frames:v", "1",
+        "-vf", f"scale=-2:{height}",
+        "-f", "image2",
+        "-c:v", "mjpeg",
+        "-q:v", "5",
+        "-",
+    ]
+    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=15)
+    if not proc.stdout:
+        return ""
+    return f"data:image/jpeg;base64,{base64.b64encode(proc.stdout).decode('ascii')}"
+
+
+def extract_frames(
+    file_path: str,
+    start_sec: float,
+    duration: float,
+    count: int,
+    height: int = 96,
+) -> Dict[str, Any]:
+    """Evenly spaced JPEG frames over [start_sec, start_sec + duration] for the timeline's picture track.
+
+    Each frame is grabbed with an input-side seek, which stays fast on long videos where decoding
+    the whole window with an fps filter would not.
+    """
+    p = Path(file_path)
+    if not p.is_file():
+        raise FileNotFoundError(f"File not found: {file_path}")
+
+    ffmpeg = _resolve_binary("ffmpeg")
+    count = max(1, min(int(count), 200))
+    duration = max(0.0, float(duration))
+    step = duration / count
+    times = [round(max(0.0, start_sec + (i + 0.5) * step), 3) for i in range(count)]
+
+    with ThreadPoolExecutor(max_workers=min(4, os.cpu_count() or 1)) as pool:
+        urls = list(pool.map(lambda t: _grab_frame(ffmpeg, p, t, int(height)), times))
+
+    return {"frames": [{"time": t, "dataUrl": url} for t, url in zip(times, urls) if url]}
 
 
 def generate_preview(

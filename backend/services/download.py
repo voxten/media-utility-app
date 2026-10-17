@@ -3,8 +3,11 @@
 import math
 from pathlib import Path
 import re
+import threading
 import time
 from typing import Any, Dict, List, Optional
+
+import yt_dlp
 
 from backend.core import thumbs
 from backend.core.jobs import JobCancelled, JobContext
@@ -302,13 +305,57 @@ def resolve_format(url: str, format_id: str, mode: str) -> str:
     return format_id
 
 
-def _run_ydl(ctx: JobContext, url: str, opts: Dict[str, Any]) -> Dict[str, Any]:
-    import yt_dlp
+class UniqueYoutubeDL(yt_dlp.YoutubeDL):
+    """YoutubeDL subclass that prevents overwriting / skipping by appending (1), (2), etc.
+    when the target destination file already exists."""
 
+    def __init__(self, *args: Any, target_ext: Optional[str] = None, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.target_ext = target_ext.lower().lstrip(".") if target_ext else None
+
+    def _prepare_filename(
+        self, info_dict: Dict[str, Any], *, outtmpl: Optional[str] = None, tmpl_type: Optional[str] = None
+    ) -> Optional[str]:
+        fn = super()._prepare_filename(info_dict, outtmpl=outtmpl, tmpl_type=tmpl_type)
+        if not fn or fn == "-":
+            return fn
+
+        if "_unique_stem" not in info_dict:
+            p = Path(fn)
+            target_ext = f".{self.target_ext}" if self.target_ext else p.suffix
+            target_path = p.with_suffix(target_ext)
+            if target_path.exists() or p.exists():
+                stem = p.stem
+                parent = p.parent
+                counter = 1
+                while True:
+                    cand_target = parent / f"{stem} ({counter}){target_ext}"
+                    cand_raw = parent / f"{stem} ({counter}){p.suffix}"
+                    if not cand_target.exists() and not cand_raw.exists():
+                        break
+                    counter += 1
+                info_dict["_unique_stem"] = f"{stem} ({counter})"
+            else:
+                info_dict["_unique_stem"] = p.stem
+
+        unique_stem = info_dict["_unique_stem"]
+        p = Path(fn)
+        return str(p.parent / f"{unique_stem}{p.suffix}")
+
+
+def _run_ydl(ctx: JobContext, url: str, opts: Dict[str, Any], target_ext: Optional[str] = None) -> Dict[str, Any]:
     try:
-        with yt_dlp.YoutubeDL(opts) as ydl:
+        with UniqueYoutubeDL(opts, target_ext=target_ext) as ydl:
             info = ydl.extract_info(url, download=True)
-            return {"title": info.get("title") or "", "path": ydl.prepare_filename(info)}
+            path = info.get("filepath") or ydl.prepare_filename(info)
+            p = Path(path)
+            if not p.is_file() and target_ext:
+                cand = p.with_suffix(f".{target_ext}")
+                if cand.is_file():
+                    p = cand
+                    path = str(cand)
+            file_size = p.stat().st_size if p.is_file() else (info.get("filesize") or info.get("filesize_approx"))
+            return {"title": info.get("title") or "", "path": path, "size": file_size}
     except JobCancelled:
         raise
     except Exception as exc:
@@ -329,21 +376,25 @@ def download(
     cookies: Optional[Dict[str, Optional[str]]] = None,
 ) -> Dict[str, Any]:
     """Download one URL. ``mode`` is ``video`` | ``audio`` | ``muxed``."""
+    t0 = time.monotonic()
     url = sanitize_x_url(url)
     Path(outdir).expanduser().mkdir(parents=True, exist_ok=True)
+    target_codec = audio_codec if audio_codec in AUDIO_CODECS else "mp3"
     opts = _download_opts(
         url,
         resolve_format(url, format_id, mode),
         output_template(outdir, filename_template),
         mode,
-        audio_codec if audio_codec in AUDIO_CODECS else "mp3",
+        target_codec,
         cookies or {},
         _ProgressHook(ctx),
     )
+    target_ext = target_codec if mode == "audio" else "mp4"
     ctx.progress(0, "download.status.starting")
-    result = _run_ydl(ctx, url, opts)
+    result = _run_ydl(ctx, url, opts, target_ext=target_ext)
+    duration = round(time.monotonic() - t0, 1)
     ctx.progress(100, "download.status.done")
-    return {**result, "outdir": str(Path(outdir).expanduser())}
+    return {**result, "duration": duration, "outdir": str(Path(outdir).expanduser())}
 
 
 def expand_batch_urls(
@@ -396,6 +447,55 @@ def expand_batch_urls(
     return items
 
 
+class ActiveBatchQueue:
+    def __init__(
+        self,
+        ctx: JobContext,
+        cookies: Optional[Dict[str, Optional[str]]],
+    ) -> None:
+        self.ctx = ctx
+        self.cookies = cookies
+        self.lock = threading.Lock()
+        self.items: List[Dict[str, Any]] = []
+        self.results: List[Dict[str, Any]] = []
+        self.cursor: int = 0
+
+    def add_urls(self, urls: List[str]) -> int:
+        expanded = expand_batch_urls(urls, self.cookies)
+        added_count = 0
+        with self.lock:
+            for item in expanded:
+                idx = len(self.items)
+                entry = {"index": idx, "url": item["url"], "title": item["title"]}
+                self.items.append(entry)
+                self.ctx.partial({**entry, "status": "pending"})
+                added_count += 1
+        return added_count
+
+
+_active_batches: Dict[str, ActiveBatchQueue] = {}
+_active_batches_lock = threading.Lock()
+
+
+def add_to_batch(job_id: Optional[str], urls: List[str]) -> bool:
+    """Add URLs to an active batch download."""
+    clean_urls = [u.strip() for u in urls if u and u.strip()]
+    if not clean_urls:
+        return False
+    with _active_batches_lock:
+        queue = None
+        if job_id and job_id in _active_batches:
+            queue = _active_batches[job_id]
+        elif not job_id and _active_batches:
+            queue = list(_active_batches.values())[-1]
+
+    if not queue:
+        return False
+
+    queue.add_urls(clean_urls)
+    return True
+
+
 def download_batch(
     ctx: JobContext,
     urls: List[str],
@@ -405,41 +505,85 @@ def download_batch(
 ) -> Dict[str, Any]:
     """Download several URLs with best quality; per-item state is streamed via ``ctx.partial``."""
     ctx.progress(None, "download.status.probing")
-    expanded = expand_batch_urls(urls, cookies)
     Path(outdir).expanduser().mkdir(parents=True, exist_ok=True)
     template = output_template(outdir, filename_template)
-    total = len(expanded)
-    results: List[Dict[str, Any]] = []
 
-    for index, item in enumerate(expanded):
-        ctx.partial({"index": index, "url": item["url"], "title": item["title"], "status": "pending"})
+    batch_queue = ActiveBatchQueue(ctx, cookies)
+    with _active_batches_lock:
+        _active_batches[ctx.job_id] = batch_queue
 
-    for index, item in enumerate(expanded):
-        ctx.check_cancelled()
-        url = item["url"]
-        ctx.partial({"index": index, "url": url, "title": item["title"], "status": "running"})
-        hook = _ProgressHook(ctx, scale=1 / total, offset=index * 100 / total, item=index)
-        fmt = AUTO_FORMAT
-        opts = _download_opts(url, fmt, template, "video", "mp3", cookies or {}, hook)
-        try:
-            info = _run_ydl(ctx, url, opts)
-            entry = {"index": index, "url": url, "title": info.get("title") or item["title"], "status": "done", **info}
-        except JobCancelled:
-            ctx.partial({"index": index, "url": url, "title": item["title"], "status": "cancelled"})
-            raise
-        except Exception as exc:  # noqa: BLE001 - keep going with the rest of the queue
-            err_msg = clean_error_message(str(exc))
-            entry = {"index": index, "url": url, "title": item["title"], "status": "error", "error": err_msg}
-            ctx.log("download.log.itemFailed", "error", url=url, error=err_msg)
-        results.append(entry)
-        ctx.partial(entry)
-        if index < total - 1 and not ctx.cancelled:
-            time.sleep(1.5)
+    try:
+        batch_queue.add_urls(urls)
 
-    ctx.progress(100, "download.status.batchDone")
-    return {
-        "items": results,
-        "succeeded": sum(1 for r in results if r["status"] == "done"),
-        "failed": sum(1 for r in results if r["status"] == "error"),
-        "outdir": str(Path(outdir).expanduser()),
-    }
+        while True:
+            ctx.check_cancelled()
+            with batch_queue.lock:
+                if batch_queue.cursor >= len(batch_queue.items):
+                    break
+                current_item = batch_queue.items[batch_queue.cursor]
+                index = batch_queue.cursor
+                batch_queue.cursor += 1
+                total = len(batch_queue.items)
+
+            url = current_item["url"]
+            ctx.partial({"index": index, "url": url, "title": current_item["title"], "status": "running"})
+            hook = _ProgressHook(ctx, scale=1 / max(1, total), offset=index * 100 / max(1, total), item=index)
+            fmt = AUTO_FORMAT
+            opts = _download_opts(url, fmt, template, "video", "mp3", cookies or {}, hook)
+
+            t0 = time.monotonic()
+            try:
+                info = _run_ydl(ctx, url, opts, target_ext="mp4")
+                duration = round(time.monotonic() - t0, 1)
+                entry = {
+                    "index": index,
+                    "url": url,
+                    "title": info.get("title") or current_item["title"],
+                    "status": "done",
+                    "duration": duration,
+                    **info,
+                }
+            except JobCancelled:
+                ctx.partial({"index": index, "url": url, "title": current_item["title"], "status": "cancelled"})
+                raise
+            except Exception as exc:  # noqa: BLE001 - keep going with the rest of the queue
+                duration = round(time.monotonic() - t0, 1)
+                err_msg = clean_error_message(str(exc))
+                entry = {
+                    "index": index,
+                    "url": url,
+                    "title": current_item["title"],
+                    "status": "error",
+                    "duration": duration,
+                    "error": err_msg,
+                }
+                ctx.log("download.log.itemFailed", "error", url=url, error=err_msg)
+
+            with batch_queue.lock:
+                batch_queue.results.append(entry)
+            ctx.partial(entry)
+
+            with batch_queue.lock:
+                more_items = batch_queue.cursor < len(batch_queue.items)
+            if more_items and not ctx.cancelled:
+                time.sleep(1.5)
+
+        ctx.progress(100, "download.status.batchDone")
+        results = batch_queue.results
+        total_size = sum(
+            r["size"] for r in results if r.get("status") == "done" and isinstance(r.get("size"), (int, float))
+        )
+        total_duration = sum(
+            r["duration"] for r in results if isinstance(r.get("duration"), (int, float))
+        )
+        return {
+            "items": results,
+            "succeeded": sum(1 for r in results if r["status"] == "done"),
+            "failed": sum(1 for r in results if r["status"] == "error"),
+            "totalSize": total_size,
+            "totalDuration": round(total_duration, 1),
+            "outdir": str(Path(outdir).expanduser()),
+        }
+    finally:
+        with _active_batches_lock:
+            _active_batches.pop(ctx.job_id, None)

@@ -3,8 +3,8 @@ import {
   Button,
   Caption1,
   makeStyles,
+  mergeClasses,
   tokens,
-  Tooltip,
 } from "@fluentui/react-components";
 import {
   ColumnDoubleCompare20Regular,
@@ -174,55 +174,45 @@ export function ImageComparison({
 
   return (
     <div className={styles.container} style={{ maxHeight }}>
-      {/* Floating View Switcher */}
       <div className={styles.modeBar}>
-        <Tooltip content={t("common.viewSplit")} relationship="label">
-          <Button
-            size="small"
-            appearance="subtle"
-            icon={<ImageSplit20Regular />}
-            className={`${styles.modeBtn} ${mode === "split" ? styles.modeBtnActive : ""}`}
-            onClick={() => setMode("split")}
-          >
-            {t("common.viewSplit")}
-          </Button>
-        </Tooltip>
-        <Tooltip content={t("common.viewSide")} relationship="label">
-          <Button
-            size="small"
-            appearance="subtle"
-            icon={<ColumnDoubleCompare20Regular />}
-            className={`${styles.modeBtn} ${mode === "side" ? styles.modeBtnActive : ""}`}
-            onClick={() => setMode("side")}
-          >
-            {t("common.viewSide")}
-          </Button>
-        </Tooltip>
-        <Tooltip content={t("common.viewAfter")} relationship="label">
-          <Button
-            size="small"
-            appearance="subtle"
-            icon={<Eye20Regular />}
-            className={`${styles.modeBtn} ${mode === "after" ? styles.modeBtnActive : ""}`}
-            onClick={() => setMode("after")}
-          >
-            {t("common.viewAfter")}
-          </Button>
-        </Tooltip>
-        <Tooltip content={t("common.viewBefore")} relationship="label">
-          <Button
-            size="small"
-            appearance="subtle"
-            icon={<Image20Regular />}
-            className={`${styles.modeBtn} ${mode === "before" ? styles.modeBtnActive : ""}`}
-            onClick={() => setMode("before")}
-          >
-            {t("common.viewBefore")}
-          </Button>
-        </Tooltip>
+        <Button
+          size="small"
+          appearance="subtle"
+          icon={<ImageSplit20Regular />}
+          className={mergeClasses(styles.modeBtn, mode === "split" && styles.modeBtnActive)}
+          onClick={() => setMode("split")}
+        >
+          {t("common.viewSplit")}
+        </Button>
+        <Button
+          size="small"
+          appearance="subtle"
+          icon={<ColumnDoubleCompare20Regular />}
+          className={mergeClasses(styles.modeBtn, mode === "side" && styles.modeBtnActive)}
+          onClick={() => setMode("side")}
+        >
+          {t("common.viewSide")}
+        </Button>
+        <Button
+          size="small"
+          appearance="subtle"
+          icon={<Eye20Regular />}
+          className={mergeClasses(styles.modeBtn, mode === "after" && styles.modeBtnActive)}
+          onClick={() => setMode("after")}
+        >
+          {t("common.viewAfter")}
+        </Button>
+        <Button
+          size="small"
+          appearance="subtle"
+          icon={<Image20Regular />}
+          className={mergeClasses(styles.modeBtn, mode === "before" && styles.modeBtnActive)}
+          onClick={() => setMode("before")}
+        >
+          {t("common.viewBefore")}
+        </Button>
       </div>
 
-      {/* Main Comparison Area */}
       <div className={styles.contentArea}>
         {mode === "split" && (
           <CompareSlider

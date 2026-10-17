@@ -251,7 +251,20 @@
     "viewBefore": "Original only",
     "before": "Before (Original)",
     "after": "After (Result)",
-    "preview": "Preview"
+    "preview": "Preview",
+    "saveError": "Could not save the file",
+    "andMore": "+ {{count}} more"
+  },
+  "fileTypes": {
+    "images": "Images",
+    "videos": "Videos",
+    "audio": "Audio",
+    "pdf": "PDF documents",
+    "text": "Text files",
+    "csv": "CSV",
+    "executables": "Programs",
+    "cookies": "Cookies",
+    "all": "All files"
   },
   "converter": {
     "changeImage": "Change image",
@@ -276,7 +289,6 @@
     "matching_other": "Found {{count}} {{format}} files.",
     "dropTitle": "Drop images here",
     "dropHint": "or click to choose files (PNG, JPG, WEBP, GIF, TIFF, BMP)",
-    "images": "Images",
     "output": "Output",
     "toFormat": "Target format",
     "quality": "Quality",
@@ -389,7 +401,6 @@
     "dropImagesTitle": "Drop image files here",
     "dropImagesHint": "or click to select images (PNG, JPG, WebP)",
     "dropChange": "Change PDF file (drop or click)",
-    "selectedFile": "Selected document",
     "settings": "Settings",
     "pages_one": "{{count}} page",
     "pages_other": "{{count}} pages",
@@ -431,13 +442,18 @@
       "dpi": "Resolution (DPI)",
       "actionToImages": "Export pages to folder",
       "actionFromImages": "Create PDF from images",
-      "defaultPdfName": "from_images.pdf"
+      "defaultPdfName": "from_images.pdf",
+      "dpiScreen": "Screen",
+      "dpiStandard": "Standard",
+      "dpiPrint": "Print"
     },
     "extract": {
       "title": "Extract text from PDF document",
       "subtitle": "Saves all text content with page separators into a .txt file.",
       "action": "Export to .txt",
-      "defaultName": "extracted_text.txt"
+      "defaultName": "extracted_text.txt",
+      "chars_one": "{{count}} character",
+      "chars_other": "{{count}} characters"
     },
     "idle": {
       "empty": "Add PDF files to get started.",
@@ -621,6 +637,11 @@
     "template": "File name template",
     "download": "Download",
     "downloadAll": "Download all",
+    "addToBatch": "Add to queue",
+    "batchPlaceholderRunning": "Paste more links (one per line) to add to the queue...",
+    "summary": "Downloaded: {{done}}/{{total}}",
+    "totalSize": "Total size: {{size}}",
+    "totalDuration": "Total time: {{duration}}",
     "idle": {
       "empty": "Paste a link and click “Check”.",
       "ready": "Choose a format and click “Download”.",
@@ -632,7 +653,8 @@
       "done": "Download finished",
       "error": "Download failed",
       "probeError": "Could not read the link",
-      "batchDone": "Queue finished: {{ok}} downloaded, {{failed}} failed"
+      "batchDone": "Queue finished: {{ok}} downloaded, {{failed}} failed",
+      "addedToBatch": "Added {{count}} links to queue"
     }
   },
   "upscale": {
@@ -657,7 +679,6 @@
       "title": "Real-ESRGAN AI Model ({{model}})",
       "desc": "Requires a one-time download of model weights to run locally on your computer.",
       "installBtn": "Download & activate model ({{size}})",
-      "installing": "Downloading AI model weights…",
       "ready": "AI model downloaded and ready to use!"
     },
     "options": {
@@ -693,9 +714,7 @@
     "toast": {
       "loadError": "Could not load image.",
       "error": "Error during image upscaling.",
-      "done": "Image successfully upscaled!",
-      "saved": "Upscaled image saved.",
-      "saveError": "Could not save file."
+      "done": "Image successfully upscaled!"
     }
   },
   "watermark": {
@@ -715,7 +734,6 @@
       "title": "LaMa AI Model (optional)",
       "desc": "Removes watermarks with photorealistic quality by reconstructing textures and background.",
       "installBtn": "Download & install model (~196 MB)",
-      "installing": "Downloading & installing model…",
       "ready": "LaMa model installed and activated!"
     },
     "changeImage": "Change image",
@@ -752,9 +770,7 @@
       "fallback": "A fallback method was used",
       "error": "Could not remove the watermark",
       "loadError": "Cannot open the image",
-      "emptyMask": "Paint over the watermark first",
-      "saved": "Image saved",
-      "saveError": "Could not save the image"
+      "emptyMask": "Paint over the watermark first"
     }
   },
   "progress": {
@@ -795,8 +811,6 @@
   "jobs": {
     "title": "Tasks",
     "popupTitle": "Running Tasks",
-    "showMore": "Show more",
-    "showMoreTooltip": "Open full tasks panel",
     "overallProgress": "Overall progress",
     "subtasksTitle": "Specific actions",
     "pending": "Queued",
@@ -808,8 +822,6 @@
     "noActiveJobs": "No active tasks",
     "noActiveJobsBody": "All operations have completed or none are running.",
     "openTool": "Open",
-    "emptyTitle": "No tasks",
-    "emptyBody": "Operations started in any tool will show up here.",
     "clearFinished": "Clear finished",
     "clearHint": "Hides finished tasks from the list. Results stay in the tools.",
     "collapseDetails": "Collapse details",
@@ -845,7 +857,6 @@
       "title": "BiRefNet / RMBG AI Model",
       "desc": "This tool requires rembg and ONNX Runtime. Click below to install in the background.",
       "installBtn": "Download & activate AI (~140 MB)",
-      "installing": "Installing AI dependencies…",
       "ready": "AI model is ready to use!"
     },
     "options": {
@@ -883,7 +894,6 @@
       "remove": "Remove background",
       "processing": "Removing background…",
       "savePng": "Save as PNG",
-      "saveWebp": "Save as WebP",
       "savedSuccess": "Saved image to file"
     }
   },
@@ -1035,110 +1045,44 @@
     "outputFilesCount": "Generated files: {{count}}"
   },
   "video_sync": {
-    "title": "Audio-Video Sync",
-    "subtitle": "Align out-of-sync audio tracks with video, preview waveforms and export synchronized media",
     "dropTitle": "Drop a video file here or click to browse",
     "dropHint": "Supports MP4, MKV, MOV, AVI, WEBM, FLV, WMV and other video formats",
     "changeVideo": "Change video",
     "errors": {
       "loadVideo": "Error loading video",
       "loadAudio": "Error loading audio file",
-      "preview": "Error generating preview"
+      "preview": "Error generating preview",
+      "frames": "Could not load video frames"
     },
     "timeline": {
-      "title": "Timeline & Audio Amplitude (Drag track to shift)",
-      "zoom": "Zoom:",
       "zoomIn": "Zoom In",
       "zoomOut": "Zoom Out",
-      "trackAudio": "Video Audio",
-      "trackExternal": "External Audio",
-      "generatingWaveform": "Generating audio waveform...",
-      "silenceDelay": "(Silence/Delay)",
-      "trimmedStart": "(Trimmed start)",
-      "previewBadge": "Preview"
-    },
-    "offset": {
-      "inSync": "In sync (0.000s)",
-      "reset": "Reset offset to 0"
-    },
-    "legend": {
-      "waveform": "Waveform (Amplitude)",
-      "delay": "Audio delay area (+)",
-      "lead": "Audio lead / trim area (-)",
-      "playhead": "Playhead",
-      "previewRange": "Preview slice region (e.g. 30s)",
-      "hint": "Tip: Hold Shift while dragging for micro-precision"
-    },
-    "controls": {
-      "title": "Offset & Track Synchronization",
-      "currentOffset": "Current audio offset"
+      "trackAudio": "Video audio",
+      "trackExternal": "Audio file"
     },
     "status": {
-      "synced": "Audio and video are in zero phase (in sync)",
-      "delayed": "Audio is delayed relative to video (plays later)",
-      "early": "Audio leads video (plays earlier)",
       "preparing": "Preparing synchronization...",
       "syncing": "Exporting synchronized video...",
       "done": "Synchronization complete"
     },
-    "nudge": {
-      "sub1s": "Subtract 1 second",
-      "sub250ms": "Subtract 250 milliseconds",
-      "sub50ms": "Subtract 50 milliseconds",
-      "zero": "Reset to 0",
-      "add50ms": "Add 50 milliseconds",
-      "add250ms": "Add 250 milliseconds",
-      "add1s": "Add 1 second"
-    },
-    "slider": {
-      "label": "Offset Slider",
-      "rangeWide": "Range: ±30s",
-      "rangeFine": "Range: ±5s (precise)"
-    },
-    "input": {
-      "seconds": "Offset in seconds (s)",
-      "millis": "Offset in milliseconds (ms)"
-    },
-    "sources": {
-      "title": "Audio Source to Synchronize",
-      "embedded": "Video embedded audio track",
-      "external": "External audio file",
-      "noExternal": "No external audio chosen",
-      "pickAudio": "Pick Audio File",
-      "changeAudio": "Change Audio File"
-    },
-    "tracks": {
-      "select": "Select audio track from video",
-      "trackNum": "Track {{num}}"
-    },
-    "preview": {
-      "title": "Video Player & Quick Preview",
-      "noClipPrompt": "Click 'Generate Preview' to render a synchronized clip slice with the audio offset applied.",
-      "startPos": "Preview start position:",
-      "startDesc": "Choose any segment even in a 3-hour long video",
-      "length": "Length:",
-      "generateBtn": "Generate Preview",
-      "generating": "Generating preview...",
-      "startPosTooltip": "Preview start:",
-      "startOfVideo": "00:00 (Start of video)",
-      "sub30s": "-30 seconds",
-      "add30s": "+30 seconds",
-      "loopOn": "✓ Loop enabled",
-      "loopOff": "Loop disabled"
-    },
     "export": {
-      "title": "Export Synchronized Video",
-      "fastCopy": "Fast Lossless (Video stream copy - instant)",
-      "reencode": "Full Re-encode (High quality x264/AAC)",
-      "saveAs": "Save As:",
-      "browse": "Browse",
-      "startExport": "Export Synchronized Video",
-      "success": "Video exported successfully!",
-      "error": "Failed to export synchronized video"
+      "fastCopy": "Copy video stream",
+      "reencode": "Re-encode to H.264/AAC",
+      "success": "Video exported",
+      "error": "Failed to export synchronized video",
+      "mode": "Export mode",
+      "action": "Export"
     },
     "log": {
       "starting": "Starting audio sync for {{path}} with offset {{offset}}",
       "finished": "Exported {{out}} ({{size}} bytes)"
-    }
+    },
+    "trackNum": "Track {{num}}",
+    "offset": "Audio offset",
+    "audioSource": "Audio",
+    "pickAudio": "Audio file…",
+    "previewLength": "Preview length",
+    "preview": "Preview",
+    "output": "Output file"
   }
 }

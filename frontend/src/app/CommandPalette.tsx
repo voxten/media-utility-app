@@ -71,7 +71,7 @@ export function CommandPalette() {
   const { t } = useTranslation();
   const open = useUi((s) => s.paletteOpen);
   const setOpen = useUi((s) => s.setPaletteOpen);
-  const setJobsOpen = useUi((s) => s.setJobsOpen);
+  const setJobsPopupOpen = useUi((s) => s.setJobsPopupOpen);
   const settings = useSettings((s) => s.settings);
   const update = useSettings((s) => s.update);
   const [query, setQuery] = useState("");
@@ -94,7 +94,7 @@ export function CommandPalette() {
         run: go(tool.id),
       })),
       { id: "settings", title: t("nav.settings"), icon: Settings24Regular, keywords: "settings ustawienia", run: go("settings") },
-      { id: "jobs", title: t("palette.showJobs"), icon: TaskListLtr24Regular, keywords: "jobs zadania tasks", run: () => setJobsOpen(true) },
+      { id: "jobs", title: t("palette.showJobs"), icon: TaskListLtr24Regular, keywords: "jobs zadania tasks", run: () => setJobsPopupOpen(true) },
       {
         id: "theme",
         title: t("palette.theme", { theme: t(`settings.themes.${nextTheme}`) }),
@@ -110,7 +110,7 @@ export function CommandPalette() {
         run: () => update({ language: nextLang }),
       },
     ];
-  }, [t, settings?.theme, settings?.language, setJobsOpen, update]);
+  }, [t, settings?.theme, settings?.language, setJobsPopupOpen, update]);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();

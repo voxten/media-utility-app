@@ -38,6 +38,14 @@ def test_extract_waveform(tmp_path):
     assert res["duration"] > 0
 
 
+def test_extract_frames(tmp_path):
+    vid = _create_sample_video(tmp_path / "frames_test.mp4", duration=3)
+    res = video_sync.extract_frames(str(vid), start_sec=0.0, duration=3.0, count=4, height=48)
+
+    assert [f["time"] for f in res["frames"]] == [0.375, 1.125, 1.875, 2.625]
+    assert all(f["dataUrl"].startswith("data:image/jpeg;base64,") for f in res["frames"])
+
+
 def test_generate_preview(tmp_path):
     vid = _create_sample_video(tmp_path / "preview_test.mp4", duration=4)
     # Test positive audio delay

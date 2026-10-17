@@ -3,7 +3,7 @@ import { Badge, Button, Caption1, makeStyles, mergeClasses, tokens, Tooltip } fr
 import { ChevronDown16Regular, ChevronRight16Regular, Copy16Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import type { LogEntry } from "../lib/types";
-import { translateMessage } from "./JobStatusBadge";
+import { translateMessage } from "../lib/jobMessage";
 
 const MAX_VISIBLE = 500;
 

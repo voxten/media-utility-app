@@ -7,7 +7,7 @@ import { useNotify } from "../components/notify";
 import { on } from "../lib/bridge";
 import { navigate } from "../lib/router";
 import { useJobs } from "../stores/jobs";
-import { toolById } from "./tools";
+import { toolForJob } from "./tools";
 
 // Short helper jobs (link probing, page thumbnails) are part of a page interaction, not worth a toast.
 const QUIET_KINDS = new Set(["download.probe", "pdf.inspect"]);
@@ -22,7 +22,7 @@ export function useJobNotifications(route: string) {
     const handle = (jobId: string, ok: boolean, error?: string) => {
       const job = useJobs.getState().jobs[jobId];
       if (!job || QUIET_KINDS.has(job.kind)) return;
-      const tool = toolById(job.kind.split(".")[0]);
+      const tool = toolForJob(job.kind);
       if (!tool || routeRef.current === tool.id) return;
       const name = t(`tools.${tool.id}.name`);
       const options = {

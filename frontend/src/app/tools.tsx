@@ -76,3 +76,15 @@ export const TOOLS: ToolDefinition[] = [
 ];
 
 export const toolById = (id: string) => TOOLS.find((tool) => tool.id === id);
+
+// Job kinds whose prefix is not the id of the tool that started them.
+const JOB_KIND_TOOLS: Record<string, string> = {
+  "pdf.compress": "pdf_compress",
+  "pdf.split": "pdf_split",
+  "pdf.to_images": "pdf_convert",
+  "pdf.from_images": "pdf_convert",
+  "pdf.extract_text": "pdf_extract",
+  image_editor: "image_tools",
+};
+
+export const toolForJob = (kind: string) => toolById(JOB_KIND_TOOLS[kind] ?? kind.split(".")[0]);

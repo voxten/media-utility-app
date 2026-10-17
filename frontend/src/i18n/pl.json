@@ -255,7 +255,20 @@
     "viewBefore": "Tylko oryginał",
     "before": "Przed (Oryginał)",
     "after": "Po (Wynik)",
-    "preview": "Podgląd"
+    "preview": "Podgląd",
+    "saveError": "Nie udało się zapisać pliku",
+    "andMore": "+ {{count}} więcej"
+  },
+  "fileTypes": {
+    "images": "Obrazy",
+    "videos": "Wideo",
+    "audio": "Audio",
+    "pdf": "Dokumenty PDF",
+    "text": "Pliki tekstowe",
+    "csv": "CSV",
+    "executables": "Programy",
+    "cookies": "Cookies",
+    "all": "Wszystkie pliki"
   },
   "converter": {
     "changeImage": "Zmień obraz",
@@ -282,7 +295,6 @@
     "matching_other": "Znaleziono {{count}} pliku {{format}}.",
     "dropTitle": "Upuść obrazy tutaj",
     "dropHint": "lub kliknij, aby wybrać pliki (PNG, JPG, WEBP, GIF, TIFF, BMP)",
-    "images": "Obrazy",
     "output": "Wynik",
     "toFormat": "Format docelowy",
     "quality": "Jakość",
@@ -403,7 +415,6 @@
     "dropImagesTitle": "Upuść pliki graficzne tutaj",
     "dropImagesHint": "lub kliknij, aby wybrać zdjęcia (PNG, JPG, WebP)",
     "dropChange": "Zmień plik PDF (upuść lub kliknij)",
-    "selectedFile": "Wybrany dokument",
     "settings": "Ustawienia",
     "pages_one": "{{count}} strona",
     "pages_few": "{{count}} strony",
@@ -447,13 +458,20 @@
       "dpi": "Rozdzielczość (DPI)",
       "actionToImages": "Eksportuj strony do folderu",
       "actionFromImages": "Utwórz PDF ze zdjęć",
-      "defaultPdfName": "z_obrazow.pdf"
+      "defaultPdfName": "z_obrazow.pdf",
+      "dpiScreen": "Ekran",
+      "dpiStandard": "Standard",
+      "dpiPrint": "Druk"
     },
     "extract": {
       "title": "Wyciągnij tekst z dokumentu PDF",
       "subtitle": "Zapisuje całą zawartość tekstową dokumentu z podziałem na strony do pliku .txt.",
       "action": "Eksportuj do .txt",
-      "defaultName": "tekst_z_pdf.txt"
+      "defaultName": "tekst_z_pdf.txt",
+      "chars_one": "{{count}} znak",
+      "chars_few": "{{count}} znaki",
+      "chars_many": "{{count}} znaków",
+      "chars_other": "{{count}} znaku"
     },
     "idle": {
       "empty": "Dodaj pliki PDF, aby zacząć.",
@@ -669,6 +687,11 @@
     "template": "Wzorzec nazwy pliku",
     "download": "Pobierz",
     "downloadAll": "Pobierz wszystkie",
+    "addToBatch": "Dopisz do kolejki",
+    "batchPlaceholderRunning": "Wklej kolejne linki (jeden w wierszu), aby dopisać do kolejki...",
+    "summary": "Pobrano: {{done}}/{{total}}",
+    "totalSize": "Łączny rozmiar: {{size}}",
+    "totalDuration": "Łączny czas: {{duration}}",
     "idle": {
       "empty": "Wklej link i kliknij „Sprawdź”.",
       "ready": "Wybierz format i kliknij „Pobierz”.",
@@ -682,7 +705,8 @@
       "done": "Pobieranie zakończone",
       "error": "Pobieranie nie powiodło się",
       "probeError": "Nie udało się odczytać linku",
-      "batchDone": "Kolejka zakończona: {{ok}} pobrano, {{failed}} błędów"
+      "batchDone": "Kolejka zakończona: {{ok}} pobrano, {{failed}} błędów",
+      "addedToBatch": "Dopisano {{count}} linków do kolejki"
     }
   },
   "upscale": {
@@ -707,7 +731,6 @@
       "title": "Model AI Real-ESRGAN ({{model}})",
       "desc": "Wymaga jednorazowego pobrania wag modelu AI do uruchomienia na Twoim komputerze.",
       "installBtn": "Pobierz i aktywuj model ({{size}})",
-      "installing": "Pobieranie wag modelu AI…",
       "ready": "Model AI został pobrany i jest gotowy do użycia!"
     },
     "options": {
@@ -743,9 +766,7 @@
     "toast": {
       "loadError": "Nie udało się wczytać obrazu.",
       "error": "Błąd podczas skalowania obrazu.",
-      "done": "Obraz został pomyślnie powiększony!",
-      "saved": "Zapisano powiększony obraz.",
-      "saveError": "Nie udało się zapisać pliku."
+      "done": "Obraz został pomyślnie powiększony!"
     }
   },
   "watermark": {
@@ -765,7 +786,6 @@
       "title": "Model AI LaMa (opcjonalny)",
       "desc": "Usuwaj znaki wodne z fotorealistyczną jakością, precyzyjnie rekonstruując tło.",
       "installBtn": "Pobierz i zainstaluj model (~196 MB)",
-      "installing": "Pobieranie i instalowanie modelu…",
       "ready": "Model LaMa został zainstalowany i aktywowany!"
     },
     "changeImage": "Zmień obraz",
@@ -802,9 +822,7 @@
       "fallback": "Użyto metody zastępczej",
       "error": "Nie udało się usunąć znaku wodnego",
       "loadError": "Nie można otworzyć obrazu",
-      "emptyMask": "Najpierw zamaluj znak wodny",
-      "saved": "Obraz zapisany",
-      "saveError": "Nie udało się zapisać obrazu"
+      "emptyMask": "Najpierw zamaluj znak wodny"
     }
   },
   "progress": {
@@ -847,8 +865,6 @@
   "jobs": {
     "title": "Zadania",
     "popupTitle": "Zadania w toku",
-    "showMore": "Pokaż więcej",
-    "showMoreTooltip": "Otwórz pełny panel zadań",
     "overallProgress": "Postęp całości",
     "subtasksTitle": "Konkretne akcje",
     "pending": "W kolejce",
@@ -860,8 +876,6 @@
     "noActiveJobs": "Brak aktywnych zadań",
     "noActiveJobsBody": "Wszystkie operacje zostały ukończone lub nie ma żadnych w toku.",
     "openTool": "Przejdź",
-    "emptyTitle": "Brak zadań",
-    "emptyBody": "Tu pojawią się operacje uruchomione w dowolnym narzędziu.",
     "clearFinished": "Wyczyść zakończone",
     "clearHint": "Ukrywa zakończone zadania z listy. Wyniki w narzędziach zostają.",
     "collapseDetails": "Zwiń szczegóły",
@@ -897,7 +911,6 @@
       "title": "Model AI BiRefNet / RMBG",
       "desc": "Do działania narzędzia wymagana jest biblioteka rembg oraz ONNX Runtime. Kliknij poniżej, aby zainstalować w tle.",
       "installBtn": "Pobierz i aktywuj AI (~140 MB)",
-      "installing": "Instalowanie zależności AI…",
       "ready": "Model AI jest gotowy do użycia!"
     },
     "options": {
@@ -935,7 +948,6 @@
       "remove": "Usuń tło",
       "processing": "Usuwanie tła…",
       "savePng": "Zapisz jako PNG",
-      "saveWebp": "Zapisz jako WebP",
       "savedSuccess": "Zapisano obraz do pliku"
     }
   },
@@ -1087,110 +1099,44 @@
     "outputFilesCount": "Liczba wygenerowanych plików: {{count}}"
   },
   "video_sync": {
-    "title": "Synchronizacja Audio-Wideo",
-    "subtitle": "Wyrównuj rozjechane ścieżki dźwiękowe z obrazem, dopasowuj po amplitudzie i twórz podgląd",
     "dropTitle": "Upuść plik wideo tutaj lub kliknij, aby wybrać",
     "dropHint": "Obsługuje MP4, MKV, MOV, AVI, WEBM, FLV, WMV i inne formaty wideo",
     "changeVideo": "Zmień wideo",
     "errors": {
       "loadVideo": "Błąd ładowania wideo",
       "loadAudio": "Błąd ładowania pliku audio",
-      "preview": "Błąd generowania podglądu"
+      "preview": "Błąd generowania podglądu",
+      "frames": "Nie udało się wczytać klatek wideo"
     },
     "timeline": {
-      "title": "Oś czasu & Amplituda dźwięku (Przeciągaj track, aby przesunąć)",
-      "zoom": "Zoom:",
       "zoomIn": "Powiększ",
       "zoomOut": "Pomniejsz",
-      "trackAudio": "Audio wideo",
-      "trackExternal": "Audio zewn.",
-      "generatingWaveform": "Generowanie podglądu fali dźwiękowej...",
-      "silenceDelay": "(Cisza/Delay)",
-      "trimmedStart": "(Przycięty początek)",
-      "previewBadge": "Podgląd"
-    },
-    "offset": {
-      "inSync": "Brak przesunięcia (0.000s)",
-      "reset": "Zresetuj przesunięcie do 0"
-    },
-    "legend": {
-      "waveform": "Fala dźwiękowa (Amplituda)",
-      "delay": "Obszar opóźnienia dźwięku (+)",
-      "lead": "Obszar przycięcia/wyprzedzenia (-)",
-      "playhead": "Głowica odtwarzania",
-      "previewRange": "Obszar wycinka podglądu (np. 30s)",
-      "hint": "Wskazówka: Przytrzymaj Shift podczas przeciągania dla mikro-precyzji"
-    },
-    "controls": {
-      "title": "Przesunięcie i Synchronizacja Ścieżki",
-      "currentOffset": "Wartość przesunięcia (Audio Delay / Lead)"
+      "trackAudio": "Dźwięk z wideo",
+      "trackExternal": "Plik audio"
     },
     "status": {
-      "synced": "Ścieżki są idealnie w fazie zerowej",
-      "delayed": "Dźwięk opóźniony (rozbrzmiewa później niż obraz)",
-      "early": "Dźwięk wyprzedza obraz (rozbrzmiewa wcześniej)",
       "preparing": "Przygotowywanie synchronizacji...",
       "syncing": "Eksportowanie zsynchronizowanego wideo...",
       "done": "Synchronizacja ukończona"
     },
-    "nudge": {
-      "sub1s": "Odejmij 1 sekundę",
-      "sub250ms": "Odejmij 250 milisekund",
-      "sub50ms": "Odejmij 50 milisekund",
-      "zero": "Zresetuj do 0",
-      "add50ms": "Dodaj 50 milisekund",
-      "add250ms": "Dodaj 250 milisekund",
-      "add1s": "Dodaj 1 sekundę"
-    },
-    "slider": {
-      "label": "Suwak przesunięcia",
-      "rangeWide": "Zakres: ±30s",
-      "rangeFine": "Zakres: ±5s (precyzyjny)"
-    },
-    "input": {
-      "seconds": "Wpisz w sekundach (s)",
-      "millis": "Wpisz w milisekundach (ms)"
-    },
-    "sources": {
-      "title": "Źródło dźwięku do synchronizacji",
-      "embedded": "Ścieżka z pliku wideo",
-      "external": "Zewnętrzny plik audio",
-      "noExternal": "Nie wybrano pliku audio",
-      "pickAudio": "Wybierz audio",
-      "changeAudio": "Zmień audio"
-    },
-    "tracks": {
-      "select": "Wybierz ścieżkę dźwiękową z wideo",
-      "trackNum": "Ścieżka {{num}}"
-    },
-    "preview": {
-      "title": "Odtwarzacz & Szybki Podgląd",
-      "noClipPrompt": "Kliknij 'Wygeneruj podgląd', aby zobaczyć zsynchronizowany fragment wideo z naniesionym opóźnieniem dźwięku.",
-      "startPos": "Miejsce podglądu w filmie:",
-      "startDesc": "Możesz wybrać dowolny fragment nawet w 3-godzinnym filmie",
-      "length": "Długość:",
-      "generateBtn": "Wygeneruj podgląd",
-      "generating": "Generowanie podglądu...",
-      "startPosTooltip": "Początek podglądu:",
-      "startOfVideo": "00:00 (Początek filmu)",
-      "sub30s": "-30 sekund",
-      "add30s": "+30 sekund",
-      "loopOn": "✓ Pętla (Loop) włączona",
-      "loopOff": "Pętla (Loop) wyłączona"
-    },
     "export": {
-      "title": "Eksport zsynchronizowanego wideo",
-      "fastCopy": "Szybki bezstratny (Kopiowanie strumienia wideo - natychmiastowe)",
-      "reencode": "Pełne przekodowanie (Wysoka jakość x264/AAC)",
-      "saveAs": "Zapisz jako:",
-      "browse": "Przeglądaj",
-      "startExport": "Eksportuj zsynchronizowane wideo",
-      "success": "Pomyślnie wyeksportowano zsynchronizowane wideo!",
-      "error": "Błąd podczas eksportu zsynchronizowanego wideo"
+      "fastCopy": "Kopiuj strumień wideo",
+      "reencode": "Przekoduj do H.264/AAC",
+      "success": "Wyeksportowano wideo",
+      "error": "Błąd podczas eksportu zsynchronizowanego wideo",
+      "mode": "Tryb eksportu",
+      "action": "Eksportuj"
     },
     "log": {
       "starting": "Rozpoczynanie synchronizacji audio dla {{path}} z przesunięciem {{offset}}",
       "finished": "Zapisano {{out}} ({{size}} bajtów)"
-    }
+    },
+    "trackNum": "Ścieżka {{num}}",
+    "offset": "Przesunięcie dźwięku",
+    "audioSource": "Dźwięk",
+    "pickAudio": "Plik audio…",
+    "previewLength": "Długość podglądu",
+    "preview": "Podgląd",
+    "output": "Plik wyjściowy"
   }
 }

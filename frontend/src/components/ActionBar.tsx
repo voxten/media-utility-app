@@ -5,7 +5,7 @@ import { Button, Caption1, makeStyles, ProgressBar, Text, tokens } from "@fluent
 import { Dismiss16Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import type { JobState } from "../stores/jobs";
-import { jobMessage } from "./JobStatusBadge";
+import { jobMessage } from "../lib/jobMessage";
 
 const useStyles = makeStyles({
   bar: {

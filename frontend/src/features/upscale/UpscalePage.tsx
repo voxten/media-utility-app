@@ -5,11 +5,8 @@ import {
   Caption1,
   Divider,
   Dropdown,
-  Input,
   makeStyles,
   Option,
-  ProgressBar,
-  shorthands,
   Switch,
   Text,
   Toolbar,
@@ -17,9 +14,6 @@ import {
   Tooltip,
 } from "@fluentui/react-components";
 import {
-  ArrowDownload16Regular,
-  Bot24Regular,
-  Dismiss16Regular,
   FolderOpen16Regular,
   Image24Regular,
   ImageEdit20Regular,
@@ -36,17 +30,17 @@ import { ImageComparison } from "../../components/ImageComparison";
 import { useNotify } from "../../components/notify";
 import { Page } from "../../components/Page";
 import { Panel } from "../../components/Panel";
-import { PathPicker } from "../../components/PathPicker";
+import { ModelBanner } from "../../components/ModelBanner";
+import { SaveOutputFields, useSaveOutput } from "../../components/SaveOutput";
 import { api } from "../../lib/bridge";
-import { dirName, fileName, joinPath } from "../../lib/format";
+import { dialogFilter, IMAGE_EXTENSIONS } from "../../lib/fileTypes";
+import {  fileName } from "../../lib/format";
 import type { UpscaleOptions, UpscalePreview, UpscaleResult } from "../../lib/types";
-import { useJob } from "../../stores/jobs";
+import { } from "../../stores/jobs";
 import { useJobRunner } from "../../lib/useJobRunner";
-import { useSettings } from "../../stores/settings";
+import { } from "../../stores/settings";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { useTransferStore } from "../../stores/transfer";
-
-const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"];
 
 type ModelType = "general" | "anime";
 type AlphaMode = "smooth" | "ai";
@@ -134,162 +128,25 @@ const useStyles = makeStyles({
   grow: {
     flexGrow: 1,
   },
-  modelBanner: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "16px",
-    padding: "12px 16px",
-    borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: tokens.colorNeutralBackground3,
-    ...shorthands.border("1px", "solid", tokens.colorNeutralStroke2),
-    flexWrap: "wrap",
-    marginTop: "8px",
-    marginBottom: "12px",
-  },
-  modelBannerLeft: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    flex: "1 1 280px",
-  },
-  modelIcon: {
-    color: tokens.colorBrandForeground1,
-    flexShrink: 0,
-    fontSize: "24px",
-  },
-  modelTexts: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "2px",
-  },
-  modelBannerRight: {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    flexShrink: 0,
-  },
-  progressBox: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-    minWidth: "220px",
-  },
-  progressHeader: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "8px",
-  },
-  transparencyBadge: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "6px",
-  },
-  saveSection: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "16px",
-    padding: "12px 16px",
-    borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: tokens.colorNeutralBackground2,
-    ...shorthands.border("1px", "solid", tokens.colorNeutralStroke2),
-    alignItems: "flex-end",
-    marginTop: "8px",
-  },
-  saveColDir: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-    flex: "1 1 280px",
-    minWidth: 0,
-  },
-  saveColName: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-    width: "240px",
-  },
 });
 
-function ModelDownloadBanner({
-  depId,
-  modelName,
-  sizeEstimate,
-  onInstalled,
-}: {
-  depId: "upscale_general" | "upscale_anime";
-  modelName: string;
-  sizeEstimate: string;
-  onInstalled: () => void;
-}) {
+const MODELS: Record<ModelType, { depId: string; name: string; size: string }> = {
+  general: { depId: "upscale_general", name: "General (x4v3)", size: "~4.8 MB" },
+  anime: { depId: "upscale_anime", name: "Anime (x4plus)", size: "~17.9 MB" },
+};
+
+function UpscaleModelBanner({ model, onInstalled }: { model: ModelType; onInstalled: () => void }) {
   const { t } = useTranslation();
-  const styles = useStyles();
-  const notify = useNotify();
-  const [jobId, setJobId] = useState<string | null>(null);
-  const job = useJob(jobId);
-
-  useEffect(() => {
-    if (!job) return;
-    if (job.status === "done") {
-      notify.success(t("upscale.modelPromo.ready"));
-      onInstalled();
-      setJobId(null);
-    } else if (job.status === "error") {
-      notify.error(t("settings.deps.failed"), { body: job.error ?? undefined });
-    }
-  }, [job?.status, job?.error, notify, onInstalled, t]);
-
-  const handleInstall = async () => {
-    try {
-      const id = await api.system.installDependency(depId);
-      setJobId(id);
-    } catch (err) {
-      notify.error(t("settings.deps.failed"), { body: String(err) });
-    }
-  };
-
-  const handleCancel = async () => {
-    if (jobId) await api.jobs.cancel(jobId);
-  };
-
-  const isRunning = job?.status === "running";
-
+  const m = MODELS[model];
   return (
-    <div className={styles.modelBanner}>
-      <div className={styles.modelBannerLeft}>
-        <Bot24Regular className={styles.modelIcon} />
-        <div className={styles.modelTexts}>
-          <Text weight="semibold">
-            {t("upscale.modelPromo.title", { model: modelName })}
-          </Text>
-          <Caption1>{t("upscale.modelPromo.desc")}</Caption1>
-        </div>
-      </div>
-      <div className={styles.modelBannerRight}>
-        {isRunning ? (
-          <div className={styles.progressBox}>
-            <div className={styles.progressHeader}>
-              <Caption1>
-                {job.message ? t(job.message, job.params) : t("upscale.modelPromo.installing")}
-              </Caption1>
-              <Button
-                appearance="subtle"
-                size="small"
-                icon={<Dismiss16Regular />}
-                onClick={handleCancel}
-                title={t("common.cancel")}
-              />
-            </div>
-            <ProgressBar value={job.percent != null ? job.percent / 100 : undefined} />
-          </div>
-        ) : (
-          <Button appearance="primary" icon={<ArrowDownload16Regular />} onClick={handleInstall}>
-            {t("upscale.modelPromo.installBtn", { size: sizeEstimate })}
-          </Button>
-        )}
-      </div>
-    </div>
+    <ModelBanner
+      depId={m.depId}
+      title={t("upscale.modelPromo.title", { model: m.name })}
+      description={t("upscale.modelPromo.desc")}
+      installLabel={t("upscale.modelPromo.installBtn", { size: m.size })}
+      readyMessage={t("upscale.modelPromo.ready")}
+      onInstalled={onInstalled}
+    />
   );
 }
 
@@ -299,9 +156,7 @@ export default function UpscalePage() {
   const notify = useNotify();
   const tool = toolById("upscale")!;
   const form = useForm();
-  const defaultDir = useSettings((s) => s.settings?.outputDir);
-  const [outDir, setOutDir] = useState<string>("");
-  const [outFileName, setOutFileName] = useState<string>("");
+  const output = useSaveOutput(api.upscale.save);
 
   const [modelsReady, setModelsReady] = useState<{ general: boolean; anime: boolean }>({
     general: false,
@@ -338,9 +193,7 @@ export default function UpscalePage() {
       const image = await api.upscale.load(path);
       form.set({ image, result: null, ...(keepSource ? {} : { sourcePath: path }) });
       const currentSrc = keepSource ? form.sourcePath || path : path;
-      const folder = dirName(currentSrc) || defaultDir || "";
-      setOutDir(folder);
-      setOutFileName(getDefaultOutFileName(currentSrc, form.scale));
+      output.reset(currentSrc, getDefaultOutFileName(currentSrc, form.scale));
     } catch (err) {
       notify.error(t("upscale.toast.loadError"), { body: String(err) });
     }
@@ -352,7 +205,7 @@ export default function UpscalePage() {
 
   const browse = async () => {
     const [path] = await api.dialogs.openFiles(
-      [`${t("converter.images")} (${IMAGE_EXTENSIONS.map((e) => `*${e}`).join(";")})`],
+      [dialogFilter(t, "images")],
       false
     );
     if (path) load(path);
@@ -378,48 +231,6 @@ export default function UpscalePage() {
     runner.start(() => api.upscale.start(opts)).catch((err) => notify.error(String(err)));
   };
 
-  const saveDirect = async () => {
-    if (!form.result) return;
-    try {
-      const name = outFileName.trim() || getDefaultOutFileName(form.sourcePath, form.scale);
-      const folder = outDir.trim() || dirName(form.sourcePath);
-      const target = joinPath(folder, name);
-      const saved = await api.upscale.save(form.result.resultPath, target);
-      notify.success(t("upscale.toast.saved"), {
-        action: {
-          label: t("common.showInFolder"),
-          onClick: () => api.system.reveal(saved).catch(() => undefined),
-        },
-      });
-    } catch (err) {
-      notify.error(t("upscale.toast.saveError"), { body: String(err) });
-    }
-  };
-
-  const saveAsDialog = async () => {
-    if (!form.result) return;
-    const defaultName = outFileName.trim() || getDefaultOutFileName(form.sourcePath, form.scale);
-    const target = await api.dialogs.saveFile(
-      defaultName,
-      ["PNG (*.png)", "JPEG (*.jpg)", "WEBP (*.webp)"],
-      outDir.trim() || dirName(form.sourcePath)
-    );
-    if (!target) return;
-    try {
-      const ext = (form.sourcePath.match(/\.[^.]+$/)?.[0] ?? ".png").toLowerCase();
-      const finalTarget = /\.[a-z0-9]+$/i.test(target) ? target : joinPath(dirName(target), `${fileName(target)}${ext}`);
-      const saved = await api.upscale.save(form.result.resultPath, finalTarget);
-      notify.success(t("upscale.toast.saved"), {
-        action: {
-          label: t("common.showInFolder"),
-          onClick: () => api.system.reveal(saved).catch(() => undefined),
-        },
-      });
-    } catch (err) {
-      notify.error(t("upscale.toast.saveError"), { body: String(err) });
-    }
-  };
-
   if (!form.image) {
     return (
       <Page
@@ -438,22 +249,15 @@ export default function UpscalePage() {
         />
         <Panel title={t("upscale.howTitle")}>
           <Text>{t("upscale.howBody")}</Text>
-          {!modelsReady.general && (
-            <ModelDownloadBanner
-              depId="upscale_general"
-              modelName="General (x4v3)"
-              sizeEstimate="~4.8 MB"
-              onInstalled={checkModels}
-            />
-          )}
+          {!modelsReady.general && <UpscaleModelBanner model="general" onInstalled={checkModels} />}
         </Panel>
       </Page>
     );
   }
 
   const modelOptions = [
-    { id: "general" as ModelType, label: t("upscale.models.general"), size: "~4.8 MB" },
-    { id: "anime" as ModelType, label: t("upscale.models.anime"), size: "~17.9 MB" },
+    { id: "general" as ModelType, label: t("upscale.models.general"), size: MODELS.general.size },
+    { id: "anime" as ModelType, label: t("upscale.models.anime"), size: MODELS.anime.size },
   ];
 
   const scaleOptions = [
@@ -503,21 +307,14 @@ export default function UpscalePage() {
             <Button
               appearance="subtle"
               icon={<ArrowRight16Regular />}
-              onClick={() => useTransferStore.getState().openModal([form.sourcePath], "upscale")}
+              onClick={() => useTransferStore.getState().openModal([form.result?.resultPath ?? form.sourcePath], "upscale")}
             >
               {t("transfer.sendTo")}
             </Button>
           </div>
         }
       >
-        {!currentModelReady && (
-          <ModelDownloadBanner
-            depId={form.model === "general" ? "upscale_general" : "upscale_anime"}
-            modelName={form.model === "general" ? "General (x4v3)" : "Anime (x4plus)"}
-            sizeEstimate={form.model === "general" ? "~4.8 MB" : "~17.9 MB"}
-            onInstalled={checkModels}
-          />
-        )}
+        {!currentModelReady && <UpscaleModelBanner model={form.model} onInstalled={checkModels} />}
 
         {!form.result && (
           <Toolbar className={styles.toolbar} aria-label={t("tools.upscale.name")}>
@@ -552,7 +349,7 @@ export default function UpscalePage() {
                   const nextScale = Number(d.optionValue) as 2 | 4;
                   form.set({ scale: nextScale });
                   if (form.sourcePath) {
-                    setOutFileName(getDefaultOutFileName(form.sourcePath, nextScale));
+                    output.setName(getDefaultOutFileName(form.sourcePath, nextScale));
                   }
                 }}
                 aria-label={t("upscale.options.scale")}
@@ -620,25 +417,7 @@ export default function UpscalePage() {
           )}
         </div>
 
-        {/* Output path and filename selector */}
-        <div className={styles.saveSection}>
-          <div className={styles.saveColDir}>
-            <Text size={200} weight="semibold">
-              {t("common.outputFolder")}
-            </Text>
-            <PathPicker value={outDir} onChange={(dir) => setOutDir(dir)} mode="folder" openable />
-          </div>
-          <div className={styles.saveColName}>
-            <Text size={200} weight="semibold">
-              {t("common.fileName")}
-            </Text>
-            <Input
-              value={outFileName}
-              onChange={(_, d) => setOutFileName(d.value)}
-              placeholder="nazwa_pliku.png"
-            />
-          </div>
-        </div>
+        <SaveOutputFields output={output} />
       </Panel>
 
       <ActionBar
@@ -658,17 +437,14 @@ export default function UpscalePage() {
             <Button onClick={() => load(form.result!.resultPath, true)}>
               {t("upscale.continueWithThis")}
             </Button>
-            <Button
-              appearance="subtle"
-              icon={<ArrowRight16Regular />}
-              onClick={() => useTransferStore.getState().openModal([form.result!.resultPath], "upscale")}
-            >
-              {t("transfer.sendTo")}
-            </Button>
-            <Button appearance="primary" icon={<Save16Regular />} onClick={saveDirect}>
+            <Button appearance="primary" icon={<Save16Regular />} disabled={!output.canSave} onClick={() => output.saveHere(form.result!.resultPath)}>
               {t("common.saveBtn")}
             </Button>
-            <Button appearance="subtle" icon={<FolderOpen16Regular />} onClick={saveAsDialog}>
+            <Button
+              appearance="subtle"
+              icon={<FolderOpen16Regular />}
+              onClick={() => output.saveAs(form.result!.resultPath, [dialogFilter(t, "images", [".png", ".jpg", ".webp"])])}
+            >
               {t("common.saveAs")}
             </Button>
           </>

@@ -4,15 +4,14 @@ import {
   Card,
   CardHeader,
   makeStyles,
-  ProgressBar,
   Text,
   tokens,
 } from "@fluentui/react-components";
 import { ArrowRight16Regular, History24Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
-import { TOOLS, toolById } from "../../app/tools";
-import { JobStatusBadge, jobMessage } from "../../components/JobStatusBadge";
+import { TOOLS } from "../../app/tools";
+import { JobCard } from "../../components/JobCard";
 import { Page, Section } from "../../components/Page";
 import { navigate } from "../../lib/router";
 import { useJobs } from "../../stores/jobs";
@@ -49,22 +48,7 @@ const useStyles = makeStyles({
     transitionDuration: tokens.durationFast,
     color: tokens.colorNeutralForeground3,
   },
-  jobs: { display: "flex", flexDirection: "column", gap: "6px" },
-  job: {
-    display: "grid",
-    gridTemplateColumns: "32px 1fr auto",
-    alignItems: "center",
-    gap: "12px",
-    padding: "10px 16px",
-    borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: tokens.colorNeutralBackground2,
-    border: `1px solid ${tokens.colorNeutralStroke3}`,
-    cursor: "pointer",
-    ":hover": { backgroundColor: tokens.colorNeutralBackground2Hover },
-  },
-  jobIcon: { color: tokens.colorNeutralForeground2, display: "grid", placeItems: "center" },
-  jobText: { display: "flex", flexDirection: "column", minWidth: 0, gap: "4px" },
-  ellipsis: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  jobs: { display: "flex", flexDirection: "column", gap: "8px" },
   empty: {
     display: "flex",
     alignItems: "center",
@@ -92,28 +76,9 @@ function RecentJobs() {
 
   return (
     <div className={styles.jobs}>
-      {jobs.map((job) => {
-        const toolId = job.kind.split(".")[0];
-        const tool = toolById(toolId);
-        const Icon = tool?.icon;
-        return (
-          <div key={job.id} className={styles.job} onClick={() => tool && navigate(tool.id)}>
-            <span className={styles.jobIcon}>{Icon && <Icon />}</span>
-            <div className={styles.jobText}>
-              <Text weight="semibold" className={styles.ellipsis}>
-                {tool ? t(`tools.${tool.id}.name`) : job.kind}
-                {job.title && job.title !== job.kind ? ` · ${t(job.title)}` : ""}
-              </Text>
-              {job.status === "running" ? (
-                <ProgressBar value={job.percent == null ? undefined : job.percent / 100} thickness="medium" />
-              ) : (
-                <Caption1 className={styles.ellipsis}>{jobMessage(t, job)}</Caption1>
-              )}
-            </div>
-            <JobStatusBadge status={job.status} />
-          </div>
-        );
-      })}
+      {jobs.map((job) => (
+        <JobCard key={job.id} job={job} />
+      ))}
     </div>
   );
 }

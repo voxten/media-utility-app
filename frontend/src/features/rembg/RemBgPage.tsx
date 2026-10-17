@@ -5,10 +5,8 @@ import {
   Caption1,
   Divider,
   Dropdown,
-  Input,
   makeStyles,
   Option,
-  ProgressBar,
   shorthands,
   Switch,
   Text,
@@ -17,16 +15,12 @@ import {
   Tooltip,
 } from "@fluentui/react-components";
 import {
-  ArrowDownload16Regular,
   ArrowForward16Regular,
-  Bot24Regular,
   Checkmark16Regular,
-  Dismiss16Regular,
   FolderOpen16Regular,
   Image24Regular,
   ImageEdit20Regular,
   Save16Regular,
-  Sparkle16Filled,
   Wand16Filled,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
@@ -38,17 +32,17 @@ import { ImageComparison } from "../../components/ImageComparison";
 import { useNotify } from "../../components/notify";
 import { Page } from "../../components/Page";
 import { Panel } from "../../components/Panel";
-import { PathPicker } from "../../components/PathPicker";
+import { ModelBanner } from "../../components/ModelBanner";
+import { SaveOutputFields, useSaveOutput } from "../../components/SaveOutput";
 import { api } from "../../lib/bridge";
-import { dirName, fileName, joinPath } from "../../lib/format";
+import { dialogFilter, IMAGE_EXTENSIONS } from "../../lib/fileTypes";
+import {  fileName } from "../../lib/format";
 import type { RemBgOptions, RemBgPreview, RemBgResult } from "../../lib/types";
-import { useJob } from "../../stores/jobs";
+import { } from "../../stores/jobs";
 import { useJobRunner } from "../../lib/useJobRunner";
-import { useSettings } from "../../stores/settings";
+import { } from "../../stores/settings";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { useTransferStore } from "../../stores/transfer";
-
-const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"];
 
 type ModelType = "birefnet" | "birefnet-lite" | "isnet" | "u2net";
 type BgMode = "checker" | "black" | "white" | "green";
@@ -191,141 +185,23 @@ const useStyles = makeStyles({
     gap: "8px",
     color: tokens.colorNeutralForeground3,
   },
-  saveSection: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "16px",
-    padding: "12px 16px",
-    borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: tokens.colorNeutralBackground2,
-    ...shorthands.border("1px", "solid", tokens.colorNeutralStroke2),
-    alignItems: "flex-end",
-    marginTop: "8px",
-  },
-  saveColDir: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-    flex: "1 1 280px",
-    minWidth: 0,
-  },
-  saveColName: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-    width: "220px",
-  },
-  modelBanner: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "16px",
-    padding: "12px 16px",
-    borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: tokens.colorNeutralBackground3,
-    ...shorthands.border("1px", "solid", tokens.colorNeutralStroke2),
-    flexWrap: "wrap",
-    marginTop: "8px",
-    marginBottom: "12px",
-  },
-  modelBannerLeft: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    flex: "1 1 280px",
-  },
-  modelIcon: {
-    color: tokens.colorBrandForeground1,
-    flexShrink: 0,
-    fontSize: "24px",
-  },
-  modelTexts: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "2px",
-  },
-  modelBannerRight: {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    flexShrink: 0,
-  },
-  modelProgressBox: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "6px",
-    minWidth: "220px",
-  },
-  modelProgressHeader: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "8px",
-  },
   infoText: {
     lineHeight: "1.6",
     color: tokens.colorNeutralForeground2,
   },
 });
 
-function ModelBanner({ onInstalled }: { onInstalled: () => void }) {
-  const styles = useStyles();
+function RemBgModelBanner({ onInstalled }: { onInstalled: () => void }) {
   const { t } = useTranslation();
-  const notify = useNotify();
-  const [jobId, setJobId] = useState<string | null>(null);
-  const job = useJob(jobId);
-
-  useEffect(() => {
-    if (!job) return;
-    if (job.status === "done") {
-      notify.success(t("rembg.modelPromo.ready"));
-      onInstalled();
-      setJobId(null);
-    } else if (job.status === "error") {
-      notify.error(t("settings.deps.failed"), { body: job.error ?? undefined });
-    }
-  }, [job?.status, job?.error, notify, onInstalled, t]);
-
-  const handleInstall = async () => {
-    try {
-      const id = await api.system.installDependency("rembg");
-      setJobId(id);
-    } catch (err) {
-      notify.error(t("settings.deps.failed"), { body: String(err) });
-    }
-  };
-
-  const handleCancel = async () => {
-    if (jobId) await api.jobs.cancel(jobId);
-  };
-
-  const isRunning = job?.status === "running";
-
   return (
-    <div className={styles.modelBanner}>
-      <div className={styles.modelBannerLeft}>
-        <Bot24Regular className={styles.modelIcon} />
-        <div className={styles.modelTexts}>
-          <Text weight="semibold">{t("rembg.modelPromo.title")}</Text>
-          <Caption1>{t("rembg.modelPromo.desc")}</Caption1>
-        </div>
-      </div>
-      <div className={styles.modelBannerRight}>
-        {isRunning ? (
-          <div className={styles.modelProgressBox}>
-            <div className={styles.modelProgressHeader}>
-              <Caption1>{job.message ? t(job.message, job.params) : t("rembg.modelPromo.installing")}</Caption1>
-              <Button appearance="subtle" size="small" icon={<Dismiss16Regular />} onClick={handleCancel} title={t("common.cancel")} />
-            </div>
-            <ProgressBar value={job.percent != null ? job.percent / 100 : undefined} />
-          </div>
-        ) : (
-          <Button appearance="primary" icon={<ArrowDownload16Regular />} onClick={handleInstall}>
-            {t("rembg.modelPromo.installBtn")}
-          </Button>
-        )}
-      </div>
-    </div>
+    <ModelBanner
+      depId="rembg"
+      title={t("rembg.modelPromo.title")}
+      description={t("rembg.modelPromo.desc")}
+      installLabel={t("rembg.modelPromo.installBtn")}
+      readyMessage={t("rembg.modelPromo.ready")}
+      onInstalled={onInstalled}
+    />
   );
 }
 
@@ -334,10 +210,8 @@ export default function RemBgPage() {
   const { t } = useTranslation();
   const notify = useNotify();
   const form = useForm();
-  const defaultDir = useSettings((s) => s.settings?.outputDir);
   const [modelAvailable, setModelAvailable] = useState<boolean | null>(null);
-  const [outDir, setOutDir] = useState<string>("");
-  const [outFileName, setOutFileName] = useState<string>("");
+  const output = useSaveOutput(api.rembg.save);
 
   const checkAvailability = async () => {
     try {
@@ -368,10 +242,7 @@ export default function RemBgPage() {
     try {
       const preview = await api.rembg.load(path);
       form.set({ image: preview, sourcePath: path, result: null });
-      const base = fileName(path).replace(/\.[^.]+$/, "");
-      const folder = dirName(path) || defaultDir || "";
-      setOutDir(folder);
-      setOutFileName(`${base}_nobg.png`);
+      output.reset(path, `${fileName(path).replace(/\.[^.]+$/, "")}_nobg.png`);
     } catch (err) {
       notify.error(t("common.jobStatus.error"), { body: String(err) });
     }
@@ -385,7 +256,7 @@ export default function RemBgPage() {
   });
 
   const browse = async () => {
-    const files = await api.dialogs.openFiles(["Image files (*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.tiff)"], false);
+    const files = await api.dialogs.openFiles([dialogFilter(t, "images")], false);
     if (files.length > 0) load(files[0]);
   };
 
@@ -400,48 +271,6 @@ export default function RemBgPage() {
       despeckle: form.despeckle,
     };
     runner.start(() => api.rembg.remove(opts)).catch((err) => notify.error(String(err)));
-  };
-
-  const saveTo = async (ext?: string) => {
-    if (!form.result) return;
-    try {
-      let name = outFileName.trim() || `${fileName(form.sourcePath).replace(/\.[^.]+$/, "")}_nobg.png`;
-      if (ext) {
-        name = name.replace(/\.[^.]+$/, "") + ext;
-      }
-      const folder = outDir.trim() || dirName(form.sourcePath);
-      const target = joinPath(folder, name);
-      const saved = await api.rembg.save(form.result.resultPath, target);
-      notify.success(t("common.savedSuccess"), {
-        action: {
-          label: t("common.showInFolder"),
-          onClick: () => api.system.reveal(saved).catch(() => undefined),
-        },
-      });
-    } catch (err) {
-      notify.error(t("common.jobStatus.error"), { body: String(err) });
-    }
-  };
-
-  const saveAsDialog = async () => {
-    if (!form.result) return;
-    try {
-      const target = await api.dialogs.saveFile(
-        outFileName || `${fileName(form.sourcePath).replace(/\.[^.]+$/, "")}_nobg.png`,
-        ["PNG (*.png)", "WEBP (*.webp)"],
-        outDir || dirName(form.sourcePath)
-      );
-      if (!target) return;
-      const saved = await api.rembg.save(form.result.resultPath, target);
-      notify.success(t("common.savedSuccess"), {
-        action: {
-          label: t("common.showInFolder"),
-          onClick: () => api.system.reveal(saved).catch(() => undefined),
-        },
-      });
-    } catch (err) {
-      notify.error(t("common.jobStatus.error"), { body: String(err) });
-    }
   };
 
   const tool = toolById("rembg")!;
@@ -459,7 +288,7 @@ export default function RemBgPage() {
         />
         <Panel title={t("rembg.howTitle")}>
           <Text className={styles.infoText}>{t("rembg.howBody")}</Text>
-          {modelAvailable === false && <ModelBanner onInstalled={() => setModelAvailable(true)} />}
+          {modelAvailable === false && <RemBgModelBanner onInstalled={() => setModelAvailable(true)} />}
         </Panel>
       </Page>
     );
@@ -525,7 +354,7 @@ export default function RemBgPage() {
           </div>
         }
       >
-        {modelAvailable === false && <ModelBanner onInstalled={() => setModelAvailable(true)} />}
+        {modelAvailable === false && <RemBgModelBanner onInstalled={() => setModelAvailable(true)} />}
 
         <Toolbar className={styles.toolbar}>
           {/* Model selection */}
@@ -667,25 +496,7 @@ export default function RemBgPage() {
           )}
         </div>
 
-        {/* Output path and filename selector */}
-        <div className={styles.saveSection}>
-          <div className={styles.saveColDir}>
-            <Text size={200} weight="semibold">
-              {t("common.outputFolder")}
-            </Text>
-            <PathPicker value={outDir} onChange={(dir) => setOutDir(dir)} mode="folder" openable />
-          </div>
-          <div className={styles.saveColName}>
-            <Text size={200} weight="semibold">
-              {t("common.fileName")}
-            </Text>
-            <Input
-              value={outFileName}
-              onChange={(_, d) => setOutFileName(d.value)}
-              placeholder="nazwa_pliku.png"
-            />
-          </div>
-        </div>
+        <SaveOutputFields output={output} />
       </Panel>
 
       <ActionBar
@@ -703,28 +514,19 @@ export default function RemBgPage() {
       >
         {form.result ? (
           <>
-            <Button icon={<Sparkle16Filled />} disabled={runner.running} onClick={run}>
+            <Button icon={<Wand16Filled />} disabled={runner.running} onClick={run}>
               {t("rembg.actions.remove")}
             </Button>
-            <Button icon={<Save16Regular />} onClick={() => saveTo(".webp")}>
-              {t("rembg.actions.saveWebp")}
-            </Button>
-            <Button appearance="primary" icon={<Save16Regular />} onClick={() => saveTo(".png")}>
+            <Button appearance="primary" icon={<Save16Regular />} disabled={!output.canSave} onClick={() => output.saveHere(form.result!.resultPath)}>
               {t("common.saveBtn")}
             </Button>
-            <Button appearance="subtle" icon={<FolderOpen16Regular />} onClick={saveAsDialog}>
+            <Button
+              appearance="subtle"
+              icon={<FolderOpen16Regular />}
+              onClick={() => output.saveAs(form.result!.resultPath, [dialogFilter(t, "images", [".png", ".webp"])])}
+            >
               {t("common.saveAs")}
             </Button>
-            {form.result.resultPath && (
-              <Button
-                appearance="subtle"
-                icon={<ArrowForward16Regular />}
-                onClick={() => openTransferModal(form.result!.resultPath, "rembg")}
-                title={t("transfer.buttonTooltip")}
-              >
-                {t("transfer.button")}
-              </Button>
-            )}
           </>
         ) : (
           <Button appearance="primary" icon={<Wand16Filled />} disabled={runner.running} onClick={run}>

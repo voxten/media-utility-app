@@ -3,7 +3,6 @@ import {
   Badge,
   Button,
   Caption1,
-  Card,
   Dropdown,
   makeStyles,
   Option,
@@ -17,8 +16,6 @@ import {
 } from "@fluentui/react-components";
 import {
   ArrowForward16Regular,
-  ArrowRight16Regular,
-  CheckmarkCircle16Filled,
   Copy16Regular,
   Delete16Regular,
   FolderOpen16Regular,
@@ -33,11 +30,13 @@ import { DropZone } from "../../components/DropZone";
 import { useNotify } from "../../components/notify";
 import { Page } from "../../components/Page";
 import { api } from "../../lib/bridge";
+import { allFilesFilter, dialogFilter, IMAGE_EXTENSIONS } from "../../lib/fileTypes";
 import { fileName, formatBytes } from "../../lib/format";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { useTransferStore } from "../../stores/transfer";
 import { AfterGallery } from "../../components/AfterGallery";
+import { ResultCard } from "../../components/ResultCard";
 
 import { ImageCanvasStage } from "./ImageCanvasStage";
 import { ImageToolbox } from "./ImageToolbox";
@@ -474,10 +473,7 @@ export default function ImageToolsPage() {
     if (!singleFile || !preview) return;
     const ext = preview.format.toLowerCase() === "jpeg" ? "jpg" : preview.format.toLowerCase();
     const defaultName = `${fileName(singleFile).replace(/\.[^.]+$/, "")}_edited.${ext}`;
-    const outPath = await api.dialogs.saveFile(defaultName, [
-      `Images (*.${ext})`,
-      "All files (*.*)",
-    ]);
+    const outPath = await api.dialogs.saveFile(defaultName, [dialogFilter(t, "images", [`.${ext}`]), allFilesFilter(t)]);
     if (!outPath) return;
 
     try {
@@ -806,10 +802,10 @@ export default function ImageToolsPage() {
               icon={Image24Regular}
               title={t("imageTools.dropSingleTitle")}
               hint={t("imageTools.dropSingleHint")}
-              accept={[".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff"]}
+              accept={IMAGE_EXTENSIONS}
               onFiles={(files) => files[0] && loadSingleFile(files[0])}
               onBrowse={async () => {
-                const files = await api.dialogs.openFiles(["Images (*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.tiff)"], false);
+                const files = await api.dialogs.openFiles([dialogFilter(t, "images")], false);
                 if (files[0]) loadSingleFile(files[0]);
               }}
             />
@@ -911,36 +907,12 @@ export default function ImageToolsPage() {
                 </div>
 
                 {lastSavedSingle && (
-                  <Card style={{ padding: "12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", marginTop: "12px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
-                      <Badge appearance="filled" color="success" icon={<CheckmarkCircle16Filled />}>
-                        {t("transfer.savedTitle")}
-                      </Badge>
-                      <Text weight="semibold" className={styles.fileNameText} title={lastSavedSingle.outPath}>
-                        {fileName(lastSavedSingle.outPath)} ({lastSavedSingle.width}×{lastSavedSingle.height} px · {formatBytes(lastSavedSingle.bytes)})
-                      </Text>
-                    </div>
-                    <div style={{ display: "flex", gap: "6px" }}>
-                      <Button
-                        size="small"
-                        appearance="subtle"
-                        icon={<FolderOpen16Regular />}
-                        onClick={() => api.system.reveal(lastSavedSingle.outPath).catch(() => undefined)}
-                      >
-                        {t("common.showInFolder")}
-                      </Button>
-                      <Button
-                        size="small"
-                        appearance="primary"
-                        icon={<ArrowRight16Regular />}
-                        onClick={() =>
-                          useTransferStore.getState().openModal([lastSavedSingle.outPath], "image_tools")
-                        }
-                      >
-                        {t("transfer.sendTo")}
-                      </Button>
-                    </div>
-                  </Card>
+                  <ResultCard
+                    title={t("transfer.savedTitle")}
+                    detail={`${lastSavedSingle.width}×${lastSavedSingle.height} px · ${formatBytes(lastSavedSingle.bytes)}`}
+                    path={lastSavedSingle.outPath}
+                    sourceToolId="image_tools"
+                  />
                 )}
               </div>
 
@@ -963,13 +935,13 @@ export default function ImageToolsPage() {
                 icon={FolderOpen16Regular}
                 title={t("imageTools.dropBatchTitle")}
                 hint={t("imageTools.dropBatchHint")}
-                accept={[".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff"]}
+                accept={IMAGE_EXTENSIONS}
                 onFiles={(files) => {
                   setBatchFiles(files);
                   setSelectedBatchIndex(0);
                 }}
                 onBrowse={async () => {
-                  const files = await api.dialogs.openFiles(["Images (*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.tiff)"], true);
+                  const files = await api.dialogs.openFiles([dialogFilter(t, "images")], true);
                   if (files.length) {
                     setBatchFiles(files);
                     setSelectedBatchIndex(0);
@@ -1051,7 +1023,7 @@ export default function ImageToolsPage() {
                         size="small"
                         icon={<FolderOpen16Regular />}
                         onClick={async () => {
-                          const files = await api.dialogs.openFiles(["Images (*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.tiff)"], true);
+                          const files = await api.dialogs.openFiles([dialogFilter(t, "images")], true);
                           if (files.length) {
                             setBatchFiles((prev) => Array.from(new Set([...prev, ...files])));
                           }

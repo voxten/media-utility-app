@@ -39,6 +39,8 @@ interface AfterGalleryProps {
   outputDir?: string;
   sourceToolId?: string;
   emptyText?: string;
+  /** One-line result summary shown under the title instead of the item count. */
+  summary?: string;
 }
 
 const useStyles = makeStyles({
@@ -63,6 +65,10 @@ const useStyles = makeStyles({
     display: "flex",
     alignItems: "center",
     gap: "8px",
+    flexWrap: "wrap",
+  },
+  summary: {
+    color: tokens.colorNeutralForeground3,
   },
   actionsGroup: {
     display: "flex",
@@ -147,6 +153,7 @@ export function AfterGallery({
   outputDir,
   sourceToolId,
   emptyText,
+  summary,
 }: AfterGalleryProps) {
   const { t } = useTranslation();
   const styles = useStyles();
@@ -219,9 +226,13 @@ export function AfterGallery({
       <div className={styles.header}>
         <div className={styles.titleGroup}>
           <Subtitle2>{galleryTitle}</Subtitle2>
-          <Badge appearance="filled" color="brand">
-            {normalizedItems.length}
-          </Badge>
+          {summary ? (
+            <Caption1 className={styles.summary}>{summary}</Caption1>
+          ) : (
+            <Badge appearance="filled" color="brand">
+              {normalizedItems.length}
+            </Badge>
+          )}
         </div>
 
         <div className={styles.actionsGroup}>

@@ -22,10 +22,7 @@ import {
 import {
   ArrowForward16Regular,
   ArrowMinimize24Regular,
-  ArrowRight16Regular,
-  CheckmarkCircle16Filled,
   Delete16Regular,
-  FolderOpen16Regular,
   Image24Regular,
   ImageEdit20Regular,
   Sparkle16Regular,
@@ -33,18 +30,20 @@ import {
 import { useTranslation } from "react-i18next";
 import { toolById } from "../../app/tools";
 import { ActionBar } from "../../components/ActionBar";
-import { CompareSlider } from "../../components/CompareSlider";
+import { ImageComparison } from "../../components/ImageComparison";
 import { DropZone } from "../../components/DropZone";
 import { useNotify } from "../../components/notify";
 import { Page } from "../../components/Page";
 import { SliderField } from "../../components/SliderField";
 import { api } from "../../lib/bridge";
 import { claimDrop, matchesExtensions } from "../../lib/drop";
+import { dialogFilter, IMAGE_EXTENSIONS } from "../../lib/fileTypes";
 import { fileName, formatBytes } from "../../lib/format";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { useTransferStore } from "../../stores/transfer";
 import { AfterGallery } from "../../components/AfterGallery";
+import { ResultCard } from "../../components/ResultCard";
 
 interface PreviewData {
   path: string;
@@ -569,10 +568,10 @@ export default function CompressorPage() {
               icon={Image24Regular}
               title={t("compressor.dropSingleTitle")}
               hint={t("compressor.dropSingleHint")}
-              accept={[".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff"]}
+              accept={IMAGE_EXTENSIONS}
               onFiles={(files) => files[0] && loadSingleFile(files[0])}
               onBrowse={async () => {
-                const files = await api.dialogs.openFiles(["Images (*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.tiff)"], false);
+                const files = await api.dialogs.openFiles([dialogFilter(t, "images")], false);
                 if (files[0]) loadSingleFile(files[0]);
               }}
             />
@@ -592,7 +591,7 @@ export default function CompressorPage() {
                   e.preventDefault();
                   claimDrop(e, (paths) => {
                     const accepted = paths.filter((p) =>
-                      matchesExtensions(p, [".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff"]),
+                      matchesExtensions(p, IMAGE_EXTENSIONS),
                     );
                     if (accepted[0]) loadSingleFile(accepted[0]);
                   });
@@ -610,10 +609,7 @@ export default function CompressorPage() {
                         appearance="subtle"
                         icon={<ImageEdit20Regular />}
                         onClick={async () => {
-                          const files = await api.dialogs.openFiles(
-                            ["Images (*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.tiff)"],
-                            false,
-                          );
+                          const files = await api.dialogs.openFiles([dialogFilter(t, "images")], false);
                           if (files[0]) loadSingleFile(files[0]);
                         }}
                       >
@@ -650,7 +646,8 @@ export default function CompressorPage() {
 
                 <div className={styles.sliderContainer}>
                   {compressedPreview?.dataUrl ? (
-                    <CompareSlider
+                    <ImageComparison
+                      maxHeight="100%"
                       before={preview.dataUrl}
                       after={compressedPreview.dataUrl}
                       beforeLabel={t("compressor.before")}
@@ -685,36 +682,11 @@ export default function CompressorPage() {
                 )}
 
                 {compressJob.result?.outPath && compressJob.result?.results?.[0]?.file === singleFile && (
-                  <Card style={{ padding: "12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", marginTop: "12px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
-                      <Badge appearance="filled" color="success" icon={<CheckmarkCircle16Filled />}>
-                        {t("compressor.status.done")}
-                      </Badge>
-                      <Text weight="semibold" className={styles.name} title={compressJob.result.outPath}>
-                        {fileName(compressJob.result.outPath)}
-                      </Text>
-                    </div>
-                    <div style={{ display: "flex", gap: "6px" }}>
-                      <Button
-                        size="small"
-                        appearance="subtle"
-                        icon={<FolderOpen16Regular />}
-                        onClick={() => api.system.reveal(compressJob.result!.outPath!).catch(() => undefined)}
-                      >
-                        {t("common.showInFolder")}
-                      </Button>
-                      <Button
-                        size="small"
-                        appearance="primary"
-                        icon={<ArrowRight16Regular />}
-                        onClick={() =>
-                          useTransferStore.getState().openModal([compressJob.result!.outPath!], "compressor")
-                        }
-                      >
-                        {t("transfer.sendTo")}
-                      </Button>
-                    </div>
-                  </Card>
+                  <ResultCard
+                    title={t("compressor.status.done")}
+                    path={compressJob.result.outPath}
+                    sourceToolId="compressor"
+                  />
                 )}
               </div>
 
@@ -744,13 +716,13 @@ export default function CompressorPage() {
                   icon={Image24Regular}
                   title={t("compressor.dropBatchTitle")}
                   hint={t("compressor.dropBatchHint")}
-                  accept={[".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff"]}
+                  accept={IMAGE_EXTENSIONS}
                   onFiles={(files) => {
                     compressJob.reset();
                     setBatchFiles((prev) => Array.from(new Set([...prev, ...files])));
                   }}
                   onBrowse={async () => {
-                    const files = await api.dialogs.openFiles(["Images (*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.tiff)"]);
+                    const files = await api.dialogs.openFiles([dialogFilter(t, "images")]);
                     if (files.length) {
                       compressJob.reset();
                       setBatchFiles((prev) => Array.from(new Set([...prev, ...files])));
@@ -837,7 +809,8 @@ export default function CompressorPage() {
 
                 <div className={styles.sliderContainer}>
                   {batchPreview && batchCompressedPreview?.dataUrl ? (
-                    <CompareSlider
+                    <ImageComparison
+                      maxHeight="100%"
                       before={batchPreview.dataUrl}
                       after={batchCompressedPreview.dataUrl}
                       beforeLabel={t("compressor.before")}
@@ -876,26 +849,15 @@ export default function CompressorPage() {
 
             {compressJob.result && !compressJob.result.outPath && batchFiles.length > 0 && (
               <>
-                <Card style={{ padding: "14px", display: "flex", flexDirection: "column", gap: "8px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <Badge appearance="filled" color="success" icon={<CheckmarkCircle16Filled />}>
-                      {t("compressor.status.done")}
-                    </Badge>
-                    <Text weight="semibold">
-                      {t("compressor.summary", {
-                        processed: compressJob.result.processed,
-                        total: compressJob.result.total,
-                        saved: formatBytes(compressJob.result.savedBytes),
-                        percent: compressJob.result.savedPercent,
-                      })}
-                    </Text>
-                  </div>
-                  <Caption1 className={styles.muted}>{compressJob.result.outputDir}</Caption1>
-                </Card>
-
                 {compressJob.result.results && compressJob.result.results.length > 0 && (
                   <AfterGallery
                     title={t("transfer.compressedTitle")}
+                    summary={t("compressor.summary", {
+                      processed: compressJob.result.processed,
+                      total: compressJob.result.total,
+                      saved: formatBytes(compressJob.result.savedBytes),
+                      percent: compressJob.result.savedPercent,
+                    })}
                     files={compressJob.result.files || compressJob.result.results.map((r) => r.dest)}
                     items={compressJob.result.results.map((r) => ({
                       file: r.file,

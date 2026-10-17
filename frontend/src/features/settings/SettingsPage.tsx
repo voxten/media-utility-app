@@ -58,6 +58,7 @@ import { Page, Section } from "../../components/Page";
 import { PathPicker } from "../../components/PathPicker";
 import { SettingGroup, SettingRow } from "../../components/SettingRow";
 import { api, getBackendMode } from "../../lib/bridge";
+import { dialogFilter } from "../../lib/fileTypes";
 import { formatBytes } from "../../lib/format";
 import type { AppInfo, Dependency, HardwareInfo, Language, StorageInfo, ThemePreference } from "../../lib/types";
 import { playChime, showDesktopNotification, useJob } from "../../stores/jobs";
@@ -615,7 +616,7 @@ function AdvancedSection() {
         >
           <PathPicker
             mode="file"
-            fileTypes={["Executables (*.exe)"]}
+            fileTypes={[dialogFilter(t, "executables")]}
             value={settings.customFfmpegPath || ""}
             placeholder={t("common.notSet")}
             clearable
@@ -751,7 +752,7 @@ export default function SettingsPage() {
                   <Caption1>{t(site === "youtube" ? "settings.cookiesYoutube" : "settings.cookiesX")}</Caption1>
                   <PathPicker
                     mode="file"
-                    fileTypes={["Cookies (*.txt)"]}
+                    fileTypes={[dialogFilter(t, "cookies")]}
                     value={settings.cookies[site]}
                     placeholder={t("common.notSet")}
                     clearable

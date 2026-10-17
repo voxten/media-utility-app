@@ -83,3 +83,93 @@ def test_expand_batch_urls_single_url():
     assert len(items) == 2
     assert items[0]["url"] == "https://example.com/video1"
     assert items[1]["url"] == "https://example.com/video2"
+
+
+def test_unique_youtube_dl_no_collision(tmp_path):
+    opts = {"outtmpl": str(Path(tmp_path) / "%(title)s.%(ext)s")}
+    with download.UniqueYoutubeDL(opts, target_ext="mp4") as ydl:
+        info = {"id": "1", "title": "my_video", "ext": "mp4"}
+        fn = ydl.prepare_filename(info)
+        assert fn == str(Path(tmp_path) / "my_video.mp4")
+
+
+def test_unique_youtube_dl_collision_adds_counter(tmp_path):
+    existing = Path(tmp_path) / "my_video.mp4"
+    existing.write_text("existing file")
+
+    opts = {"outtmpl": str(Path(tmp_path) / "%(title)s.%(ext)s")}
+    with download.UniqueYoutubeDL(opts, target_ext="mp4") as ydl:
+        info = {"id": "2", "title": "my_video", "ext": "mp4"}
+        fn = ydl.prepare_filename(info)
+        assert fn == str(Path(tmp_path) / "my_video (1).mp4")
+
+
+def test_unique_youtube_dl_multiple_collisions(tmp_path):
+    (Path(tmp_path) / "my_video.mp4").write_text("v0")
+    (Path(tmp_path) / "my_video (1).mp4").write_text("v1")
+
+    opts = {"outtmpl": str(Path(tmp_path) / "%(title)s.%(ext)s")}
+    with download.UniqueYoutubeDL(opts, target_ext="mp4") as ydl:
+        info = {"id": "3", "title": "my_video", "ext": "mp4"}
+        fn = ydl.prepare_filename(info)
+        assert fn == str(Path(tmp_path) / "my_video (2).mp4")
+
+
+def test_unique_youtube_dl_audio_conversion(tmp_path):
+    (Path(tmp_path) / "song.mp3").write_text("existing audio")
+
+    opts = {"outtmpl": str(Path(tmp_path) / "%(title)s.%(ext)s")}
+    with download.UniqueYoutubeDL(opts, target_ext="mp3") as ydl:
+        info = {"id": "4", "title": "song", "ext": "m4a"}
+        raw_fn = ydl.prepare_filename(info)
+        assert raw_fn == str(Path(tmp_path) / "song (1).m4a")
+
+        info["ext"] = "mp3"
+        post_fn = ydl.prepare_filename(info)
+        assert post_fn == str(Path(tmp_path) / "song (1).mp3")
+
+
+def test_unique_youtube_dl_temp_and_subsequent_calls_consistent(tmp_path):
+    (Path(tmp_path) / "clip.mp4").write_text("existing")
+
+    opts = {"outtmpl": str(Path(tmp_path) / "%(title)s.%(ext)s")}
+    with download.UniqueYoutubeDL(opts, target_ext="mp4") as ydl:
+        info = {"id": "5", "title": "clip", "ext": "mp4"}
+        fn1 = ydl.prepare_filename(info)
+        fn_temp = ydl.prepare_filename(info, "temp")
+        fn2 = ydl.prepare_filename(info)
+
+        assert fn1 == str(Path(tmp_path) / "clip (1).mp4")
+        assert fn_temp == str(Path(tmp_path) / "clip (1).mp4")
+        assert fn2 == str(Path(tmp_path) / "clip (1).mp4")
+
+
+def test_add_to_batch():
+    from backend.core.jobs import JobContext
+
+    ctx = JobContext("test-batch")
+    partials = []
+    ctx.partial = lambda data: partials.append(data)
+
+    queue = download.ActiveBatchQueue(ctx, None)
+    with download._active_batches_lock:
+        download._active_batches["test-batch"] = queue
+
+    try:
+        # Initial add
+        queue.add_urls(["https://example.com/1", "https://example.com/2"])
+        assert len(queue.items) == 2
+        assert queue.items[0]["index"] == 0
+        assert queue.items[1]["index"] == 1
+
+        # Dynamic append via add_to_batch
+        res = download.add_to_batch("test-batch", ["https://example.com/3", "https://example.com/4"])
+        assert res is True
+        assert len(queue.items) == 4
+        assert queue.items[2]["index"] == 2
+        assert queue.items[3]["index"] == 3
+        assert len(partials) == 4
+    finally:
+        with download._active_batches_lock:
+            download._active_batches.pop("test-batch", None)
+

@@ -21,6 +21,7 @@ import type {
   SyncPreviewResult,
   UpscaleOptions,
   UpscalePreview,
+  VideoFrame,
   VideoInfo,
   VideoSyncParams,
   WaveformData,
@@ -193,6 +194,8 @@ export const api = {
       title?: string;
     }) => call<JobId>("download", "start", params),
     batch: (params: { urls: string[]; outdir: string; template?: string }) => call<JobId>("download", "batch", params),
+    addToBatch: (params: { jobId?: string; urls: string[] }) =>
+      call<{ success: boolean }>("download", "add_to_batch", params),
   },
   watermark: {
     load: (path: string) => call<{ path: string; width: number; height: number; dataUrl: string }>("watermark", "load", path),
@@ -302,6 +305,8 @@ export const api = {
     probe: (path: string) => call<VideoInfo>("video_sync", "probe", path),
     waveform: (path: string, points = 1200, startSec = 0, duration?: number, streamIdx?: number) =>
       call<WaveformData>("video_sync", "waveform", path, points, startSec, duration, streamIdx),
+    frames: (path: string, startSec: number, duration: number, count: number, height = 96) =>
+      call<{ frames: VideoFrame[] }>("video_sync", "frames", path, startSec, duration, count, height),
     preview: (params: {
       videoPath: string;
       offsetSec: number;

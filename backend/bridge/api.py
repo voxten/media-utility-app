@@ -324,6 +324,12 @@ class DownloadApi(_Namespace):
             title=f"{len(urls)} URL",
         )
 
+    def add_to_batch(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        urls = [u for u in params.get("urls", []) if u.strip()]
+        job_id = params.get("jobId")
+        success = download.add_to_batch(job_id, urls)
+        return {"success": success}
+
 
 class WatermarkApi(_Namespace):
     def load(self, path: str) -> Dict[str, Any]:
@@ -473,6 +479,9 @@ class VideoSyncApi(_Namespace):
             start_sec=float(start_sec),
             duration=float(duration) if duration is not None else None,
         )
+
+    def frames(self, path: str, start_sec: float, duration: float, count: int, height: int = 96) -> Dict[str, Any]:
+        return video_sync.extract_frames(path, float(start_sec), float(duration), int(count), int(height))
 
     def preview(self, params: Dict[str, Any]) -> Dict[str, Any]:
         return video_sync.generate_preview(
