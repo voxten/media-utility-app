@@ -451,13 +451,7 @@ function HardwareSection() {
                 })
               : undefined
           }
-        >
-          {hardware && (
-            <Badge appearance="tint" color="informative">
-              {hardware.cpuThreads} Threads
-            </Badge>
-          )}
-        </SettingRow>
+        />
 
         <SettingRow
           icon={DeveloperBoard24Regular}
@@ -471,17 +465,7 @@ function HardwareSection() {
               ? t("settings.hardware.cudaActive", { version: hardware.cudaVersion || "CUDA" })
               : t("settings.hardware.cudaInactive")
           }
-        >
-          {hardware && (
-            <Badge
-              appearance="tint"
-              color={hardware.cudaAvailable ? "success" : "subtle"}
-              icon={hardware.cudaAvailable ? <CheckmarkCircle16Filled /> : undefined}
-            >
-              {hardware.cudaAvailable ? "CUDA Ready" : "CPU Fallback"}
-            </Badge>
-          )}
-        </SettingRow>
+        />
 
         {hardware && hardware.ramTotalBytes > 0 && (
           <SettingRow
@@ -491,11 +475,7 @@ function HardwareSection() {
               avail: formatBytes(hardware.ramAvailBytes),
               total: formatBytes(hardware.ramTotalBytes),
             })}
-          >
-            <Badge appearance="tint" color="informative">
-              {formatBytes(hardware.ramTotalBytes)} RAM
-            </Badge>
-          </SettingRow>
+          />
         )}
 
         <SettingRow
@@ -540,7 +520,7 @@ function NotificationsSection() {
 
   const handleTestNotification = () => {
     playChime("done");
-    showDesktopNotification("Media Studio", t("settings.notifications.testSent"));
+    showDesktopNotification(t("app.name"), t("settings.notifications.testSent"));
     notify.success(t("settings.notifications.testSent"));
   };
 

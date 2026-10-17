@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button, Caption1, makeStyles, Slider, tokens } from "@fluentui/react-components";
 import { Pause20Filled, Play20Filled } from "@fluentui/react-icons";
+import { useTranslation } from "react-i18next";
 import { formatDuration } from "../lib/format";
 
 const useStyles = makeStyles({
@@ -20,6 +21,7 @@ const useStyles = makeStyles({
 
 export function AudioPlayer({ src, autoPlay }: { src: string; autoPlay?: boolean }) {
   const styles = useStyles();
+  const { t } = useTranslation();
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
   const [position, setPosition] = useState(0);
@@ -50,7 +52,7 @@ export function AudioPlayer({ src, autoPlay }: { src: string; autoPlay?: boolean
         onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
         onError={() => setPlaying(false)}
       />
-      <Button appearance="primary" className={styles.play} icon={playing ? <Pause20Filled /> : <Play20Filled />} onClick={toggle} aria-label={playing ? "Pause" : "Play"} />
+      <Button appearance="primary" className={styles.play} icon={playing ? <Pause20Filled /> : <Play20Filled />} onClick={toggle} aria-label={playing ? t("common.pause") : t("common.play")} />
       <Slider
         className={styles.slider}
         min={0}
@@ -60,7 +62,7 @@ export function AudioPlayer({ src, autoPlay }: { src: string; autoPlay?: boolean
           if (audioRef.current) audioRef.current.currentTime = d.value;
           setPosition(d.value);
         }}
-        aria-label="Seek"
+        aria-label={t("common.seek")}
       />
       <Caption1 className={styles.time}>
         {formatDuration(position)} / {formatDuration(duration)}

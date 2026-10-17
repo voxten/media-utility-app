@@ -376,7 +376,7 @@ export default function DownloadPage() {
   const extra = activeJob?.status === "running" ? activeJob.extra : {};
   const detail =
     typeof extra.speed === "number"
-      ? `${formatBytes(Number(extra.downloaded))} / ${formatBytes(Number(extra.total))} · ${formatBytes(extra.speed)}/s · ETA ${formatDuration(Number(extra.eta))}`
+      ? `${formatBytes(Number(extra.downloaded))} / ${formatBytes(Number(extra.total))} · ${formatBytes(extra.speed)}/s · ${t("common.eta", { time: formatDuration(Number(extra.eta)) })}`
       : undefined;
 
   const runProbe = () => {
@@ -674,7 +674,7 @@ export default function DownloadPage() {
                           <ProgressBar value={(item.percent ?? 0) / 100} thickness="medium" />
                           {extra.speed != null && typeof extra.speed === "number" && (
                             <Caption1 className={styles.muted} style={{ textAlign: "right" }}>
-                              {formatBytes(extra.speed)}/s · ETA {formatDuration(Number(extra.eta))}
+                              {formatBytes(extra.speed)}/s · {t("common.eta", { time: formatDuration(Number(extra.eta)) })}
                             </Caption1>
                           )}
                         </div>

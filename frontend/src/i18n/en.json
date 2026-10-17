@@ -253,7 +253,13 @@
     "after": "After (Result)",
     "preview": "Preview",
     "saveError": "Could not save the file",
-    "andMore": "+ {{count}} more"
+    "andMore": "+ {{count}} more",
+    "addFiles": "Add files",
+    "files": "Files",
+    "eta": "{{time}} left",
+    "seek": "Seek",
+    "play": "Play",
+    "pause": "Pause"
   },
   "fileTypes": {
     "images": "Images",
@@ -324,7 +330,6 @@
     }
   },
   "compressor": {
-    "changeImage": "Change image",
     "status": {
       "processing": "Compressing: {{file}} ({{index}}/{{total}})",
       "done": "Compression completed successfully."
@@ -333,21 +338,10 @@
       "done": "{{name}} compressed ({{saved}})",
       "error": "Compression error for {{file}}: {{error}}"
     },
-    "tabs": {
-      "single": "Single file with preview",
-      "batch": "Batch compression (multiple files)"
-    },
-    "dropSingleTitle": "Drop image to compress here",
-    "dropSingleHint": "or click to select an image (PNG, JPEG, WebP)",
-    "dropBatchTitle": "Drop multiple images or a folder",
-    "dropBatchHint": "or click to select files for batch compression",
     "mode": "Compression mode",
     "modeSmart": "Smart Lossy (Balanced)",
-    "modeSmartHint": "Optimal balance between imperceptible quality change and high file savings",
     "modeLossless": "Lossless",
-    "modeLosslessHint": "100% pixel preservation, stream optimization and metadata scrubbing",
     "modeTarget": "Target Size",
-    "modeTargetHint": "Automatically tune parameters to keep file size under specified KB limit",
     "format": "Output format",
     "formatOriginal": "Same as original",
     "formatWebp": "Modern WebP (recommended, greatest savings)",
@@ -355,20 +349,17 @@
     "formatPng": "PNG (quantized 256-color palette)",
     "quality": "Quality",
     "targetKb": "Target size (KB)",
-    "targetKbPlaceholder": "e.g. 500",
-    "targetKbHint": "Maximum allowed output size in kilobytes",
     "before": "Original",
     "after": "Compressed",
-    "saved": "Saved: {{saved}} (-{{percent}}%)",
     "compressAction": "Compress & save",
-    "compressBatchAction": "Compress all files",
-    "outputDir": "Output folder",
     "summary": "Summary: {{processed}}/{{total}} files, saved {{saved}} (-{{percent}}%)",
     "toast": {
       "success": "Image compressed",
-      "batchSuccess": "Compressed {{count}} files (saved {{saved}})",
       "error": "Could not compress image"
-    }
+    },
+    "dropTitle": "Drop images to compress",
+    "dropHint": "One or more files: PNG, JPEG, WebP, BMP, TIFF",
+    "compressAll": "Compress {{count}} files"
   },
   "pdf": {
     "status": {
@@ -827,7 +818,9 @@
     "collapseDetails": "Collapse details",
     "expandDetails": "Expand details",
     "toastDone": "{{tool}}: finished",
-    "toastError": "{{tool}}: failed"
+    "toastError": "{{tool}}: failed",
+    "notifyDone": "Task completed",
+    "notifyError": "Task failed"
   },
   "palette": {
     "title": "Search",
@@ -883,7 +876,8 @@
       "brushRestore": "Restore detail",
       "brushNone": "Preview / Pan",
       "brushSize": "Brush Size",
-      "clearStrokes": "Clear strokes"
+      "clearStrokes": "Clear strokes",
+      "chokeNone": "None"
     },
     "preview": {
       "before": "Original",
@@ -931,19 +925,6 @@
     }
   },
   "imageTools": {
-    "tabs": {
-      "single": "Single image",
-      "batch": "Batch processing"
-    },
-    "subtabs": {
-      "resize": "Resize",
-      "crop": "Crop",
-      "transform": "Rotate & Flip"
-    },
-    "dropSingleTitle": "Drop an image to edit",
-    "dropSingleHint": "or click to select a file (PNG, JPG, WebP, BMP, TIFF)",
-    "dropBatchTitle": "Drop images for batch processing",
-    "dropBatchHint": "or click to choose image files",
     "width": "Width (px)",
     "height": "Height (px)",
     "lockAspect": "Lock aspect ratio",
@@ -967,10 +948,6 @@
     "crop9_16": "Vertical 9:16",
     "crop4_3": "Standard 4:3",
     "crop3_2": "Photo 3:2",
-    "cropX": "X position",
-    "cropY": "Y position",
-    "cropW": "Crop width",
-    "cropH": "Crop height",
     "rotation": "Rotation",
     "flip": "Flip",
     "rotateLeft": "Rotate 90° CCW",
@@ -991,24 +968,15 @@
     "cropCancel": "Cancel crop",
     "cropReset": "Full image",
     "cropHelper": "Draw a crop box by dragging, or use edge handles to adjust",
-    "cropDimensions": "Crop dimensions",
-    "cropAppliedToast": "Crop applied",
-    "resizeDelta": "Size",
-    "filterTooltip": "Pixel interpolation algorithm used for resizing",
-    "reset": "Reset to original",
     "copyClipboard": "Copy to clipboard",
     "copied": "Image copied to clipboard!",
     "saveAction": "Save image as…",
-    "batchAction": "Apply to all ({{count}})",
-    "batchOutputFolder": "Output folder",
     "applyToAll": "Apply to all",
     "appliedToAll": "Settings applied to all images in queue",
     "processBatch": "Process and save ({{count}})",
-    "selectedFile": "Editing file",
-    "batchHint": "Select a file from the list to adjust its size, crop and rotation",
     "status": {
       "starting": "Starting processing…",
-      "processing": "Processing image…",
+      "processing": "Processing image {{index}}/{{total}}…",
       "done": "Processing completed."
     },
     "toast": {
@@ -1016,7 +984,9 @@
       "batchSuccess": "Successfully processed {{count}} images",
       "copyError": "Could not copy image to clipboard",
       "error": "Error modifying image"
-    }
+    },
+    "dropTitle": "Drop images to edit",
+    "dropHint": "One or more files: PNG, JPEG, WebP, BMP, TIFF"
   },
   "transfer": {
     "sendTo": "Send to...",

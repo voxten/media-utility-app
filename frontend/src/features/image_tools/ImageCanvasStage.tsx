@@ -8,7 +8,7 @@ const useStyles = makeStyles({
     position: "relative",
     width: "100%",
     height: "100%",
-    minHeight: "440px",
+    minHeight: 0,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -112,7 +112,7 @@ export function ImageCanvasStage({
           <img
             className={styles.image}
             src={imageSrc}
-            alt="Preview"
+            alt=""
             style={{ width: `${displaySize.w}px`, height: `${displaySize.h}px` }}
           />
 

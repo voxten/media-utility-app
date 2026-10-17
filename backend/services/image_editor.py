@@ -216,7 +216,7 @@ def batch_process(
             ctx.log(f"Plik nie istnieje: {f}")
             continue
 
-        ctx.progress(int((idx / total) * 100), f"imageTools.status.processing ({idx + 1}/{total})")
+        ctx.progress(int((idx / total) * 100), "imageTools.status.processing", {"index": idx + 1, "total": total})
 
         # Resolve operations for this specific file
         file_ops: Dict[str, Any] = {}

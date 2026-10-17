@@ -1,47 +1,34 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Button, Caption1, Dropdown, makeStyles, Option, Spinner, tokens } from "@fluentui/react-components";
 import {
-  Badge,
-  Button,
-  Caption1,
-  Dropdown,
-  makeStyles,
-  Option,
-  Spinner,
-  Subtitle2,
-  Tab,
-  TabList,
-  Text,
-  tokens,
-  Tooltip,
-} from "@fluentui/react-components";
-import {
-  ArrowForward16Regular,
+  Add16Regular,
+  ArrowRight16Regular,
   Copy16Regular,
+  CopySelect20Regular,
   Delete16Regular,
-  FolderOpen16Regular,
   Image24Regular,
   Save16Regular,
-  Sparkle16Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { toolById } from "../../app/tools";
 import { ActionBar } from "../../components/ActionBar";
+import { AfterGallery } from "../../components/AfterGallery";
 import { DropZone } from "../../components/DropZone";
+import { FileStrip } from "../../components/FileStrip";
 import { useNotify } from "../../components/notify";
 import { Page } from "../../components/Page";
+import { Panel } from "../../components/Panel";
+import { ResultCard } from "../../components/ResultCard";
 import { api } from "../../lib/bridge";
 import { allFilesFilter, dialogFilter, IMAGE_EXTENSIONS } from "../../lib/fileTypes";
 import { fileName, formatBytes } from "../../lib/format";
-import { useJobRunner } from "../../lib/useJobRunner";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
+import { useJobRunner } from "../../lib/useJobRunner";
 import { useTransferStore } from "../../stores/transfer";
-import { AfterGallery } from "../../components/AfterGallery";
-import { ResultCard } from "../../components/ResultCard";
-
 import { ImageCanvasStage } from "./ImageCanvasStage";
 import { ImageToolbox } from "./ImageToolbox";
-import { ToolOptionsBar } from "./ToolOptionsBar";
 import type { CropRect } from "./InteractiveCropOverlay";
+import { ToolOptionsBar } from "./ToolOptionsBar";
 import {
   type ActiveTool,
   type BatchResult,
@@ -51,189 +38,49 @@ import {
   createDefaultOperations,
 } from "./types";
 
+const PREVIEW_DELAY_MS = 150;
+const OUTPUT_FORMATS = ["original", "png", "jpeg", "webp"] as const;
+type OutputFormat = (typeof OUTPUT_FORMATS)[number];
+
+const CROP_RATIOS: Record<string, number> = { "1_1": 1, "16_9": 16 / 9, "9_16": 9 / 16, "4_3": 4 / 3, "3_2": 3 / 2 };
+
 const useStyles = makeStyles({
-  container: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-    height: "100%",
-  },
-  studioLayout: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "10px",
-    width: "100%",
-  },
-  stageContainer: {
-    display: "flex",
-    gap: "12px",
-    alignItems: "stretch",
-    width: "100%",
-    minHeight: "480px",
-    height: "calc(64vh)",
-  },
-  canvasWrapper: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
-    flexGrow: 1,
-    minWidth: 0,
-    backgroundColor: tokens.colorNeutralBackground2,
-    borderRadius: tokens.borderRadiusLarge,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    padding: "12px",
-    boxSizing: "border-box",
-  },
-  canvasHeader: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "8px",
-    minWidth: 0,
-  },
-  fileNameText: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-    minWidth: 0,
-  },
-  muted: { color: tokens.colorNeutralForeground3 },
-  statsBar: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "12px",
-    flexWrap: "wrap",
-    padding: "6px 12px",
-    borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: tokens.colorNeutralBackground1,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-  },
-  filmstripPane: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "10px",
-    backgroundColor: tokens.colorNeutralBackground1,
-    borderRadius: tokens.borderRadiusLarge,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    padding: "12px 16px",
-    width: "100%",
-    boxSizing: "border-box",
-  },
-  filmstripHeader: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "16px",
-    flexWrap: "nowrap",
-    minHeight: "36px",
-  },
-  filmstripActions: {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    flexShrink: 0,
-    marginLeft: "auto",
-  },
-  filmstripListWrapper: {
-    display: "flex",
-    width: "100%",
-    overflowX: "auto",
-    padding: "6px 0 10px 0",
-    scrollbarWidth: "thin",
-  },
-  filmstripTrack: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    margin: "0 auto", // Centers items when fewer than viewport width, scrolls smoothly when overflowing
-    padding: "0 8px",
-    minWidth: "max-content",
-  },
-  filmstripCard: {
-    position: "relative",
-    display: "flex",
-    flexDirection: "column",
-    width: "116px",
-    height: "122px",
-    minWidth: "116px",
-    padding: "6px",
-    borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: tokens.colorNeutralBackground2,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    cursor: "pointer",
-    boxSizing: "border-box",
-    transition: "all 0.15s ease",
-    ":hover": {
-      backgroundColor: tokens.colorNeutralBackground2Hover,
-      transform: "translateY(-2px)",
-      boxShadow: tokens.shadow4,
-    },
-  },
-  filmstripCardActive: {
-    outline: `2px solid ${tokens.colorCompoundBrandStroke}`,
-    boxShadow: `0 0 0 2px ${tokens.colorCompoundBrandStroke}, ${tokens.shadow8}`,
-    backgroundColor: tokens.colorNeutralBackground2Selected,
-  },
-  filmstripThumbBox: {
-    width: "100%",
-    height: "76px",
-    borderRadius: tokens.borderRadiusSmall,
-    backgroundColor: tokens.colorNeutralBackground3,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-    marginBottom: "6px",
-    position: "relative",
-  },
-  filmstripImg: {
-    maxWidth: "100%",
-    maxHeight: "100%",
-    objectFit: "contain",
-    display: "block",
-    userSelect: "none",
-  },
-  filmstripCardFooter: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "4px",
-    marginTop: "auto",
-    width: "100%",
-  },
-  filmstripCardTitle: {
-    fontSize: "11px",
-    fontWeight: tokens.fontWeightRegular,
-    color: tokens.colorNeutralForeground1,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-    flexGrow: 1,
-    minWidth: 0,
-  },
-  filmstripCardDelete: {
-    position: "absolute",
-    top: "3px",
-    right: "3px",
-    width: "20px",
-    height: "20px",
-    minWidth: "20px",
-    padding: "0",
-    backgroundColor: "rgba(20, 20, 20, 0.75)",
-    backdropFilter: "blur(4px)",
-    color: "#fff",
-    borderRadius: "50%",
-    opacity: 0.75,
-    zIndex: 2,
-    transition: "opacity 0.15s ease, background-color 0.15s ease",
-    ":hover": {
-      opacity: 1,
-      backgroundColor: tokens.colorPaletteRedBackground3,
-      color: "#fff",
-    },
-  },
+  stageRow: { display: "flex", gap: "12px", alignItems: "stretch", minHeight: "520px", height: "68vh" },
+  viewer: { flexGrow: 1, minWidth: 0 },
+  canvas: { flexGrow: 1, minHeight: 0, display: "flex", overflow: "hidden" },
+  meta: { color: tokens.colorNeutralForeground3 },
+  format: { minWidth: "160px" },
 });
+
+/** Converts editor state into the backend's operation dict for an image of the given natural size. */
+function compileOps(ops: ImageOperations, width: number, height: number): Record<string, unknown> {
+  const res: Record<string, unknown> = {};
+  if (ops.cropActive && ops.cropW > 0 && ops.cropH > 0 && (ops.cropW < width || ops.cropH < height || ops.cropX > 0 || ops.cropY > 0)) {
+    res.crop = {
+      x: Math.max(0, ops.cropX),
+      y: Math.max(0, ops.cropY),
+      width: Math.min(width - ops.cropX, ops.cropW),
+      height: Math.min(height - ops.cropY, ops.cropH),
+    };
+  }
+  if (ops.rotation !== 0) res.rotate = ops.rotation;
+  if (ops.flipH) res.flip_h = true;
+  if (ops.flipV) res.flip_v = true;
+  if (ops.resizeActive) {
+    if (ops.scalePercent != null && ops.scalePercent > 0 && ops.scalePercent !== 100) {
+      res.resize = { percent: ops.scalePercent, filter: ops.filter || "lanczos" };
+    } else if (ops.targetWidth && ops.targetHeight && (ops.targetWidth !== width || ops.targetHeight !== height)) {
+      res.resize = { width: ops.targetWidth, height: ops.targetHeight, filter: ops.filter || "lanczos" };
+    }
+  }
+  return res;
+}
+
+const isEdited = (ops: ImageOperations | undefined) =>
+  !!ops && (ops.resizeActive || ops.cropActive || ops.rotation !== 0 || ops.flipH || ops.flipV);
+
+const cropOf = (ops: ImageOperations, width: number, height: number): CropRect =>
+  ops.cropActive ? { x: ops.cropX, y: ops.cropY, w: ops.cropW, h: ops.cropH } : { x: 0, y: 0, w: width, h: height };
 
 export default function ImageToolsPage() {
   const { t } = useTranslation();
@@ -241,227 +88,157 @@ export default function ImageToolsPage() {
   const notify = useNotify();
   const tool = toolById("image_tools")!;
 
-  const [activeTab, setActiveTab] = useState<"single" | "batch">("single");
-
-  // Single file state
-  const [singleFile, setSingleFile] = useState<string | null>(null);
+  const [files, setFiles] = useState<string[]>([]);
+  const [selected, setSelected] = useState(0);
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [transformed, setTransformed] = useState<TransformResult | null>(null);
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const [opsByFile, setOpsByFile] = useState<Record<string, ImageOperations>>({});
+  const [sizes, setSizes] = useState<Record<string, { width: number; height: number }>>({});
   const [activeTool, setActiveTool] = useState<ActiveTool>("crop");
-  const [singleOps, setSingleOps] = useState<ImageOperations>(createDefaultOperations());
-  const [currentCrop, setCurrentCrop] = useState<CropRect>({ x: 0, y: 0, w: 0, h: 0 });
-  const [lastSavedSingle, setLastSavedSingle] = useState<{ outPath: string; width: number; height: number; bytes: number } | null>(null);
+  const [crop, setCrop] = useState<CropRect>({ x: 0, y: 0, w: 0, h: 0 });
+  const [outputFormat, setOutputFormat] = useState<OutputFormat>("original");
+  const [saved, setSaved] = useState<{ outPath: string; width: number; height: number; bytes: number } | null>(null);
 
-  // Batch state
-  const [batchFiles, setBatchFiles] = useState<string[]>([]);
-  const [selectedBatchIndex, setSelectedBatchIndex] = useState(0);
-  const [batchPreview, setBatchPreview] = useState<PreviewData | null>(null);
-  const [batchTransformed, setBatchTransformed] = useState<TransformResult | null>(null);
-  const [isBatchLoading, setIsBatchLoading] = useState(false);
-  const [isBatchUpdating, setIsBatchUpdating] = useState(false);
-  const [batchActiveTool, setBatchActiveTool] = useState<ActiveTool>("crop");
-  const [batchFormat, setBatchFormat] = useState<string>("original");
-  const [batchOps, setBatchOps] = useState<Record<string, ImageOperations>>({});
-  const [batchCrop, setBatchCrop] = useState<CropRect>({ x: 0, y: 0, w: 0, h: 0 });
-  const [batchThumbnails, setBatchThumbnails] = useState<Record<string, string>>({});
-  const pendingThumbsRef = useRef<Set<string>>(new Set());
-
-  // Timers
-  const singleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const batchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Job Runner for batch processing
-  const batchJob = useJobRunner<BatchResult>("image_editor", {
-    onDone: (res) =>
-      notify.success(t("imageTools.toast.batchSuccess", { count: res.processed }), {
-        action: {
-          label: t("common.showInFolder"),
-          onClick: () => api.system.reveal(res.outputDir).catch(() => undefined),
-        },
-      }),
+  const job = useJobRunner<BatchResult>("image_editor", {
+    onDone: (res) => {
+      if (res.failed > 0) notify.warning(t("common.errorsCount", { count: res.failed }));
+    },
     onError: (err) => notify.error(t("imageTools.toast.error"), { body: err }),
   });
 
-  // Convert ImageOperations into backend dictionary
-  const compileBackendOps = useCallback((ops: ImageOperations, origW: number, origH: number): Record<string, unknown> => {
-    const res: Record<string, unknown> = {};
+  const current = files[selected] ?? null;
+  const ops = useMemo(
+    () => (current && preview ? (opsByFile[current] ?? createDefaultOperations(preview.width, preview.height)) : null),
+    [current, preview, opsByFile],
+  );
 
-    // 1. Crop
-    if (ops.cropActive && ops.cropW > 0 && ops.cropH > 0) {
-      if (ops.cropW < origW || ops.cropH < origH || ops.cropX > 0 || ops.cropY > 0) {
-        res.crop = {
-          x: Math.max(0, ops.cropX),
-          y: Math.max(0, ops.cropY),
-          width: Math.min(origW - ops.cropX, ops.cropW),
-          height: Math.min(origH - ops.cropY, ops.cropH),
-        };
-      }
-    }
-
-    // 2. Rotate
-    if (ops.rotation !== 0) {
-      res.rotate = ops.rotation;
-    }
-
-    // 3. Flip
-    if (ops.flipH) res.flip_h = true;
-    if (ops.flipV) res.flip_v = true;
-
-    // 4. Resize
-    if (ops.resizeActive) {
-      if (ops.scalePercent != null && ops.scalePercent > 0 && ops.scalePercent !== 100) {
-        res.resize = { percent: ops.scalePercent, filter: ops.filter || "lanczos" };
-      } else if (ops.targetWidth && ops.targetHeight && (ops.targetWidth !== origW || ops.targetHeight !== origH)) {
-        res.resize = {
-          width: ops.targetWidth,
-          height: ops.targetHeight,
-          filter: ops.filter || "lanczos",
-        };
-      }
-    }
-
-    return res;
-  }, []);
-
-  /* ==================== SINGLE FILE LOGIC ==================== */
-
-  const loadSingleFile = async (filePath: string) => {
-    try {
-      setIsUpdating(true);
-      setLastSavedSingle(null);
-      const data = await api.image_editor.loadPreview(filePath);
-      setSingleFile(filePath);
-      setPreview(data);
-      const initialOps = createDefaultOperations(data.width, data.height);
-      setSingleOps(initialOps);
-      setCurrentCrop({ x: 0, y: 0, w: data.width, h: data.height });
-      setActiveTool("crop");
-      setTransformed({
-        width: data.width,
-        height: data.height,
-        hasAlpha: data.hasAlpha,
-        dataUrl: data.dataUrl,
-      });
-    } catch (e) {
-      notify.error(String(e));
-    } finally {
-      setIsUpdating(false);
-    }
+  const resetResults = () => {
+    job.reset();
+    setSaved(null);
   };
 
-  const openTransferModal = useTransferStore((s) => s.openModal);
+  const addFiles = (paths: string[]) => {
+    if (!paths.length) return;
+    resetResults();
+    setFiles((prev) => Array.from(new Set([...prev, ...paths])));
+  };
 
-  // Consume incoming file transfers from other tools
-  useIncomingTransfer("image_tools", (files) => {
-    if (files.length > 1) {
-      setActiveTab("batch");
-      setBatchFiles(files);
-      setSelectedBatchIndex(0);
-    } else if (files[0]) {
-      setActiveTab("single");
-      loadSingleFile(files[0]);
-    }
-  });
+  const browse = async () => addFiles(await api.dialogs.openFiles([dialogFilter(t, "images")]));
 
-  // Debounced update for single file preview
+  const removeAt = (index: number) => {
+    resetResults();
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+    setSelected((s) => Math.max(0, s > index ? s - 1 : Math.min(s, files.length - 2)));
+  };
+
+  const clear = () => {
+    resetResults();
+    setFiles([]);
+    setOpsByFile({});
+    setSelected(0);
+  };
+
+  useIncomingTransfer("image_tools", addFiles);
+
   useEffect(() => {
-    if (!singleFile || !preview) return;
-    if (singleTimerRef.current) clearTimeout(singleTimerRef.current);
-
-    singleTimerRef.current = setTimeout(async () => {
-      try {
-        setIsUpdating(true);
-        const ops = compileBackendOps(singleOps, preview.width, preview.height);
-        const res = await api.image_editor.previewTransform(singleFile, ops);
-        setTransformed(res);
-      } catch {
-        // Ignore preview failure
-      } finally {
-        setIsUpdating(false);
-      }
-    }, 150);
-
+    setPreview(null);
+    setTransformed(null);
+    if (!current) return;
+    let live = true;
+    api.image_editor
+      .loadPreview(current)
+      .then((data) => {
+        if (!live) return;
+        setPreview(data);
+        setSizes((prev) => ({ ...prev, [current]: { width: data.width, height: data.height } }));
+        setOpsByFile((prev) => (prev[current] ? prev : { ...prev, [current]: createDefaultOperations(data.width, data.height) }));
+      })
+      .catch((err) => notify.error(String(err)));
     return () => {
-      if (singleTimerRef.current) clearTimeout(singleTimerRef.current);
+      live = false;
     };
-  }, [singleFile, preview, singleOps, compileBackendOps]);
+  }, [current, notify]);
 
-  // Single file Crop handlers
-  const handleApplySingleCrop = () => {
-    if (!preview) return;
-    setSingleOps((prev) => ({
-      ...prev,
-      cropActive: true,
-      cropX: currentCrop.x,
-      cropY: currentCrop.y,
-      cropW: currentCrop.w,
-      cropH: currentCrop.h,
-    }));
-    notify.success(t("imageTools.cropAppliedToast"));
-    setActiveTool("select");
-  };
+  // Sync the crop box with the stored crop whenever the file changes or its preview arrives.
+  useEffect(() => {
+    if (preview && ops) setCrop(cropOf(ops, preview.width, preview.height));
+    // Only on file/preview change; `ops` changes on every edit and must not reset an in-progress crop.
+  }, [preview]);
 
-  const handleCancelSingleCrop = () => {
-    if (!preview) return;
-    setCurrentCrop({
-      x: singleOps.cropActive ? singleOps.cropX : 0,
-      y: singleOps.cropActive ? singleOps.cropY : 0,
-      w: singleOps.cropActive ? singleOps.cropW : preview.width,
-      h: singleOps.cropActive ? singleOps.cropH : preview.height,
-    });
-    setActiveTool("select");
-  };
-
-  const handleResetSingleCrop = () => {
-    if (!preview) return;
-    setSingleOps((prev) => ({
-      ...prev,
-      cropActive: false,
-      cropPreset: "free",
-      cropX: 0,
-      cropY: 0,
-      cropW: preview.width,
-      cropH: preview.height,
-    }));
-    setCurrentCrop({ x: 0, y: 0, w: preview.width, h: preview.height });
-  };
-
-  const handleSingleCropPresetChange = (preset: string) => {
-    if (!preview) return;
-    let targetRatio: number | null = null;
-    if (preset === "1_1") targetRatio = 1;
-    else if (preset === "16_9") targetRatio = 16 / 9;
-    else if (preset === "9_16") targetRatio = 9 / 16;
-    else if (preset === "4_3") targetRatio = 4 / 3;
-    else if (preset === "3_2") targetRatio = 3 / 2;
-
-    setSingleOps((prev) => ({ ...prev, cropPreset: preset }));
-
-    if (targetRatio) {
-      let newW = preview.width;
-      let newH = Math.round(newW / targetRatio);
-      if (newH > preview.height) {
-        newH = preview.height;
-        newW = Math.round(newH * targetRatio);
+  useEffect(() => {
+    if (!current || !preview || !ops) return;
+    let live = true;
+    const timer = window.setTimeout(async () => {
+      setUpdating(true);
+      try {
+        const res = await api.image_editor.previewTransform(current, compileOps(ops, preview.width, preview.height));
+        if (live) setTransformed(res);
+      } catch (err) {
+        console.warn("Image preview failed:", err);
+      } finally {
+        if (live) setUpdating(false);
       }
-      const newX = Math.round((preview.width - newW) / 2);
-      const newY = Math.round((preview.height - newH) / 2);
-      setCurrentCrop({ x: newX, y: newY, w: newW, h: newH });
-    }
+    }, PREVIEW_DELAY_MS);
+    return () => {
+      live = false;
+      window.clearTimeout(timer);
+    };
+  }, [current, preview, ops]);
+
+  const updateOps = (updater: (prev: ImageOperations) => ImageOperations) => {
+    if (!current || !preview) return;
+    resetResults();
+    setOpsByFile((prev) => ({ ...prev, [current]: updater(prev[current] ?? createDefaultOperations(preview.width, preview.height)) }));
   };
 
-  const handleSingleReset = () => {
+  const applyCrop = () => {
+    updateOps((prev) => ({ ...prev, cropActive: true, cropX: crop.x, cropY: crop.y, cropW: crop.w, cropH: crop.h }));
+    setActiveTool("select");
+  };
+
+  const cancelCrop = () => {
+    if (preview && ops) setCrop(cropOf(ops, preview.width, preview.height));
+    setActiveTool("select");
+  };
+
+  const resetCrop = () => {
     if (!preview) return;
-    setSingleOps(createDefaultOperations(preview.width, preview.height));
-    setCurrentCrop({ x: 0, y: 0, w: preview.width, h: preview.height });
+    updateOps((prev) => ({ ...prev, cropActive: false, cropPreset: "free", cropX: 0, cropY: 0, cropW: preview.width, cropH: preview.height }));
+    setCrop({ x: 0, y: 0, w: preview.width, h: preview.height });
   };
 
-  const handleCopyClipboard = async () => {
+  const changeCropPreset = (preset: string) => {
+    if (!preview) return;
+    updateOps((prev) => ({ ...prev, cropPreset: preset }));
+    const ratio = CROP_RATIOS[preset];
+    if (!ratio) return;
+    let w = preview.width;
+    let h = Math.round(w / ratio);
+    if (h > preview.height) {
+      h = preview.height;
+      w = Math.round(h * ratio);
+    }
+    setCrop({ x: Math.round((preview.width - w) / 2), y: Math.round((preview.height - h) / 2), w, h });
+  };
+
+  const resetAll = () => {
+    if (!preview) return;
+    updateOps(() => createDefaultOperations(preview.width, preview.height));
+    setCrop({ x: 0, y: 0, w: preview.width, h: preview.height });
+  };
+
+  const applyToAll = () => {
+    if (!ops) return;
+    resetResults();
+    setOpsByFile(Object.fromEntries(files.map((f) => [f, { ...ops }])));
+    notify.success(t("imageTools.appliedToAll"));
+  };
+
+  const copyToClipboard = async () => {
     if (!transformed?.dataUrl) return;
     try {
-      const res = await fetch(transformed.dataUrl);
-      const blob = await res.blob();
+      const blob = await (await fetch(transformed.dataUrl)).blob();
       await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
       notify.success(t("imageTools.copied"));
     } catch {
@@ -469,719 +246,198 @@ export default function ImageToolsPage() {
     }
   };
 
-  const handleSaveSingle = async () => {
-    if (!singleFile || !preview) return;
-    const ext = preview.format.toLowerCase() === "jpeg" ? "jpg" : preview.format.toLowerCase();
-    const defaultName = `${fileName(singleFile).replace(/\.[^.]+$/, "")}_edited.${ext}`;
-    const outPath = await api.dialogs.saveFile(defaultName, [dialogFilter(t, "images", [`.${ext}`]), allFilesFilter(t)]);
-    if (!outPath) return;
-
-    try {
-      const ops = compileBackendOps(singleOps, preview.width, preview.height);
-      const res = await api.image_editor.saveTransformed(singleFile, outPath, ops);
-      setLastSavedSingle(res);
-      notify.success(t("imageTools.toast.saveSuccess"), {
-        body: res.outPath,
-        action: {
-          label: t("common.showInFolder"),
-          onClick: () => api.system.reveal(res.outPath).catch(() => undefined),
-        },
-      });
-    } catch (e) {
-      notify.error(String(e));
-    }
-  };
-
-  /* ==================== BATCH PROCESSING LOGIC ==================== */
-
-  const currentBatchFile = batchFiles[selectedBatchIndex] || null;
-
-  const getCurrentFileOps = useCallback((file: string | null, w = 0, h = 0): ImageOperations => {
-    if (!file) return createDefaultOperations();
-    return batchOps[file] || createDefaultOperations(w, h);
-  }, [batchOps]);
-
-  const updateCurrentBatchOps = (updater: (prev: ImageOperations) => ImageOperations) => {
-    if (!currentBatchFile) return;
-    setBatchOps((prev) => {
-      const existing = prev[currentBatchFile] || createDefaultOperations(batchPreview?.width, batchPreview?.height);
-      return {
-        ...prev,
-        [currentBatchFile]: updater(existing),
-      };
-    });
-  };
-
-  const handleSelectBatchFile = (idx: number) => {
-    if (idx === selectedBatchIndex && batchPreview) return;
-    setSelectedBatchIndex(idx);
-    setIsBatchLoading(true);
-    setBatchTransformed(null);
-  };
-
-  // When active batch file changes, load preview data
-  useEffect(() => {
-    if (!batchFiles.length) {
-      setBatchPreview(null);
-      setBatchTransformed(null);
-      setIsBatchLoading(false);
-      return;
-    }
-
-    const targetFile = batchFiles[selectedBatchIndex] || batchFiles[0];
-    if (!targetFile) return;
-
-    let isCurrent = true;
-    setIsBatchLoading(true);
-
-    api.image_editor
-      .loadPreview(targetFile)
-      .then((data) => {
-        if (!isCurrent) return;
-        setBatchPreview(data);
-        if (data.dataUrl) {
-          setBatchThumbnails((prev) => (prev[targetFile] ? prev : { ...prev, [targetFile]: data.dataUrl }));
-        }
-
-        setBatchOps((prev) => {
-          if (!prev[targetFile]) {
-            return {
-              ...prev,
-              [targetFile]: createDefaultOperations(data.width, data.height),
-            };
-          }
-          return prev;
-        });
-
-        const currentOps = batchOps[targetFile] || createDefaultOperations(data.width, data.height);
-        setBatchCrop({
-          x: currentOps.cropActive ? currentOps.cropX : 0,
-          y: currentOps.cropActive ? currentOps.cropY : 0,
-          w: currentOps.cropActive ? currentOps.cropW : data.width,
-          h: currentOps.cropActive ? currentOps.cropH : data.height,
-        });
-
-        const backendOps = compileBackendOps(currentOps, data.width, data.height);
-        return api.image_editor.previewTransform(targetFile, backendOps);
-      })
-      .then((res) => {
-        if (!isCurrent || !res) return;
-        setBatchTransformed(res);
-      })
-      .catch((e) => {
-        if (isCurrent) notify.error(String(e));
-      })
-      .finally(() => {
-        if (isCurrent) setIsBatchLoading(false);
-      });
-
-    return () => {
-      isCurrent = false;
-    };
-  }, [batchFiles, selectedBatchIndex, compileBackendOps]);
-
-  // Preload batch thumbnails for carousel filmstrip
-  useEffect(() => {
-    if (!batchFiles.length) {
-      setBatchThumbnails({});
-      pendingThumbsRef.current.clear();
-      return;
-    }
-
-    let isCurrent = true;
-    const toLoad = batchFiles.filter((f) => !batchThumbnails[f] && !pendingThumbsRef.current.has(f));
-    toLoad.forEach((f) => {
-      pendingThumbsRef.current.add(f);
-      api.image_editor
-        .loadPreview(f)
-        .then((data) => {
-          if (isCurrent && data?.dataUrl) {
-            setBatchThumbnails((prev) => ({ ...prev, [f]: data.dataUrl }));
-          }
-        })
-        .catch(() => undefined)
-        .finally(() => {
-          pendingThumbsRef.current.delete(f);
-        });
-    });
-
-    return () => {
-      isCurrent = false;
-    };
-  }, [batchFiles, batchThumbnails]);
-
-  // Debounced update when batch ops change
-  useEffect(() => {
-    if (!currentBatchFile || !batchPreview) return;
-    if (batchTimerRef.current) clearTimeout(batchTimerRef.current);
-
-    batchTimerRef.current = setTimeout(async () => {
+  const save = async () => {
+    if (!current || !preview || !ops) return;
+    if (files.length === 1) {
+      const ext = preview.format.toLowerCase() === "jpeg" ? "jpg" : preview.format.toLowerCase();
+      const outPath = await api.dialogs.saveFile(`${fileName(current).replace(/\.[^.]+$/, "")}_edited.${ext}`, [
+        dialogFilter(t, "images", [`.${ext}`]),
+        allFilesFilter(t),
+      ]);
+      if (!outPath) return;
       try {
-        setIsBatchUpdating(true);
-        const ops = getCurrentFileOps(currentBatchFile, batchPreview.width, batchPreview.height);
-        const backendOps = compileBackendOps(ops, batchPreview.width, batchPreview.height);
-        const res = await api.image_editor.previewTransform(currentBatchFile, backendOps);
-        setBatchTransformed(res);
-      } catch {
-        // Ignore
-      } finally {
-        setIsBatchUpdating(false);
+        setSaved(await api.image_editor.saveTransformed(current, outPath, compileOps(ops, preview.width, preview.height)));
+      } catch (err) {
+        notify.error(t("imageTools.toast.error"), { body: String(err) });
       }
-    }, 150);
-
-    return () => {
-      if (batchTimerRef.current) clearTimeout(batchTimerRef.current);
-    };
-  }, [batchOps, currentBatchFile, batchPreview, compileBackendOps, getCurrentFileOps]);
-
-  const handleApplyBatchCrop = () => {
-    if (!batchPreview || !currentBatchFile) return;
-    updateCurrentBatchOps((prev) => ({
-      ...prev,
-      cropActive: true,
-      cropX: batchCrop.x,
-      cropY: batchCrop.y,
-      cropW: batchCrop.w,
-      cropH: batchCrop.h,
-    }));
-    notify.success(t("imageTools.cropAppliedToast"));
-    setBatchActiveTool("select");
-  };
-
-  const handleCancelBatchCrop = () => {
-    if (!batchPreview || !currentBatchFile) return;
-    const ops = getCurrentFileOps(currentBatchFile, batchPreview.width, batchPreview.height);
-    setBatchCrop({
-      x: ops.cropActive ? ops.cropX : 0,
-      y: ops.cropActive ? ops.cropY : 0,
-      w: ops.cropActive ? ops.cropW : batchPreview.width,
-      h: ops.cropActive ? ops.cropH : batchPreview.height,
-    });
-    setBatchActiveTool("select");
-  };
-
-  const handleResetBatchCrop = () => {
-    if (!batchPreview || !currentBatchFile) return;
-    updateCurrentBatchOps((prev) => ({
-      ...prev,
-      cropActive: false,
-      cropPreset: "free",
-      cropX: 0,
-      cropY: 0,
-      cropW: batchPreview.width,
-      cropH: batchPreview.height,
-    }));
-    setBatchCrop({ x: 0, y: 0, w: batchPreview.width, h: batchPreview.height });
-  };
-
-  const handleBatchCropPresetChange = (preset: string) => {
-    if (!batchPreview || !currentBatchFile) return;
-    let targetRatio: number | null = null;
-    if (preset === "1_1") targetRatio = 1;
-    else if (preset === "16_9") targetRatio = 16 / 9;
-    else if (preset === "9_16") targetRatio = 9 / 16;
-    else if (preset === "4_3") targetRatio = 4 / 3;
-    else if (preset === "3_2") targetRatio = 3 / 2;
-
-    updateCurrentBatchOps((prev) => ({ ...prev, cropPreset: preset }));
-
-    if (targetRatio) {
-      let newW = batchPreview.width;
-      let newH = Math.round(newW / targetRatio);
-      if (newH > batchPreview.height) {
-        newH = batchPreview.height;
-        newW = Math.round(newH * targetRatio);
-      }
-      const newX = Math.round((batchPreview.width - newW) / 2);
-      const newY = Math.round((batchPreview.height - newH) / 2);
-      setBatchCrop({ x: newX, y: newY, w: newW, h: newH });
+      return;
     }
-  };
-
-  const handleBatchResetCurrent = () => {
-    if (!currentBatchFile || !batchPreview) return;
-    setBatchOps((prev) => ({
-      ...prev,
-      [currentBatchFile]: createDefaultOperations(batchPreview.width, batchPreview.height),
-    }));
-    setBatchCrop({ x: 0, y: 0, w: batchPreview.width, h: batchPreview.height });
-  };
-
-  const handleApplyToAll = () => {
-    if (!currentBatchFile) return;
-    const current = batchOps[currentBatchFile] || createDefaultOperations(batchPreview?.width, batchPreview?.height);
-    const nextMap: Record<string, ImageOperations> = {};
-    for (const file of batchFiles) {
-      nextMap[file] = { ...current };
-    }
-    setBatchOps(nextMap);
-    notify.success(t("imageTools.appliedToAll"));
-  };
-
-  const handleBatchStart = async () => {
-    if (!batchFiles.length) return;
     const outDir = await api.dialogs.openFolder();
     if (!outDir) return;
-
-    const perFileOps: Record<string, Record<string, unknown>> = {};
-    for (const f of batchFiles) {
-      const ops = batchOps[f];
-      if (ops) {
-        const origW = ops.targetWidth || 0;
-        const origH = ops.targetHeight || 0;
-        perFileOps[f] = compileBackendOps(ops, origW, origH);
-      } else {
-        perFileOps[f] = {};
-      }
-    }
-
-    const fmt = batchFormat === "original" ? undefined : batchFormat;
-    batchJob.start(() => api.image_editor.startBatch(batchFiles, outDir, perFileOps, fmt)).catch((e) => notify.error(String(e)));
+    const perFile = Object.fromEntries(
+      files.map((f) => {
+        const size = sizes[f];
+        const fileOps = opsByFile[f];
+        return [f, fileOps && size ? compileOps(fileOps, size.width, size.height) : {}];
+      }),
+    );
+    job
+      .start(() => api.image_editor.startBatch(files, outDir, perFile, outputFormat === "original" ? undefined : outputFormat))
+      .catch((err) => notify.error(String(err)));
   };
 
-  // Keyboard Shortcuts (C, R, T, V, Enter, Esc)
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
-        return;
-      }
-
-      if (activeTab === "single" && preview) {
-        if (e.key === "c" || e.key === "C") {
-          setActiveTool("crop");
-        } else if (e.key === "r" || e.key === "R") {
-          setActiveTool("resize");
-        } else if (e.key === "t" || e.key === "T") {
-          setActiveTool("transform");
-        } else if (e.key === "v" || e.key === "V") {
-          setActiveTool("select");
-        } else if (e.key === "Enter" && activeTool === "crop") {
-          handleApplySingleCrop();
-        } else if (e.key === "Escape" && activeTool === "crop") {
-          handleCancelSingleCrop();
-        }
-      } else if (activeTab === "batch" && batchPreview) {
-        if (e.key === "c" || e.key === "C") {
-          setBatchActiveTool("crop");
-        } else if (e.key === "r" || e.key === "R") {
-          setBatchActiveTool("resize");
-        } else if (e.key === "t" || e.key === "T") {
-          setBatchActiveTool("transform");
-        } else if (e.key === "v" || e.key === "V") {
-          setBatchActiveTool("select");
-        } else if (e.key === "Enter" && batchActiveTool === "crop") {
-          handleApplyBatchCrop();
-        } else if (e.key === "Escape" && batchActiveTool === "crop") {
-          handleCancelBatchCrop();
-        }
-      }
+      if (!preview || (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable))) return;
+      const key = e.key.toLowerCase();
+      if (key === "c") setActiveTool("crop");
+      else if (key === "r") setActiveTool("resize");
+      else if (key === "t") setActiveTool("transform");
+      else if (key === "v") setActiveTool("select");
+      else if (e.key === "Enter" && activeTool === "crop") applyCrop();
+      else if (e.key === "Escape" && activeTool === "crop") cancelCrop();
     };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [activeTab, preview, batchPreview, activeTool, batchActiveTool, currentCrop, batchCrop]);
+  if (!files.length) {
+    return (
+      <Page title={t("tools.image_tools.name")} description={t("tools.image_tools.description")} icon={tool.icon} accent={tool.accent}>
+        <DropZone
+          icon={Image24Regular}
+          title={t("imageTools.dropTitle")}
+          hint={t("imageTools.dropHint")}
+          accept={IMAGE_EXTENSIONS}
+          onFiles={addFiles}
+          onBrowse={browse}
+        />
+      </Page>
+    );
+  }
 
-  const activeBatchOps = getCurrentFileOps(currentBatchFile, batchPreview?.width, batchPreview?.height);
+  const edited = new Set(files.filter((f) => isEdited(opsByFile[f])));
+  const resized = transformed && preview && (transformed.width !== preview.width || transformed.height !== preview.height);
+  const result = job.result;
+  const formatLabel = (f: OutputFormat) => (f === "original" ? t("compressor.formatOriginal") : f.toUpperCase());
 
   return (
     <Page title={t("tools.image_tools.name")} description={t("tools.image_tools.description")} icon={tool.icon} accent={tool.accent}>
-      <div className={styles.container}>
-        <TabList selectedValue={activeTab} onTabSelect={(_, d) => setActiveTab(d.value as "single" | "batch")}>
-          <Tab value="single" icon={<Sparkle16Regular />}>
-            {t("imageTools.tabs.single")}
-          </Tab>
-          <Tab value="batch" icon={<FolderOpen16Regular />}>
-            {t("imageTools.tabs.batch")}
-          </Tab>
-        </TabList>
+      {preview && ops && (
+        <ToolOptionsBar
+          activeTool={activeTool}
+          ops={ops}
+          naturalWidth={preview.width}
+          naturalHeight={preview.height}
+          onOpsChange={updateOps}
+          onCropPresetChange={changeCropPreset}
+        />
+      )}
 
-        {activeTab === "single" ? (
-          !preview ? (
-            <DropZone
-              icon={Image24Regular}
-              title={t("imageTools.dropSingleTitle")}
-              hint={t("imageTools.dropSingleHint")}
-              accept={IMAGE_EXTENSIONS}
-              onFiles={(files) => files[0] && loadSingleFile(files[0])}
-              onBrowse={async () => {
-                const files = await api.dialogs.openFiles([dialogFilter(t, "images")], false);
-                if (files[0]) loadSingleFile(files[0]);
-              }}
-            />
-          ) : (
-            <div className={styles.studioLayout}>
-              {/* Dynamic Contextual Tool Options Bar */}
-              <ToolOptionsBar
-                activeTool={activeTool}
-                ops={singleOps}
+      <div className={styles.stageRow}>
+        <ImageToolbox activeTool={activeTool} onSelectTool={setActiveTool} onReset={resetAll} disabled={!preview} />
+
+        <Panel
+          className={styles.viewer}
+          title={current ? fileName(current) : undefined}
+          actions={
+            <>
+              <Button appearance="subtle" icon={<Add16Regular />} onClick={browse}>
+                {t("common.addFiles")}
+              </Button>
+              {!result && !saved && (
+                <Button appearance="subtle" icon={<ArrowRight16Regular />} onClick={() => useTransferStore.getState().openModal(files, "image_tools")}>
+                  {t("transfer.sendTo")}
+                </Button>
+              )}
+              <Button appearance="subtle" icon={<Delete16Regular />} onClick={() => removeAt(selected)}>
+                {t("common.remove")}
+              </Button>
+            </>
+          }
+        >
+          {preview && (
+            <Caption1 className={styles.meta}>
+              {preview.width} × {preview.height} px · {preview.format.toUpperCase()} · {formatBytes(preview.size)}
+              {resized && ` → ${transformed.width} × ${transformed.height} px`}
+            </Caption1>
+          )}
+          <div className={styles.canvas}>
+            {preview && ops ? (
+              <ImageCanvasStage
+                imageSrc={activeTool === "crop" ? preview.dataUrl : (transformed?.dataUrl ?? preview.dataUrl)}
                 naturalWidth={preview.width}
                 naturalHeight={preview.height}
-                onOpsChange={setSingleOps}
-                onCropPresetChange={handleSingleCropPresetChange}
-              />
-
-              {/* Main Studio Area: Toolbox on Left + Canvas Stage on Right */}
-              <div className={styles.stageContainer}>
-                {/* Przybornik (Studio Toolbox) */}
-                <ImageToolbox
-                  activeTool={activeTool}
-                  onSelectTool={setActiveTool}
-                  onReset={handleSingleReset}
-                />
-
-                {/* Hero Viewport Canvas Stage */}
-                <div className={styles.canvasWrapper}>
-                  <div className={styles.canvasHeader}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
-                      <Image24Regular />
-                      <Subtitle2 className={styles.fileNameText}>{preview.fileName}</Subtitle2>
-                      <Caption1 className={styles.muted}>
-                        {preview.width} × {preview.height} px · {preview.format.toUpperCase()} · {formatBytes(preview.size)}
-                        {transformed && (transformed.width !== preview.width || transformed.height !== preview.height) && (
-                          <span> ➔ {transformed.width} × {transformed.height} px</span>
-                        )}
-                      </Caption1>
-                    </div>
-
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      {isUpdating && <Spinner size="tiny" label={t("common.loading")} />}
-                      {singleFile && (
-                        <Button
-                          appearance="subtle"
-                          icon={<ArrowForward16Regular />}
-                          onClick={() => openTransferModal(singleFile, "image_tools")}
-                          title={t("transfer.buttonTooltip")}
-                        >
-                          {t("transfer.button")}
-                        </Button>
-                      )}
-                      <Button appearance="subtle" icon={<Copy16Regular />} onClick={handleCopyClipboard}>
-                        {t("imageTools.copyClipboard")}
-                      </Button>
-                      <Button
-                        appearance="subtle"
-                        icon={<Delete16Regular />}
-                        onClick={() => {
-                          setSingleFile(null);
-                          setPreview(null);
-                          setTransformed(null);
-                          setLastSavedSingle(null);
-                        }}
-                      >
-                        {t("common.clearAll")}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <ImageCanvasStage
-                    imageSrc={activeTool === "crop" ? preview.dataUrl : (transformed?.dataUrl ?? preview.dataUrl)}
-                    naturalWidth={preview.width}
-                    naturalHeight={preview.height}
-                    activeTool={activeTool}
-                    crop={currentCrop}
-                    cropPreset={singleOps.cropPreset}
-                    isLoading={isUpdating}
-                    onCropChange={setCurrentCrop}
-                    onApplyCrop={handleApplySingleCrop}
-                    onCancelCrop={handleCancelSingleCrop}
-                    onResetCrop={handleResetSingleCrop}
-                  />
-
-                  {/* Informative Stats Footer Bar */}
-                  <div className={styles.statsBar}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <Caption1>{t("imageTools.width")}:</Caption1>
-                      <Text weight="semibold">{transformed?.width ?? preview.width} px</Text>
-                      <Caption1 style={{ marginLeft: "12px" }}>{t("imageTools.height")}:</Caption1>
-                      <Text weight="semibold">{transformed?.height ?? preview.height} px</Text>
-                    </div>
-
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      {singleOps.cropActive && <Badge color="brand">Crop: {singleOps.cropW}×{singleOps.cropH}</Badge>}
-                      {singleOps.rotation !== 0 && <Badge color="informative">{singleOps.rotation}°</Badge>}
-                      {singleOps.flipH && <Badge color="informative">Flip H</Badge>}
-                      {singleOps.flipV && <Badge color="informative">Flip V</Badge>}
-                    </div>
-                  </div>
-                </div>
-
-                {lastSavedSingle && (
-                  <ResultCard
-                    title={t("transfer.savedTitle")}
-                    detail={`${lastSavedSingle.width}×${lastSavedSingle.height} px · ${formatBytes(lastSavedSingle.bytes)}`}
-                    path={lastSavedSingle.outPath}
-                    sourceToolId="image_tools"
-                  />
-                )}
-              </div>
-
-              {/* Bottom Action Bar */}
-              <ActionBar idleText={`${transformed?.width ?? preview.width} × ${transformed?.height ?? preview.height} px`}>
-                <Button appearance="subtle" icon={<Copy16Regular />} onClick={handleCopyClipboard}>
-                  {t("imageTools.copyClipboard")}
-                </Button>
-                <Button appearance="primary" icon={<Save16Regular />} onClick={handleSaveSingle}>
-                  {t("imageTools.saveAction")}
-                </Button>
-              </ActionBar>
-            </div>
-          )
-        ) : (
-          /* ==================== BATCH PROCESSING TAB ==================== */
-          <div className={styles.studioLayout}>
-            {!batchFiles.length ? (
-              <DropZone
-                icon={FolderOpen16Regular}
-                title={t("imageTools.dropBatchTitle")}
-                hint={t("imageTools.dropBatchHint")}
-                accept={IMAGE_EXTENSIONS}
-                onFiles={(files) => {
-                  setBatchFiles(files);
-                  setSelectedBatchIndex(0);
-                }}
-                onBrowse={async () => {
-                  const files = await api.dialogs.openFiles([dialogFilter(t, "images")], true);
-                  if (files.length) {
-                    setBatchFiles(files);
-                    setSelectedBatchIndex(0);
-                  }
-                }}
+                activeTool={activeTool}
+                crop={crop}
+                cropPreset={ops.cropPreset}
+                isLoading={updating}
+                onCropChange={setCrop}
+                onApplyCrop={applyCrop}
+                onCancelCrop={cancelCrop}
+                onResetCrop={resetCrop}
               />
             ) : (
-              <div className={styles.studioLayout}>
-                {/* Dynamic Contextual Tool Options Bar */}
-                {batchPreview && (
-                  <ToolOptionsBar
-                    activeTool={batchActiveTool}
-                    ops={activeBatchOps}
-                    naturalWidth={batchPreview.width}
-                    naturalHeight={batchPreview.height}
-                    onOpsChange={(updater) => updateCurrentBatchOps(updater)}
-                    onCropPresetChange={handleBatchCropPresetChange}
-                  />
-                )}
-
-                {/* Main Studio Area: Toolbox on Left + Canvas Stage on Right (100% width, full space) */}
-                <div className={styles.stageContainer}>
-                  <ImageToolbox
-                    activeTool={batchActiveTool}
-                    onSelectTool={setBatchActiveTool}
-                    onReset={handleBatchResetCurrent}
-                    disabled={!batchPreview}
-                  />
-
-                  <div className={styles.canvasWrapper}>
-                    <div className={styles.canvasHeader}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
-                        <Image24Regular />
-                        <Subtitle2 className={styles.fileNameText}>
-                          {currentBatchFile ? fileName(currentBatchFile) : t("imageTools.selectedFile")}
-                        </Subtitle2>
-                        {batchPreview && (
-                          <Caption1 className={styles.muted}>
-                            {batchPreview.width} × {batchPreview.height} px · {batchPreview.format.toUpperCase()} · {formatBytes(batchPreview.size)}
-                            {batchTransformed && (batchTransformed.width !== batchPreview.width || batchTransformed.height !== batchPreview.height) && (
-                              <span> ➔ {batchTransformed.width} × {batchTransformed.height} px</span>
-                            )}
-                          </Caption1>
-                        )}
-                      </div>
-
-                      {isBatchUpdating && <Spinner size="tiny" label={t("common.loading")} />}
-                    </div>
-
-                    {batchPreview ? (
-                      <ImageCanvasStage
-                        imageSrc={batchActiveTool === "crop" ? batchPreview.dataUrl : (batchTransformed?.dataUrl ?? batchPreview.dataUrl)}
-                        naturalWidth={batchPreview.width}
-                        naturalHeight={batchPreview.height}
-                        activeTool={batchActiveTool}
-                        crop={batchCrop}
-                        cropPreset={activeBatchOps.cropPreset}
-                        isLoading={isBatchLoading || isBatchUpdating}
-                        onCropChange={setBatchCrop}
-                        onApplyCrop={handleApplyBatchCrop}
-                        onCancelCrop={handleCancelBatchCrop}
-                        onResetCrop={handleResetBatchCrop}
-                      />
-                    ) : (
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
-                        <Spinner label={t("common.loading")} />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Filmstrip / Karuzela miniatur bezpośrednio pod podglądem */}
-                <div className={styles.filmstripPane}>
-                  <div className={styles.filmstripHeader}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
-                      <Text weight="semibold">{t("imageTools.selectedFile")}</Text>
-                      <Badge color="brand">{selectedBatchIndex + 1} / {batchFiles.length}</Badge>
-                      <Button
-                        size="small"
-                        icon={<FolderOpen16Regular />}
-                        onClick={async () => {
-                          const files = await api.dialogs.openFiles([dialogFilter(t, "images")], true);
-                          if (files.length) {
-                            setBatchFiles((prev) => Array.from(new Set([...prev, ...files])));
-                          }
-                        }}
-                      >
-                        {t("common.browse")}
-                      </Button>
-                    </div>
-
-                    <div className={styles.filmstripActions}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
-                        <Caption1 style={{ color: tokens.colorNeutralForeground2, whiteSpace: "nowrap" }}>
-                          {t("compressor.format")}:
-                        </Caption1>
-                        <Dropdown
-                          size="small"
-                          style={{ width: "165px", minWidth: "165px" }}
-                          value={batchFormat === "original" ? t("compressor.formatOriginal") : batchFormat.toUpperCase()}
-                          selectedOptions={[batchFormat]}
-                          onOptionSelect={(_, d) => setBatchFormat(d.optionValue as string)}
-                        >
-                          <Option value="original">{t("compressor.formatOriginal")}</Option>
-                          <Option value="png">PNG</Option>
-                          <Option value="jpeg">JPEG</Option>
-                          <Option value="webp">WebP</Option>
-                        </Dropdown>
-                      </div>
-
-                      <Button size="small" icon={<Copy16Regular />} onClick={handleApplyToAll} style={{ flexShrink: 0 }}>
-                        {t("imageTools.applyToAll")}
-                      </Button>
-
-                      <Button
-                        size="small"
-                        appearance="subtle"
-                        icon={<ArrowForward16Regular />}
-                        style={{ flexShrink: 0 }}
-                        disabled={!currentBatchFile}
-                        onClick={() => currentBatchFile && openTransferModal(currentBatchFile, "image_tools")}
-                        title={t("transfer.buttonTooltip")}
-                      >
-                        {t("transfer.button")}
-                      </Button>
-
-                      <Button
-                        size="small"
-                        appearance="subtle"
-                        icon={<Delete16Regular />}
-                        style={{ flexShrink: 0 }}
-                        onClick={() => {
-                          setBatchFiles([]);
-                          setBatchOps({});
-                          setBatchPreview(null);
-                          setBatchTransformed(null);
-                          setBatchThumbnails({});
-                          batchJob.reset();
-                        }}
-                      >
-                        {t("common.clearAll")}
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Centered Scrollable Carousel List */}
-                  <div className={styles.filmstripListWrapper}>
-                    <div className={styles.filmstripTrack}>
-                      {batchFiles.map((file, idx) => {
-                        const isActive = idx === selectedBatchIndex;
-                        const hasOps = !!batchOps[file] && (batchOps[file].resizeActive || batchOps[file].cropActive || batchOps[file].rotation !== 0 || batchOps[file].flipH || batchOps[file].flipV);
-                        const thumbSrc = (isActive && batchTransformed?.dataUrl)
-                          ? batchTransformed.dataUrl
-                          : (batchThumbnails[file] || (isActive ? batchPreview?.dataUrl : undefined));
-
-                        return (
-                          <div
-                            key={file}
-                            className={`${styles.filmstripCard} ${isActive ? styles.filmstripCardActive : ""}`}
-                            onClick={() => handleSelectBatchFile(idx)}
-                          >
-                            <div className={styles.filmstripThumbBox}>
-                              {thumbSrc ? (
-                                <img
-                                  src={thumbSrc}
-                                  className={styles.filmstripImg}
-                                  alt={fileName(file)}
-                                  loading="lazy"
-                                />
-                              ) : (
-                                <Spinner size="extra-tiny" />
-                              )}
-                            </div>
-
-                            <div className={styles.filmstripCardFooter}>
-                              <Text size={200} weight={isActive ? "semibold" : "regular"} className={styles.filmstripCardTitle} title={fileName(file)}>
-                                {fileName(file)}
-                              </Text>
-                              <div style={{ display: "flex", alignItems: "center", gap: "2px", flexShrink: 0 }}>
-                                <Caption1 className={styles.muted}>#{idx + 1}</Caption1>
-                                {hasOps && <Badge size="tiny" color="informative" appearance="filled" />}
-                              </div>
-                            </div>
-
-                            <Tooltip content={t("common.delete")} relationship="label">
-                              <Button
-                                className={styles.filmstripCardDelete}
-                                size="small"
-                                appearance="subtle"
-                                icon={<Delete16Regular fontSize={12} />}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const next = batchFiles.filter((_, i) => i !== idx);
-                                  setBatchFiles(next);
-                                  if (selectedBatchIndex >= next.length) {
-                                    setSelectedBatchIndex(Math.max(0, next.length - 1));
-                                  }
-                                }}
-                              />
-                            </Tooltip>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-
-                {batchJob.result && batchJob.result.results && batchJob.result.results.length > 0 && (
-                  <AfterGallery
-                    title={t("transfer.processedTitle")}
-                    files={batchJob.result.files || batchJob.result.results.map((r) => r.dest)}
-                    items={batchJob.result.results.map((r) => ({
-                      file: r.file,
-                      dest: r.dest,
-                      name: fileName(r.dest),
-                      size: r.bytes,
-                      width: r.width,
-                      height: r.height,
-                    }))}
-                    outputDir={batchJob.result.outputDir}
-                    sourceToolId="image_tools"
-                  />
-                )}
-
-                {/* Bottom Action Bar */}
-                <ActionBar idleText={t("imageTools.processBatch", { count: batchFiles.length })}>
-                  <Button
-                    appearance="primary"
-                    icon={<Save16Regular />}
-                    disabled={!batchFiles.length}
-                    onClick={handleBatchStart}
-                  >
-                    {t("imageTools.processBatch", { count: batchFiles.length })}
-                  </Button>
-                </ActionBar>
-              </div>
+              <Spinner label={t("common.loading")} />
             )}
           </div>
-        )}
+        </Panel>
       </div>
+
+      {files.length > 1 && (
+        <FileStrip
+          files={files}
+          selected={selected}
+          onSelect={setSelected}
+          onRemove={removeAt}
+          edited={edited}
+          actions={
+            <>
+              <Button appearance="subtle" icon={<CopySelect20Regular />} onClick={applyToAll}>
+                {t("imageTools.applyToAll")}
+              </Button>
+              <Button appearance="subtle" icon={<Delete16Regular />} onClick={clear}>
+                {t("common.clearAll")}
+              </Button>
+            </>
+          }
+        />
+      )}
+
+      {saved && (
+        <ResultCard
+          title={t("imageTools.toast.saveSuccess")}
+          detail={`${saved.width} × ${saved.height} px · ${formatBytes(saved.bytes)}`}
+          path={saved.outPath}
+          sourceToolId="image_tools"
+        />
+      )}
+
+      {result && result.results.length > 0 && (
+        <AfterGallery
+          title={t("transfer.processedTitle")}
+          summary={t("imageTools.toast.batchSuccess", { count: result.processed })}
+          files={result.files || result.results.map((r) => r.dest)}
+          items={result.results.map((r) => ({ file: r.file, dest: r.dest, name: fileName(r.dest), size: r.bytes, width: r.width, height: r.height }))}
+          outputDir={result.outputDir}
+          sourceToolId="image_tools"
+        />
+      )}
+
+      <ActionBar job={job.job?.status === "done" ? undefined : job.job} onCancel={job.cancel}>
+        <Button icon={<Copy16Regular />} disabled={!transformed} onClick={copyToClipboard}>
+          {t("imageTools.copyClipboard")}
+        </Button>
+        {files.length > 1 && (
+          <Dropdown
+            className={styles.format}
+            aria-label={t("compressor.format")}
+            value={formatLabel(outputFormat)}
+            selectedOptions={[outputFormat]}
+            onOptionSelect={(_, d) => setOutputFormat(d.optionValue as OutputFormat)}
+          >
+            {OUTPUT_FORMATS.map((f) => (
+              <Option key={f} value={f}>
+                {formatLabel(f)}
+              </Option>
+            ))}
+          </Dropdown>
+        )}
+        <Button appearance="primary" icon={<Save16Regular />} disabled={!preview || job.running} onClick={save}>
+          {files.length > 1 ? t("imageTools.processBatch", { count: files.length }) : t("imageTools.saveAction")}
+        </Button>
+      </ActionBar>
     </Page>
   );
 }

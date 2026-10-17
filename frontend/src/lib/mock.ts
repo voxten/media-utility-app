@@ -110,11 +110,13 @@ export function createMockBackend(emit: Emit) {
       },
     },
     dialogs: {
-      open_files: (types: string[] = []) =>
+      open_files: (types: string[] = [], multiple = true) =>
         ok(
           types.some((t) => t.toLowerCase().includes("pdf"))
             ? ["C:\\Users\\demo\\Documents\\raport.pdf", "C:\\Users\\demo\\Documents\\umowa.pdf"]
-            : ["C:\\Users\\demo\\Pictures\\photo.png"],
+            : multiple
+              ? ["C:\\Users\\demo\\Pictures\\photo.png", "C:\\Users\\demo\\Pictures\\beach.jpg", "C:\\Users\\demo\\Pictures\\city.webp"]
+              : ["C:\\Users\\demo\\Pictures\\photo.png"],
         ),
       open_folder: () => ok("C:\\Users\\demo\\Pictures"),
       save_file: (filename: string) => ok(`C:\\Users\\demo\\Downloads\\${filename || "output"}`),
@@ -401,17 +403,30 @@ export function createMockBackend(emit: Emit) {
           savedPercent: 81.4,
           dataUrl: fakePhoto(1),
         }),
-      start: (_params: unknown) =>
-        simulateJob("compressor", "image.png", {
-          total: 1,
-          processed: 1,
-          failed: 0,
+      start: (params: { files?: string[]; path?: string; outPath?: string; outputDir?: string }) => {
+        const files = params.files ?? (params.path ? [params.path] : []);
+        const outputDir = params.outputDir ?? "C:\\out";
+        const results = files.map((file) => ({
+          file,
+          dest: params.outPath ?? `${outputDir}\\${file.split("\\").pop()}`,
           inBytes: 3_500_000,
           outBytes: 650_000,
-          savedBytes: 2_850_000,
           savedPercent: 81.4,
-          outputDir: "C:\\out",
-        }, 1200),
+        }));
+        return simulateJob("compressor", files.length === 1 ? files[0].split("\\").pop() ?? "" : `${files.length} files`, {
+          total: files.length,
+          processed: files.length,
+          failed: 0,
+          inBytes: 3_500_000 * files.length,
+          outBytes: 650_000 * files.length,
+          savedBytes: 2_850_000 * files.length,
+          savedPercent: 81.4,
+          outputDir,
+          outPath: files.length === 1 ? params.outPath : undefined,
+          files: results.map((r) => r.dest),
+          results,
+        }, 1200);
+      },
     },
     image_editor: {
       load_preview: (path: string) =>
@@ -439,14 +454,23 @@ export function createMockBackend(emit: Emit) {
           height: 720,
           bytes: 1_200_000,
         }),
-      start_batch: (_files: string[], outDir: string, _ops: unknown) =>
-        simulateJob("image_editor", "Batch transforms", {
-          total: 2,
-          processed: 2,
+      start_batch: (files: string[], outDir: string, _ops: unknown) => {
+        const results = files.map((file) => ({
+          file,
+          dest: `${outDir}\\${file.split("\\").pop()}`,
+          width: 1280,
+          height: 720,
+          bytes: 640_000,
+        }));
+        return simulateJob("image_editor", `${files.length} files`, {
+          total: files.length,
+          processed: files.length,
           failed: 0,
           outputDir: outDir,
-          results: [],
-        }, 1200),
+          files: results.map((r) => r.dest),
+          results,
+        }, 1200);
+      },
     },
     video_sync: {
       probe: (path: string) =>

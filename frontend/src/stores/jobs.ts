@@ -9,6 +9,9 @@ import { useSettings } from "./settings";
 
 const MAX_LOGS = 2000;
 
+const notificationTitle = (jobTitle?: string | null) =>
+  jobTitle ? `${i18n.t("app.name")} · ${i18n.t(jobTitle)}` : i18n.t("app.name");
+
 export function playChime(kind: "done" | "error" = "done") {
   try {
     const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
@@ -143,8 +146,7 @@ export function initJobEvents() {
     if (s?.completionSound) playChime("done");
     if (s?.desktopNotifications) {
       const job = useJobs.getState().jobs[jobId];
-      const title = job?.title ? `Media Studio · ${i18n.t(job.title)}` : "Media Studio";
-      showDesktopNotification(title, "Zadanie ukończone pomyślnie / Task completed");
+      showDesktopNotification(notificationTitle(job?.title), i18n.t("jobs.notifyDone"));
     }
   });
 
@@ -154,8 +156,7 @@ export function initJobEvents() {
     if (s?.completionSound) playChime("error");
     if (s?.desktopNotifications) {
       const job = useJobs.getState().jobs[jobId];
-      const title = job?.title ? `Media Studio · ${i18n.t(job.title)}` : "Media Studio";
-      showDesktopNotification(title, error || "Błąd wykonania zadania / Task failed");
+      showDesktopNotification(notificationTitle(job?.title), error || i18n.t("jobs.notifyError"));
     }
   });
 

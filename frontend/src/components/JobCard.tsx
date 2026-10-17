@@ -52,7 +52,7 @@ export function extractSubtasks(job: JobState): SubtaskAction[] {
         const item = p as Record<string, unknown>;
         const idx = typeof item.index === "number" ? item.index : (typeof item.id === "string" ? item.id : null);
         if (idx != null) {
-          const rawTitle = String(item.title || item.name || item.url || `Element #${Number(idx) + 1}`);
+          const rawTitle = String(item.title || item.name || item.url || `#${Number(idx) + 1}`);
           const status = (item.status as SubtaskAction["status"]) || "pending";
           const existing = items.get(idx);
           items.set(idx, {
@@ -78,7 +78,7 @@ export function extractSubtasks(job: JobState): SubtaskAction[] {
           const p = item as Record<string, unknown>;
           const idx = typeof p.index === "number" ? p.index : (typeof p.id === "string" ? p.id : null);
           if (idx != null) {
-            const rawTitle = String(p.title || p.name || p.url || `Element #${Number(idx) + 1}`);
+            const rawTitle = String(p.title || p.name || p.url || `#${Number(idx) + 1}`);
             const status = (p.status as SubtaskAction["status"]) || "done";
             items.set(idx, {
               id: idx,
@@ -337,9 +337,9 @@ function SubtaskRow({ item }: { item: SubtaskAction }) {
             : isRunning && item.percent != null
               ? `${Math.round(item.percent)}%`
               : isError
-                ? t("common.jobStatus.error", { defaultValue: "Error" })
+                ? t("common.jobStatus.error")
                 : item.status === "pending"
-                  ? t("jobs.pending", { defaultValue: "Pending" })
+                  ? t("jobs.pending")
                   : item.status}
         </Caption1>
       </div>
@@ -350,7 +350,7 @@ function SubtaskRow({ item }: { item: SubtaskAction }) {
           {(item.speed != null || item.eta != null) && (
             <div className={styles.subtaskDetailRow}>
               {item.speed != null && <Caption1 className={styles.muted}>{formatBytes(item.speed)}/s</Caption1>}
-              {item.eta != null && <Caption1 className={styles.muted}>ETA {formatDuration(item.eta)}</Caption1>}
+              {item.eta != null && <Caption1 className={styles.muted}>{t("common.eta", { time: formatDuration(item.eta) })}</Caption1>}
             </div>
           )}
         </>
@@ -490,7 +490,7 @@ export function JobCard({ job, onNavigate }: { job: JobState; onNavigate?: () =>
           <Caption1 className={styles.muted}>
             <LiveElapsed startedAt={job.startedAt} finishedAt={job.finishedAt} active={running} />
             {speed != null && ` · ${formatBytes(speed)}/s`}
-            {eta != null && ` · ETA ${formatDuration(eta)}`}
+            {eta != null && ` · ${t("common.eta", { time: formatDuration(eta) })}`}
             {totalCompletedSize != null && ` · ${formatBytes(totalCompletedSize)}`}
           </Caption1>
           <Caption1 className={styles.muted}>

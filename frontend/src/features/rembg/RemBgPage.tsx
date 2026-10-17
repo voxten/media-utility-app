@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  Badge,
   Button,
   Caption1,
   Divider,
@@ -301,12 +300,10 @@ export default function RemBgPage() {
     { id: "u2net", label: t("rembg.options.modelU2net") },
   ];
 
-  const chokeOptions = [
-    { value: 0, label: "0 px (Bez cięcia)" },
-    { value: 1, label: "1 px (Zalecane)" },
-    { value: 2, label: "2 px (Mocniejsze)" },
-    { value: 3, label: "3 px (Maksymalne)" },
-  ];
+  const chokeOptions = [0, 1, 2, 3].map((value) => ({
+    value,
+    label: value === 0 ? t("rembg.options.chokeNone") : `${value} px`,
+  }));
 
   const getStageClass = () => {
     switch (form.bgMode) {
@@ -331,9 +328,6 @@ export default function RemBgPage() {
             <Caption1>
               {form.image.width}×{form.image.height} px
             </Caption1>
-            <Badge appearance="tint" color="brand">
-              BiRefNet
-            </Badge>
           </span>
         }
         actions={
@@ -492,7 +486,7 @@ export default function RemBgPage() {
               aspectRatio={form.image.width && form.image.height ? form.image.width / form.image.height : undefined}
             />
           ) : (
-            <img src={form.image.dataUrl} alt="Original" className={styles.stagePreview} draggable={false} />
+            <img src={form.image.dataUrl} alt={fileName(form.sourcePath)} className={styles.stagePreview} draggable={false} />
           )}
         </div>
 

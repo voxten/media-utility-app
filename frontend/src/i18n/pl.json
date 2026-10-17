@@ -257,7 +257,13 @@
     "after": "Po (Wynik)",
     "preview": "Podgląd",
     "saveError": "Nie udało się zapisać pliku",
-    "andMore": "+ {{count}} więcej"
+    "andMore": "+ {{count}} więcej",
+    "addFiles": "Dodaj pliki",
+    "files": "Pliki",
+    "eta": "zostało {{time}}",
+    "seek": "Przewiń",
+    "play": "Odtwórz",
+    "pause": "Wstrzymaj"
   },
   "fileTypes": {
     "images": "Obrazy",
@@ -338,7 +344,6 @@
     }
   },
   "compressor": {
-    "changeImage": "Zmień obraz",
     "status": {
       "processing": "Kompresja: {{file}} ({{index}}/{{total}})",
       "done": "Kompresja zakończona pomyślnie."
@@ -347,21 +352,10 @@
       "done": "{{name}} skompresowano ({{saved}})",
       "error": "Błąd kompresji {{file}}: {{error}}"
     },
-    "tabs": {
-      "single": "Pojedynczy plik z podglądem",
-      "batch": "Kompresja seryjna (wiele plików)"
-    },
-    "dropSingleTitle": "Upuść grafikę do kompresji tutaj",
-    "dropSingleHint": "lub kliknij, aby wybrać obraz (PNG, JPEG, WebP)",
-    "dropBatchTitle": "Upuść wiele grafik lub folder",
-    "dropBatchHint": "lub kliknij, aby wybrać grupę plików do masowej kompresji",
     "mode": "Tryb kompresji",
     "modeSmart": "Zrównoważona (Smart Lossy)",
-    "modeSmartHint": "Znakomity kompromis między niewidoczną utratą jakości a małym rozmiarem",
     "modeLossless": "Bezstratna (Lossless)",
-    "modeLosslessHint": "100% zachowania pikseli, optymalizacja kompresji i usunięcie zbędnych metadanych",
     "modeTarget": "Dopasuj do limitu (Target Size)",
-    "modeTargetHint": "Automatyczny dobór parametrów, by plik nie przekroczył podanej wagi w KB",
     "format": "Format wyjściowy",
     "formatOriginal": "Taki sam jak oryginał",
     "formatWebp": "Nowoczesny WebP (zalecany, największa oszczędność)",
@@ -369,20 +363,17 @@
     "formatPng": "PNG (kwantyzacja do palety 256 kolorów)",
     "quality": "Jakość",
     "targetKb": "Docelowy rozmiar (KB)",
-    "targetKbPlaceholder": "np. 500",
-    "targetKbHint": "Maksymalny dozwolony rozmiar pliku wyjściowego w kilobajtach",
     "before": "Oryginał",
     "after": "Po kompresji",
-    "saved": "Zaoszczędzono: {{saved}} (-{{percent}}%)",
     "compressAction": "Kompresuj i zapisz",
-    "compressBatchAction": "Kompresuj wszystkie pliki",
-    "outputDir": "Katalog docelowy",
     "summary": "Podsumowanie: {{processed}}/{{total}} plików, zaoszczędzono {{saved}} (-{{percent}}%)",
     "toast": {
       "success": "Skompresowano obraz",
-      "batchSuccess": "Skompresowano {{count}} plików (zaoszczędzono {{saved}})",
       "error": "Nie udało się skompresować pliku"
-    }
+    },
+    "dropTitle": "Upuść obrazy do kompresji",
+    "dropHint": "Jeden lub więcej plików: PNG, JPEG, WebP, BMP, TIFF",
+    "compressAll": "Kompresuj pliki ({{count}})"
   },
   "pdf": {
     "status": {
@@ -881,7 +872,9 @@
     "collapseDetails": "Zwiń szczegóły",
     "expandDetails": "Rozwiń szczegóły",
     "toastDone": "{{tool}}: zakończono",
-    "toastError": "{{tool}}: błąd"
+    "toastError": "{{tool}}: błąd",
+    "notifyDone": "Zadanie ukończone",
+    "notifyError": "Zadanie nie powiodło się"
   },
   "palette": {
     "title": "Szukaj",
@@ -937,7 +930,8 @@
       "brushRestore": "Przywróć detal",
       "brushNone": "Podgląd / Przesuwanie",
       "brushSize": "Rozmiar pędzla",
-      "clearStrokes": "Wyczyść poprawki"
+      "clearStrokes": "Wyczyść poprawki",
+      "chokeNone": "Bez przycinania"
     },
     "preview": {
       "before": "Oryginał",
@@ -985,19 +979,6 @@
     }
   },
   "imageTools": {
-    "tabs": {
-      "single": "Pojedynczy obraz",
-      "batch": "Przetwarzanie wsadowe"
-    },
-    "subtabs": {
-      "resize": "Zmień rozmiar",
-      "crop": "Kadrowanie",
-      "transform": "Obrót i odbicie"
-    },
-    "dropSingleTitle": "Upuść obraz do edycji",
-    "dropSingleHint": "lub kliknij, aby wybrać plik (PNG, JPG, WebP, BMP, TIFF)",
-    "dropBatchTitle": "Upuść obrazy do edycji wsadowej",
-    "dropBatchHint": "lub kliknij, aby wybrać pliki graficzne",
     "width": "Szerokość (px)",
     "height": "Wysokość (px)",
     "lockAspect": "Zachowaj proporcje",
@@ -1021,10 +1002,6 @@
     "crop9_16": "Pionowy 9:16",
     "crop4_3": "Standardowy 4:3",
     "crop3_2": "Fotografia 3:2",
-    "cropX": "Pozycja X",
-    "cropY": "Pozycja Y",
-    "cropW": "Szerokość kadru",
-    "cropH": "Wysokość kadru",
     "rotation": "Obrót",
     "flip": "Odbicie",
     "rotateLeft": "Obróć o 90° w lewo",
@@ -1045,24 +1022,15 @@
     "cropCancel": "Anuluj kadr",
     "cropReset": "Pełny obraz",
     "cropHelper": "Zaznacz kadr przeciągając myszą lub użyj uchwytów na krawędziach",
-    "cropDimensions": "Wymiary kadru",
-    "cropAppliedToast": "Zastosowano kadr",
-    "resizeDelta": "Rozmiar",
-    "filterTooltip": "Algorytm interpolacji pikseli podczas skalowania",
-    "reset": "Przywróć oryginalny",
     "copyClipboard": "Kopiuj do schowka",
     "copied": "Skopiowano obraz do schowka!",
     "saveAction": "Zapisz obraz jako…",
-    "batchAction": "Zastosuj do wszystkich ({{count}})",
-    "batchOutputFolder": "Folder zapisu",
     "applyToAll": "Zastosuj do wszystkich",
     "appliedToAll": "Zastosowano ustawienia do wszystkich obrazów w kolejce",
     "processBatch": "Przetwórz i zapisz ({{count}})",
-    "selectedFile": "Edytowany plik",
-    "batchHint": "Wybierz plik z listy, aby dostosować jego rozmiar, kadr i obrót",
     "status": {
       "starting": "Rozpoczynanie przetwarzania…",
-      "processing": "Przetwarzanie obrazu…",
+      "processing": "Przetwarzanie obrazu {{index}}/{{total}}…",
       "done": "Przetwarzanie zakończone."
     },
     "toast": {
@@ -1070,7 +1038,9 @@
       "batchSuccess": "Pomyślnie przetworzono {{count}} obrazów",
       "copyError": "Nie udało się skopiować obrazu do schowka",
       "error": "Błąd podczas modyfikacji obrazu"
-    }
+    },
+    "dropTitle": "Upuść obrazy do edycji",
+    "dropHint": "Jeden lub więcej plików: PNG, JPEG, WebP, BMP, TIFF"
   },
   "transfer": {
     "sendTo": "Prześlij do...",
