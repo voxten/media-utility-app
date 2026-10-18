@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Caption1, makeStyles, mergeClasses, tokens } from "@fluentui/react-components";
 import { ChevronLeft16Filled, ChevronRight16Filled } from "@fluentui/react-icons";
+import { ON_IMAGE } from "../lib/onImage";
 
 const useStyles = makeStyles({
   root: {
@@ -56,8 +57,8 @@ const useStyles = makeStyles({
     bottom: "0",
     width: "2px",
     marginLeft: "-1px",
-    backgroundColor: "#fff",
-    boxShadow: "0 0 6px rgba(0,0,0,.7)",
+    backgroundColor: ON_IMAGE.light,
+    boxShadow: `0 0 6px ${ON_IMAGE.outline}`,
     zIndex: 3,
     pointerEvents: "none",
   },
@@ -72,8 +73,8 @@ const useStyles = makeStyles({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#fff",
-    color: "#222",
+    backgroundColor: ON_IMAGE.light,
+    color: ON_IMAGE.dark,
     boxShadow: tokens.shadow8,
     cursor: "ew-resize",
     zIndex: 4,
@@ -84,8 +85,8 @@ const useStyles = makeStyles({
     top: "10px",
     padding: "3px 8px",
     borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: "rgba(0,0,0,.65)",
-    color: "#fff",
+    backgroundColor: ON_IMAGE.scrim,
+    color: ON_IMAGE.light,
     lineHeight: tokens.lineHeightBase200,
     zIndex: 4,
     pointerEvents: "none",

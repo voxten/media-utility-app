@@ -65,7 +65,7 @@
     },
     "pdf_split": {
       "name": "PDF Splitter",
-      "description": "Split document into single pages or extract specific page ranges."
+      "description": "Split document into single pages or chosen groups of pages."
     },
     "pdf_convert": {
       "name": "PDF ↔ Images",
@@ -117,9 +117,9 @@
       "ffmpeg": "FFmpeg",
       "mediainfo": "MediaInfo",
       "lama": "LaMa AI model (optional)",
-      "rembg": "BiRefNet AI Model (Background removal)",
-      "upscale_general": "Real-ESRGAN General AI Model (x4v3)",
-      "upscale_anime": "Real-ESRGAN Anime AI Model (x4plus)",
+      "rembg": "BiRefNet background removal model",
+      "upscale_general": "Real-ESRGAN General AI model",
+      "upscale_anime": "Real-ESRGAN Anime AI model",
       "install": "Download & install",
       "installing": "Installing…",
       "installed": "Dependency installed successfully",
@@ -146,10 +146,12 @@
     "micaUnsupported": "Requires Windows 11 (22H2 or later).",
     "storage": {
       "title": "Storage & Cache",
-      "cacheTitle": "Cache & Temporary Files",
+      "cacheTitle": "Cache",
       "cacheDesc": "Temporary conversion files, downloaded archives and cached thumbnails.",
-      "modelsTitle": "AI Neural Models",
-      "appDataTitle": "App Data Folder (%APPDATA%)",
+      "usage_one": "{{size}} · {{count}} file",
+      "usage_other": "{{size}} · {{count}} files",
+      "modelsTitle": "AI models",
+      "appDataTitle": "App data folder",
       "appDataDesc": "Primary Media Studio directory containing settings and app data.",
       "recentFoldersTitle": "Recent Folders History",
       "recentFoldersDesc": "History of recently accessed directories in picker dialogs.",
@@ -162,22 +164,22 @@
     },
     "hardware": {
       "title": "Hardware & Performance",
-      "cpu": "Processor (CPU)",
+      "cpu": "Processor",
       "cpuDetails": "{{threads}} logical threads · {{arch}} architecture",
       "noGpu": "Integrated graphics or no dedicated GPU detected",
       "cudaActive": "PyTorch CUDA acceleration active (v{{version}})",
-      "cudaInactive": "CPU Mode (PyTorch CUDA not available)",
-      "ram": "RAM Memory",
+      "cudaInactive": "CUDA unavailable, running on CPU",
+      "ram": "RAM",
       "ramDetails": "{{avail}} free of {{total}} total memory",
       "concurrency": "Max Worker Concurrency",
       "concurrencyDesc": "Number of background jobs and worker threads running in parallel.",
       "concurrencyThreads": "{{count}} threads",
-      "acceleration": "Hardware Acceleration (GPU)",
+      "acceleration": "GPU acceleration",
       "accelerationDesc": "Use graphics processor to accelerate AI inference and video processing."
     },
     "notifications": {
       "title": "Notifications & Feedback",
-      "desktop": "Windows Desktop Notifications",
+      "desktop": "Desktop notifications",
       "desktopDesc": "Displays system notifications in Windows Action Center when long-running background tasks finish.",
       "sound": "Task Completion Sound",
       "soundDesc": "Plays a subtle audio chime when a job finishes or encounters an error.",
@@ -233,13 +235,13 @@
     "outputFolder": "Output folder",
     "fileName": "File name",
     "savedSuccess": "File saved",
-    "loading": "Loading...",
+    "loading": "Loading…",
     "viewSplit": "Split slider",
     "viewSide": "Side by side",
     "viewAfter": "Result only",
     "viewBefore": "Original only",
-    "before": "Before (Original)",
-    "after": "After (Result)",
+    "before": "Before",
+    "after": "After",
     "saveError": "Could not save the file",
     "andMore": "+ {{count}} more",
     "addFiles": "Add files",
@@ -247,7 +249,13 @@
     "eta": "{{time}} left",
     "seek": "Seek",
     "play": "Play",
-    "pause": "Pause"
+    "pause": "Pause",
+    "outputFormat": "Output format",
+    "formatOriginal": "Same as original",
+    "changeImage": "Change image",
+    "continueWithResult": "Continue with the result",
+    "search": "Type to search…",
+    "noResults": "No matches"
   },
   "fileTypes": {
     "images": "Images",
@@ -272,15 +280,17 @@
       "failed": "Failed to convert {{src}}: {{error}}"
     },
     "source": "Source",
+    "sourceFile": "File",
     "sourceFolder": "Folder",
     "sourceFiles": "Files",
+    "inputFile": "Image file",
     "inputFolder": "Input folder",
     "fromFormat": "Source format",
     "swap": "Swap formats",
     "matching_one": "Found {{count}} {{format}} file.",
     "matching_other": "Found {{count}} {{format}} files.",
     "dropTitle": "Drop images here",
-    "dropHint": "or click to choose files (PNG, JPG, WEBP, GIF, TIFF, BMP)",
+    "dropHint": "or click to choose files ({{formats}})",
     "output": "Output",
     "toFormat": "Target format",
     "quality": "Quality",
@@ -291,6 +301,7 @@
     "filesSelected_one": "{{count}} file selected",
     "filesSelected_other": "{{count}} files selected",
     "idle": {
+      "pickFile": "Choose an image file.",
       "pickFolder": "Choose a folder with images.",
       "pickFiles": "Add images to convert.",
       "ready_one": "{{count}} file ready to convert",
@@ -321,26 +332,21 @@
       "error": "Compression error for {{file}}: {{error}}"
     },
     "mode": "Compression mode",
-    "modeSmart": "Smart Lossy (Balanced)",
+    "modeSmart": "Balanced",
     "modeLossless": "Lossless",
-    "modeTarget": "Target Size",
-    "format": "Output format",
-    "formatOriginal": "Same as original",
-    "formatWebp": "Modern WebP (recommended, greatest savings)",
-    "formatJpeg": "Standard JPEG",
-    "formatPng": "PNG (quantized 256-color palette)",
+    "modeTarget": "Target size",
     "quality": "Quality",
     "targetKb": "Target size (KB)",
     "before": "Original",
     "after": "Compressed",
     "compressAction": "Compress & save",
-    "summary": "Summary: {{processed}}/{{total}} files, saved {{saved}} (-{{percent}}%)",
+    "summary": "{{processed}}/{{total}} files · saved {{saved}} (−{{percent}}%)",
     "toast": {
       "success": "Image compressed",
       "error": "Could not compress image"
     },
     "dropTitle": "Drop images to compress",
-    "dropHint": "One or more files: PNG, JPEG, WebP, BMP, TIFF",
+    "dropHint": "One or more files: {{formats}}",
     "compressAll": "Compress {{count}} files"
   },
   "pdf": {
@@ -365,10 +371,11 @@
     "dropSingleTitle": "Drop a PDF file here",
     "dropSingleHint": "or click to select a single PDF",
     "dropImagesTitle": "Drop image files here",
-    "dropImagesHint": "or click to select images (PNG, JPG, WebP)",
-    "dropChange": "Change PDF file (drop or click)",
-    "pages_one": "{{count}} page",
-    "pages_other": "{{count}} pages",
+    "dropImagesHint": "or click to select images ({{formats}})",
+    "dropChange": "Change PDF file",
+    "pagesTitle": "Pages",
+    "pageCount_one": "{{count}} page",
+    "pageCount_other": "{{count}} pages",
     "pageShort": "p. {{page}}",
     "preview": "Preview",
     "removePage": "Remove page",
@@ -379,23 +386,25 @@
     "defaultName": "merged.pdf",
     "compress": {
       "preset": "Compression level",
-      "presetLow": "Low (high quality, 200 DPI)",
-      "presetBalanced": "Balanced (recommended, 150 DPI)",
-      "presetHigh": "High (smallest file, 100 DPI)",
+      "presetLow": "Low · 200 DPI",
+      "presetBalanced": "Balanced · 150 DPI",
+      "presetHigh": "High · 100 DPI",
       "action": "Compress & save",
-      "result": "Original: {{before}} ➔ Compressed: {{after}} (savings: -{{percent}}%)"
+      "result": "{{before}} → {{after}} (−{{percent}}%)"
     },
     "split": {
       "mode": "Split mode",
       "modeAll": "Every page as a separate PDF",
-      "modeRange": "Extract specific page range",
-      "rangeLabel": "Page range (e.g. 1-3, 5, 8-10)",
-      "rangePlaceholder": "1-3, 5, 8",
+      "modeGroups": "Each group as a separate PDF",
+      "groupsHint": "Click pages to add them to the selected group; Shift+click adds a run of pages",
+      "group": "Group {{n}}",
+      "newGroup": "New group",
+      "removeGroup": "Remove group",
       "action": "Split to folder"
     },
     "convert": {
-      "pdfToImages": "PDF ➔ Image files",
-      "imagesToPdf": "Images ➔ PDF document",
+      "pdfToImages": "PDF → Image files",
+      "imagesToPdf": "Images → PDF document",
       "format": "Image format",
       "dpi": "Resolution (DPI)",
       "actionToImages": "Export pages to folder",
@@ -403,7 +412,9 @@
       "defaultPdfName": "from_images.pdf",
       "dpiScreen": "Screen",
       "dpiStandard": "Standard",
-      "dpiPrint": "Print"
+      "dpiPrint": "Print",
+      "pages": "Pages",
+      "allPages": "All pages"
     },
     "extract": {
       "action": "Export to .txt",
@@ -412,8 +423,8 @@
     },
     "idle": {
       "empty": "Add PDF files to get started.",
-      "ready_one": "{{count}} page from {{files}} file(s) ready to merge",
-      "ready_other": "{{count}} pages from {{files}} file(s) ready to merge"
+      "ready_one": "{{count}} page ready to merge",
+      "ready_other": "{{count}} pages ready to merge"
     },
     "toast": {
       "merged_one": "Merged {{count}} page",
@@ -422,11 +433,14 @@
       "readError": "Cannot read {{file}}",
       "compressSuccess": "PDF document compressed",
       "compressError": "Could not compress PDF",
-      "splitSuccess": "Split document into {{count}} files",
+      "splitSuccess_one": "Created {{count}} file",
+      "splitSuccess_other": "Created {{count}} files",
       "splitError": "Could not split PDF",
-      "toImagesSuccess": "Exported {{count}} pages to images",
+      "toImagesSuccess_one": "Exported {{count}} page",
+      "toImagesSuccess_other": "Exported {{count}} pages",
       "toImagesError": "Could not export pages to images",
-      "fromImagesSuccess": "Created PDF from {{count}} images",
+      "fromImagesSuccess_one": "Created PDF from {{count}} image",
+      "fromImagesSuccess_other": "Created PDF from {{count}} images",
       "fromImagesError": "Could not create PDF from images",
       "extractSuccess": "Extracted text to file",
       "extractError": "Could not extract text"
@@ -504,7 +518,7 @@
     "placeholder": "Type or paste the text to be read aloud…",
     "counter": "{{chars}} characters · {{words}} words",
     "voice": "Voice",
-    "engineEdge": "Edge (neural)",
+    "engineEdge": "Edge",
     "engineLocal": "System",
     "engineEdgeHint": "Natural-sounding Microsoft voices in 70+ languages. Requires internet.",
     "engineLocalHint": "Voices installed in Windows. Works offline.",
@@ -512,7 +526,6 @@
     "language": "Language",
     "voiceLabel": "Voice",
     "searchVoice": "Search voices…",
-    "allVoices": "All voices",
     "noVoices": "No voices available for this engine.",
     "gender": {
       "male": "male",
@@ -540,7 +553,7 @@
       "thumbnail": "Fetching thumbnail…",
       "starting": "Starting download…",
       "downloading": "Downloading…",
-      "postprocessing": "Post-processing (FFmpeg)…",
+      "postprocessing": "Post-processing…",
       "done": "Download finished.",
       "batchDone": "Queue finished."
     },
@@ -574,8 +587,6 @@
     "retryFailed_one": "Retry failed ({{count}})",
     "retryFailed_other": "Retry failed ({{count}})",
     "queueTitle": "Links",
-    "urlCount_one": "{{count}} item",
-    "urlCount_other": "{{count}} items",
     "itemStatus": {
       "pending": "Pending",
       "error": "Failed"
@@ -586,7 +597,7 @@
     "download": "Download",
     "downloadAll": "Download all",
     "addToBatch": "Add to queue",
-    "batchPlaceholderRunning": "Paste more links (one per line) to add to the queue...",
+    "batchPlaceholderRunning": "Paste more links, one per line, to add them to the queue…",
     "summary": "Downloaded: {{done}}/{{total}}",
     "totalSize": "Total size: {{size}}",
     "totalDuration": "Total time: {{duration}}",
@@ -609,16 +620,16 @@
     "status": {
       "loading": "Loading image…",
       "tiling": "Upscaling image tiles ({{percent}}%)…",
-      "debleeding": "Cleaning edges (Anti-Halo)…",
+      "debleeding": "Cleaning edges…",
       "modelInference": "Real-ESRGAN AI model inference…",
       "alphaProcessing": "Processing transparency…",
       "done": "Upscaling completed successfully."
     },
     "dropTitle": "Drop image to upscale",
-    "dropHint": "or click to choose a file (PNG, JPG, WEBP, BMP, TIFF)",
+    "dropHint": "or click to choose a file ({{formats}})",
     "models": {
-      "general": "Real-ESRGAN · Photos & Graphics (x4v3)",
-      "anime": "Real-ESRGAN · Anime & Illustrations (x4plus)"
+      "general": "Real-ESRGAN · Photos & graphics",
+      "anime": "Real-ESRGAN · Anime & illustrations"
     },
     "modelPromo": {
       "title": "Real-ESRGAN AI Model ({{model}})",
@@ -629,34 +640,25 @@
     "options": {
       "model": "AI Model",
       "scale": "Scale factor",
-      "scale2x": "2× (sharp)",
-      "scale4x": "4× (maximum)",
+      "scale2x": "2×",
+      "scale4x": "4×",
       "alphaMode": "Transparency handling",
-      "alphaSmooth": "Smooth (Lanczos-4)",
-      "alphaAi": "Deep AI (SRVGGNet)",
-      "antiHalo": "Edge protection (Anti-Halo)",
+      "alphaSmooth": "Smooth",
+      "alphaAi": "AI",
+      "antiHalo": "Edge protection",
       "antiHaloHint": "Prevents dark edge fringing and haloing around transparent cutouts"
     },
-    "badges": {
-      "transparent": "Transparency (RGBA)",
-      "opaque": "Standard (RGB)"
-    },
-    "changeImage": "Change image",
-    "before": "Before",
-    "after": "After ({{scale}}×)",
     "idle": {
       "ready": "Ready to upscale image.",
       "done": "Image successfully upscaled.",
       "needModel": "Download the selected AI model above to begin."
     },
-    "runBtn": "Upscale image ({{scale}}×)",
+    "runBtn": "Upscale",
     "backToOptions": "Change options",
-    "continueWithThis": "Continue with this image",
     "suffix": "_upscaled",
     "toast": {
       "loadError": "Could not load image.",
-      "error": "Error during image upscaling.",
-      "done": "Image successfully upscaled!"
+      "error": "Error during image upscaling."
     }
   },
   "watermark": {
@@ -669,14 +671,13 @@
       "lamaMissing": "IOPaint/PyTorch not installed – OpenCV (Telea) was used instead. To use LaMa: pip install iopaint torch torchvision"
     },
     "dropTitle": "Drop an image with a watermark",
-    "dropHint": "or click to choose a file (PNG, JPG, WEBP, BMP, TIFF)",
+    "dropHint": "or click to choose a file ({{formats}})",
     "lamaPromo": {
       "title": "LaMa AI Model (optional)",
       "desc": "Removes watermarks with photorealistic quality by reconstructing textures and background.",
       "installBtn": "Download & install model (~196 MB)",
       "ready": "LaMa model installed and activated!"
     },
-    "changeImage": "Change image",
     "tools": "Mask tools",
     "brush": "Brush",
     "eraser": "Eraser",
@@ -691,11 +692,8 @@
       "lama": "AI · LaMa (best quality)",
       "lamaMissing": "AI · LaMa (not installed)"
     },
-    "before": "Before",
-    "after": "After",
     "suffix": "_clean",
     "backToMask": "Back to mask",
-    "continue": "Keep editing the result",
     "remove": "Remove watermark",
     "idle": {
       "paint": "Paint over the watermark.",
@@ -703,7 +701,6 @@
       "done": "Done – compare and save the result."
     },
     "toast": {
-      "done": "Watermark removed",
       "fallback": "A fallback method was used",
       "error": "Could not remove the watermark",
       "loadError": "Cannot open the image",
@@ -726,7 +723,7 @@
     "title": "Title",
     "titlePlaceholder": "e.g. Project progress – October",
     "banner": "Header banner",
-    "noBanner": "No banner (optional)",
+    "noBanner": "No banner",
     "width": "Width",
     "barHeight": "Bar height",
     "background": "Background",
@@ -774,7 +771,6 @@
     "open": "open"
   },
   "rembg": {
-    "changeImage": "Change image",
     "status": {
       "loading": "Loading image…",
       "preparingModel": "Preparing AI model ({{model}})…",
@@ -784,40 +780,42 @@
       "done": "Background removed successfully."
     },
     "dropTitle": "Drop image here to remove background",
-    "dropHint": "or click to browse (PNG, JPG, WEBP, BMP, TIFF)",
+    "dropHint": "or click to choose a file ({{formats}})",
     "modelPromo": {
-      "title": "BiRefNet / RMBG AI Model",
+      "title": "BiRefNet background removal model",
       "desc": "This tool requires rembg and ONNX Runtime. Click below to install in the background.",
       "installBtn": "Download & activate AI (~140 MB)",
       "ready": "AI model is ready to use!"
     },
     "options": {
       "model": "AI Model",
-      "modelBirefnet": "BiRefNet · Maximum precision & hair (recommended)",
+      "modelBirefnet": "BiRefNet · Maximum precision, hair",
       "modelBirefnetLite": "BiRefNet Lite · Fast & lightweight",
-      "modelIsnet": "IS-Net · General purpose (DIS)",
+      "modelIsnet": "IS-Net · General purpose",
       "modelU2net": "U2Net · Classic model",
-      "antiHalo": "Edge Anti-Halo Debleed",
+      "antiHalo": "Edge protection",
       "antiHaloHint": "Replaces white/bright border bleed with the true foreground color",
-      "choke": "Edge Choke / Erode",
+      "choke": "Edge choke",
       "chokeHint": "Shaves outermost boundary pixels (0-4 px) to eliminate fringe halos",
-      "despeckle": "Remove Small Remnants (Despeckle)",
+      "despeckle": "Remove small remnants",
       "despeckleHint": "Automatically filters isolated background specks and noise",
       "previewBg": "Preview Background",
       "bgChecker": "Checkerboard",
-      "bgBlack": "Pure Black",
-      "bgWhite": "Pure White",
-      "bgCustom": "Custom Color",
+      "bgBlack": "Black",
+      "bgWhite": "White",
+      "bgGreen": "Green",
       "chokeNone": "None"
     },
     "preview": {
-      "before": "Original",
       "after": "Cutout",
       "timeElapsed": "Elapsed: {{seconds}}s"
     },
     "actions": {
-      "remove": "Remove background",
-      "processing": "Removing background…"
+      "remove": "Remove background"
+    },
+    "idle": {
+      "ready": "Ready to remove the background.",
+      "needModel": "Install the AI model above to begin."
     }
   },
   "deps": {
@@ -848,7 +846,7 @@
     "installTitle": {
       "lama": "LaMa AI Model",
       "ffmpeg": "FFmpeg",
-      "rembg": "BiRefNet AI Model (Background removal)",
+      "rembg": "BiRefNet background removal model",
       "upscale_general": "Real-ESRGAN General AI Model",
       "upscale_anime": "Real-ESRGAN Anime AI Model"
     }
@@ -913,32 +911,26 @@
       "error": "Error modifying image"
     },
     "dropTitle": "Drop images to edit",
-    "dropHint": "One or more files: PNG, JPEG, WebP, BMP, TIFF"
+    "dropHint": "One or more files: {{formats}}"
   },
   "transfer": {
-    "sendTo": "Send to...",
-    "sendAllTo": "Send all to...",
-    "button": "Send to...",
-    "buttonTooltip": "Open this file in another tool",
+    "sendTo": "Send to…",
+    "sendAllTo": "Send all to…",
     "modalTitle": "Send file to another tool",
     "modalDesc": "Choose a tool to continue working with this file.",
     "sourceFiles": "Selected files ({{count}})",
     "compatibleTools": "Compatible tools",
     "noCompatibleTools": "No compatible tools found for this file type.",
-    "asImagesToPdf": "Will open in mode: Images to PDF",
-    "asPdfToImages": "Will open in mode: PDF to Images",
     "toastLoaded": "File successfully loaded into tool",
     "toastLoadedFrom": "Loaded file from: {{source}}",
-    "afterTitle": "Processed images",
     "convertedTitle": "Converted images",
     "compressedTitle": "Compressed images",
     "processedTitle": "Processing results",
-    "extractedTitle": "Extracted images",
     "openOutputFolder": "Show output folder"
   },
   "video_sync": {
     "dropTitle": "Drop a video file here or click to browse",
-    "dropHint": "Supports MP4, MKV, MOV, AVI, WEBM, FLV, WMV and other video formats",
+    "dropHint": "Supports {{formats}}",
     "changeVideo": "Change video",
     "errors": {
       "loadVideo": "Error loading video",
@@ -953,8 +945,8 @@
       "trackExternal": "Audio file"
     },
     "status": {
-      "preparing": "Preparing synchronization...",
-      "syncing": "Exporting synchronized video...",
+      "preparing": "Preparing synchronization…",
+      "syncing": "Exporting synchronized video…",
       "done": "Synchronization complete"
     },
     "export": {

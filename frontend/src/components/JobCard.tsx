@@ -25,7 +25,7 @@ import { toolForJob } from "../app/tools";
 import { api } from "../lib/bridge";
 import { formatBytes, formatDuration } from "../lib/format";
 import { navigate } from "../lib/router";
-import {  type JobState } from "../stores/jobs";
+import type { JobState } from "../stores/jobs";
 import { useTransferStore } from "../stores/transfer";
 import { jobMessage } from "../lib/jobMessage";
 import { LiveElapsed } from "./LiveElapsed";

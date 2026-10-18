@@ -1,46 +1,18 @@
 import { useEffect, useState } from "react";
-import {
-  Badge,
-  Button,
-  Caption1,
-  Divider,
-  Dropdown,
-  makeStyles,
-  Option,
-  Switch,
-  Text,
-  Toolbar,
-  tokens,
-  Tooltip,
-} from "@fluentui/react-components";
-import {
-  FolderOpen16Regular,
-  Image24Regular,
-  ImageEdit20Regular,
-  Save16Regular,
-  Sparkle16Filled,
-  ArrowRight16Regular,
-} from "@fluentui/react-icons";
+import { Button, Divider, makeStyles, Switch, Text, Toolbar, Tooltip } from "@fluentui/react-components";
+import { ArrowMaximize16Filled } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { create } from "zustand";
-import { toolById } from "../../app/tools";
-import { ActionBar } from "../../components/ActionBar";
-import { DropZone } from "../../components/DropZone";
-import { ImageComparison } from "../../components/ImageComparison";
-import { useNotify } from "../../components/notify";
-import { Page } from "../../components/Page";
-import { Panel } from "../../components/Panel";
 import { ModelBanner } from "../../components/ModelBanner";
-import { SaveOutputFields, useSaveOutput } from "../../components/SaveOutput";
+import { Select } from "../../components/Select";
+import { useNotify } from "../../components/notify";
+import { useSaveOutput } from "../../components/SaveOutput";
+import { SingleImageTool } from "../../components/SingleImageTool";
 import { api } from "../../lib/bridge";
-import { dialogFilter, IMAGE_EXTENSIONS } from "../../lib/fileTypes";
-import {  fileName } from "../../lib/format";
+import { formatList, IMAGE_EXTENSIONS } from "../../lib/fileTypes";
+import { fileName } from "../../lib/format";
 import type { UpscaleOptions, UpscalePreview, UpscaleResult } from "../../lib/types";
-import { } from "../../stores/jobs";
 import { useJobRunner } from "../../lib/useJobRunner";
-import { } from "../../stores/settings";
-import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
-import { useTransferStore } from "../../stores/transfer";
 
 type ModelType = "general" | "anime";
 type AlphaMode = "smooth" | "ai";
@@ -96,38 +68,6 @@ const useStyles = makeStyles({
     gap: "8px",
     marginTop: "16px",
   },
-  stage: {
-    height: "min(64vh, 660px)",
-    minHeight: "340px",
-    borderRadius: tokens.borderRadiusLarge,
-    backgroundColor: tokens.colorNeutralBackground3,
-    backgroundImage: `linear-gradient(45deg, ${tokens.colorNeutralBackground4} 25%, transparent 25%), linear-gradient(-45deg, ${tokens.colorNeutralBackground4} 25%, transparent 25%), linear-gradient(45deg, transparent 75%, ${tokens.colorNeutralBackground4} 75%), linear-gradient(-45deg, transparent 75%, ${tokens.colorNeutralBackground4} 75%)`,
-    backgroundSize: "20px 20px",
-    backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0",
-    overflow: "hidden",
-    display: "grid",
-    placeItems: "center",
-    padding: "16px",
-    boxSizing: "border-box",
-    position: "relative",
-  },
-  stagePreview: {
-    maxWidth: "100%",
-    maxHeight: "calc(min(64vh, 660px) - 32px)",
-    objectFit: "contain",
-    boxShadow: tokens.shadow16,
-    borderRadius: tokens.borderRadiusMedium,
-  },
-  fileRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    color: tokens.colorNeutralForeground3,
-    flexWrap: "wrap",
-  },
-  grow: {
-    flexGrow: 1,
-  },
 });
 
 const MODELS: Record<ModelType, { depId: string; name: string; size: string }> = {
@@ -154,7 +94,6 @@ export default function UpscalePage() {
   const { t } = useTranslation();
   const styles = useStyles();
   const notify = useNotify();
-  const tool = toolById("upscale")!;
   const form = useForm();
   const output = useSaveOutput(api.upscale.save);
 
@@ -175,10 +114,7 @@ export default function UpscalePage() {
   }, []);
 
   const runner = useJobRunner<UpscaleResult>("upscale", {
-    onDone: (result) => {
-      form.set({ result });
-      notify.success(t("upscale.toast.done"));
-    },
+    onDone: (result) => form.set({ result }),
     onError: (error) => notify.error(t("upscale.toast.error"), { body: error }),
   });
 
@@ -197,18 +133,6 @@ export default function UpscalePage() {
     } catch (err) {
       notify.error(t("upscale.toast.loadError"), { body: String(err) });
     }
-  };
-
-  useIncomingTransfer("upscale", (files) => {
-    if (files[0]) load(files[0]);
-  });
-
-  const browse = async () => {
-    const [path] = await api.dialogs.openFiles(
-      [dialogFilter(t, "images")],
-      false
-    );
-    if (path) load(path);
   };
 
   const currentModelReady = modelsReady[form.model];
@@ -231,27 +155,6 @@ export default function UpscalePage() {
     runner.start(() => api.upscale.start(opts)).catch((err) => notify.error(String(err)));
   };
 
-  if (!form.image) {
-    return (
-      <Page
-        title={t("tools.upscale.name")}
-        description={t("tools.upscale.description")}
-        icon={tool.icon}
-        accent={tool.accent}
-      >
-        <DropZone
-          icon={Image24Regular}
-          title={t("upscale.dropTitle")}
-          hint={t("upscale.dropHint")}
-          accept={IMAGE_EXTENSIONS}
-          onFiles={(paths) => load(paths[0])}
-          onBrowse={browse}
-        />
-        {!modelsReady.general && <UpscaleModelBanner model="general" onInstalled={checkModels} />}
-      </Page>
-    );
-  }
-
   const modelOptions = [
     { id: "general" as ModelType, label: t("upscale.models.general"), size: MODELS.general.size },
     { id: "anime" as ModelType, label: t("upscale.models.anime"), size: MODELS.anime.size },
@@ -267,195 +170,89 @@ export default function UpscalePage() {
     { id: "ai" as AlphaMode, label: t("upscale.options.alphaAi") },
   ];
 
-  const targetWidth = form.image.width * form.scale;
-  const targetHeight = form.image.height * form.scale;
+  const toolbar = form.image && !form.result && (
+    <Toolbar className={styles.toolbar} aria-label={t("tools.upscale.name")}>
+      <div className={styles.optionItem}>
+        <Text size={200} weight="semibold">{t("upscale.options.model")}</Text>
+        <Select
+          className={styles.modelDropdown}
+          options={modelOptions.map((m) => ({ value: m.id, label: modelsReady[m.id] ? m.label : `${m.label} (${m.size})` }))}
+          value={form.model}
+          onChange={(model) => form.set({ model })}
+          aria-label={t("upscale.options.model")}
+        />
+      </div>
+
+      <div className={styles.optionItem}>
+        <Text size={200} weight="semibold">{t("upscale.options.scale")}</Text>
+        <Select
+          className={styles.scaleDropdown}
+          options={scaleOptions.map((o) => ({ value: String(o.id), label: o.label }))}
+          value={String(form.scale)}
+          onChange={(v) => {
+            const nextScale = Number(v) as 2 | 4;
+            form.set({ scale: nextScale });
+            if (form.sourcePath) output.setName(getDefaultOutFileName(form.sourcePath, nextScale));
+          }}
+          aria-label={t("upscale.options.scale")}
+        />
+      </div>
+
+      {form.image.hasAlpha && (
+        <>
+          <Divider vertical />
+          <div className={styles.optionItem}>
+            <Text size={200} weight="semibold">{t("upscale.options.alphaMode")}</Text>
+            <Select
+              className={styles.alphaDropdown}
+              options={alphaOptions.map((a) => ({ value: a.id, label: a.label }))}
+              value={form.alphaMode}
+              onChange={(alphaMode) => form.set({ alphaMode })}
+              aria-label={t("upscale.options.alphaMode")}
+            />
+          </div>
+
+          <div className={styles.switchRow}>
+            <Switch
+              checked={form.antiHalo}
+              onChange={(_, data) => form.set({ antiHalo: data.checked })}
+              label={
+                <Tooltip content={t("upscale.options.antiHaloHint")} relationship="description">
+                  <span>{t("upscale.options.antiHalo")}</span>
+                </Tooltip>
+              }
+            />
+          </div>
+        </>
+      )}
+    </Toolbar>
+  );
 
   return (
-    <Page
-      title={t("tools.upscale.name")}
-      description={t("tools.upscale.description")}
-      icon={tool.icon}
-      accent={tool.accent}
-    >
-      <Panel
-        title={
-          <span className={styles.fileRow}>
-            <Image24Regular />
-            <Text weight="semibold">{fileName(form.sourcePath)}</Text>
-            <Caption1>
-              {form.image.width}×{form.image.height} → {targetWidth}×{targetHeight} ({form.scale}×)
-            </Caption1>
-            {form.image.hasAlpha ? (
-              <Badge appearance="filled" color="brand">
-                {t("upscale.badges.transparent")}
-              </Badge>
-            ) : (
-              <Badge appearance="tint" color="informative">
-                {t("upscale.badges.opaque")}
-              </Badge>
-            )}
-          </span>
-        }
-        actions={
-          <>
-            <Button appearance="subtle" icon={<ImageEdit20Regular />} onClick={browse}>
-              {t("upscale.changeImage")}
-            </Button>
-            <Button
-              appearance="subtle"
-              icon={<ArrowRight16Regular />}
-              onClick={() => useTransferStore.getState().openModal([form.result?.resultPath ?? form.sourcePath], "upscale")}
-            >
-              {t("transfer.sendTo")}
-            </Button>
-          </>
-        }
-      >
-        {!currentModelReady && <UpscaleModelBanner model={form.model} onInstalled={checkModels} />}
-
-        {!form.result && (
-          <Toolbar className={styles.toolbar} aria-label={t("tools.upscale.name")}>
-            <div className={styles.optionItem}>
-              <Text size={200} weight="semibold">{t("upscale.options.model")}</Text>
-              <Dropdown
-                className={styles.modelDropdown}
-                value={modelOptions.find((m) => m.id === form.model)?.label}
-                selectedOptions={[form.model]}
-                onOptionSelect={(_, d) => form.set({ model: d.optionValue as ModelType })}
-                aria-label={t("upscale.options.model")}
-              >
-                {modelOptions.map((m) => (
-                  <Option
-                    key={m.id}
-                    value={m.id}
-                    text={`${m.label} ${!modelsReady[m.id] ? `(${m.size})` : ""}`.trim()}
-                  >
-                    {m.label} {!modelsReady[m.id] ? `(${m.size})` : ""}
-                  </Option>
-                ))}
-              </Dropdown>
-            </div>
-
-            <div className={styles.optionItem}>
-              <Text size={200} weight="semibold">{t("upscale.options.scale")}</Text>
-              <Dropdown
-                className={styles.scaleDropdown}
-                value={scaleOptions.find((s) => s.id === form.scale)?.label}
-                selectedOptions={[String(form.scale)]}
-                onOptionSelect={(_, d) => {
-                  const nextScale = Number(d.optionValue) as 2 | 4;
-                  form.set({ scale: nextScale });
-                  if (form.sourcePath) {
-                    output.setName(getDefaultOutFileName(form.sourcePath, nextScale));
-                  }
-                }}
-                aria-label={t("upscale.options.scale")}
-              >
-                {scaleOptions.map((s) => (
-                  <Option key={String(s.id)} value={String(s.id)}>
-                    {s.label}
-                  </Option>
-                ))}
-              </Dropdown>
-            </div>
-
-            {form.image.hasAlpha && (
-              <>
-                <Divider vertical />
-                <div className={styles.optionItem}>
-                  <Text size={200} weight="semibold">{t("upscale.options.alphaMode")}</Text>
-                  <Dropdown
-                    className={styles.alphaDropdown}
-                    value={alphaOptions.find((a) => a.id === form.alphaMode)?.label}
-                    selectedOptions={[form.alphaMode]}
-                    onOptionSelect={(_, d) => form.set({ alphaMode: d.optionValue as AlphaMode })}
-                    aria-label={t("upscale.options.alphaMode")}
-                  >
-                    {alphaOptions.map((a) => (
-                      <Option key={a.id} value={a.id}>
-                        {a.label}
-                      </Option>
-                    ))}
-                  </Dropdown>
-                </div>
-
-                <div className={styles.switchRow}>
-                  <Switch
-                    checked={form.antiHalo}
-                    onChange={(_, data) => form.set({ antiHalo: data.checked })}
-                    label={
-                      <Tooltip content={t("upscale.options.antiHaloHint")} relationship="description">
-                        <span>{t("upscale.options.antiHalo")}</span>
-                      </Tooltip>
-                    }
-                  />
-                </div>
-              </>
-            )}
-          </Toolbar>
-        )}
-
-        <div className={styles.stage}>
-          {form.result ? (
-            <ImageComparison
-              before={form.image.dataUrl}
-              after={form.result.dataUrl}
-              beforeLabel={`${t("upscale.before")} (${form.image.width}×${form.image.height})`}
-              afterLabel={`${t("upscale.after", { scale: form.scale })} (${form.result.width}×${form.result.height})`}
-              maxHeight="calc(min(64vh, 660px) - 32px)"
-              aspectRatio={form.image.width && form.image.height ? form.image.width / form.image.height : undefined}
-            />
-          ) : (
-            <img
-              src={form.image.dataUrl}
-              alt={fileName(form.sourcePath)}
-              className={styles.stagePreview}
-            />
-          )}
-        </div>
-
-        <SaveOutputFields output={output} />
-      </Panel>
-
-      <ActionBar
-        job={runner.running ? runner.job : undefined}
-        idleText={
-          form.result
-            ? t("upscale.idle.done")
-            : currentModelReady
-            ? t("upscale.idle.ready")
-            : t("upscale.idle.needModel")
-        }
-        onCancel={runner.cancel}
-      >
-        {form.result ? (
-          <>
-            <Button onClick={() => form.set({ result: null })}>{t("upscale.backToOptions")}</Button>
-            <Button onClick={() => load(form.result!.resultPath, true)}>
-              {t("upscale.continueWithThis")}
-            </Button>
-            <Button appearance="primary" icon={<Save16Regular />} disabled={!output.canSave} onClick={() => output.saveHere(form.result!.resultPath)}>
-              {t("common.saveBtn")}
-            </Button>
-            <Button
-              appearance="subtle"
-              icon={<FolderOpen16Regular />}
-              onClick={() => output.saveAs(form.result!.resultPath, [dialogFilter(t, "images", [".png", ".jpg", ".webp"])])}
-            >
-              {t("common.saveAs")}
-            </Button>
-          </>
-        ) : (
-          <Button
-            appearance="primary"
-            icon={<Sparkle16Filled />}
-            disabled={!currentModelReady || runner.running}
-            onClick={run}
-          >
-            {t("upscale.runBtn", { scale: form.scale })}
-          </Button>
-        )}
-      </ActionBar>
-    </Page>
+    <SingleImageTool
+      toolId="upscale"
+      image={form.image}
+      sourcePath={form.sourcePath}
+      result={form.result}
+      onLoad={load}
+      dropTitle={t("upscale.dropTitle")}
+      dropHint={t("upscale.dropHint", { formats: formatList(IMAGE_EXTENSIONS) })}
+      banner={!currentModelReady && <UpscaleModelBanner model={form.model} onInstalled={checkModels} />}
+      emptyBanner={!modelsReady.general && <UpscaleModelBanner model="general" onInstalled={checkModels} />}
+      caption={form.image && `${form.image.width}×${form.image.height} → ${form.image.width * form.scale}×${form.image.height * form.scale}`}
+      toolbar={toolbar}
+      output={output}
+      saveExtensions={[".png", ".jpg", ".webp"]}
+      job={runner.job}
+      idleText={form.result ? t("upscale.idle.done") : currentModelReady ? t("upscale.idle.ready") : t("upscale.idle.needModel")}
+      onCancel={runner.cancel}
+      runAction={
+        <Button appearance="primary" icon={<ArrowMaximize16Filled />} disabled={!currentModelReady || runner.running} onClick={run}>
+          {t("upscale.runBtn")}
+        </Button>
+      }
+      resultActions={<Button onClick={() => form.set({ result: null })}>{t("upscale.backToOptions")}</Button>}
+      onContinue={() => form.result && load(form.result.resultPath, true)}
+    />
   );
 }

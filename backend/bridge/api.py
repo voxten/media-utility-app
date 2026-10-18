@@ -217,17 +217,17 @@ class PdfApi(_Namespace):
             title=Path(path).name,
         )
 
-    def split(self, path: str, out_dir: str, mode: str = "all", range_spec: str = "") -> str:
+    def split(self, path: str, out_dir: str, mode: str = "all", groups: Optional[List[List[int]]] = None) -> str:
         return self._ctx.jobs.submit(
             "pdf.split",
-            lambda ctx: pdf.split(ctx, path, out_dir, mode=mode, range_spec=range_spec),
+            lambda ctx: pdf.split(ctx, path, out_dir, mode=mode, groups=groups or []),
             title=Path(path).name,
         )
 
-    def pdf_to_images(self, path: str, out_dir: str, fmt: str = "png", dpi: int = 150) -> str:
+    def pdf_to_images(self, path: str, out_dir: str, fmt: str = "png", dpi: int = 150, range_spec: str = "") -> str:
         return self._ctx.jobs.submit(
             "pdf.to_images",
-            lambda ctx: pdf.pdf_to_images(ctx, path, out_dir, fmt=fmt, dpi=int(dpi)),
+            lambda ctx: pdf.pdf_to_images(ctx, path, out_dir, fmt=fmt, dpi=int(dpi), range_spec=range_spec),
             title=Path(path).name,
         )
 
@@ -428,6 +428,9 @@ class CompressorApi(_Namespace):
 class ImageEditorApi(_Namespace):
     def load_preview(self, path: str) -> Dict[str, Any]:
         return image_editor.load_preview(path)
+
+    def thumbnail(self, path: str) -> Dict[str, Any]:
+        return image_editor.thumbnail(path)
 
     def preview_transform(self, path: str, operations: Dict[str, Any]) -> Dict[str, Any]:
         return image_editor.preview_transform(path, operations)

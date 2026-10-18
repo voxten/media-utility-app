@@ -33,13 +33,12 @@ import {
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { create } from "zustand";
-import { toolById } from "../../app/tools";
 import { ActionBar } from "../../components/ActionBar";
 import { confirm } from "../../components/ConfirmDialog";
 import { EmptyState } from "../../components/EmptyState";
 import { LogPanel } from "../../components/LogPanel";
 import { useNotify } from "../../components/notify";
-import { Page } from "../../components/Page";
+import { ToolPage } from "../../components/Page";
 import { Panel } from "../../components/Panel";
 import { PathPicker } from "../../components/PathPicker";
 import { SliderField } from "../../components/SliderField";
@@ -198,7 +197,6 @@ export default function DuplicatesPage() {
   const { t } = useTranslation();
   const styles = useStyles();
   const notify = useNotify();
-  const tool = toolById("duplicates")!;
   const form = useForm();
 
   const runner = useJobRunner<ScanResult>("duplicates", {
@@ -282,7 +280,7 @@ export default function DuplicatesPage() {
     runner.start(() => api.duplicates.scan(form.folder, form.mode, form.threshold)).catch((err) => notify.error(t("duplicates.toast.error"), { body: String(err) }));
 
   return (
-    <Page title={t("tools.duplicates.name")} description={t("tools.duplicates.description")} icon={tool.icon} accent={tool.accent}>
+    <ToolPage toolId="duplicates">
       <Panel
         title={t("duplicates.setup")}
         actions={
@@ -398,6 +396,6 @@ export default function DuplicatesPage() {
           {t("duplicates.scan")}
         </Button>
       </ActionBar>
-    </Page>
+    </ToolPage>
   );
 }

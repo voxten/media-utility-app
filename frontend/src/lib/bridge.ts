@@ -160,10 +160,11 @@ export const api = {
     merge: (pages: { file: string; page: number }[], outPath: string) => call<JobId>("pdf", "merge", pages, outPath),
     compress: (path: string, outPath: string, quality: "low" | "balanced" | "high") =>
       call<JobId>("pdf", "compress", path, outPath, quality),
-    split: (path: string, outDir: string, mode: "all" | "range", rangeSpec?: string) =>
-      call<JobId>("pdf", "split", path, outDir, mode, rangeSpec ?? ""),
-    toImages: (path: string, outDir: string, fmt: "png" | "jpeg" | "webp", dpi: number) =>
-      call<JobId>("pdf", "pdf_to_images", path, outDir, fmt, dpi),
+    /** `groups` holds 0-based page indexes; each group becomes one output file. */
+    split: (path: string, outDir: string, mode: "all" | "groups", groups: number[][] = []) =>
+      call<JobId>("pdf", "split", path, outDir, mode, groups),
+    toImages: (path: string, outDir: string, fmt: "png" | "jpeg" | "webp", dpi: number, rangeSpec = "") =>
+      call<JobId>("pdf", "pdf_to_images", path, outDir, fmt, dpi, rangeSpec),
     fromImages: (paths: string[], outPath: string) => call<JobId>("pdf", "images_to_pdf", paths, outPath),
     rotate: (path: string, pages: number[], angle: number, outPath: string) =>
       call<JobId>("pdf", "rotate_pages", path, pages, angle, outPath),
@@ -258,6 +259,8 @@ export const api = {
     }) => call<JobId>("compressor", "start", params),
   },
   image_editor: {
+    thumbnail: (path: string) =>
+      call<{ width: number; height: number; format: string; size: number; dataUrl: string }>("image_editor", "thumbnail", path),
     loadPreview: (path: string) =>
       call<{
         path: string;

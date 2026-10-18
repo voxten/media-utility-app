@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { makeStyles, mergeClasses, Subtitle2, Text, Title2, tokens } from "@fluentui/react-components";
 import type { FluentIcon } from "@fluentui/react-icons";
+import { useTranslation } from "react-i18next";
+import { toolById } from "../app/tools";
 
 const useStyles = makeStyles({
   scroll: {
@@ -31,7 +33,7 @@ const useStyles = makeStyles({
     borderRadius: tokens.borderRadiusXLarge,
     display: "grid",
     placeItems: "center",
-    color: "#fff",
+    color: tokens.colorNeutralForegroundStaticInverted,
     boxShadow: tokens.shadow4,
     "& svg": { width: "26px", height: "26px" },
   },
@@ -83,6 +85,21 @@ export function Page({ title, description, icon: Icon, accent, actions, children
         {children}
       </div>
     </div>
+  );
+}
+
+/** Page for a tool from app/tools.tsx; title, description, icon and accent come from its definition. */
+export function ToolPage({ toolId, ...rest }: Omit<PageProps, "title" | "description" | "icon" | "accent"> & { toolId: string }) {
+  const { t } = useTranslation();
+  const tool = toolById(toolId);
+  return (
+    <Page
+      title={t(`tools.${toolId}.name`)}
+      description={t(`tools.${toolId}.description`)}
+      icon={tool?.icon}
+      accent={tool?.accent}
+      {...rest}
+    />
   );
 }
 

@@ -24,6 +24,18 @@ def test_load_preview(tmp_path: Path):
     assert meta["dataUrl"].startswith("data:image/")
 
 
+def test_thumbnail_is_small_and_keeps_alpha(tmp_path: Path):
+    opaque = _create_test_image(tmp_path / "big.jpg", size=(2000, 1000))
+    meta = image_editor.thumbnail(str(opaque))
+    assert (meta["width"], meta["height"]) == (2000, 1000)
+    assert meta["format"] == "JPEG"
+    assert meta["dataUrl"].startswith("data:image/jpeg")
+
+    transparent = _create_test_image(tmp_path / "alpha.png", size=(600, 600), color=(0, 0, 0, 0), mode="RGBA")
+    meta = image_editor.thumbnail(str(transparent))
+    assert meta["dataUrl"].startswith("data:image/webp")
+
+
 def test_resize_dimensions(tmp_path: Path):
     src = tmp_path / "img.jpg"
     _create_test_image(src, size=(400, 200))

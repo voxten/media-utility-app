@@ -1,6 +1,7 @@
-// Layout shared by PDF tools that work on one document: drop zone, selected file with options, result, action bar.
+// Layout shared by PDF tools that work on one document: drop zone, selected file with options, result,
+// page previews and the action bar.
 
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { Button, Caption1, makeStyles, tokens } from "@fluentui/react-components";
 import { ArrowRight16Regular, Delete16Regular, DocumentPdf24Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
@@ -12,6 +13,10 @@ import { dialogFilter, PDF_EXTENSIONS } from "../../lib/fileTypes";
 import { dirName, fileName } from "../../lib/format";
 import type { JobState } from "../../stores/jobs";
 import { useTransferStore } from "../../stores/transfer";
+import { formatPageRange, parsePageRange } from "./pageRange";
+import { PdfPageGrid, type PageMark } from "./PdfPageGrid";
+import { usePdfPagePreview } from "./PdfPagePreview";
+import { usePdfPages } from "./usePdfPages";
 
 const useStyles = makeStyles({
   muted: { color: tokens.colorNeutralForeground3, overflowWrap: "anywhere" },
@@ -29,11 +34,31 @@ interface SinglePdfToolProps {
   result?: ReactNode;
   /** Tool options shown under the selected file. */
   children?: ReactNode;
+  /** Page range text ("1-3, 5") that the page grid shows and edits by clicking pages. */
+  pageRange?: { value: string; onChange: (range: string) => void };
+  /** Coloured page groups the tool manages itself; `toolbar` goes in the page grid's header. */
+  pageMarks?: {
+    marks: Map<number, PageMark>;
+    onToggle: (page: number, extend: boolean) => void;
+    toolbar?: ReactNode;
+  };
 }
 
-export function SinglePdfTool({ toolId, file, onFileChange, job, onCancel, action, result, children }: SinglePdfToolProps) {
+export function SinglePdfTool({ toolId, file, onFileChange, job, onCancel, action, result, children, pageRange, pageMarks }: SinglePdfToolProps) {
   const styles = useStyles();
   const { t } = useTranslation();
+  const { pages, loading } = usePdfPages(file);
+  const preview = usePdfPagePreview();
+
+  const range = pageRange?.value ?? "";
+  const selected = useMemo(() => new Set(parsePageRange(range, pages.length)), [range, pages.length]);
+  const togglePage = (page: number) => {
+    if (!pageRange) return;
+    const next = new Set(selected);
+    if (next.has(page)) next.delete(page);
+    else next.add(page);
+    pageRange.onChange(formatPageRange(next));
+  };
 
   const browse = async () => {
     const [picked] = await api.dialogs.openFiles([dialogFilter(t, "pdf")], false);
@@ -72,11 +97,27 @@ export function SinglePdfTool({ toolId, file, onFileChange, job, onCancel, actio
             </>
           }
         >
-          <Caption1 className={styles.muted}>{dirName(file)}</Caption1>
+          <Caption1 className={styles.muted}>
+            {pages.length && !loading ? `${dirName(file)} · ${t("pdf.pageCount", { count: pages.length })}` : dirName(file)}
+          </Caption1>
           {children}
           {result}
         </Panel>
       )}
+
+      {file && (
+        <Panel title={t("pdf.pagesTitle")} actions={pageMarks?.toolbar}>
+          <PdfPageGrid
+            pages={pages}
+            loading={loading}
+            selected={pageRange ? selected : undefined}
+            marks={pageMarks?.marks}
+            onToggle={pageMarks?.onToggle ?? (pageRange ? togglePage : undefined)}
+            onPreview={preview.show}
+          />
+        </Panel>
+      )}
+      {preview.dialog}
 
       <ActionBar job={job} idleText={file ? undefined : t("pdf.idle.empty")} onCancel={onCancel}>
         {action}

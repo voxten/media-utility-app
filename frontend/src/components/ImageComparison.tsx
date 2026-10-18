@@ -13,6 +13,8 @@ import {
   ImageSplit20Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
+import { IMAGE_STAGE_CONTENT_HEIGHT } from "../lib/imageStage";
+import { ON_IMAGE } from "../lib/onImage";
 import { CompareSlider } from "./CompareSlider";
 
 export type CompareViewMode = "split" | "side" | "after" | "before";
@@ -38,25 +40,25 @@ const useStyles = makeStyles({
     gap: "4px",
     padding: "4px 6px",
     borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: "rgba(0,0,0,0.55)",
+    backgroundColor: ON_IMAGE.scrim,
     backdropFilter: "blur(8px)",
     boxShadow: tokens.shadow8,
     zIndex: 10,
     flexShrink: 0,
   },
   modeBtn: {
-    color: "#fff",
+    color: ON_IMAGE.light,
     minWidth: "auto",
     padding: "4px 8px",
     height: "28px",
     ":hover": {
-      color: "#fff",
-      backgroundColor: "rgba(255,255,255,0.15)",
+      color: ON_IMAGE.light,
+      backgroundColor: ON_IMAGE.hover,
     },
   },
   modeBtnActive: {
-    backgroundColor: "rgba(255,255,255,0.25)",
-    color: "#fff",
+    backgroundColor: ON_IMAGE.selected,
+    color: ON_IMAGE.light,
     fontWeight: tokens.fontWeightSemibold,
   },
   contentArea: {
@@ -96,7 +98,7 @@ const useStyles = makeStyles({
     minHeight: 0,
     minWidth: 0,
     borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: "rgba(0,0,0,0.2)",
+    backgroundColor: tokens.colorNeutralBackground3,
     padding: "8px",
     boxSizing: "border-box",
     overflow: "hidden",
@@ -107,8 +109,8 @@ const useStyles = makeStyles({
     left: "8px",
     padding: "3px 8px",
     borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: "rgba(0,0,0,0.65)",
-    color: "#fff",
+    backgroundColor: ON_IMAGE.scrim,
+    color: ON_IMAGE.light,
     zIndex: 2,
     boxShadow: tokens.shadow4,
   },
@@ -161,7 +163,7 @@ export function ImageComparison({
   after,
   beforeLabel,
   afterLabel,
-  maxHeight = "calc(min(64vh, 660px) - 32px)",
+  maxHeight = IMAGE_STAGE_CONTENT_HEIGHT,
   initialMode = "split",
   aspectRatio,
 }: ImageComparisonProps) {

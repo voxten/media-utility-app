@@ -1,7 +1,9 @@
 import cv2
 import numpy as np
 import pytest
-import torch
+
+# PyTorch is installed on demand from Settings, so these tests only run where it is present.
+torch = pytest.importorskip("torch")
 
 from backend.services import ai_models, upscale
 

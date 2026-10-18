@@ -47,7 +47,7 @@ const useStyles = makeStyles({
     borderRadius: tokens.borderRadiusMedium,
     display: "grid",
     placeItems: "center",
-    color: "#fff",
+    color: tokens.colorNeutralForegroundStaticInverted,
     flexShrink: 0,
     "& svg": { width: "18px", height: "18px" },
   },

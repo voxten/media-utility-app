@@ -3,6 +3,7 @@
 
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { makeStyles, tokens } from "@fluentui/react-components";
+import { ON_IMAGE } from "../../lib/onImage";
 
 export interface MaskCanvasHandle {
   undo: () => void;
@@ -42,8 +43,8 @@ const useStyles = makeStyles({
     position: "absolute",
     pointerEvents: "none",
     borderRadius: "50%",
-    border: "1.5px solid #fff",
-    boxShadow: "0 0 0 1px rgba(0,0,0,0.6)",
+    border: `1.5px solid ${ON_IMAGE.light}`,
+    boxShadow: `0 0 0 1px ${ON_IMAGE.outline}`,
     transform: "translate(-50%, -50%)",
   },
 });

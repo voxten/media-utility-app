@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import {
   Badge,
   Button,
@@ -9,7 +8,6 @@ import {
   DialogSurface,
   DialogTitle,
   makeStyles,
-  Spinner,
   Text,
   tokens,
   Tooltip,
@@ -23,36 +21,18 @@ import {
   Video24Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
-import { toolById } from "../app/tools";
-import { api } from "../lib/bridge";
-import { IMAGE_EXTENSIONS, PDF_EXTENSIONS, VIDEO_EXTENSIONS } from "../lib/fileTypes";
+import { CATEGORY_ACCENTS, toolById, TOOLS } from "../app/tools";
+import { fileExtension, formatName, mediaKind } from "../lib/fileTypes";
 import { fileName, formatBytes } from "../lib/format";
 import { navigate } from "../lib/router";
+import { useThumbnail } from "../lib/useThumbnail";
 import { useTransferStore } from "../stores/transfer";
-
-const IMAGE_EXTS = new Set([...IMAGE_EXTENSIONS, ".gif"]);
-const PDF_EXTS = new Set(PDF_EXTENSIONS);
-const VIDEO_EXTS = new Set(VIDEO_EXTENSIONS);
-
-function getExt(filePath: string): string {
-  const match = filePath.match(/\.[^.]+$/);
-  return match ? match[0].toLowerCase() : "";
-}
-
-function getFileType(filePath: string): "image" | "pdf" | "video" | "unknown" {
-  const ext = getExt(filePath);
-  if (IMAGE_EXTS.has(ext)) return "image";
-  if (PDF_EXTS.has(ext)) return "pdf";
-  if (VIDEO_EXTS.has(ext)) return "video";
-  return "unknown";
-}
+import { FileThumbnail } from "./FileThumbnail";
 
 interface TargetToolItem {
   id: string;
-  nameKey: string;
-  descKey: string;
   subTab?: string;
-  subTabNoteKey?: string;
+  noteKey?: string;
 }
 
 const useStyles = makeStyles({
@@ -62,7 +42,6 @@ const useStyles = makeStyles({
     borderRadius: tokens.borderRadiusLarge,
     boxShadow: tokens.shadow16,
     backgroundColor: tokens.colorNeutralBackground1,
-    position: "relative",
   },
   closeButton: {
     position: "absolute",
@@ -160,7 +139,7 @@ const useStyles = makeStyles({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: "#fff",
+    color: tokens.colorNeutralForegroundStaticInverted,
   },
   toolInfo: {
     display: "flex",
@@ -196,7 +175,6 @@ const useStyles = makeStyles({
   },
   muted: { color: tokens.colorNeutralForeground3 },
   inlineRow: { display: "flex", alignItems: "center", gap: "6px" },
-  note: { marginTop: "2px", width: "fit-content" },
 });
 
 export function TransferModal() {
@@ -209,77 +187,17 @@ export function TransferModal() {
   const closeModal = useTransferStore((s) => s.closeModal);
   const sendToTool = useTransferStore((s) => s.sendToTool);
 
-  const [thumbUrl, setThumbUrl] = useState<string | null>(null);
-  const [fileSize, setFileSize] = useState<number | null>(null);
-  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
-
   const firstFile = modalFiles[0] ?? "";
-  const fileType = firstFile ? getFileType(firstFile) : "unknown";
-  const ext = firstFile ? getExt(firstFile).replace(".", "").toUpperCase() : "";
+  const fileType = firstFile ? mediaKind(firstFile) : null;
+  const ext = firstFile ? formatName(fileExtension(firstFile)) : "";
 
-  useEffect(() => {
-    if (!isModalOpen || !firstFile) {
-      setThumbUrl(null);
-      setFileSize(null);
-      return;
-    }
+  const thumb = useThumbnail(fileType === "image" ? firstFile : null);
 
-    if (fileType === "image") {
-      setIsLoadingPreview(true);
-      api.image_editor
-        .loadPreview(firstFile)
-        .then((data) => {
-          if (data?.dataUrl) setThumbUrl(data.dataUrl);
-          if (data?.size) setFileSize(data.size);
-        })
-        .catch(() => undefined)
-        .finally(() => setIsLoadingPreview(false));
-    } else {
-      setThumbUrl(null);
-      setFileSize(null);
-    }
-  }, [isModalOpen, firstFile, fileType]);
-
-  const targetTools: TargetToolItem[] = [];
-
-  if (fileType === "image") {
-    const list: TargetToolItem[] = [
-      { id: "image_tools", nameKey: "tools.image_tools.name", descKey: "tools.image_tools.description" },
-      { id: "compressor", nameKey: "tools.compressor.name", descKey: "tools.compressor.description" },
-      { id: "rembg", nameKey: "tools.rembg.name", descKey: "tools.rembg.description" },
-      { id: "upscale", nameKey: "tools.upscale.name", descKey: "tools.upscale.description" },
-      { id: "watermark", nameKey: "tools.watermark.name", descKey: "tools.watermark.description" },
-      { id: "converter", nameKey: "tools.converter.name", descKey: "tools.converter.description" },
-      {
-        id: "pdf_convert",
-        nameKey: "tools.pdf_convert.name",
-        descKey: "tools.pdf_convert.description",
-        subTab: "imagesToPdf",
-        subTabNoteKey: "transfer.asImagesToPdf",
-      },
-    ];
-    targetTools.push(...list.filter((tool) => tool.id !== sourceToolId));
-  } else if (fileType === "pdf") {
-    const list: TargetToolItem[] = [
-      { id: "pdf", nameKey: "tools.pdf.name", descKey: "tools.pdf.description" },
-      { id: "pdf_compress", nameKey: "tools.pdf_compress.name", descKey: "tools.pdf_compress.description" },
-      { id: "pdf_split", nameKey: "tools.pdf_split.name", descKey: "tools.pdf_split.description" },
-      {
-        id: "pdf_convert",
-        nameKey: "tools.pdf_convert.name",
-        descKey: "tools.pdf_convert.description",
-        subTab: "pdfToImages",
-        subTabNoteKey: "transfer.asPdfToImages",
-      },
-      { id: "pdf_extract", nameKey: "tools.pdf_extract.name", descKey: "tools.pdf_extract.description" },
-    ];
-    targetTools.push(...list.filter((tool) => tool.id !== sourceToolId));
-  } else if (fileType === "video") {
-    const list: TargetToolItem[] = [
-      { id: "download", nameKey: "tools.download.name", descKey: "tools.download.description" },
-    ];
-    targetTools.push(...list.filter((tool) => tool.id !== sourceToolId));
-  }
+  const targetTools: TargetToolItem[] = TOOLS.flatMap((tool) => {
+    const accept = fileType && tool.id !== sourceToolId ? tool.accepts?.[fileType] : undefined;
+    if (!accept) return [];
+    return [accept === true ? { id: tool.id } : { id: tool.id, subTab: accept.subTab, noteKey: accept.noteKey }];
+  });
 
   const handleSelectTool = (item: TargetToolItem) => {
     sendToTool(item.id, modalFiles, item.subTab);
@@ -310,17 +228,11 @@ export function TransferModal() {
               <div className={styles.sourceCard}>
                 <div className={styles.sourceThumbBox}>
                   {fileType === "image" ? (
-                    isLoadingPreview ? (
-                      <Spinner size="extra-tiny" />
-                    ) : thumbUrl ? (
-                      <img src={thumbUrl} className={styles.sourceThumbImg} alt={fileName(firstFile)} />
-                    ) : (
-                      <Image24Regular fontSize={24} />
-                    )
+                    <FileThumbnail path={firstFile} className={styles.sourceThumbImg} fallback={<Image24Regular fontSize={24} />} />
                   ) : fileType === "pdf" ? (
-                    <DocumentPdf24Regular fontSize={26} color="#d9480f" />
+                    <DocumentPdf24Regular fontSize={26} color={CATEGORY_ACCENTS.pdf} />
                   ) : fileType === "video" ? (
-                    <Video24Regular fontSize={26} color="#e0475b" />
+                    <Video24Regular fontSize={26} color={CATEGORY_ACCENTS.video} />
                   ) : (
                     <Document24Regular fontSize={26} />
                   )}
@@ -334,9 +246,7 @@ export function TransferModal() {
                   </Text>
                   <div className={styles.inlineRow}>
                     {ext && <Badge size="small" appearance="tint" color="brand">{ext}</Badge>}
-                    {fileSize ? (
-                      <Caption1 className={styles.muted}>{formatBytes(fileSize)}</Caption1>
-                    ) : null}
+                    {thumb?.size ? <Caption1 className={styles.muted}>{formatBytes(thumb.size)}</Caption1> : null}
                   </div>
                 </div>
               </div>
@@ -350,6 +260,7 @@ export function TransferModal() {
                   const def = toolById(target.id);
                   const Icon = def?.icon ?? Document24Regular;
                   const accent = def?.accent ?? tokens.colorCompoundBrandBackground;
+                  const description = t(target.noteKey ?? `tools.${target.id}.description`);
 
                   return (
                     <div
@@ -370,15 +281,10 @@ export function TransferModal() {
                       </div>
 
                       <div className={styles.toolInfo}>
-                        <Text className={styles.toolTitle}>{t(target.nameKey)}</Text>
-                        <Caption1 className={styles.toolDesc} title={t(target.descKey)}>
-                          {t(target.descKey)}
+                        <Text className={styles.toolTitle}>{t(`tools.${target.id}.name`)}</Text>
+                        <Caption1 className={styles.toolDesc} title={description}>
+                          {description}
                         </Caption1>
-                        {target.subTabNoteKey && (
-                          <Badge size="tiny" color="informative" appearance="filled" className={styles.note}>
-                            {t(target.subTabNoteKey)}
-                          </Badge>
-                        )}
                       </div>
 
                       <ArrowForward16Regular className={styles.arrowIcon} />

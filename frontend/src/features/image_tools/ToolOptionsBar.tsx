@@ -2,11 +2,9 @@ import {
   Badge,
   Button,
   Divider,
-  Dropdown,
   Field,
   Input,
   makeStyles,
-  Option,
   tokens,
   Tooltip,
 } from "@fluentui/react-components";
@@ -20,7 +18,10 @@ import {
   LinkDismiss16Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
+import { Select } from "../../components/Select";
 import type { ActiveTool, ImageOperations } from "./types";
+
+const SCALE_PERCENTS = [25, 50, 75, 100, 150, 200];
 
 const useStyles = makeStyles({
   container: {
@@ -215,36 +216,20 @@ export function ToolOptionsBar({
       <div className={styles.container}>
         <div className={styles.cropRow}>
           <Field label={t("imageTools.cropPreset")} className={styles.cropPresetField}>
-            <Dropdown
+            <Select
               className={styles.fill}
-              value={
-                ops.cropPreset === "free"
-                  ? t("imageTools.cropFree")
-                  : ops.cropPreset === "original"
-                    ? t("imageTools.presetOriginal")
-                    : ops.cropPreset === "1_1"
-                      ? t("imageTools.crop1_1")
-                      : ops.cropPreset === "16_9"
-                        ? t("imageTools.crop16_9")
-                        : ops.cropPreset === "9_16"
-                          ? t("imageTools.crop9_16")
-                          : ops.cropPreset === "4_3"
-                            ? t("imageTools.crop4_3")
-                            : ops.cropPreset === "3_2"
-                              ? t("imageTools.crop3_2")
-                              : t("imageTools.cropFree")
-              }
-              selectedOptions={[ops.cropPreset]}
-              onOptionSelect={(_, d) => onCropPresetChange(d.optionValue as string)}
-            >
-              <Option value="free">{t("imageTools.cropFree")}</Option>
-              <Option value="original">{t("imageTools.presetOriginal")}</Option>
-              <Option value="1_1">{t("imageTools.crop1_1")}</Option>
-              <Option value="16_9">{t("imageTools.crop16_9")}</Option>
-              <Option value="9_16">{t("imageTools.crop9_16")}</Option>
-              <Option value="4_3">{t("imageTools.crop4_3")}</Option>
-              <Option value="3_2">{t("imageTools.crop3_2")}</Option>
-            </Dropdown>
+              options={[
+                { value: "free", label: t("imageTools.cropFree") },
+                { value: "original", label: t("imageTools.presetOriginal") },
+                { value: "1_1", label: t("imageTools.crop1_1") },
+                { value: "16_9", label: t("imageTools.crop16_9") },
+                { value: "9_16", label: t("imageTools.crop9_16") },
+                { value: "4_3", label: t("imageTools.crop4_3") },
+                { value: "3_2", label: t("imageTools.crop3_2") },
+              ]}
+              value={ops.cropPreset}
+              onChange={onCropPresetChange}
+            />
           </Field>
 
         </div>
@@ -297,66 +282,44 @@ export function ToolOptionsBar({
           </div>
 
           <Field label={t("imageTools.scalePercent")} className={styles.scaleField}>
-            <Dropdown
+            <Select
               className={styles.fill}
-              value={ops.scalePercent ? `${ops.scalePercent}%` : `${scaleDiff}%`}
-              selectedOptions={[String(ops.scalePercent ?? "")]}
-              onOptionSelect={(_, d) => {
-                const val = Number(d.optionValue);
-                if (val > 0) applyScalePercent(val);
-              }}
-            >
-              <Option value="25">25%</Option>
-              <Option value="50">50%</Option>
-              <Option value="75">75%</Option>
-              <Option value="100">100%</Option>
-              <Option value="150">150%</Option>
-              <Option value="200">200%</Option>
-            </Dropdown>
+              options={SCALE_PERCENTS.map((p) => ({ value: String(p), label: `${p}%` }))}
+              value={ops.scalePercent ? String(ops.scalePercent) : null}
+              placeholder={`${scaleDiff}%`}
+              onChange={(v) => applyScalePercent(Number(v))}
+            />
           </Field>
 
           <Field label={t("imageTools.presets")} className={styles.presetField}>
-            <Dropdown
+            <Select
               className={styles.fill}
               placeholder={t("imageTools.presets")}
-              onOptionSelect={(_, d) => {
-                if (d.optionValue) applyResolutionPreset(d.optionValue);
-              }}
-            >
-              <Option value="original">{t("imageTools.presetOriginal")}</Option>
-              <Option value="fhd">{t("imageTools.presetFullHd")}</Option>
-              <Option value="4k">{t("imageTools.preset4k")}</Option>
-              <Option value="square">{t("imageTools.presetSquare")}</Option>
-              <Option value="story">{t("imageTools.presetStory")}</Option>
-              <Option value="classic">{t("imageTools.presetClassic")}</Option>
-            </Dropdown>
+              options={[
+                { value: "original", label: t("imageTools.presetOriginal") },
+                { value: "fhd", label: t("imageTools.presetFullHd") },
+                { value: "4k", label: t("imageTools.preset4k") },
+                { value: "square", label: t("imageTools.presetSquare") },
+                { value: "story", label: t("imageTools.presetStory") },
+                { value: "classic", label: t("imageTools.presetClassic") },
+              ]}
+              value={null}
+              onChange={applyResolutionPreset}
+            />
           </Field>
 
           <Field label={t("imageTools.filter")} className={styles.filterField}>
-            <Dropdown
+            <Select
               className={styles.fill}
-              value={
-                ops.filter === "lanczos"
-                  ? t("imageTools.filterLanczos")
-                  : ops.filter === "bicubic"
-                    ? t("imageTools.filterBicubic")
-                    : ops.filter === "bilinear"
-                      ? t("imageTools.filterBilinear")
-                      : t("imageTools.filterNearest")
-              }
-              selectedOptions={[ops.filter]}
-              onOptionSelect={(_, d) =>
-                onOpsChange((prev) => ({
-                  ...prev,
-                  filter: d.optionValue as "lanczos" | "bicubic" | "bilinear" | "nearest",
-                }))
-              }
-            >
-              <Option value="lanczos">{t("imageTools.filterLanczos")}</Option>
-              <Option value="bicubic">{t("imageTools.filterBicubic")}</Option>
-              <Option value="bilinear">{t("imageTools.filterBilinear")}</Option>
-              <Option value="nearest">{t("imageTools.filterNearest")}</Option>
-            </Dropdown>
+              options={[
+                { value: "lanczos", label: t("imageTools.filterLanczos") },
+                { value: "bicubic", label: t("imageTools.filterBicubic") },
+                { value: "bilinear", label: t("imageTools.filterBilinear") },
+                { value: "nearest", label: t("imageTools.filterNearest") },
+              ]}
+              value={ops.filter}
+              onChange={(filter) => onOpsChange((prev) => ({ ...prev, filter }))}
+            />
           </Field>
         </div>
       </div>

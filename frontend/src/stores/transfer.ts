@@ -35,13 +35,8 @@ export const useTransferStore = create<TransferStore>((set, get) => ({
     });
   },
 
-  closeModal: () => {
-    set({
-      isModalOpen: false,
-      modalFiles: [],
-      sourceToolId: undefined,
-    });
-  },
+  // Files stay set while closed so the dialog keeps its content during the exit animation.
+  closeModal: () => set({ isModalOpen: false }),
 
   pendingTransfer: null,
 
@@ -55,8 +50,6 @@ export const useTransferStore = create<TransferStore>((set, get) => ({
         timestamp: Date.now(),
       },
       isModalOpen: false,
-      modalFiles: [],
-      sourceToolId: undefined,
     }));
   },
 

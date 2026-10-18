@@ -58,6 +58,27 @@ def load_preview(path: str) -> Dict[str, Any]:
     }
 
 
+def thumbnail(path: str, max_side: int = 256) -> Dict[str, Any]:
+    """Small preview for file lists; WebP keeps transparency at a fraction of PNG's size."""
+    p = Path(path)
+    if not p.is_file():
+        raise FileNotFoundError(f"File not found: {path}")
+
+    with Image.open(p) as img:
+        w, h = img.width, img.height
+        fmt = (img.format or p.suffix.lstrip(".")).upper()
+        has_alpha = _has_alpha(img)
+        # JPEG decoders can scale down while decoding, which skips most of the work for big photos.
+        img.draft("RGB", (max_side, max_side))
+        data_url = thumbs.to_data_url(
+            img,
+            max_size=(max_side, max_side),
+            fmt="WEBP" if has_alpha else "JPEG",
+            quality=80,
+        )
+
+    return {"width": w, "height": h, "format": fmt, "size": p.stat().st_size, "dataUrl": data_url}
+
 def apply_operations(img: Image.Image, ops: Dict[str, Any]) -> Image.Image:
     """Applies crop, rotate, flip, and resize in the correct order."""
     result = img.copy()

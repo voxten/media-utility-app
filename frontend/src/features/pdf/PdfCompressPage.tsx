@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { Button, Dropdown, Field, makeStyles, Option } from "@fluentui/react-components";
+import { Button, Field, makeStyles } from "@fluentui/react-components";
 import { DocumentCompress24Regular } from "../../app/customIcons";
 import { useTranslation } from "react-i18next";
-import { toolById } from "../../app/tools";
 import { useNotify } from "../../components/notify";
-import { Page } from "../../components/Page";
+import { ToolPage } from "../../components/Page";
 import { ResultCard } from "../../components/ResultCard";
+import { Select } from "../../components/Select";
 import { api } from "../../lib/bridge";
 import { dialogFilter } from "../../lib/fileTypes";
 import { fileName, formatBytes } from "../../lib/format";
@@ -32,17 +32,11 @@ export default function PdfCompressPage() {
   const { t } = useTranslation();
   const styles = useStyles();
   const notify = useNotify();
-  const tool = toolById("pdf_compress")!;
 
   const [file, setFile] = useState<string | null>(null);
   const [preset, setPreset] = useState<Preset>("balanced");
 
   const compress = useJobRunner<CompressResult>("pdf.compress", {
-    onDone: (result) =>
-      notify.success(t("pdf.toast.compressSuccess"), {
-        body: result.outPath,
-        action: { label: t("common.showInFolder"), onClick: () => api.system.reveal(result.outPath).catch(() => undefined) },
-      }),
     onError: (error) => notify.error(t("pdf.toast.compressError"), { body: error }),
   });
 
@@ -71,7 +65,7 @@ export default function PdfCompressPage() {
   };
 
   return (
-    <Page title={t("tools.pdf_compress.name")} description={t("tools.pdf_compress.description")} icon={tool.icon} accent={tool.accent}>
+    <ToolPage toolId="pdf_compress">
       <SinglePdfTool
         toolId="pdf_compress"
         file={file}
@@ -99,19 +93,13 @@ export default function PdfCompressPage() {
         }
       >
         <Field label={t("pdf.compress.preset")} className={styles.field}>
-          <Dropdown
-            value={presetLabel[preset]}
-            selectedOptions={[preset]}
-            onOptionSelect={(_, d) => setPreset(d.optionValue as Preset)}
-          >
-            {(["balanced", "high", "low"] as const).map((p) => (
-              <Option key={p} value={p}>
-                {presetLabel[p]}
-              </Option>
-            ))}
-          </Dropdown>
+          <Select
+            options={(["balanced", "high", "low"] as const).map((p) => ({ value: p, label: presetLabel[p] }))}
+            value={preset}
+            onChange={setPreset}
+          />
         </Field>
       </SinglePdfTool>
-    </Page>
+    </ToolPage>
   );
 }

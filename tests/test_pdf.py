@@ -1,4 +1,5 @@
 import fitz
+from pathlib import Path
 
 from backend.services import pdf
 
@@ -91,6 +92,13 @@ def test_pdf_to_images(tmp_path, ctx):
     res = pdf.pdf_to_images(ctx, str(src), str(out_dir), fmt="png", dpi=72)
     assert res["count"] == 2
     assert all(f.endswith(".png") for f in res["files"])
+
+
+def test_pdf_to_images_page_range(tmp_path, ctx):
+    src = tmp_path / "doc.pdf"
+    _make_pdf(src, ["A", "B", "C"])
+    res = pdf.pdf_to_images(ctx, str(src), str(tmp_path / "images"), fmt="png", dpi=72, range_spec="1, 3")
+    assert [Path(f).name for f in res["files"]] == ["doc_001.png", "doc_003.png"]
 
 
 def test_images_to_pdf(tmp_path, ctx):

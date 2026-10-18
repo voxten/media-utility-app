@@ -36,7 +36,7 @@ const useStyles = makeStyles({
     borderRadius: tokens.borderRadiusLarge,
     display: "grid",
     placeItems: "center",
-    color: "#fff",
+    color: tokens.colorNeutralForegroundStaticInverted,
     "& svg": { width: "22px", height: "22px" },
   },
   description: { color: tokens.colorNeutralForeground3 },

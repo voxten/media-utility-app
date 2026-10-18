@@ -1,10 +1,24 @@
 // Inline confirmation shown after a tool writes its output, with "Show in folder" and "Send to".
 
-import { Button, MessageBar, MessageBarActions, MessageBarBody, MessageBarTitle } from "@fluentui/react-components";
+import {
+  Button,
+  Caption1,
+  makeStyles,
+  MessageBar,
+  MessageBarActions,
+  MessageBarBody,
+  MessageBarTitle,
+  tokens,
+} from "@fluentui/react-components";
 import { ArrowRight16Regular, FolderOpen16Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { api } from "../lib/bridge";
 import { useTransferStore } from "../stores/transfer";
+
+const useStyles = makeStyles({
+  title: { display: "block" },
+  detail: { display: "block", color: tokens.colorNeutralForeground3, overflowWrap: "anywhere" },
+});
 
 interface ResultCardProps {
   title: string;
@@ -18,6 +32,7 @@ interface ResultCardProps {
 }
 
 export function ResultCard({ title, path, folder, files, sourceToolId, detail }: ResultCardProps) {
+  const styles = useStyles();
   const { t } = useTranslation();
   const sendable = files ?? (folder ? [] : [path]);
   const show = () => (folder ? api.system.openPath(path) : api.system.reveal(path)).catch(() => undefined);
@@ -25,8 +40,8 @@ export function ResultCard({ title, path, folder, files, sourceToolId, detail }:
   return (
     <MessageBar intent="success" layout="multiline">
       <MessageBarBody>
-        <MessageBarTitle>{title}</MessageBarTitle>
-        {[detail, path].filter(Boolean).join(" · ")}
+        <MessageBarTitle className={styles.title}>{title}</MessageBarTitle>
+        <Caption1 className={styles.detail}>{[detail, path].filter(Boolean).join(" · ")}</Caption1>
       </MessageBarBody>
       <MessageBarActions>
         <Button size="small" icon={<FolderOpen16Regular />} onClick={show}>

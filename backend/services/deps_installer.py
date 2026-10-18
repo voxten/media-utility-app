@@ -1,16 +1,16 @@
-"""Service for downloading and installing external dependencies (LaMa AI model, FFmpeg)."""
+"""Downloads and installs optional dependencies from Settings: FFmpeg, AI models and their Python packages."""
 
 import hashlib
+import importlib
 import logging
-import os
 import shutil
 import subprocess
-import sys
 import urllib.request
 import zipfile
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Sequence
 
+from backend.core.addons import activate_addons, pip_install_command
 from backend.core.deps import (
     LAMA_EXPECTED_MD5,
     _has_module,
@@ -82,19 +82,16 @@ def _download_file_with_progress(
         raise
 
 
-def _install_torch_pip(ctx: JobContext) -> None:
-    """Installs PyTorch into the current Python environment using pip."""
-    ctx.progress(5, "deps.status.installingTorch")
-    ctx.log("deps.log.installingTorch")
-
-    cmd = [sys.executable, "-m", "pip", "install", "torch", "--no-warn-script-location"]
+def _run_pip(ctx: JobContext, packages: Sequence[str]) -> None:
+    """Installs Python packages where this app can import them, streaming pip's output to the job log."""
     proc = subprocess.Popen(
-        cmd,
+        pip_install_command(packages),
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
         encoding="utf-8",
         errors="replace",
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
     )
 
     try:
@@ -116,6 +113,15 @@ def _install_torch_pip(ctx: JobContext) -> None:
     if proc.returncode != 0:
         raise RuntimeError(f"Pip install failed with return code {proc.returncode}")
 
+    # New packages must be importable in this process without restarting the app.
+    activate_addons()
+    importlib.invalidate_caches()
+
+
+def _install_torch(ctx: JobContext) -> None:
+    ctx.progress(5, "deps.status.installingTorch")
+    ctx.log("deps.log.installingTorch")
+    _run_pip(ctx, ["torch"])
     ctx.progress(40, "deps.status.torchInstalled")
     ctx.log("deps.log.torchInstalled")
 
@@ -128,7 +134,7 @@ def install_lama(ctx: JobContext) -> Dict[str, Any]:
 
     has_torch = _has_module("torch")
     if not has_torch:
-        _install_torch_pip(ctx)
+        _install_torch(ctx)
 
     model_dest = app_data_dir() / "models" / "big-lama.pt"
     if not model_dest.is_file() or model_dest.stat().st_size < 100_000_000:
@@ -233,7 +239,7 @@ def install_upscale(ctx: JobContext, dep_id: str) -> Dict[str, Any]:
 
     has_torch = _has_module("torch")
     if not has_torch:
-        _install_torch_pip(ctx)
+        _install_torch(ctx)
 
     dest = app_data_dir() / "models" / cfg["filename"]
     if not dest.is_file() or dest.stat().st_size < cfg["min_size"]:
@@ -271,34 +277,7 @@ def install_rembg(ctx: JobContext) -> Dict[str, Any]:
     ctx.progress(5, "deps.status.installingRembg")
     ctx.log("deps.log.installingRembg")
 
-    cmd = [sys.executable, "-m", "pip", "install", "rembg[cpu]", "onnxruntime", "pymatting", "--no-warn-script-location"]
-    proc = subprocess.Popen(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-    )
-
-    try:
-        while True:
-            if ctx.cancelled:
-                proc.terminate()
-                raise JobCancelled()
-            line = proc.stdout.readline() if proc.stdout else ""
-            if not line and proc.poll() is not None:
-                break
-            if line:
-                stripped = line.strip()
-                if stripped:
-                    ctx.log("deps.log.pipOutput", line=stripped)
-    finally:
-        if proc.poll() is None:
-            proc.kill()
-
-    if proc.returncode != 0:
-        raise RuntimeError(f"Pip install failed with return code {proc.returncode}")
+    _run_pip(ctx, ["rembg[cpu]", "onnxruntime", "pymatting"])
 
     ctx.progress(90, "deps.status.verifying")
     ctx.log("deps.log.verifying")

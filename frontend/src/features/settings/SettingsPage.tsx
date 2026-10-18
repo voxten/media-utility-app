@@ -1,19 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   Badge,
-  Body1,
   Button,
   Caption1,
-  Dialog,
-  DialogActions,
-  DialogBody,
-  DialogContent,
-  DialogSurface,
-  DialogTitle,
-  DialogTrigger,
-  Dropdown,
   makeStyles,
-  Option,
   ProgressBar,
   Skeleton,
   SkeletonItem,
@@ -54,9 +44,12 @@ import {
   WrenchScrewdriver24Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
+import { SETTINGS_ACCENT } from "../../app/tools";
+import { confirm } from "../../components/ConfirmDialog";
 import { useNotify } from "../../components/notify";
 import { Page, Section } from "../../components/Page";
 import { PathPicker } from "../../components/PathPicker";
+import { Select } from "../../components/Select";
 import { SettingGroup, SettingRow } from "../../components/SettingRow";
 import { api, getBackendMode } from "../../lib/bridge";
 import { dialogFilter } from "../../lib/fileTypes";
@@ -86,32 +79,6 @@ const useStyles = makeStyles({
   depProgress: { display: "flex", flexDirection: "column", gap: "4px", minWidth: "220px", maxWidth: "320px" },
   depProgressHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" },
   progressStatus: { color: tokens.colorNeutralForeground2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
-  storageGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-    gap: "12px",
-    marginBottom: "12px",
-  },
-  storageCard: {
-    padding: "14px 16px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-    backgroundColor: tokens.colorNeutralBackground2,
-    border: `1px solid ${tokens.colorNeutralStroke3}`,
-    borderRadius: tokens.borderRadiusMedium,
-  },
-  storageCardHeader: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    color: tokens.colorNeutralForeground2,
-  },
-  storageCardValue: {
-    fontSize: tokens.fontSizeBase500,
-    fontWeight: tokens.fontWeightSemibold,
-    color: tokens.colorNeutralForeground1,
-  },
   actionRow: {
     display: "flex",
     alignItems: "center",
@@ -290,7 +257,6 @@ function DependenciesSection() {
 
 function StorageSection() {
   const { t } = useTranslation();
-  const styles = useStyles();
   const notify = useNotify();
   const settings = useSettings((s) => s.settings);
   const clearRecentFolders = useSettings((s) => s.clearRecentFolders);
@@ -342,42 +308,15 @@ function StorageSection() {
 
   return (
     <Section title={t("settings.storage.title")}>
-      {storage && (
-        <div className={styles.storageGrid}>
-          <div className={styles.storageCard}>
-            <div className={styles.storageCardHeader}>
-              <Database24Regular />
-              <Caption1>{t("settings.storage.cacheTitle")}</Caption1>
-            </div>
-            <div className={styles.storageCardValue}>{formatBytes(storage.cacheBytes)}</div>
-            <Caption1 className={styles.hint}>{storage.cacheFiles} {t("settings.storage.cacheDesc")}</Caption1>
-          </div>
-
-          <div className={styles.storageCard}>
-            <div className={styles.storageCardHeader}>
-              <Bot24Regular />
-              <Caption1>{t("settings.storage.modelsTitle")}</Caption1>
-            </div>
-            <div className={styles.storageCardValue}>{formatBytes(storage.modelsBytes)}</div>
-            <Caption1 className={styles.hint}>{storage.modelsFiles} {t("settings.storage.modelsTitle")}</Caption1>
-          </div>
-
-          <div className={styles.storageCard}>
-            <div className={styles.storageCardHeader}>
-              <HardDrive24Regular />
-              <Caption1>{t("settings.storage.appDataTitle")}</Caption1>
-            </div>
-            <div className={styles.storageCardValue}>{formatBytes(storage.totalAppDataBytes)}</div>
-            <Caption1 className={styles.hint}>{storage.totalAppDataFiles} {t("settings.storage.appDataTitle")}</Caption1>
-          </div>
-        </div>
-      )}
-
       <SettingGroup>
         <SettingRow
           icon={Database24Regular}
           title={t("settings.storage.cacheTitle")}
-          description={t("settings.storage.cacheDesc")}
+          description={
+            storage
+              ? t("settings.storage.usage", { size: formatBytes(storage.cacheBytes), count: storage.cacheFiles })
+              : t("settings.storage.cacheDesc")
+          }
         >
           <Button
             appearance="secondary"
@@ -390,10 +329,22 @@ function StorageSection() {
           </Button>
         </SettingRow>
 
+        {storage && (
+          <SettingRow
+            icon={Bot24Regular}
+            title={t("settings.storage.modelsTitle")}
+            description={t("settings.storage.usage", { size: formatBytes(storage.modelsBytes), count: storage.modelsFiles })}
+          />
+        )}
+
         <SettingRow
           icon={HardDrive24Regular}
           title={t("settings.storage.appDataTitle")}
-          description={storage?.appDataDir || t("settings.storage.appDataDesc")}
+          description={
+            storage
+              ? `${t("settings.storage.usage", { size: formatBytes(storage.totalAppDataBytes), count: storage.totalAppDataFiles })} · ${storage.appDataDir}`
+              : t("settings.storage.appDataDesc")
+          }
         >
           <Button
             appearance="subtle"
@@ -484,18 +435,12 @@ function HardwareSection() {
           title={t("settings.hardware.concurrency")}
           description={t("settings.hardware.concurrencyDesc")}
         >
-          <Dropdown
+          <Select
             className={styles.dropdown}
-            value={t("settings.hardware.concurrencyThreads", { count: settings.maxConcurrency ?? 4 })}
-            selectedOptions={[String(settings.maxConcurrency ?? 4)]}
-            onOptionSelect={(_, data) => update({ maxConcurrency: Number(data.optionValue) })}
-          >
-            {concurrencyOptions.map((opt) => (
-              <Option key={opt} value={String(opt)}>
-                {t("settings.hardware.concurrencyThreads", { count: opt })}
-              </Option>
-            ))}
-          </Dropdown>
+            options={concurrencyOptions.map((n) => ({ value: String(n), label: t("settings.hardware.concurrencyThreads", { count: n }) }))}
+            value={String(settings.maxConcurrency ?? 4)}
+            onChange={(v) => update({ maxConcurrency: Number(v) })}
+          />
         </SettingRow>
 
         <SettingRow
@@ -515,14 +460,15 @@ function HardwareSection() {
 
 function NotificationsSection() {
   const { t } = useTranslation();
-  const notify = useNotify();
   const settings = useSettings((s) => s.settings)!;
   const update = useSettings((s) => s.update);
 
+  const soundOn = settings.completionSound ?? true;
+  const desktopOn = settings.desktopNotifications ?? true;
+
   const handleTestNotification = () => {
-    playChime("done");
-    showDesktopNotification(t("app.name"), t("settings.notifications.testSent"));
-    notify.success(t("settings.notifications.testSent"));
+    if (soundOn) playChime("done");
+    if (desktopOn) showDesktopNotification(t("app.name"), t("settings.notifications.testSent"));
   };
 
   return (
@@ -534,7 +480,7 @@ function NotificationsSection() {
           description={t("settings.notifications.desktopDesc")}
         >
           <Switch
-            checked={settings.desktopNotifications ?? true}
+            checked={desktopOn}
             onChange={(_, d) => update({ desktopNotifications: d.checked })}
           />
         </SettingRow>
@@ -549,12 +495,13 @@ function NotificationsSection() {
               appearance="subtle"
               size="small"
               icon={<Speaker216Regular />}
+              disabled={!soundOn && !desktopOn}
               onClick={handleTestNotification}
             >
               {t("settings.notifications.test")}
             </Button>
             <Switch
-              checked={settings.completionSound ?? true}
+              checked={soundOn}
               onChange={(_, d) => update({ completionSound: d.checked })}
             />
           </>
@@ -570,19 +517,19 @@ function AdvancedSection() {
   const settings = useSettings((s) => s.settings)!;
   const update = useSettings((s) => s.update);
   const reset = useSettings((s) => s.reset);
-  const [resetting, setResetting] = useState(false);
-  const [openResetDialog, setOpenResetDialog] = useState(false);
-
   const handleReset = async () => {
-    setResetting(true);
+    const ok = await confirm({
+      title: t("settings.advanced.resetConfirmTitle"),
+      body: t("settings.advanced.resetConfirmBody"),
+      confirmLabel: t("settings.advanced.resetConfirmAction"),
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await reset();
-      setOpenResetDialog(false);
       notify.success(t("settings.advanced.resetSuccess"));
     } catch (err) {
       notify.error(String(err));
-    } finally {
-      setResetting(false);
     }
   };
 
@@ -621,33 +568,9 @@ function AdvancedSection() {
           title={t("settings.advanced.resetSettings")}
           description={t("settings.advanced.resetSettingsDesc")}
         >
-          <Dialog open={openResetDialog} onOpenChange={(_, data) => setOpenResetDialog(data.open)}>
-            <DialogTrigger disableButtonEnhancement>
-              <Button appearance="subtle" icon={<ArrowReset24Regular />}>
-                {t("settings.advanced.resetBtn")}
-              </Button>
-            </DialogTrigger>
-            <DialogSurface>
-              <DialogBody>
-                <DialogTitle>{t("settings.advanced.resetConfirmTitle")}</DialogTitle>
-                <DialogContent>
-                  <Body1>{t("settings.advanced.resetConfirmBody")}</Body1>
-                </DialogContent>
-                <DialogActions>
-                  <DialogTrigger disableButtonEnhancement>
-                    <Button appearance="secondary">{t("common.cancel")}</Button>
-                  </DialogTrigger>
-                  <Button
-                    appearance="primary"
-                    disabled={resetting}
-                    onClick={handleReset}
-                  >
-                    {t("settings.advanced.resetConfirmAction")}
-                  </Button>
-                </DialogActions>
-              </DialogBody>
-            </DialogSurface>
-          </Dialog>
+          <Button appearance="subtle" icon={<ArrowReset24Regular />} onClick={handleReset}>
+            {t("settings.advanced.resetBtn")}
+          </Button>
         </SettingRow>
       </SettingGroup>
     </Section>
@@ -674,36 +597,24 @@ export default function SettingsPage() {
   ];
 
   return (
-    <Page title={t("settings.title")} description={t("settings.subtitle")} icon={Settings24Filled} accent="#5b6b7f">
+    <Page title={t("settings.title")} description={t("settings.subtitle")} icon={Settings24Filled} accent={SETTINGS_ACCENT}>
       <Section title={t("settings.appearance")}>
         <SettingGroup>
           <SettingRow icon={DarkTheme24Regular} title={t("settings.theme")} description={t("settings.themeDescription")}>
-            <Dropdown
+            <Select
               className={styles.dropdown}
-              value={t(`settings.themes.${settings.theme}`)}
-              selectedOptions={[settings.theme]}
-              onOptionSelect={(_, data) => update({ theme: data.optionValue as ThemePreference })}
-            >
-              {themes.map((theme) => (
-                <Option key={theme} value={theme}>
-                  {t(`settings.themes.${theme}`)}
-                </Option>
-              ))}
-            </Dropdown>
+              options={themes.map((theme) => ({ value: theme, label: t(`settings.themes.${theme}`) }))}
+              value={settings.theme}
+              onChange={(theme) => update({ theme })}
+            />
           </SettingRow>
           <SettingRow icon={LocalLanguage24Regular} title={t("settings.language")} description={t("settings.languageDescription")}>
-            <Dropdown
+            <Select
               className={styles.dropdown}
-              value={languages.find((l) => l.id === settings.language)?.label}
-              selectedOptions={[settings.language]}
-              onOptionSelect={(_, data) => update({ language: data.optionValue as Language })}
-            >
-              {languages.map((lang) => (
-                <Option key={lang.id} value={lang.id}>
-                  {lang.label}
-                </Option>
-              ))}
-            </Dropdown>
+              options={languages.map((l) => ({ value: l.id, label: l.label }))}
+              value={settings.language}
+              onChange={(language) => update({ language })}
+            />
           </SettingRow>
           <SettingRow
             icon={Color24Regular}

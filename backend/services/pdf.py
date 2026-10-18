@@ -2,7 +2,7 @@
 
 import base64
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Sequence
 
 import fitz  # PyMuPDF
 
@@ -182,12 +182,15 @@ def split(
     path: str,
     out_dir: str,
     mode: str = "all",
-    range_spec: str = "",
+    groups: Sequence[Sequence[int]] = (),
 ) -> Dict[str, Any]:
-    """Split a PDF into individual pages or extract a specific page range."""
+    """Split a PDF into one file per page, or with mode 'groups' one file per group of 0-based page indexes."""
     src = Path(path)
     if not src.is_file():
         raise FileNotFoundError(f"File not found: {path}")
+
+    if mode not in ("all", "groups"):
+        raise ValueError(f"Unknown split mode: '{mode}'")
 
     out_dir_path = Path(out_dir)
     out_dir_path.mkdir(parents=True, exist_ok=True)
@@ -199,19 +202,21 @@ def split(
         if total == 0:
             raise ValueError("PDF document has 0 pages")
 
-        if mode == "range":
-            pages_to_extract = parse_page_range(range_spec, total)
-            if not pages_to_extract:
-                raise ValueError(f"No valid pages specified in range: '{range_spec}'")
+        if mode == "groups":
+            valid = [sorted({int(p) for p in g if 0 <= int(p) < total}) for g in groups]
+            valid = [g for g in valid if g]
+            if not valid:
+                raise ValueError("No pages selected")
 
-            out_file = out_dir_path / f"{stem}_wybrane.pdf"
-            with fitz.open() as sub_doc:
-                for idx, page_num in enumerate(pages_to_extract):
-                    ctx.check_cancelled()
-                    sub_doc.insert_pdf(doc, from_page=page_num, to_page=page_num)
-                    ctx.progress((idx + 1) / len(pages_to_extract) * 90, "pdf.status.splitting")
-                sub_doc.save(str(out_file), garbage=3, deflate=True)
-            created_files.append(str(out_file))
+            for idx, group in enumerate(valid):
+                ctx.check_cancelled()
+                out_file = out_dir_path / f"{stem}_czesc_{idx + 1:02d}.pdf"
+                with fitz.open() as sub_doc:
+                    for page_num in group:
+                        sub_doc.insert_pdf(doc, from_page=page_num, to_page=page_num)
+                    sub_doc.save(str(out_file), garbage=3, deflate=True)
+                created_files.append(str(out_file))
+                ctx.progress((idx + 1) / len(valid) * 100, "pdf.status.splitting")
         else:
             for i in range(total):
                 ctx.check_cancelled()
@@ -236,8 +241,9 @@ def pdf_to_images(
     out_dir: str,
     fmt: str = "png",
     dpi: int = 150,
+    range_spec: str = "",
 ) -> Dict[str, Any]:
-    """Export every page of a PDF as an image file."""
+    """Export the pages of a PDF as image files: all of them, or those in ``range_spec`` (e.g. '1-3, 5')."""
     src = Path(path)
     if not src.is_file():
         raise FileNotFoundError(f"File not found: {path}")
@@ -251,8 +257,11 @@ def pdf_to_images(
     stem = src.stem
     created_files: List[str] = []
     with fitz.open(str(src)) as doc:
-        total = len(doc)
-        for i in range(total):
+        pages = parse_page_range(range_spec, len(doc)) if range_spec.strip() else list(range(len(doc)))
+        if not pages:
+            raise ValueError(f"No valid pages specified in range: '{range_spec}'")
+        total = len(pages)
+        for done, i in enumerate(pages, start=1):
             ctx.check_cancelled()
             page = doc[i]
             pix = page.get_pixmap(dpi=dpi)
@@ -265,7 +274,7 @@ def pdf_to_images(
             else:
                 pix.pil_save(str(out_file))
             created_files.append(str(out_file))
-            ctx.progress((i + 1) / total * 100, "pdf.status.rendering", {"file": out_file.name, "page": i + 1})
+            ctx.progress(done / total * 100, "pdf.status.rendering", {"file": out_file.name, "page": i + 1})
 
     ctx.progress(100, "pdf.status.done")
     return {

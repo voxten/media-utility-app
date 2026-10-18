@@ -3,6 +3,7 @@
     python main.py          # production: serves frontend/dist
     python main.py --dev    # development: loads the Vite dev server (npm run dev) with HMR + DevTools
     MediaStudio.exe --selftest report.json   # bundle smoke test (used by scripts/build.py)
+    MediaStudio.exe --pip install …          # pip inside the bundle, used to install optional AI packages
 """
 
 import argparse
@@ -17,6 +18,7 @@ from backend import APP_NAME, APP_VERSION
 from backend.bridge.api import Api
 from backend.bridge.events import EventBus
 from backend.core import win_theme
+from backend.core.addons import PIP_FLAG, activate_addons, run_pip_main
 from backend.core.paths import app_data_dir, resource_path
 from backend.core.settings import Settings
 
@@ -94,7 +96,10 @@ def ensure_output_streams() -> None:
 
 
 def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1] == PIP_FLAG:
+        sys.exit(run_pip_main(sys.argv[2:]))
     ensure_output_streams()
+    activate_addons()
     cleanup_webview_cache()
     parser = argparse.ArgumentParser(description=APP_NAME)
     parser.add_argument("--dev", action="store_true", help="load the Vite dev server")

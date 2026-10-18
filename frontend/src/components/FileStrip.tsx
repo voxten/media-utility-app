@@ -1,14 +1,11 @@
 // Horizontal strip of image thumbnails for tools that work on several files with one shared viewer.
 
-import { useEffect, useState, type ReactNode } from "react";
-import { Button, makeStyles, mergeClasses, Spinner, tokens, Tooltip } from "@fluentui/react-components";
+import type { ReactNode } from "react";
+import { Button, makeStyles, mergeClasses, tokens, Tooltip } from "@fluentui/react-components";
 import { Dismiss12Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
-import { api } from "../lib/bridge";
 import { fileName } from "../lib/format";
-
-// Thumbnails survive page switches; previews are keyed by path and never change for a given file.
-const thumbCache = new Map<string, string>();
+import { FileThumbnail } from "./FileThumbnail";
 
 const useStyles = makeStyles({
   root: { display: "flex", alignItems: "center", gap: "12px", minWidth: 0 },
@@ -64,58 +61,37 @@ interface FileStripProps {
 export function FileStrip({ files, selected, onSelect, onRemove, edited, actions }: FileStripProps) {
   const styles = useStyles();
   const { t } = useTranslation();
-  const [, setLoaded] = useState(0);
-
-  useEffect(() => {
-    let current = true;
-    for (const file of files) {
-      if (thumbCache.has(file)) continue;
-      api.image_editor
-        .loadPreview(file)
-        .then((p) => {
-          thumbCache.set(file, p.dataUrl);
-          if (current) setLoaded((n) => n + 1);
-        })
-        .catch(() => undefined);
-    }
-    return () => {
-      current = false;
-    };
-  }, [files]);
 
   return (
     <div className={styles.root}>
       <div className={styles.strip} role="listbox" aria-label={t("common.files")}>
-        {files.map((file, i) => {
-          const thumb = thumbCache.get(file);
-          return (
-            <div
-              key={file}
-              role="option"
-              aria-selected={i === selected}
-              title={file}
-              className={mergeClasses(styles.item, i === selected && styles.selected)}
-              onClick={() => onSelect(i)}
-            >
-              <div className={styles.thumb}>
-                {thumb ? <img className={styles.img} src={thumb} alt="" loading="lazy" /> : <Spinner size="extra-tiny" />}
-              </div>
-              <span className={mergeClasses(styles.name, edited?.has(file) && styles.edited)}>{fileName(file)}</span>
-              <Tooltip content={t("common.remove")} relationship="label">
-                <Button
-                  className={styles.remove}
-                  size="small"
-                  appearance="subtle"
-                  icon={<Dismiss12Regular />}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRemove(i);
-                  }}
-                />
-              </Tooltip>
+        {files.map((file, i) => (
+          <div
+            key={file}
+            role="option"
+            aria-selected={i === selected}
+            title={file}
+            className={mergeClasses(styles.item, i === selected && styles.selected)}
+            onClick={() => onSelect(i)}
+          >
+            <div className={styles.thumb}>
+              <FileThumbnail path={file} className={styles.img} />
             </div>
-          );
-        })}
+            <span className={mergeClasses(styles.name, edited?.has(file) && styles.edited)}>{fileName(file)}</span>
+            <Tooltip content={t("common.remove")} relationship="label">
+              <Button
+                className={styles.remove}
+                size="small"
+                appearance="subtle"
+                icon={<Dismiss12Regular />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemove(i);
+                }}
+              />
+            </Tooltip>
+          </div>
+        ))}
       </div>
       {actions && <div className={styles.actions}>{actions}</div>}
     </div>

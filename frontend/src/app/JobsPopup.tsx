@@ -54,7 +54,7 @@ const useStyles = makeStyles({
   },
   mica: {
     backdropFilter: "blur(24px)",
-    backgroundColor: "rgba(32, 32, 32, 0.85)",
+    backgroundColor: tokens.colorNeutralBackgroundAlpha2,
   },
   header: {
     display: "flex",

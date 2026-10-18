@@ -2,9 +2,8 @@ import { useState } from "react";
 import { Button } from "@fluentui/react-components";
 import { DocumentExtract24Regular } from "../../app/customIcons";
 import { useTranslation } from "react-i18next";
-import { toolById } from "../../app/tools";
 import { useNotify } from "../../components/notify";
-import { Page } from "../../components/Page";
+import { ToolPage } from "../../components/Page";
 import { ResultCard } from "../../components/ResultCard";
 import { api } from "../../lib/bridge";
 import { dialogFilter } from "../../lib/fileTypes";
@@ -22,16 +21,10 @@ interface ExtractTextResult {
 export default function PdfExtractPage() {
   const { t } = useTranslation();
   const notify = useNotify();
-  const tool = toolById("pdf_extract")!;
 
   const [file, setFile] = useState<string | null>(null);
 
   const extract = useJobRunner<ExtractTextResult>("pdf.extract_text", {
-    onDone: (result) =>
-      notify.success(t("pdf.toast.extractSuccess"), {
-        body: result.outPath,
-        action: { label: t("common.showInFolder"), onClick: () => api.system.reveal(result.outPath).catch(() => undefined) },
-      }),
     onError: (error) => notify.error(t("pdf.toast.extractError"), { body: error }),
   });
 
@@ -54,7 +47,7 @@ export default function PdfExtractPage() {
   };
 
   return (
-    <Page title={t("tools.pdf_extract.name")} description={t("tools.pdf_extract.description")} icon={tool.icon} accent={tool.accent}>
+    <ToolPage toolId="pdf_extract">
       <SinglePdfTool
         toolId="pdf_extract"
         file={file}
@@ -77,6 +70,6 @@ export default function PdfExtractPage() {
           )
         }
       />
-    </Page>
+    </ToolPage>
   );
 }

@@ -1,28 +1,27 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Button,
-  Dropdown,
   Field,
   makeStyles,
-  Option,
   Spinner,
   tokens,
 } from "@fluentui/react-components";
 import { Play16Regular, Save16Regular, VideoSwitch20Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
-import { toolById } from "../../app/tools";
 import { ActionBar } from "../../components/ActionBar";
 import { DropZone } from "../../components/DropZone";
 import { useNotify } from "../../components/notify";
-import { Page } from "../../components/Page";
+import { ToolPage } from "../../components/Page";
 import { Panel } from "../../components/Panel";
 import { PathPicker } from "../../components/PathPicker";
 import { ResultCard } from "../../components/ResultCard";
+import { Select } from "../../components/Select";
 import { SliderField } from "../../components/SliderField";
 import { api } from "../../lib/bridge";
-import { allFilesFilter, dialogFilter, VIDEO_EXTENSIONS } from "../../lib/fileTypes";
+import { allFilesFilter, dialogFilter, formatList, formatName, VIDEO_EXTENSIONS } from "../../lib/fileTypes";
 import { fileName } from "../../lib/format";
 import type { VideoInfo, WaveformData } from "../../lib/types";
+import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { OFFSET_LIMIT_SEC, WaveformTimeline } from "./WaveformTimeline";
 
@@ -64,7 +63,6 @@ export default function VideoSyncPage() {
   const styles = useStyles();
   const { t } = useTranslation();
   const notify = useNotify();
-  const tool = toolById("video_sync")!;
   const videoRef = useRef<HTMLVideoElement>(null);
   const framesErrorFor = useRef<string | null>(null);
 
@@ -123,6 +121,10 @@ export default function VideoSyncPage() {
       notify.error(t("video_sync.errors.loadVideo"), { body: errorText(err) });
     }
   };
+
+  useIncomingTransfer("video_sync", (files) => {
+    if (files[0]) loadVideo(files[0]);
+  });
 
   const browseVideo = async () => {
     const [path] = await api.dialogs.openFiles([dialogFilter(t, "videos"), allFilesFilter(t)], false);
@@ -193,9 +195,8 @@ export default function VideoSyncPage() {
   const trackLabel = (index: number) => {
     const track = video?.audioTracks[index];
     if (!track) return "";
-    return [track.title || t("video_sync.trackNum", { num: index + 1 }), track.codec.toUpperCase(), `${track.channels} ch`].join(" · ");
+    return [track.title || t("video_sync.trackNum", { num: index + 1 }), formatName(track.codec), `${track.channels} ch`].join(" · ");
   };
-  const sourceLabel = source === "external" ? (externalAudio ? fileName(externalAudio.path) : "") : trackLabel(source);
 
   const modeLabel: Record<ExportMode, string> = {
     fast_copy: t("video_sync.export.fastCopy"),
@@ -204,21 +205,21 @@ export default function VideoSyncPage() {
 
   if (!video) {
     return (
-      <Page title={t("tools.video_sync.name")} description={t("tools.video_sync.description")} icon={tool.icon} accent={tool.accent}>
+      <ToolPage toolId="video_sync">
         <DropZone
           icon={VideoSwitch20Regular}
           title={t("video_sync.dropTitle")}
-          hint={t("video_sync.dropHint")}
+          hint={t("video_sync.dropHint", { formats: formatList(VIDEO_EXTENSIONS) })}
           accept={VIDEO_EXTENSIONS}
           onFiles={(files) => files[0] && loadVideo(files[0])}
           onBrowse={browseVideo}
         />
-      </Page>
+      </ToolPage>
     );
   }
 
   return (
-    <Page title={t("tools.video_sync.name")} description={t("tools.video_sync.description")} icon={tool.icon} accent={tool.accent}>
+    <ToolPage toolId="video_sync">
       <Panel
         title={video.fileName}
         actions={
@@ -265,38 +266,30 @@ export default function VideoSyncPage() {
           </div>
 
           <Field label={t("video_sync.audioSource")} className={styles.source}>
-            <Dropdown
-              value={sourceLabel}
-              selectedOptions={[String(source)]}
-              onOptionSelect={(_, d) => {
-                if (d.optionValue === "pick") browseAudio();
-                else if (d.optionValue === "external") setSource("external");
+            <Select
+              options={[
+                ...video.audioTracks.map((_, i) => ({ value: String(i), label: trackLabel(i) })),
+                ...(externalAudio ? [{ value: "external", label: fileName(externalAudio.path) }] : []),
+                { value: "pick", label: t("video_sync.pickAudio") },
+              ]}
+              value={String(source)}
+              onChange={(v) => {
+                if (v === "pick") browseAudio();
+                else if (v === "external") setSource("external");
                 else {
-                  setSource(Number(d.optionValue));
-                  setTrackIndex(Number(d.optionValue));
+                  setSource(Number(v));
+                  setTrackIndex(Number(v));
                 }
               }}
-            >
-              {video.audioTracks.map((_, i) => (
-                <Option key={i} value={String(i)}>
-                  {trackLabel(i)}
-                </Option>
-              ))}
-              {externalAudio && <Option value="external">{fileName(externalAudio.path)}</Option>}
-              <Option value="pick">{t("video_sync.pickAudio")}</Option>
-            </Dropdown>
+            />
           </Field>
 
           <Field label={t("video_sync.previewLength")} className={styles.length}>
-            <Dropdown
-              value={`${previewDuration} s`}
-              selectedOptions={[String(previewDuration)]}
-              onOptionSelect={(_, d) => setPreviewDuration(Number(d.optionValue))}
-            >
-              {PREVIEW_LENGTHS.map((len) => (
-                <Option key={len} value={String(len)}>{`${len} s`}</Option>
-              ))}
-            </Dropdown>
+            <Select
+              options={PREVIEW_LENGTHS.map((len) => ({ value: String(len), label: `${len} s` }))}
+              value={String(previewDuration)}
+              onChange={(v) => setPreviewDuration(Number(v))}
+            />
           </Field>
 
           <Button icon={previewing ? <Spinner size="tiny" /> : <Play16Regular />} disabled={previewing} onClick={generatePreview}>
@@ -315,14 +308,11 @@ export default function VideoSyncPage() {
             />
           </Field>
           <Field label={t("video_sync.export.mode")} className={styles.mode}>
-            <Dropdown
-              value={modeLabel[exportMode]}
-              selectedOptions={[exportMode]}
-              onOptionSelect={(_, d) => setExportMode(d.optionValue as ExportMode)}
-            >
-              <Option value="fast_copy">{modeLabel.fast_copy}</Option>
-              <Option value="reencode">{modeLabel.reencode}</Option>
-            </Dropdown>
+            <Select
+              options={(["fast_copy", "reencode"] as const).map((m) => ({ value: m, label: modeLabel[m] }))}
+              value={exportMode}
+              onChange={setExportMode}
+            />
           </Field>
         </div>
 
@@ -336,6 +326,6 @@ export default function VideoSyncPage() {
           {t("video_sync.export.action")}
         </Button>
       </ActionBar>
-    </Page>
+    </ToolPage>
   );
 }

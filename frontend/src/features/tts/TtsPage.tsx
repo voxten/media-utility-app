@@ -2,13 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Button,
   Caption1,
-  Combobox,
-  Dropdown,
   Field,
   Input,
   makeStyles,
-  Option,
-  OptionGroup,
   Spinner,
   Tab,
   TabList,
@@ -18,15 +14,16 @@ import {
 import { Cloud24Regular, Desktop24Regular, Dismiss16Regular, FolderOpen16Regular, Speaker216Filled } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { create } from "zustand";
-import { toolById } from "../../app/tools";
 import { ActionBar } from "../../components/ActionBar";
 import { AudioPlayer } from "../../components/AudioPlayer";
 import { useNotify } from "../../components/notify";
-import { Page } from "../../components/Page";
+import { ToolPage } from "../../components/Page";
 import { Panel } from "../../components/Panel";
 import { PathPicker } from "../../components/PathPicker";
+import { Select } from "../../components/Select";
 import { SliderField } from "../../components/SliderField";
 import { api } from "../../lib/bridge";
+import { formatOptions } from "../../lib/fileTypes";
 import { joinPath } from "../../lib/format";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useSettings } from "../../stores/settings";
@@ -116,11 +113,9 @@ export default function TtsPage() {
   const { t, i18n } = useTranslation();
   const styles = useStyles();
   const notify = useNotify();
-  const tool = toolById("tts")!;
   const form = useForm();
   const outputDir = useSettings((s) => s.settings?.outputDir ?? "");
   const [voices, setVoices] = useState<Voice[] | null>(voiceCache[form.engine] ?? null);
-  const [query, setQuery] = useState<string | null>(null);
 
   const runner = useJobRunner<{ outPath: string; bytes: number }>("tts", {
     onDone: async (result) => {
@@ -184,10 +179,22 @@ export default function TtsPage() {
     form.set({ locale, voice: voiceOk ? form.voice : voices.find((v) => v.locale === locale)?.id ?? voices[0].id });
   }, [voices]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const visibleVoices = (voices ?? []).filter(
-    (v) => (!form.locale || v.locale === form.locale) && (!query || `${v.name} ${v.id}`.toLowerCase().includes(query.toLowerCase())),
-  );
-  const selectedVoice = voices?.find((v) => v.id === form.voice);
+  const localeOptions = useMemo(() => {
+    const names = new Intl.DisplayNames([i18n.language], { type: "language" });
+    return locales.map((l) => ({ value: l, label: `${names.of(l) ?? l} · ${l}` }));
+  }, [locales, i18n.language]);
+
+  const voiceOptions = (voices ?? [])
+    .filter((v) => !form.locale || v.locale === form.locale)
+    .map((v) => {
+      const gender = v.gender ? t(`tts.gender.${v.gender.toLowerCase()}`, { defaultValue: v.gender }) : "";
+      return {
+        value: v.id,
+        label: `${v.name} (${v.locale})`,
+        content: gender ? `${v.name} · ${gender}` : v.name,
+        keywords: `${v.id} ${gender}`,
+      };
+    });
   const rateCfg = RATE[form.engine];
   const effectiveOutDir = form.outDir || outputDir;
   const rawName = form.fileName.trim() || t("tts.defaultName");
@@ -206,7 +213,7 @@ export default function TtsPage() {
       .catch((err) => notify.error(t("tts.toast.error"), { body: String(err) }));
 
   return (
-    <Page title={t("tools.tts.name")} description={t("tools.tts.description")} icon={tool.icon} accent={tool.accent}>
+    <ToolPage toolId="tts">
       <div className={styles.columns}>
         <Panel title={t("tts.text")}>
           <Textarea
@@ -243,43 +250,22 @@ export default function TtsPage() {
             <>
               {locales.length > 1 && (
                 <Field label={t("tts.language")}>
-                  <Combobox
+                  <Select
+                    searchable
+                    options={localeOptions}
                     value={form.locale}
-                    selectedOptions={[form.locale]}
-                    onOptionSelect={(_, d) => {
-                      const locale = d.optionValue ?? "";
-                      form.set({ locale, voice: voices.find((v) => v.locale === locale)?.id ?? form.voice });
-                    }}
-                  >
-                    {locales.map((l) => (
-                      <Option key={l} value={l}>
-                        {l}
-                      </Option>
-                    ))}
-                  </Combobox>
+                    onChange={(locale) => form.set({ locale, voice: voices.find((v) => v.locale === locale)?.id ?? form.voice })}
+                  />
                 </Field>
               )}
               <Field label={t("tts.voiceLabel")} validationMessage={voices.length === 0 ? t("tts.noVoices") : undefined}>
-                <Combobox
-                  value={query ?? (selectedVoice ? `${selectedVoice.name} (${selectedVoice.locale})` : "")}
-                  selectedOptions={form.voice ? [form.voice] : []}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onOptionSelect={(_, d) => {
-                    if (d.optionValue) form.set({ voice: d.optionValue });
-                    setQuery(null);
-                  }}
-                  onBlur={() => setQuery(null)}
+                <Select
+                  searchable
+                  options={voiceOptions}
+                  value={form.voice}
+                  onChange={(voice) => form.set({ voice })}
                   placeholder={t("tts.searchVoice")}
-                >
-                  <OptionGroup label={form.locale || t("tts.allVoices")}>
-                    {visibleVoices.map((v) => (
-                      <Option key={v.id} value={v.id} text={`${v.name} (${v.locale})`}>
-                        {v.name}
-                        {v.gender ? ` · ${t(`tts.gender.${v.gender.toLowerCase()}`, { defaultValue: v.gender })}` : ""}
-                      </Option>
-                    ))}
-                  </OptionGroup>
-                </Combobox>
+                />
               </Field>
             </>
           )}
@@ -312,18 +298,7 @@ export default function TtsPage() {
               />
             </Field>
             <Field label={t("tts.format")}>
-              <Dropdown
-                className={styles.narrowDropdown}
-                value={form.format.toUpperCase()}
-                selectedOptions={[form.format]}
-                onOptionSelect={(_, d) => setFormat(d.optionValue as (typeof FORMATS)[number])}
-              >
-                {FORMATS.map((f) => (
-                  <Option key={f} value={f}>
-                    {f.toUpperCase()}
-                  </Option>
-                ))}
-              </Dropdown>
+              <Select searchable className={styles.narrowDropdown} options={formatOptions(FORMATS)} value={form.format} onChange={setFormat} />
             </Field>
           </div>
         </Panel>
@@ -355,13 +330,13 @@ export default function TtsPage() {
 
       <ActionBar
         job={runner.running ? runner.job : undefined}
-        idleText={form.text.trim() ? t("tts.idle.ready", { voice: selectedVoice?.name ?? "—" }) : t("tts.idle.empty")}
+        idleText={form.text.trim() ? t("tts.idle.ready", { voice: voices?.find((v) => v.id === form.voice)?.name ?? "—" }) : t("tts.idle.empty")}
         onCancel={runner.cancel}
       >
         <Button appearance="primary" icon={<Speaker216Filled />} disabled={!form.text.trim() || !form.voice || runner.running} onClick={start}>
           {t("tts.generate")}
         </Button>
       </ActionBar>
-    </Page>
+    </ToolPage>
   );
 }

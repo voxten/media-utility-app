@@ -153,6 +153,9 @@ def _check_image_editor(tmp: Path) -> Any:
     assert res["width"] == 80
     transformed = image_editor.preview_transform(str(path), {"rotate": 90})
     assert transformed["width"] == 80
+    alpha = tmp / "alpha.png"
+    Image.new("RGBA", (80, 80), (0, 0, 0, 0)).save(alpha)
+    assert image_editor.thumbnail(str(alpha))["dataUrl"].startswith("data:image/webp")
     return True
 
 
@@ -164,6 +167,42 @@ def _check_system_info(_: Path) -> Any:
     hw = system_info.get_hardware_info()
     assert "cpuThreads" in hw
     return True
+
+
+# Optional AI packages are pip-installed at runtime and import stdlib modules the app itself never uses.
+ADDON_STDLIB = [
+    "unittest.mock",
+    "multiprocessing.pool",
+    "concurrent.futures",
+    "ctypes.util",
+    "pdb",
+    "cProfile",
+    "timeit",
+    "modulefinder",
+    "sqlite3",
+    "xml.etree.ElementTree",
+    "uuid",
+]
+
+
+ADDON_PACKAGES = ["torch", "rembg", "onnxruntime"]
+
+
+def _check_addon_support(_: Path) -> Any:
+    """pip and the stdlib parts add-ons need are bundled; add-ons already installed actually import."""
+    from backend.core.addons import activate_addons, addons_dir, run_pip_main
+
+    for name in ADDON_STDLIB:
+        importlib.import_module(name)
+    # "install" loads pip's wheel installer, which "--version" alone never imports.
+    assert run_pip_main(["install", "--help"]) == 0
+    activate_addons()
+    folder = addons_dir()
+    installed = {}
+    for name in ADDON_PACKAGES:
+        if (folder / name).is_dir():
+            installed[name] = getattr(importlib.import_module(name), "__version__", "ok")
+    return {"folder": str(folder), "installed": installed}
 
 
 def _check_video_sync(tmp: Path) -> Any:
@@ -204,6 +243,7 @@ CHECKS: Dict[str, Callable[[Path], Any]] = {
     "image_editor": _check_image_editor,
     "system_info": _check_system_info,
     "video_sync": _check_video_sync,
+    "addons": _check_addon_support,
 }
 
 

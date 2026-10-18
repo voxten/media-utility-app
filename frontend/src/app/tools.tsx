@@ -34,6 +34,7 @@ import {
   DocumentExtract24,
   DocumentSplit24,
 } from "./customIcons";
+import type { MediaKind } from "../lib/fileTypes";
 
 export type CategoryId = "video" | "image" | "text" | "pdf" | "system" | "generators";
 
@@ -43,6 +44,8 @@ export interface ToolDefinition {
   icon: FluentIcon;
   /** Accent used for the icon tile on the Home page. */
   accent: string;
+  /** File kinds the tool takes from "Send to"; an object opens a sub-tab, whose name replaces the description. */
+  accepts?: Partial<Record<MediaKind, true | { subTab: string; noteKey: string }>>;
 }
 
 export const CATEGORIES: CategoryId[] = ["video", "image", "text", "pdf", "system", "generators"];
@@ -56,21 +59,32 @@ export const CATEGORY_ACCENTS: Record<CategoryId, string> = {
   generators: "#0e9aa7",
 };
 
+export const SETTINGS_ACCENT = "#5b6b7f";
+
 export const TOOLS: ToolDefinition[] = [
   { id: "download", category: "video", icon: bundleIcon(ArrowDownload24Filled, ArrowDownload24Regular), accent: CATEGORY_ACCENTS.video },
-  { id: "video_sync", category: "video", icon: bundleIcon(Timeline24Filled, Timeline24Regular), accent: CATEGORY_ACCENTS.video },
-  { id: "compressor", category: "image", icon: bundleIcon(ArrowMinimize24Filled, ArrowMinimize24Regular), accent: CATEGORY_ACCENTS.image },
-  { id: "image_tools", category: "image", icon: bundleIcon(Crop24Filled, Crop24Regular), accent: CATEGORY_ACCENTS.image },
-  { id: "converter", category: "image", icon: bundleIcon(ImageArrowForward24Filled, ImageArrowForward24Regular), accent: CATEGORY_ACCENTS.image },
-  { id: "rembg", category: "image", icon: bundleIcon(Wand24Filled, Wand24Regular), accent: CATEGORY_ACCENTS.image },
-  { id: "upscale", category: "image", icon: bundleIcon(ArrowMaximize24Filled, ArrowMaximize24Regular), accent: CATEGORY_ACCENTS.image },
-  { id: "watermark", category: "image", icon: bundleIcon(ImageEdit24Filled, ImageEdit24Regular), accent: CATEGORY_ACCENTS.image },
+  { id: "video_sync", category: "video", icon: bundleIcon(Timeline24Filled, Timeline24Regular), accent: CATEGORY_ACCENTS.video, accepts: { video: true } },
+  { id: "compressor", category: "image", icon: bundleIcon(ArrowMinimize24Filled, ArrowMinimize24Regular), accent: CATEGORY_ACCENTS.image, accepts: { image: true } },
+  { id: "image_tools", category: "image", icon: bundleIcon(Crop24Filled, Crop24Regular), accent: CATEGORY_ACCENTS.image, accepts: { image: true } },
+  { id: "converter", category: "image", icon: bundleIcon(ImageArrowForward24Filled, ImageArrowForward24Regular), accent: CATEGORY_ACCENTS.image, accepts: { image: true } },
+  { id: "rembg", category: "image", icon: bundleIcon(Wand24Filled, Wand24Regular), accent: CATEGORY_ACCENTS.image, accepts: { image: true } },
+  { id: "upscale", category: "image", icon: bundleIcon(ArrowMaximize24Filled, ArrowMaximize24Regular), accent: CATEGORY_ACCENTS.image, accepts: { image: true } },
+  { id: "watermark", category: "image", icon: bundleIcon(ImageEdit24Filled, ImageEdit24Regular), accent: CATEGORY_ACCENTS.image, accepts: { image: true } },
   { id: "tts", category: "text", icon: bundleIcon(PersonVoice24Filled, PersonVoice24Regular), accent: CATEGORY_ACCENTS.text },
-  { id: "pdf", category: "pdf", icon: bundleIcon(DocumentMultiple24Filled, DocumentMultiple24Regular), accent: CATEGORY_ACCENTS.pdf },
-  { id: "pdf_compress", category: "pdf", icon: DocumentCompress24, accent: CATEGORY_ACCENTS.pdf },
-  { id: "pdf_split", category: "pdf", icon: DocumentSplit24, accent: CATEGORY_ACCENTS.pdf },
-  { id: "pdf_convert", category: "pdf", icon: DocumentConvert24, accent: CATEGORY_ACCENTS.pdf },
-  { id: "pdf_extract", category: "pdf", icon: DocumentExtract24, accent: CATEGORY_ACCENTS.pdf },
+  { id: "pdf", category: "pdf", icon: bundleIcon(DocumentMultiple24Filled, DocumentMultiple24Regular), accent: CATEGORY_ACCENTS.pdf, accepts: { pdf: true } },
+  { id: "pdf_compress", category: "pdf", icon: DocumentCompress24, accent: CATEGORY_ACCENTS.pdf, accepts: { pdf: true } },
+  { id: "pdf_split", category: "pdf", icon: DocumentSplit24, accent: CATEGORY_ACCENTS.pdf, accepts: { pdf: true } },
+  {
+    id: "pdf_convert",
+    category: "pdf",
+    icon: DocumentConvert24,
+    accent: CATEGORY_ACCENTS.pdf,
+    accepts: {
+      image: { subTab: "imagesToPdf", noteKey: "pdf.convert.imagesToPdf" },
+      pdf: { subTab: "pdfToImages", noteKey: "pdf.convert.pdfToImages" },
+    },
+  },
+  { id: "pdf_extract", category: "pdf", icon: DocumentExtract24, accent: CATEGORY_ACCENTS.pdf, accepts: { pdf: true } },
   { id: "duplicates", category: "system", icon: bundleIcon(FolderSearch24Filled, FolderSearch24Regular), accent: CATEGORY_ACCENTS.system },
   { id: "progress", category: "generators", icon: bundleIcon(DataBarHorizontal24Filled, DataBarHorizontal24Regular), accent: CATEGORY_ACCENTS.generators },
 ];

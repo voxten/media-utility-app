@@ -54,7 +54,7 @@ export function ActionBar({ job, idleText, detail, onCancel, children }: ActionB
         {job ? (
           <>
             <div className={styles.line}>
-              <Text className={mergeClasses(styles.message, job.status === "error" && styles.error)}>{jobMessage(t, job) || t("common.status.working")}</Text>
+              <Text className={mergeClasses(styles.message, job.status === "error" && styles.error)}>{jobMessage(t, job) || (running ? t("common.status.working") : t(`common.jobStatus.${job.status}`))}</Text>
               <Caption1 className={styles.percent}>
                 {detail}
                 {running && job.percent != null && `  ${Math.round(job.percent)}%`}

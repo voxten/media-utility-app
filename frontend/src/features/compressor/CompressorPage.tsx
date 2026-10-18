@@ -2,11 +2,9 @@ import { useEffect, useState } from "react";
 import {
   Button,
   Caption1,
-  Dropdown,
   Field,
   Input,
   makeStyles,
-  Option,
   Radio,
   RadioGroup,
   Spinner,
@@ -15,27 +13,29 @@ import {
 } from "@fluentui/react-components";
 import { Add16Regular, ArrowMinimize24Regular, ArrowRight16Regular, Delete16Regular, Image24Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
-import { toolById } from "../../app/tools";
 import { ActionBar } from "../../components/ActionBar";
 import { AfterGallery } from "../../components/AfterGallery";
 import { DropZone } from "../../components/DropZone";
 import { FileStrip } from "../../components/FileStrip";
 import { ImageComparison } from "../../components/ImageComparison";
 import { useNotify } from "../../components/notify";
-import { Page } from "../../components/Page";
+import { ToolPage } from "../../components/Page";
 import { Panel } from "../../components/Panel";
 import { ResultCard } from "../../components/ResultCard";
+import { Select } from "../../components/Select";
 import { SliderField } from "../../components/SliderField";
 import { api } from "../../lib/bridge";
+import { checkerboard } from "../../lib/checkerboard";
 import { claimDrop, matchesExtensions } from "../../lib/drop";
-import { dialogFilter, IMAGE_EXTENSIONS } from "../../lib/fileTypes";
+import { dialogFilter, formatList, formatName, IMAGE_EXTENSIONS, imageFormatLabel, type ImageOutputFormat } from "../../lib/fileTypes";
 import { fileName, formatBytes } from "../../lib/format";
+import { IMAGE_STAGE_HEIGHT } from "../../lib/imageStage";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useTransferStore } from "../../stores/transfer";
 
 type Mode = "smart" | "lossless" | "target";
-type Format = "original" | "webp" | "jpeg" | "png";
+const FORMATS: ImageOutputFormat[] = ["original", "webp", "jpeg", "png"];
 
 interface PreviewData {
   path: string;
@@ -79,12 +79,12 @@ const useStyles = makeStyles({
   targetRow: { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" },
   targetInput: { width: "130px" },
   stage: {
-    height: "min(60vh, 560px)",
+    height: IMAGE_STAGE_HEIGHT,
     minHeight: "320px",
     display: "grid",
     placeItems: "center",
-    borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: tokens.colorNeutralBackground3,
+    borderRadius: tokens.borderRadiusLarge,
+    ...checkerboard(),
     overflow: "hidden",
   },
   meta: { display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap", color: tokens.colorNeutralForeground3 },
@@ -95,7 +95,6 @@ export default function CompressorPage() {
   const { t } = useTranslation();
   const styles = useStyles();
   const notify = useNotify();
-  const tool = toolById("compressor")!;
 
   const [files, setFiles] = useState<string[]>([]);
   const [selected, setSelected] = useState(0);
@@ -104,7 +103,7 @@ export default function CompressorPage() {
   const [updating, setUpdating] = useState(false);
 
   const [mode, setMode] = useState<Mode>("smart");
-  const [format, setFormat] = useState<Format>("original");
+  const [format, setFormat] = useState<ImageOutputFormat>("original");
   const [quality, setQuality] = useState(80);
   const [targetKb, setTargetKb] = useState("500");
 
@@ -193,28 +192,22 @@ export default function CompressorPage() {
 
   if (!files.length) {
     return (
-      <Page title={t("tools.compressor.name")} description={t("tools.compressor.description")} icon={tool.icon} accent={tool.accent}>
+      <ToolPage toolId="compressor">
         <DropZone
           icon={Image24Regular}
           title={t("compressor.dropTitle")}
-          hint={t("compressor.dropHint")}
+          hint={t("compressor.dropHint", { formats: formatList(IMAGE_EXTENSIONS) })}
           accept={IMAGE_EXTENSIONS}
           onFiles={addFiles}
           onBrowse={browse}
         />
-      </Page>
+      </ToolPage>
     );
   }
 
-  const formatLabel: Record<Format, string> = {
-    original: t("compressor.formatOriginal"),
-    webp: t("compressor.formatWebp"),
-    jpeg: t("compressor.formatJpeg"),
-    png: t("compressor.formatPng"),
-  };
 
   return (
-    <Page title={t("tools.compressor.name")} description={t("tools.compressor.description")} icon={tool.icon} accent={tool.accent}>
+    <ToolPage toolId="compressor">
       <Panel>
         <div className={styles.settings}>
           <Field label={t("compressor.mode")}>
@@ -226,14 +219,8 @@ export default function CompressorPage() {
           </Field>
         </div>
         <div className={styles.settings}>
-          <Field label={t("compressor.format")} className={styles.format}>
-            <Dropdown value={formatLabel[format]} selectedOptions={[format]} onOptionSelect={(_, d) => setFormat(d.optionValue as Format)}>
-              {(Object.keys(formatLabel) as Format[]).map((f) => (
-                <Option key={f} value={f}>
-                  {formatLabel[f]}
-                </Option>
-              ))}
-            </Dropdown>
+          <Field label={t("common.outputFormat")} className={styles.format}>
+            <Select searchable options={FORMATS.map((f) => ({ value: f, label: imageFormatLabel(t, f) }))} value={format} onChange={setFormat} />
           </Field>
           {mode === "smart" && (
             <div className={styles.param}>
@@ -300,7 +287,7 @@ export default function CompressorPage() {
         {preview && (
           <div className={styles.meta}>
             <Caption1>
-              {preview.width} × {preview.height} px · {preview.format.toUpperCase()}
+              {preview.width} × {preview.height} px · {formatName(preview.format)}
             </Caption1>
             {compressed && (
               <Text>
@@ -356,6 +343,6 @@ export default function CompressorPage() {
           {files.length > 1 ? t("compressor.compressAll", { count: files.length }) : t("compressor.compressAction")}
         </Button>
       </ActionBar>
-    </Page>
+    </ToolPage>
   );
 }

@@ -1,17 +1,22 @@
-"""AI Super-Resolution service supporting RGBA transparent backgrounds and anti-halo debleeding."""
+"""AI Super-Resolution service supporting RGBA transparent backgrounds and anti-halo debleeding.
+
+PyTorch is an optional add-on installed from Settings, so it is imported only where a model runs;
+the app (and this module) must load without it.
+"""
 
 import uuid
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
 
 import cv2
 import numpy as np
-import torch
 
 from backend.core import thumbs
 from backend.core.jobs import JobCancelled, JobContext
 from backend.core.paths import app_data_dir, cache_dir, project_root
-from backend.services.ai_models import load_upscale_model
+
+if TYPE_CHECKING:
+    import torch
 
 SUPPORTED_FORMATS = (".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff", ".tif")
 
@@ -90,7 +95,7 @@ def anti_halo_debleed(bgr: np.ndarray, alpha: np.ndarray) -> np.ndarray:
 
 
 def _process_tiles(
-    model: torch.nn.Module,
+    model: "torch.nn.Module",
     device: str,
     img_bgr: np.ndarray,
     tile_size: int = 512,
@@ -99,6 +104,8 @@ def _process_tiles(
     ctx: Optional[JobContext] = None,
 ) -> np.ndarray:
     """Processes image in overlapping tiles to prevent out-of-memory errors on large images."""
+    import torch
+
     h, w, c = img_bgr.shape
     out_h, out_w = h * scale, w * scale
 
@@ -203,6 +210,8 @@ def upscale_array(
     if ctx:
         ctx.check_cancelled()
         ctx.progress(20, "upscale.status.modelInference")
+
+    from backend.services.ai_models import load_upscale_model
 
     model, device = load_upscale_model(model_id, str(weights_path))
     # Native model upscales 4x

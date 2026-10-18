@@ -67,7 +67,7 @@
     },
     "pdf_split": {
       "name": "Podział PDF",
-      "description": "Podziel dokument na pojedyncze strony lub wyodrębnij wskazany zakres."
+      "description": "Podziel dokument na pojedyncze strony lub wybrane grupy stron."
     },
     "pdf_convert": {
       "name": "PDF ↔ Obrazy",
@@ -119,9 +119,9 @@
       "ffmpeg": "FFmpeg",
       "mediainfo": "MediaInfo",
       "lama": "Model AI LaMa (opcjonalny)",
-      "rembg": "Model AI BiRefNet (Usuwanie tła)",
-      "upscale_general": "Model AI Real-ESRGAN General (x4v3)",
-      "upscale_anime": "Model AI Real-ESRGAN Anime (x4plus)",
+      "rembg": "Model BiRefNet do usuwania tła",
+      "upscale_general": "Model AI Real-ESRGAN General",
+      "upscale_anime": "Model AI Real-ESRGAN Anime",
       "install": "Pobierz i zainstaluj",
       "installing": "Instalowanie…",
       "installed": "Pomyślnie zainstalowano zależność",
@@ -148,10 +148,14 @@
     "micaUnsupported": "Wymaga Windows 11 (22H2 lub nowszego).",
     "storage": {
       "title": "Pamięć i pamięć podręczna",
-      "cacheTitle": "Pamięć podręczna (Cache)",
+      "cacheTitle": "Pamięć podręczna",
       "cacheDesc": "Tymczasowe pliki konwersji, pobrane archiwa i miniatury robocze.",
-      "modelsTitle": "Modele sztucznej inteligencji (AI)",
-      "appDataTitle": "Folder aplikacji (%APPDATA%)",
+      "usage_one": "{{size}} · {{count}} plik",
+      "usage_few": "{{size}} · {{count}} pliki",
+      "usage_many": "{{size}} · {{count}} plików",
+      "usage_other": "{{size}} · {{count}} pliku",
+      "modelsTitle": "Modele AI",
+      "appDataTitle": "Folder danych aplikacji",
       "appDataDesc": "Główny katalog Media Studio zawierający konfigurację i pliki tymczasowe.",
       "recentFoldersTitle": "Historia ostatnich folderów",
       "recentFoldersDesc": "Historia ostatnio używanych katalogów w oknach wyboru.",
@@ -164,22 +168,22 @@
     },
     "hardware": {
       "title": "Wydajność i sprzęt",
-      "cpu": "Procesor (CPU)",
+      "cpu": "Procesor",
       "cpuDetails": "{{threads}} wątków logicznych · architektura {{arch}}",
       "noGpu": "Zintegrowana grafika lub brak dedykowanego GPU",
       "cudaActive": "Akceleracja PyTorch CUDA aktywna (v{{version}})",
-      "cudaInactive": "Tryb CPU (Brak środowiska PyTorch CUDA)",
-      "ram": "Pamięć operacyjna RAM",
+      "cudaInactive": "CUDA niedostępna, praca na CPU",
+      "ram": "Pamięć RAM",
       "ramDetails": "{{avail}} wolne z {{total}} całkowitej pamięci",
       "concurrency": "Maksymalna współbieżność zadań",
       "concurrencyDesc": "Liczba zadań w tle i wątków roboczych wykonywanych równolegle.",
       "concurrencyThreads": "{{count}} wątków",
-      "acceleration": "Akceleracja sprzętowa (GPU)",
+      "acceleration": "Akceleracja GPU",
       "accelerationDesc": "Używaj procesora graficznego do akceleracji obliczeń AI i wideo."
     },
     "notifications": {
       "title": "Powiadomienia i dźwięki",
-      "desktop": "Powiadomienia na pulpicie (Windows)",
+      "desktop": "Powiadomienia systemowe",
       "desktopDesc": "Wyświetla powiadomienia w systemie po zakończeniu długotrwałych zadań w tle.",
       "sound": "Dźwięk ukończenia zadania",
       "soundDesc": "Odtwarza subtelny sygnał dźwiękowy po ukończeniu lub błędzie zadania.",
@@ -237,13 +241,13 @@
     "outputFolder": "Folder zapisu",
     "fileName": "Nazwa pliku",
     "savedSuccess": "Zapisano plik",
-    "loading": "Ładowanie...",
+    "loading": "Ładowanie…",
     "viewSplit": "Suwak",
     "viewSide": "Obok siebie",
     "viewAfter": "Tylko wynik",
     "viewBefore": "Tylko oryginał",
-    "before": "Przed (Oryginał)",
-    "after": "Po (Wynik)",
+    "before": "Przed",
+    "after": "Po",
     "saveError": "Nie udało się zapisać pliku",
     "andMore": "+ {{count}} więcej",
     "addFiles": "Dodaj pliki",
@@ -251,7 +255,13 @@
     "eta": "zostało {{time}}",
     "seek": "Przewiń",
     "play": "Odtwórz",
-    "pause": "Wstrzymaj"
+    "pause": "Wstrzymaj",
+    "outputFormat": "Format wyjściowy",
+    "formatOriginal": "Taki sam jak oryginał",
+    "changeImage": "Zmień obraz",
+    "continueWithResult": "Kontynuuj z wynikiem",
+    "search": "Wpisz, aby wyszukać…",
+    "noResults": "Brak wyników"
   },
   "fileTypes": {
     "images": "Obrazy",
@@ -276,8 +286,10 @@
       "failed": "Nie udało się przekonwertować {{src}}: {{error}}"
     },
     "source": "Źródło",
+    "sourceFile": "Plik",
     "sourceFolder": "Folder",
     "sourceFiles": "Pliki",
+    "inputFile": "Plik obrazu",
     "inputFolder": "Folder wejściowy",
     "fromFormat": "Format źródłowy",
     "swap": "Zamień formaty",
@@ -286,7 +298,7 @@
     "matching_many": "Znaleziono {{count}} plików {{format}}.",
     "matching_other": "Znaleziono {{count}} pliku {{format}}.",
     "dropTitle": "Upuść obrazy tutaj",
-    "dropHint": "lub kliknij, aby wybrać pliki (PNG, JPG, WEBP, GIF, TIFF, BMP)",
+    "dropHint": "lub kliknij, aby wybrać pliki ({{formats}})",
     "output": "Wynik",
     "toFormat": "Format docelowy",
     "quality": "Jakość",
@@ -299,6 +311,7 @@
     "filesSelected_many": "Wybrano {{count}} plików",
     "filesSelected_other": "Wybrano {{count}} pliku",
     "idle": {
+      "pickFile": "Wybierz plik obrazu.",
       "pickFolder": "Wybierz folder z obrazami.",
       "pickFiles": "Dodaj obrazy do konwersji.",
       "ready_one": "{{count}} plik gotowy do konwersji",
@@ -335,26 +348,21 @@
       "error": "Błąd kompresji {{file}}: {{error}}"
     },
     "mode": "Tryb kompresji",
-    "modeSmart": "Zrównoważona (Smart Lossy)",
-    "modeLossless": "Bezstratna (Lossless)",
-    "modeTarget": "Dopasuj do limitu (Target Size)",
-    "format": "Format wyjściowy",
-    "formatOriginal": "Taki sam jak oryginał",
-    "formatWebp": "Nowoczesny WebP (zalecany, największa oszczędność)",
-    "formatJpeg": "Standardowy JPEG",
-    "formatPng": "PNG (kwantyzacja do palety 256 kolorów)",
+    "modeSmart": "Zrównoważona",
+    "modeLossless": "Bezstratna",
+    "modeTarget": "Dopasuj do limitu",
     "quality": "Jakość",
     "targetKb": "Docelowy rozmiar (KB)",
     "before": "Oryginał",
     "after": "Po kompresji",
     "compressAction": "Kompresuj i zapisz",
-    "summary": "Podsumowanie: {{processed}}/{{total}} plików, zaoszczędzono {{saved}} (-{{percent}}%)",
+    "summary": "{{processed}}/{{total}} plików · zaoszczędzono {{saved}} (−{{percent}}%)",
     "toast": {
       "success": "Skompresowano obraz",
       "error": "Nie udało się skompresować pliku"
     },
     "dropTitle": "Upuść obrazy do kompresji",
-    "dropHint": "Jeden lub więcej plików: PNG, JPEG, WebP, BMP, TIFF",
+    "dropHint": "Jeden lub więcej plików: {{formats}}",
     "compressAll": "Kompresuj pliki ({{count}})"
   },
   "pdf": {
@@ -379,12 +387,13 @@
     "dropSingleTitle": "Upuść dokument PDF tutaj",
     "dropSingleHint": "lub kliknij, aby wybrać pojedynczy plik PDF",
     "dropImagesTitle": "Upuść pliki graficzne tutaj",
-    "dropImagesHint": "lub kliknij, aby wybrać zdjęcia (PNG, JPG, WebP)",
-    "dropChange": "Zmień plik PDF (upuść lub kliknij)",
-    "pages_one": "{{count}} strona",
-    "pages_few": "{{count}} strony",
-    "pages_many": "{{count}} stron",
-    "pages_other": "{{count}} strony",
+    "dropImagesHint": "lub kliknij, aby wybrać obrazy ({{formats}})",
+    "dropChange": "Zmień plik PDF",
+    "pagesTitle": "Strony",
+    "pageCount_one": "{{count}} strona",
+    "pageCount_few": "{{count}} strony",
+    "pageCount_many": "{{count}} stron",
+    "pageCount_other": "{{count}} strony",
     "pageShort": "str. {{page}}",
     "preview": "Podgląd",
     "removePage": "Usuń stronę",
@@ -395,23 +404,25 @@
     "defaultName": "polaczony.pdf",
     "compress": {
       "preset": "Poziom kompresji",
-      "presetLow": "Lekka (wysoka jakość, 200 DPI)",
-      "presetBalanced": "Zrównoważona (zalecana, 150 DPI)",
-      "presetHigh": "Maksymalna (najmniejszy plik, 100 DPI)",
+      "presetLow": "Lekka · 200 DPI",
+      "presetBalanced": "Zrównoważona · 150 DPI",
+      "presetHigh": "Maksymalna · 100 DPI",
       "action": "Kompresuj i zapisz",
-      "result": "Oryginał: {{before}} ➔ Po kompresji: {{after}} (oszczędność: -{{percent}}%)"
+      "result": "{{before}} → {{after}} (−{{percent}}%)"
     },
     "split": {
       "mode": "Sposób podziału",
       "modeAll": "Każda strona jako osobny plik PDF",
-      "modeRange": "Wyodrębnij określony zakres stron",
-      "rangeLabel": "Zakres stron (np. 1-3, 5, 8-10)",
-      "rangePlaceholder": "1-3, 5, 8",
+      "modeGroups": "Każda grupa jako osobny plik PDF",
+      "groupsHint": "Klikaj strony, aby dodać je do wybranej grupy; Shift+klik dodaje kilka stron naraz",
+      "group": "Grupa {{n}}",
+      "newGroup": "Nowa grupa",
+      "removeGroup": "Usuń grupę",
       "action": "Podziel do folderu"
     },
     "convert": {
-      "pdfToImages": "PDF ➔ Pliki graficzne",
-      "imagesToPdf": "Grafiki ➔ Dokument PDF",
+      "pdfToImages": "PDF → Pliki graficzne",
+      "imagesToPdf": "Grafiki → Dokument PDF",
       "format": "Format obrazu",
       "dpi": "Rozdzielczość (DPI)",
       "actionToImages": "Eksportuj strony do folderu",
@@ -419,7 +430,9 @@
       "defaultPdfName": "z_obrazow.pdf",
       "dpiScreen": "Ekran",
       "dpiStandard": "Standard",
-      "dpiPrint": "Druk"
+      "dpiPrint": "Druk",
+      "pages": "Strony",
+      "allPages": "Wszystkie strony"
     },
     "extract": {
       "action": "Eksportuj do .txt",
@@ -430,10 +443,10 @@
     },
     "idle": {
       "empty": "Dodaj pliki PDF, aby zacząć.",
-      "ready_one": "{{count}} strona z {{files}} plików gotowa do połączenia",
-      "ready_few": "{{count}} strony z {{files}} plików gotowe do połączenia",
-      "ready_many": "{{count}} stron z {{files}} plików gotowych do połączenia",
-      "ready_other": "{{count}} strony z {{files}} plików gotowe do połączenia"
+      "ready_one": "{{count}} strona gotowa do połączenia",
+      "ready_few": "{{count}} strony gotowe do połączenia",
+      "ready_many": "{{count}} stron gotowych do połączenia",
+      "ready_other": "{{count}} strony gotowe do połączenia"
     },
     "toast": {
       "merged_one": "Połączono {{count}} stronę",
@@ -444,11 +457,20 @@
       "readError": "Nie można odczytać pliku {{file}}",
       "compressSuccess": "Skompresowano dokument PDF",
       "compressError": "Nie udało się skompresować pliku",
-      "splitSuccess": "Podzielono dokument na {{count}} plików",
+      "splitSuccess_one": "Utworzono {{count}} plik",
+      "splitSuccess_few": "Utworzono {{count}} pliki",
+      "splitSuccess_many": "Utworzono {{count}} plików",
+      "splitSuccess_other": "Utworzono {{count}} pliku",
       "splitError": "Nie udało się podzielić pliku",
-      "toImagesSuccess": "Wyeksportowano {{count}} stron do grafik",
+      "toImagesSuccess_one": "Wyeksportowano {{count}} stronę",
+      "toImagesSuccess_few": "Wyeksportowano {{count}} strony",
+      "toImagesSuccess_many": "Wyeksportowano {{count}} stron",
+      "toImagesSuccess_other": "Wyeksportowano {{count}} strony",
       "toImagesError": "Nie udało się wyeksportować stron",
-      "fromImagesSuccess": "Utworzono PDF z {{count}} grafik",
+      "fromImagesSuccess_one": "Utworzono PDF z {{count}} grafiki",
+      "fromImagesSuccess_few": "Utworzono PDF z {{count}} grafik",
+      "fromImagesSuccess_many": "Utworzono PDF z {{count}} grafik",
+      "fromImagesSuccess_other": "Utworzono PDF z {{count}} grafiki",
       "fromImagesError": "Nie udało się utworzyć pliku PDF",
       "extractSuccess": "Wyodrębniono tekst do pliku",
       "extractError": "Nie udało się wyodrębnić tekstu"
@@ -546,7 +568,7 @@
     "placeholder": "Wpisz lub wklej tekst, który ma zostać przeczytany…",
     "counter": "{{chars}} znaków · {{words}} słów",
     "voice": "Głos",
-    "engineEdge": "Edge (neuronowe)",
+    "engineEdge": "Edge",
     "engineLocal": "Systemowe",
     "engineEdgeHint": "Naturalnie brzmiące głosy Microsoft w ponad 70 językach. Wymaga internetu.",
     "engineLocalHint": "Głosy zainstalowane w Windows. Działa offline.",
@@ -554,7 +576,6 @@
     "language": "Język",
     "voiceLabel": "Głos",
     "searchVoice": "Szukaj głosu…",
-    "allVoices": "Wszystkie głosy",
     "noVoices": "Brak dostępnych głosów dla tego silnika.",
     "gender": {
       "male": "męski",
@@ -582,7 +603,7 @@
       "thumbnail": "Pobieranie miniatury…",
       "starting": "Rozpoczynanie pobierania…",
       "downloading": "Pobieranie…",
-      "postprocessing": "Przetwarzanie (FFmpeg)…",
+      "postprocessing": "Przetwarzanie końcowe…",
       "done": "Pobieranie zakończone.",
       "batchDone": "Kolejka zakończona."
     },
@@ -622,10 +643,6 @@
     "retryFailed_many": "Ponów niepobrane ({{count}})",
     "retryFailed_other": "Ponów niepobrane ({{count}})",
     "queueTitle": "Lista linków",
-    "urlCount_one": "{{count}} element",
-    "urlCount_few": "{{count}} elementy",
-    "urlCount_many": "{{count}} elementów",
-    "urlCount_other": "{{count}} elementu",
     "itemStatus": {
       "pending": "Oczekuje",
       "error": "Błąd"
@@ -636,7 +653,7 @@
     "download": "Pobierz",
     "downloadAll": "Pobierz wszystkie",
     "addToBatch": "Dopisz do kolejki",
-    "batchPlaceholderRunning": "Wklej kolejne linki (jeden w wierszu), aby dopisać do kolejki...",
+    "batchPlaceholderRunning": "Wklej kolejne linki, jeden w wierszu, aby dopisać je do kolejki…",
     "summary": "Pobrano: {{done}}/{{total}}",
     "totalSize": "Łączny rozmiar: {{size}}",
     "totalDuration": "Łączny czas: {{duration}}",
@@ -661,16 +678,16 @@
     "status": {
       "loading": "Wczytywanie obrazu…",
       "tiling": "Skalowanie fragmentów obrazu ({{percent}}%)…",
-      "debleeding": "Oczyszczanie krawędzi (Anti-Halo)…",
+      "debleeding": "Oczyszczanie krawędzi…",
       "modelInference": "Inferencja modelu AI Real-ESRGAN…",
       "alphaProcessing": "Przetwarzanie przezroczystości…",
       "done": "Skalowanie zakończone sukcesem."
     },
     "dropTitle": "Upuść obraz do przeskalowania",
-    "dropHint": "lub kliknij, aby wybrać plik (PNG, JPG, WEBP, BMP, TIFF)",
+    "dropHint": "lub kliknij, aby wybrać plik ({{formats}})",
     "models": {
-      "general": "Real-ESRGAN · Zdjęcia i grafiki (x4v3)",
-      "anime": "Real-ESRGAN · Anime i ilustracje (x4plus)"
+      "general": "Real-ESRGAN · Zdjęcia i grafiki",
+      "anime": "Real-ESRGAN · Anime i ilustracje"
     },
     "modelPromo": {
       "title": "Model AI Real-ESRGAN ({{model}})",
@@ -681,34 +698,25 @@
     "options": {
       "model": "Model AI",
       "scale": "Powiększenie",
-      "scale2x": "2× (ostre)",
-      "scale4x": "4× (maksymalne)",
+      "scale2x": "2×",
+      "scale4x": "4×",
       "alphaMode": "Obsługa przezroczystości",
-      "alphaSmooth": "Gładka (Lanczos-4)",
-      "alphaAi": "Głęboka AI (SRVGGNet)",
-      "antiHalo": "Ochrona krawędzi (Anti-Halo)",
+      "alphaSmooth": "Gładka",
+      "alphaAi": "AI",
+      "antiHalo": "Ochrona krawędzi",
       "antiHaloHint": "Eliminuje ciemne obwódki na brzegach przezroczystych obiektów"
     },
-    "badges": {
-      "transparent": "Przezroczystość (RGBA)",
-      "opaque": "Standardowy (RGB)"
-    },
-    "changeImage": "Zmień obraz",
-    "before": "Przed",
-    "after": "Po ({{scale}}×)",
     "idle": {
       "ready": "Gotowy do powiększenia obrazu.",
       "done": "Obraz został pomyślnie powiększony.",
       "needModel": "Pobierz wybrany model AI powyżej, aby rozpocząć."
     },
-    "runBtn": "Powiększ obraz ({{scale}}×)",
+    "runBtn": "Powiększ",
     "backToOptions": "Zmień opcje",
-    "continueWithThis": "Kontynuuj z tym obrazem",
     "suffix": "_upscaled",
     "toast": {
       "loadError": "Nie udało się wczytać obrazu.",
-      "error": "Błąd podczas skalowania obrazu.",
-      "done": "Obraz został pomyślnie powiększony!"
+      "error": "Błąd podczas skalowania obrazu."
     }
   },
   "watermark": {
@@ -721,14 +729,13 @@
       "lamaMissing": "Brak IOPaint/PyTorch – użyto algorytmu OpenCV (Telea). Aby użyć modelu LaMa: pip install iopaint torch torchvision"
     },
     "dropTitle": "Upuść obraz ze znakiem wodnym",
-    "dropHint": "lub kliknij, aby wybrać plik (PNG, JPG, WEBP, BMP, TIFF)",
+    "dropHint": "lub kliknij, aby wybrać plik ({{formats}})",
     "lamaPromo": {
       "title": "Model AI LaMa (opcjonalny)",
       "desc": "Usuwaj znaki wodne z fotorealistyczną jakością, precyzyjnie rekonstruując tło.",
       "installBtn": "Pobierz i zainstaluj model (~196 MB)",
       "ready": "Model LaMa został zainstalowany i aktywowany!"
     },
-    "changeImage": "Zmień obraz",
     "tools": "Narzędzia maski",
     "brush": "Pędzel",
     "eraser": "Gumka",
@@ -743,11 +750,8 @@
       "lama": "AI · LaMa (najlepsza jakość)",
       "lamaMissing": "AI · LaMa (niezainstalowany)"
     },
-    "before": "Przed",
-    "after": "Po",
     "suffix": "_bez_znaku",
     "backToMask": "Wróć do maski",
-    "continue": "Edytuj dalej na wyniku",
     "remove": "Usuń znak wodny",
     "idle": {
       "paint": "Zamaluj obszar znaku wodnego.",
@@ -755,7 +759,6 @@
       "done": "Gotowe – porównaj i zapisz wynik."
     },
     "toast": {
-      "done": "Znak wodny usunięty",
       "fallback": "Użyto metody zastępczej",
       "error": "Nie udało się usunąć znaku wodnego",
       "loadError": "Nie można otworzyć obrazu",
@@ -778,7 +781,7 @@
     "title": "Tytuł",
     "titlePlaceholder": "np. Postęp projektu – październik",
     "banner": "Baner nagłówka",
-    "noBanner": "Brak banera (opcjonalny)",
+    "noBanner": "Brak banera",
     "width": "Szerokość",
     "barHeight": "Wysokość paska",
     "background": "Tło",
@@ -828,7 +831,6 @@
     "open": "otwórz"
   },
   "rembg": {
-    "changeImage": "Zmień obraz",
     "status": {
       "loading": "Wczytywanie obrazu…",
       "preparingModel": "Przygotowywanie modelu AI ({{model}})…",
@@ -838,40 +840,42 @@
       "done": "Tło zostało pomyślnie usunięte."
     },
     "dropTitle": "Upuść obraz do usunięcia tła",
-    "dropHint": "lub kliknij, aby wybrać plik (PNG, JPG, WEBP, BMP, TIFF)",
+    "dropHint": "lub kliknij, aby wybrać plik ({{formats}})",
     "modelPromo": {
-      "title": "Model AI BiRefNet / RMBG",
+      "title": "Model BiRefNet do usuwania tła",
       "desc": "Do działania narzędzia wymagana jest biblioteka rembg oraz ONNX Runtime. Kliknij poniżej, aby zainstalować w tle.",
       "installBtn": "Pobierz i aktywuj AI (~140 MB)",
       "ready": "Model AI jest gotowy do użycia!"
     },
     "options": {
       "model": "Model AI",
-      "modelBirefnet": "BiRefNet · Maksymalna precyzja i włosy (zalecany)",
+      "modelBirefnet": "BiRefNet · Maksymalna precyzja, włosy",
       "modelBirefnetLite": "BiRefNet Lite · Szybki i lekki",
-      "modelIsnet": "IS-Net · Ogólnego zastosowania (DIS)",
+      "modelIsnet": "IS-Net · Ogólnego zastosowania",
       "modelU2net": "U2Net · Klasyczny model",
-      "antiHalo": "Ochrona krawędzi (Anti-Halo Debleed)",
+      "antiHalo": "Ochrona krawędzi",
       "antiHaloHint": "Zastępuje białe/jasne zabrudzenia na krawędziach prawdziwym kolorem obiektu",
-      "choke": "Podcięcie krawędzi (Choke)",
+      "choke": "Podcięcie krawędzi",
       "chokeHint": "Ścina zewnętrzną warstwę pikseli (0-4 px), usuwając białą obwódkę",
-      "despeckle": "Usuń drobne pozostałości tła (Despeckle)",
+      "despeckle": "Usuń drobne pozostałości tła",
       "despeckleHint": "Automatycznie odfiltrowuje małe odizolowane plamki i pyłki",
       "previewBg": "Tło podglądu",
       "bgChecker": "Szachownica",
-      "bgBlack": "Czysta czerń",
-      "bgWhite": "Czysta biel",
-      "bgCustom": "Własny kolor",
+      "bgBlack": "Czarne",
+      "bgWhite": "Białe",
+      "bgGreen": "Zielone",
       "chokeNone": "Bez przycinania"
     },
     "preview": {
-      "before": "Oryginał",
       "after": "Bez tła",
       "timeElapsed": "Czas wykonania: {{seconds}}s"
     },
     "actions": {
-      "remove": "Usuń tło",
-      "processing": "Usuwanie tła…"
+      "remove": "Usuń tło"
+    },
+    "idle": {
+      "ready": "Gotowe do usunięcia tła.",
+      "needModel": "Zainstaluj model AI powyżej, aby rozpocząć."
     }
   },
   "deps": {
@@ -902,7 +906,7 @@
     "installTitle": {
       "lama": "Model AI LaMa",
       "ffmpeg": "FFmpeg",
-      "rembg": "Model AI BiRefNet (Usuwanie tła)",
+      "rembg": "Model BiRefNet do usuwania tła",
       "upscale_general": "Model AI Real-ESRGAN General",
       "upscale_anime": "Model AI Real-ESRGAN Anime"
     }
@@ -936,7 +940,7 @@
     "rotateLeft": "Obróć o 90° w lewo",
     "rotateRight": "Obróć o 90° w prawo",
     "rotate180": "Obróć o 180°",
-    "flipH": "Odbij w poziomie (lustro)",
+    "flipH": "Odbij w poziomie",
     "flipV": "Odbij w pionie",
     "toolbox": {
       "title": "Przybornik",
@@ -967,32 +971,26 @@
       "error": "Błąd podczas modyfikacji obrazu"
     },
     "dropTitle": "Upuść obrazy do edycji",
-    "dropHint": "Jeden lub więcej plików: PNG, JPEG, WebP, BMP, TIFF"
+    "dropHint": "Jeden lub więcej plików: {{formats}}"
   },
   "transfer": {
-    "sendTo": "Prześlij do...",
-    "sendAllTo": "Prześlij wszystkie do...",
-    "button": "Prześlij do...",
-    "buttonTooltip": "Otwórz ten plik w innym narzędziu",
+    "sendTo": "Prześlij do…",
+    "sendAllTo": "Prześlij wszystkie do…",
     "modalTitle": "Prześlij plik do innego narzędzia",
     "modalDesc": "Wybierz narzędzie, w którym chcesz kontynuować pracę z tym plikiem.",
     "sourceFiles": "Przesyłane pliki ({{count}})",
-    "compatibleTools": "Dostępne narzędzia (zgodne z typem pliku)",
+    "compatibleTools": "Zgodne narzędzia",
     "noCompatibleTools": "Brak kompatybilnych narzędzi dla tego typu pliku.",
-    "asImagesToPdf": "Otworzy się w trybie: Obrazy do PDF",
-    "asPdfToImages": "Otworzy się w trybie: PDF do obrazów",
     "toastLoaded": "Plik został pomyślnie załadowany do narzędzia",
     "toastLoadedFrom": "Załadowano plik z narzędzia: {{source}}",
-    "afterTitle": "Przetworzone obrazy",
     "convertedTitle": "Przekonwertowane obrazy",
     "compressedTitle": "Skompresowane obrazy",
     "processedTitle": "Wyniki przetwarzania",
-    "extractedTitle": "Wyodrębnione obrazy",
     "openOutputFolder": "Pokaż folder wyjściowy"
   },
   "video_sync": {
     "dropTitle": "Upuść plik wideo tutaj lub kliknij, aby wybrać",
-    "dropHint": "Obsługuje MP4, MKV, MOV, AVI, WEBM, FLV, WMV i inne formaty wideo",
+    "dropHint": "Obsługuje {{formats}}",
     "changeVideo": "Zmień wideo",
     "errors": {
       "loadVideo": "Błąd ładowania wideo",
@@ -1007,8 +1005,8 @@
       "trackExternal": "Plik audio"
     },
     "status": {
-      "preparing": "Przygotowywanie synchronizacji...",
-      "syncing": "Eksportowanie zsynchronizowanego wideo...",
+      "preparing": "Przygotowywanie synchronizacji…",
+      "syncing": "Eksportowanie zsynchronizowanego wideo…",
       "done": "Synchronizacja ukończona"
     },
     "export": {

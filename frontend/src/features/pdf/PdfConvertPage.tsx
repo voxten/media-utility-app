@@ -2,10 +2,9 @@ import { useState } from "react";
 import {
   Button,
   Caption1,
-  Dropdown,
   Field,
+  Input,
   makeStyles,
-  Option,
   Tab,
   TabList,
   tokens,
@@ -17,23 +16,21 @@ import {
   ImageArrowForward24Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
-import { toolById } from "../../app/tools";
 import { ActionBar } from "../../components/ActionBar";
-import { AfterGallery } from "../../components/AfterGallery";
 import { DropZone } from "../../components/DropZone";
 import { useNotify } from "../../components/notify";
-import { Page } from "../../components/Page";
+import { ToolPage } from "../../components/Page";
 import { Panel } from "../../components/Panel";
 import { ResultCard } from "../../components/ResultCard";
+import { Select } from "../../components/Select";
 import { api } from "../../lib/bridge";
-import { dialogFilter, IMAGE_EXTENSIONS } from "../../lib/fileTypes";
+import { ALL_IMAGE_EXTENSIONS, dialogFilter, formatList, formatOptions } from "../../lib/fileTypes";
 import { fileName } from "../../lib/format";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { useTransferStore } from "../../stores/transfer";
 import { SinglePdfTool } from "./SinglePdfTool";
 
-const PDFABLE_EXTENSIONS = [...IMAGE_EXTENSIONS, ".gif"];
 const VISIBLE_IMAGES = 10;
 
 interface ConvertImagesResult {
@@ -48,7 +45,8 @@ interface ImagesToPdfResult {
   bytes: number;
 }
 
-type ImageFormat = "png" | "jpeg" | "webp";
+const IMAGE_FORMATS = ["png", "jpeg", "webp"] as const;
+type ImageFormat = (typeof IMAGE_FORMATS)[number];
 
 const useStyles = makeStyles({
   settingsRow: {
@@ -57,6 +55,7 @@ const useStyles = makeStyles({
     gap: "16px",
     maxWidth: "520px",
   },
+  rangeField: { maxWidth: "360px" },
   imagesList: { display: "flex", flexDirection: "column", gap: "4px" },
   imageItem: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" },
   name: { flexGrow: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
@@ -67,34 +66,25 @@ export default function PdfConvertPage() {
   const { t } = useTranslation();
   const styles = useStyles();
   const notify = useNotify();
-  const tool = toolById("pdf_convert")!;
 
   const [subTab, setSubTab] = useState<"pdfToImages" | "imagesToPdf">("pdfToImages");
   const [pdfFile, setPdfFile] = useState<string | null>(null);
   const [format, setFormat] = useState<ImageFormat>("png");
   const [dpi, setDpi] = useState<number>(150);
+  const [pageRange, setPageRange] = useState("");
   const [imageFiles, setImageFiles] = useState<string[]>([]);
 
   const toImages = useJobRunner<ConvertImagesResult>("pdf.to_images", {
-    onDone: (result) =>
-      notify.success(t("pdf.toast.toImagesSuccess", { count: result.count }), {
-        body: result.outDir,
-        action: { label: t("common.showInFolder"), onClick: () => api.system.openPath(result.outDir).catch(() => undefined) },
-      }),
     onError: (error) => notify.error(t("pdf.toast.toImagesError"), { body: error }),
   });
 
   const fromImages = useJobRunner<ImagesToPdfResult>("pdf.from_images", {
-    onDone: (result) =>
-      notify.success(t("pdf.toast.fromImagesSuccess", { count: result.pageCount }), {
-        body: result.outPath,
-        action: { label: t("common.showInFolder"), onClick: () => api.system.reveal(result.outPath).catch(() => undefined) },
-      }),
     onError: (error) => notify.error(t("pdf.toast.fromImagesError"), { body: error }),
   });
 
   const changePdf = (next: string | null) => {
     setPdfFile(next);
+    setPageRange("");
     toImages.reset();
   };
 
@@ -117,7 +107,7 @@ export default function PdfConvertPage() {
     if (!pdfFile) return;
     const outDir = await api.dialogs.openFolder();
     if (!outDir) return;
-    toImages.start(() => api.pdf.toImages(pdfFile, outDir, format, dpi)).catch((err) => notify.error(String(err)));
+    toImages.start(() => api.pdf.toImages(pdfFile, outDir, format, dpi, pageRange)).catch((err) => notify.error(String(err)));
   };
 
   const startFromImages = async () => {
@@ -137,7 +127,7 @@ export default function PdfConvertPage() {
   ].map((o) => ({ ...o, label: `${o.label} · ${o.value} DPI` }));
 
   return (
-    <Page title={t("tools.pdf_convert.name")} description={t("tools.pdf_convert.description")} icon={tool.icon} accent={tool.accent}>
+    <ToolPage toolId="pdf_convert">
       <TabList selectedValue={subTab} onTabSelect={(_, d) => setSubTab(d.value as "pdfToImages" | "imagesToPdf")}>
         <Tab value="pdfToImages" icon={<DocumentPdf24Regular />}>
           {t("pdf.convert.pdfToImages")}
@@ -159,14 +149,15 @@ export default function PdfConvertPage() {
               {t("pdf.convert.actionToImages")}
             </Button>
           }
+          pageRange={{ value: pageRange, onChange: setPageRange }}
           result={
             toImages.result &&
             toImages.result.files?.length > 0 && (
-              <AfterGallery
-                title={t("transfer.extractedTitle")}
-                summary={t("pdf.toast.toImagesSuccess", { count: toImages.result.count })}
+              <ResultCard
+                title={t("pdf.toast.toImagesSuccess", { count: toImages.result.count })}
+                path={toImages.result.outDir}
+                folder
                 files={toImages.result.files}
-                outputDir={toImages.result.outDir}
                 sourceToolId="pdf_convert"
               />
             )
@@ -174,30 +165,19 @@ export default function PdfConvertPage() {
         >
           <div className={styles.settingsRow}>
             <Field label={t("pdf.convert.format")}>
-              <Dropdown
-                value={format.toUpperCase()}
-                selectedOptions={[format]}
-                onOptionSelect={(_, d) => setFormat(d.optionValue as ImageFormat)}
-              >
-                <Option value="png">PNG</Option>
-                <Option value="jpeg">JPEG</Option>
-                <Option value="webp">WebP</Option>
-              </Dropdown>
+              <Select searchable options={formatOptions(IMAGE_FORMATS)} value={format} onChange={setFormat} />
             </Field>
             <Field label={t("pdf.convert.dpi")}>
-              <Dropdown
-                value={dpiOptions.find((o) => o.value === dpi)?.label}
-                selectedOptions={[String(dpi)]}
-                onOptionSelect={(_, d) => setDpi(Number(d.optionValue))}
-              >
-                {dpiOptions.map((o) => (
-                  <Option key={o.value} value={String(o.value)}>
-                    {o.label}
-                  </Option>
-                ))}
-              </Dropdown>
+              <Select
+                options={dpiOptions.map((o) => ({ value: String(o.value), label: o.label }))}
+                value={String(dpi)}
+                onChange={(v) => setDpi(Number(v))}
+              />
             </Field>
           </div>
+          <Field label={t("pdf.convert.pages")} className={styles.rangeField}>
+            <Input value={pageRange} placeholder={t("pdf.convert.allPages")} onChange={(_, d) => setPageRange(d.value)} />
+          </Field>
         </SinglePdfTool>
       ) : (
         <>
@@ -205,11 +185,11 @@ export default function PdfConvertPage() {
             compact={imageFiles.length > 0}
             icon={ImageArrowForward24Regular}
             title={imageFiles.length ? t("pdf.dropMore") : t("pdf.dropImagesTitle")}
-            hint={t("pdf.dropImagesHint")}
-            accept={PDFABLE_EXTENSIONS}
+            hint={t("pdf.dropImagesHint", { formats: formatList(ALL_IMAGE_EXTENSIONS) })}
+            accept={ALL_IMAGE_EXTENSIONS}
             onFiles={(files) => changeImages([...imageFiles, ...files])}
             onBrowse={async () => {
-              const files = await api.dialogs.openFiles([dialogFilter(t, "images", PDFABLE_EXTENSIONS)]);
+              const files = await api.dialogs.openFiles([dialogFilter(t, "images", ALL_IMAGE_EXTENSIONS)]);
               if (files.length) changeImages([...imageFiles, ...files]);
             }}
           />
@@ -273,6 +253,6 @@ export default function PdfConvertPage() {
           </ActionBar>
         </>
       )}
-    </Page>
+    </ToolPage>
   );
 }

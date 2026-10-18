@@ -8,7 +8,6 @@ import {
   Field,
   Input,
   makeStyles,
-  mergeClasses,
   Popover,
   PopoverSurface,
   PopoverTrigger,
@@ -33,13 +32,13 @@ import {
 import { toPng } from "html-to-image";
 import { useTranslation } from "react-i18next";
 import { create } from "zustand";
-import { toolById } from "../../app/tools";
 import { ActionBar } from "../../components/ActionBar";
 import { useNotify } from "../../components/notify";
-import { Page } from "../../components/Page";
+import { ToolPage } from "../../components/Page";
 import { Panel } from "../../components/Panel";
 import { SliderField } from "../../components/SliderField";
 import { api } from "../../lib/bridge";
+import { checkerboard } from "../../lib/checkerboard";
 import { dialogFilter } from "../../lib/fileTypes";
 import { fileName } from "../../lib/format";
 import { ProgressCard, type CardOptions, type ProgressRow } from "./ProgressCard";
@@ -129,12 +128,11 @@ const useStyles = makeStyles({
   previewBox: {
     borderRadius: tokens.borderRadiusLarge,
     padding: "20px",
-    backgroundColor: "#151515",
+    ...checkerboard(),
     overflow: "hidden",
     display: "flex",
     justifyContent: "center",
   },
-  previewLight: { backgroundColor: "#e9e9ee" },
   muted: { color: tokens.colorNeutralForeground3 },
   stack: { display: "flex", flexDirection: "column", gap: "16px" },
 });
@@ -208,7 +206,6 @@ export default function ProgressPage() {
   const { t } = useTranslation();
   const styles = useStyles();
   const notify = useNotify();
-  const tool = toolById("progress")!;
   const form = useForm();
   const cardRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
@@ -278,7 +275,7 @@ export default function ProgressPage() {
   const average = form.rows.length ? Math.round(form.rows.reduce((s, r) => s + r.value, 0) / form.rows.length) : 0;
 
   return (
-    <Page title={t("tools.progress.name")} description={t("tools.progress.description")} icon={tool.icon} accent={tool.accent}>
+    <ToolPage toolId="progress">
       <div className={styles.columns}>
         <div className={styles.stack}>
           <Panel
@@ -343,7 +340,7 @@ export default function ProgressPage() {
         </div>
 
         <Panel title={t("progress.preview")} className={styles.previewPanel}>
-          <div ref={previewRef} className={mergeClasses(styles.previewBox, form.options.theme === "light" && styles.previewLight)}>
+          <div ref={previewRef} className={styles.previewBox}>
             <div style={{ width: form.options.width * scale, height: cardHeight * scale }}>
               <div style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: form.options.width }}>
                 <ProgressCard ref={cardRef} rows={form.rows} options={form.options} />
@@ -358,6 +355,6 @@ export default function ProgressPage() {
           {exporting ? t("progress.exporting") : t("progress.export")}
         </Button>
       </ActionBar>
-    </Page>
+    </ToolPage>
   );
 }

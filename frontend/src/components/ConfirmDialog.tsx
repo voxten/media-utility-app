@@ -10,12 +10,17 @@ import {
   DialogSurface,
   DialogTitle,
   makeStyles,
+  tokens,
 } from "@fluentui/react-components";
 import { useTranslation } from "react-i18next";
 import { create } from "zustand";
 
 const useStyles = makeStyles({
   body: { wordBreak: "break-word" },
+  danger: {
+    backgroundColor: tokens.colorPaletteRedBackground3,
+    ":hover": { backgroundColor: tokens.colorPaletteRedForeground1 },
+  },
 });
 
 interface ConfirmRequest {
@@ -26,23 +31,25 @@ interface ConfirmRequest {
   resolve: (ok: boolean) => void;
 }
 
-const useConfirmStore = create<{ request: ConfirmRequest | null }>(() => ({ request: null }));
+// `request` outlives `open` so the dialog keeps its text while it animates out.
+const useConfirmStore = create<{ open: boolean; request: ConfirmRequest | null }>(() => ({ open: false, request: null }));
 
 export function confirm(options: Omit<ConfirmRequest, "resolve">): Promise<boolean> {
-  return new Promise((resolve) => useConfirmStore.setState({ request: { ...options, resolve } }));
+  return new Promise((resolve) => useConfirmStore.setState({ open: true, request: { ...options, resolve } }));
 }
 
 export function ConfirmHost() {
   const styles = useStyles();
   const { t } = useTranslation();
-  const request = useConfirmStore((s) => s.request);
+  const { open, request } = useConfirmStore();
   const close = (ok: boolean) => {
+    if (!open) return;
     request?.resolve(ok);
-    useConfirmStore.setState({ request: null });
+    useConfirmStore.setState({ open: false });
   };
 
   return (
-    <Dialog open={!!request} onOpenChange={(_, data) => !data.open && close(false)} modalType="alert">
+    <Dialog open={open} onOpenChange={(_, data) => !data.open && close(false)} modalType="alert">
       <DialogSurface>
         <DialogBody>
           <DialogTitle>{request?.title}</DialogTitle>
@@ -53,8 +60,8 @@ export function ConfirmHost() {
             </Button>
             <Button
               appearance="primary"
+              className={request?.danger ? styles.danger : undefined}
               onClick={() => close(true)}
-              style={request?.danger ? { backgroundColor: "var(--colorPaletteRedBackground3)" } : undefined}
             >
               {request?.confirmLabel ?? t("common.ok")}
             </Button>

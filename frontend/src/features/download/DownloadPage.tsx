@@ -1,154 +1,47 @@
 import { useMemo, useState } from "react";
-import {
-  Badge,
-  Body1,
-  Button,
-  Caption1,
-  Dropdown,
-  Field,
-  Input,
-  makeStyles,
-  mergeClasses,
-  Option,
-  ProgressBar,
-  Spinner,
-  Subtitle2,
-  Tab,
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableHeaderCell,
-  TableRow,
-  TableSelectionCell,
-  TabList,
-  Text,
-  Textarea,
-  tokens,
-  Tooltip,
-} from "@fluentui/react-components";
+import { Badge, Button, Field, Input, makeStyles, Spinner, Tab, TabList, Tooltip } from "@fluentui/react-components";
 import {
   Add16Regular,
   ArrowClockwise16Regular,
   ArrowDownload16Filled,
-  CheckmarkCircle16Filled,
-  Clock16Regular,
   ClipboardPaste16Regular,
-  DismissCircle16Filled,
-  Eye16Regular,
-  FolderOpen16Regular,
   Link24Regular,
-  MusicNote224Regular,
-  Person16Regular,
   Search16Regular,
   TextBulletListLtr24Regular,
   Video24Regular,
-  VideoClipMultiple24Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
-import { create } from "zustand";
-import { toolById } from "../../app/tools";
 import { ActionBar } from "../../components/ActionBar";
 import { EmptyState } from "../../components/EmptyState";
 import { LogPanel } from "../../components/LogPanel";
 import { useNotify } from "../../components/notify";
-import { Page } from "../../components/Page";
+import { ToolPage } from "../../components/Page";
 import { Panel } from "../../components/Panel";
 import { PathPicker } from "../../components/PathPicker";
 import { api } from "../../lib/bridge";
 import { formatBytes, formatDuration } from "../../lib/format";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useSettings } from "../../stores/settings";
+import { BatchQueue } from "./BatchQueue";
+import { ProbeResultPanel } from "./ProbeResultPanel";
+import { useDownloadForm } from "./store";
+import type { BatchItem, ProbeResult } from "./types";
 
-type Mode = "video" | "audio" | "muxed";
-
-interface Format {
-  id: string;
-  kind: "auto" | "video" | "audio" | "muxed";
-  ext: string;
-  height: number | null;
-  fps: number | null;
-  vcodec: string;
-  acodec: string;
-  filesize: number | null;
-  abr?: number | null;
-  note: string;
-}
-
-interface PlaylistEntry {
-  url: string;
-  title: string;
-  id: string;
-  duration: number | null;
-}
-
-interface ProbeResult {
-  url: string;
-  title: string;
-  uploader: string;
-  duration: number | null;
-  viewCount: number | null;
-  thumbnail: string | null;
-  isPlaylist?: boolean;
-  entries?: PlaylistEntry[];
-  formats: Record<Mode, Format[]>;
-}
-
-interface BatchItem {
-  index: number;
-  url: string;
-  status: "pending" | "running" | "done" | "error" | "cancelled";
-  title?: string;
-  error?: string;
-  percent?: number;
-  size?: number;
-  duration?: number;
-}
-
-const AUDIO_CODECS = ["mp3", "m4a", "flac", "wav", "aac", "opus"];
 const TEMPLATE_TOKENS = ["{title}", "{id}", "{ext}"];
 
-interface DownloadForm {
-  tab: "single" | "batch";
-  url: string;
-  probe: ProbeResult | null;
-  mode: Mode;
-  formatId: string;
-  audioCodec: string;
-  batchText: string;
+interface BatchResult {
+  items: BatchItem[];
+  succeeded: number;
+  failed: number;
+  totalSize?: number;
+  totalDuration?: number;
   outdir: string;
-  template: string;
-  set: (patch: Partial<Omit<DownloadForm, "set">>) => void;
 }
-
-const useForm = create<DownloadForm>((set) => ({
-  tab: "single",
-  url: "",
-  probe: null,
-  mode: "video",
-  formatId: "",
-  audioCodec: "mp3",
-  batchText: "",
-  outdir: "",
-  template: "{title}.{ext}",
-  set: (patch) => set(patch),
-}));
 
 const useStyles = makeStyles({
   urlRow: { display: "flex", gap: "8px", width: "100%", minWidth: 0 },
   urlInput: { flexGrow: 1, minWidth: 0 },
   searchBtn: { flexShrink: 0, whiteSpace: "nowrap" },
-  media: { display: "grid", gridTemplateColumns: "240px minmax(0, 1fr)", gap: "20px", alignItems: "start", "@media (max-width: 800px)": { gridTemplateColumns: "1fr" } },
-  thumb: { width: "100%", aspectRatio: "16 / 9", objectFit: "cover", borderRadius: tokens.borderRadiusLarge, boxShadow: tokens.shadow8, backgroundColor: tokens.colorNeutralBackground3 },
-  mediaInfo: { display: "flex", flexDirection: "column", gap: "8px", minWidth: 0 },
-  metaRow: { display: "flex", gap: "16px", flexWrap: "wrap", color: tokens.colorNeutralForeground3 },
-  meta: { display: "inline-flex", gap: "6px", alignItems: "center" },
-  tableWrap: { maxHeight: "320px", overflowY: "auto", borderRadius: tokens.borderRadiusLarge, border: `1px solid ${tokens.colorNeutralStroke3}` },
-  row: { cursor: "pointer" },
-  mono: { fontFamily: tokens.fontFamilyMonospace, fontSize: tokens.fontSizeBase200, color: tokens.colorNeutralForeground3 },
-  formatsHead: { display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" },
-  grow: { flexGrow: 1 },
-  codec: { minWidth: "120px" },
   outputGrid: {
     display: "grid",
     gridTemplateColumns: "minmax(0, 3fr) minmax(0, 2fr)",
@@ -158,144 +51,20 @@ const useStyles = makeStyles({
   templateInput: { width: "100%", minWidth: 0 },
   tokens: { display: "flex", gap: "6px", marginTop: "6px", flexWrap: "wrap", minWidth: 0 },
   token: { cursor: "pointer", flexShrink: 0 },
-  batchPanel: { flexGrow: 1, display: "flex", flexDirection: "column", minHeight: "260px" },
-  batchArea: {
-    flexGrow: 1,
-    minHeight: "180px",
-    display: "flex",
-    flexDirection: "column",
-    width: "100%",
-    "& textarea": {
-      fontFamily: tokens.fontFamilyMonospace,
-      maxHeight: "none",
-      minHeight: "inherit",
-      boxSizing: "border-box",
-      flexGrow: 1,
-      height: "100%",
-    },
-  },
-  queue: { display: "flex", flexDirection: "column", gap: "6px", marginTop: "12px" },
-  queueItem: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    padding: "10px 14px",
-    borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: tokens.colorNeutralBackground1,
-    border: `1px solid ${tokens.colorNeutralStroke3}`,
-  },
-  queueItemIcon: {
-    display: "grid",
-    placeItems: "center",
-    flexShrink: 0,
-    width: "20px",
-  },
-  queueItemContent: {
-    flexGrow: 1,
-    minWidth: 0,
-    display: "flex",
-    flexDirection: "column",
-    gap: "2px",
-  },
-  queueItemTitle: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-    fontSize: tokens.fontSizeBase300,
-  },
-  queueItemSub: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-    color: tokens.colorNeutralForeground3,
-    fontSize: tokens.fontSizeBase100,
-  },
-  queueItemMeta: {
-    flexShrink: 0,
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-  },
-  queueItemSize: {
-    fontVariantNumeric: "tabular-nums",
-    fontWeight: tokens.fontWeightSemibold,
-  },
-  queueItemDuration: {
-    fontVariantNumeric: "tabular-nums",
-    color: tokens.colorNeutralForeground3,
-    display: "flex",
-    alignItems: "center",
-    gap: "4px",
-  },
-  queueProgressWrap: {
-    width: "140px",
-    flexShrink: 0,
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-  },
-  batchSummaryBar: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "10px 14px",
-    marginTop: "10px",
-    borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: tokens.colorNeutralBackground2,
-    border: `1px solid ${tokens.colorNeutralStroke3}`,
-  },
-  ellipsis: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
-  ok: { color: tokens.colorPaletteGreenForeground1 },
-  bad: { color: tokens.colorPaletteRedForeground1 },
-  muted: { color: tokens.colorNeutralForeground3 },
-  playlistHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap", marginBottom: "8px" },
-  playlistEntriesList: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "6px",
-    maxHeight: "260px",
-    overflowY: "auto",
-    marginTop: "12px",
-    padding: "8px",
-    borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: tokens.colorNeutralBackground2,
-    border: `1px solid ${tokens.colorNeutralStroke3}`,
-  },
-  playlistEntryItem: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    padding: "6px 10px",
-    borderRadius: tokens.borderRadiusSmall,
-    backgroundColor: tokens.colorNeutralBackground1,
-  },
-  entryIdx: { color: tokens.colorNeutralForeground3, fontVariantNumeric: "tabular-nums", minWidth: "28px" },
-  recommended: { marginLeft: "8px" },
-  queueActions: { display: "flex", alignItems: "center", gap: "8px" },
-  alignRight: { textAlign: "right" },
-  doneMeta: { display: "flex", alignItems: "center", gap: "10px" },
-  smallIcon: { fontSize: "12px" },
-  summaryStats: { display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" },
 });
 
-function formatLabel(f: Format, t: (k: string, o?: Record<string, unknown>) => string) {
-  if (f.kind === "auto") return t("download.auto");
-  if (f.kind === "audio") return f.abr ? `${Math.round(f.abr)} kbps` : f.note || t("download.audioOnly");
-  return f.height ? `${f.height}p${f.fps && f.fps > 30 ? f.fps : ""}` : f.note || "—";
-}
-
-function codecLabel(f: Format) {
-  const short = (c: string) => (c && c !== "none" ? c.split(".")[0] : "");
-  if (f.kind === "auto") return "";
-  return [short(f.vcodec), short(f.acodec)].filter(Boolean).join(" + ");
+/** Sum of a per-item number over finished items, preferring the total the backend reported. */
+function batchTotal(reported: number | undefined, queue: BatchItem[], key: "size" | "duration") {
+  if (typeof reported === "number" && reported > 0) return reported;
+  const sum = queue.reduce((acc, it) => acc + (it.status === "done" && typeof it[key] === "number" ? it[key]! : 0), 0);
+  return sum > 0 ? sum : undefined;
 }
 
 export default function DownloadPage() {
   const { t } = useTranslation();
   const styles = useStyles();
   const notify = useNotify();
-  const tool = toolById("download")!;
-  const form = useForm();
+  const form = useDownloadForm();
   const defaultOutdir = useSettings((s) => s.settings?.outputDir ?? "");
   const outdir = form.outdir || defaultOutdir;
   const [lastBatch, setLastBatch] = useState<BatchItem[] | null>(null);
@@ -317,14 +86,7 @@ export default function DownloadPage() {
     onError: (error) => notify.error(t("download.toast.error"), { body: error }),
   });
 
-  const batch = useJobRunner<{
-    items: BatchItem[];
-    succeeded: number;
-    failed: number;
-    totalSize?: number;
-    totalDuration?: number;
-    outdir: string;
-  }>("download.batch", {
+  const batch = useJobRunner<BatchResult>("download.batch", {
     onDone: (result) => {
       setLastBatch(result.items);
       const notifyFn = result.failed ? notify.warning : notify.success;
@@ -338,8 +100,8 @@ export default function DownloadPage() {
   const urls = useMemo(() => form.batchText.split(/\r?\n/).map((u) => u.trim()).filter(Boolean), [form.batchText]);
 
   // Batch queue view: merge streamed per-item partials with the per-item progress.
-  const queue = useMemo<(BatchItem & { percent?: number })[]>(() => {
-    const items = new Map<number, BatchItem & { percent?: number }>();
+  const queue = useMemo<BatchItem[]>(() => {
+    const items = new Map<number, BatchItem>();
     const source = (batch.job?.partials && batch.job.partials.length > 0 ? (batch.job.partials as BatchItem[]) : lastBatch) ?? [];
     if (!batch.job && !lastBatch) {
       urls.forEach((url, index) => items.set(index, { index, url, status: "pending", percent: 0 }));
@@ -355,21 +117,7 @@ export default function DownloadPage() {
   }, [batch.job, lastBatch, urls]);
 
   const failedItems = useMemo(() => queue.filter((i) => i.status === "error"), [queue]);
-  const doneCount = useMemo(() => queue.filter((i) => i.status === "done").length, [queue]);
-
-  const batchTotalSize = useMemo(() => {
-    const res = batch.job?.result as { totalSize?: number } | undefined;
-    if (typeof res?.totalSize === "number" && res.totalSize > 0) return res.totalSize;
-    const sum = queue.reduce((acc, it) => acc + (typeof it.size === "number" && it.status === "done" ? it.size : 0), 0);
-    return sum > 0 ? sum : undefined;
-  }, [batch.job?.result, queue]);
-
-  const batchTotalDuration = useMemo(() => {
-    const res = batch.job?.result as { totalDuration?: number } | undefined;
-    if (typeof res?.totalDuration === "number" && res.totalDuration > 0) return res.totalDuration;
-    const sum = queue.reduce((acc, it) => acc + (typeof it.duration === "number" && it.status === "done" ? it.duration : 0), 0);
-    return sum > 0 ? sum : undefined;
-  }, [batch.job?.result, queue]);
+  const batchResult = batch.job?.result as Partial<BatchResult> | undefined;
 
   const retryFailed = () => {
     const targetUrls = failedItems.length > 0 ? failedItems.map((i) => i.url) : urls;
@@ -381,9 +129,11 @@ export default function DownloadPage() {
   const activeJob = form.tab === "batch" ? batch.job : download.running ? download.job : probe.running ? probe.job : download.job;
   const running = probe.running || download.running || batch.running;
   const extra = activeJob?.status === "running" ? activeJob.extra : {};
+  const speed = typeof extra.speed === "number" ? extra.speed : undefined;
+  const eta = typeof extra.eta === "number" ? extra.eta : undefined;
   const detail =
-    typeof extra.speed === "number"
-      ? `${formatBytes(Number(extra.downloaded))} / ${formatBytes(Number(extra.total))} · ${formatBytes(extra.speed)}/s · ${t("common.eta", { time: formatDuration(Number(extra.eta)) })}`
+    speed != null
+      ? `${formatBytes(Number(extra.downloaded))} / ${formatBytes(Number(extra.total))} · ${formatBytes(speed)}/s · ${t("common.eta", { time: formatDuration(Number(eta)) })}`
       : undefined;
 
   const runProbe = () => {
@@ -404,16 +154,20 @@ export default function DownloadPage() {
   const startDownload = () => {
     if (form.tab === "batch") {
       if (batch.running && batch.jobId) {
-        api.download.addToBatch({ jobId: batch.jobId, urls }).then(() => {
-          form.set({ batchText: "" });
-          notify.success(t("download.toast.addedToBatch", { count: urls.length }));
-        }).catch((err) => notify.error(String(err)));
+        api.download
+          .addToBatch({ jobId: batch.jobId, urls })
+          .then(() => {
+            form.set({ batchText: "" });
+            notify.success(t("download.toast.addedToBatch", { count: urls.length }));
+          })
+          .catch((err) => notify.error(String(err)));
         return;
       }
       setLastBatch(null);
-      batch.start(() => api.download.batch({ urls, outdir, template: form.template })).then(() => {
-        form.set({ batchText: "" });
-      }).catch((err) => notify.error(String(err)));
+      batch
+        .start(() => api.download.batch({ urls, outdir, template: form.template }))
+        .then(() => form.set({ batchText: "" }))
+        .catch((err) => notify.error(String(err)));
       return;
     }
     if (!form.probe) return;
@@ -439,14 +193,13 @@ export default function DownloadPage() {
       .catch((err) => notify.error(String(err)));
   };
 
-  const formats = form.probe?.formats[form.mode] ?? [];
   const canDownload =
     form.tab === "batch"
       ? urls.length > 0 && !!outdir
       : !running && !!outdir && !!form.probe && (form.probe.isPlaylist || !!form.formatId);
 
   return (
-    <Page title={t("tools.download.name")} description={t("tools.download.description")} icon={tool.icon} accent={tool.accent}>
+    <ToolPage toolId="download">
       <TabList selectedValue={form.tab} onTabSelect={(_, d) => form.set({ tab: d.value as "single" | "batch" })}>
         <Tab value="single" icon={<Link24Regular />}>
           {t("download.single")}
@@ -474,135 +227,20 @@ export default function DownloadPage() {
                 onChange={(_, d) => form.set({ url: d.value })}
                 onKeyDown={(e) => e.key === "Enter" && runProbe()}
               />
-              <Button className={styles.searchBtn} size="large" icon={probe.running ? <Spinner size="tiny" /> : <Search16Regular />} disabled={!form.url.trim() || probe.running} onClick={runProbe}>
+              <Button
+                className={styles.searchBtn}
+                size="large"
+                icon={probe.running ? <Spinner size="tiny" /> : <Search16Regular />}
+                disabled={!form.url.trim() || probe.running}
+                onClick={runProbe}
+              >
                 {t("download.check")}
               </Button>
             </div>
           </Panel>
 
           {form.probe ? (
-            <Panel>
-              <div className={styles.media}>
-                {form.probe.thumbnail ? <img className={styles.thumb} src={form.probe.thumbnail} alt="" /> : <div className={styles.thumb} />}
-                <div className={styles.mediaInfo}>
-                  <Subtitle2>{form.probe.title}</Subtitle2>
-                  <div className={styles.metaRow}>
-                    {form.probe.uploader && (
-                      <span className={styles.meta}>
-                        <Person16Regular /> {form.probe.uploader}
-                      </span>
-                    )}
-                    {form.probe.duration != null && (
-                      <span className={styles.meta}>
-                        <Clock16Regular /> {formatDuration(form.probe.duration)}
-                      </span>
-                    )}
-                    {form.probe.viewCount != null && (
-                      <span className={styles.meta}>
-                        <Eye16Regular /> {form.probe.viewCount.toLocaleString()}
-                      </span>
-                    )}
-                  </div>
-                  {form.probe.isPlaylist ? (
-                    <div>
-                      <div className={styles.playlistHeader}>
-                        <Badge appearance="tint" color="brand">
-                          {t("download.playlistBadge", { count: form.probe.entries?.length ?? 0 })}
-                        </Badge>
-                      </div>
-                      {form.probe.entries && form.probe.entries.length > 0 && (
-                        <div className={styles.playlistEntriesList}>
-                          {form.probe.entries.map((entry, idx) => (
-                            <div key={entry.url + idx} className={styles.playlistEntryItem}>
-                              <Text weight="semibold" className={styles.entryIdx}>
-                                #{idx + 1}
-                              </Text>
-                              <Text className={styles.ellipsis}>{entry.title || entry.url}</Text>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <>
-                      <div className={styles.formatsHead}>
-                        <TabList
-                          size="small"
-                          selectedValue={form.mode}
-                          onTabSelect={(_, d) => {
-                            const mode = d.value as Mode;
-                            form.set({ mode, formatId: form.probe!.formats[mode][0]?.id ?? "" });
-                          }}
-                        >
-                          <Tab value="video" icon={<Video24Regular />}>
-                            {t("download.modeVideo")}
-                          </Tab>
-                          <Tab value="audio" icon={<MusicNote224Regular />}>
-                            {t("download.modeAudio")}
-                          </Tab>
-                          <Tab value="muxed" icon={<VideoClipMultiple24Regular />}>
-                            {t("download.modeMuxed")}
-                          </Tab>
-                        </TabList>
-                        <span className={styles.grow} />
-                        {form.mode === "audio" && (
-                          <Dropdown
-                            className={styles.codec}
-                            value={form.audioCodec.toUpperCase()}
-                            selectedOptions={[form.audioCodec]}
-                            onOptionSelect={(_, d) => form.set({ audioCodec: d.optionValue! })}
-                            aria-label={t("download.audioCodec")}
-                          >
-                            {AUDIO_CODECS.map((c) => (
-                              <Option key={c} value={c}>
-                                {c.toUpperCase()}
-                              </Option>
-                            ))}
-                          </Dropdown>
-                        )}
-                      </div>
-                      {formats.length === 0 ? (
-                        <Body1 className={styles.muted}>{t("download.noFormats")}</Body1>
-                      ) : (
-                        <div className={styles.tableWrap}>
-                          <Table size="small" aria-label={t("download.formats")}>
-                            <TableHeader>
-                              <TableRow>
-                                <TableSelectionCell type="radio" invisible />
-                                <TableHeaderCell>{t("download.colQuality")}</TableHeaderCell>
-                                <TableHeaderCell>{t("download.colFormat")}</TableHeaderCell>
-                                <TableHeaderCell>{t("download.colCodec")}</TableHeaderCell>
-                                <TableHeaderCell>{t("download.colSize")}</TableHeaderCell>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {formats.map((f) => (
-                                <TableRow key={f.id} className={styles.row} onClick={() => form.set({ formatId: f.id })} aria-selected={form.formatId === f.id}>
-                                  <TableSelectionCell type="radio" checked={form.formatId === f.id} />
-                                  <TableCell>
-                                    <Text weight={f.kind === "auto" ? "semibold" : "regular"}>{formatLabel(f, t)}</Text>
-                                    {f.kind === "auto" && (
-                                      <Badge appearance="tint" color="brand" size="small" className={styles.recommended}>
-                                        {t("download.recommended")}
-                                      </Badge>
-                                    )}
-                                  </TableCell>
-                                  <TableCell>{f.ext.toUpperCase()}</TableCell>
-                                  <TableCell>
-                                    <span className={styles.mono}>{codecLabel(f)}</span>
-                                  </TableCell>
-                                  <TableCell>{f.filesize ? formatBytes(f.filesize) : "—"}</TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-            </Panel>
+            <ProbeResultPanel probe={form.probe} />
           ) : (
             !probe.running && (
               <Panel>
@@ -614,129 +252,14 @@ export default function DownloadPage() {
           )}
         </>
       ) : (
-        <Panel
-          className={styles.batchPanel}
-          title={t("download.queueTitle")}
-          actions={
-            <div className={styles.queueActions}>
-              {failedItems.length > 0 && !batch.running && (
-                <Button size="small" appearance="subtle" icon={<ArrowClockwise16Regular />} onClick={retryFailed}>
-                  {t("download.retryFailed", { count: failedItems.length })}
-                </Button>
-              )}
-              {batch.running && urls.length > 0 && (
-                <Button size="small" appearance="primary" icon={<Add16Regular />} onClick={startDownload}>
-                  {t("download.addToBatch")}
-                </Button>
-              )}
-              <Badge appearance="tint">{t("download.urlCount", { count: queue.length || urls.length })}</Badge>
-            </div>
-          }
-        >
-          <Textarea
-            className={styles.batchArea}
-            resize="vertical"
-            value={form.batchText}
-            placeholder={
-              batch.running
-                ? t("download.batchPlaceholderRunning")
-                : "https://www.youtube.com/watch?v=…\nhttps://x.com/…/status/…"
-            }
-            onChange={(_, d) => form.set({ batchText: d.value })}
-          />
-          {queue.length > 0 && (
-            <div className={styles.queue}>
-              {queue.map((item) => {
-                const isDone = item.status === "done";
-                const isError = item.status === "error";
-                const isRunning = item.status === "running" && batch.running;
-
-                return (
-                  <div key={item.index} className={styles.queueItem} title={item.error ?? item.url}>
-                    <div className={styles.queueItemIcon}>
-                      {isDone ? (
-                        <CheckmarkCircle16Filled className={styles.ok} />
-                      ) : isError ? (
-                        <DismissCircle16Filled className={styles.bad} />
-                      ) : isRunning ? (
-                        <Spinner size="extra-tiny" />
-                      ) : (
-                        <Clock16Regular className={styles.muted} />
-                      )}
-                    </div>
-                    <div className={styles.queueItemContent}>
-                      <Text weight={isRunning ? "semibold" : "medium"} className={styles.queueItemTitle}>
-                        {item.title || item.url}
-                      </Text>
-                      <Caption1 className={isError ? styles.bad : styles.queueItemSub}>
-                        {isError && item.error ? item.error : item.url}
-                      </Caption1>
-                    </div>
-                    <div className={styles.queueItemMeta}>
-                      {isRunning ? (
-                        <div className={styles.queueProgressWrap}>
-                          <ProgressBar value={(item.percent ?? 0) / 100} thickness="medium" />
-                          {extra.speed != null && typeof extra.speed === "number" && (
-                            <Caption1 className={mergeClasses(styles.muted, styles.alignRight)}>
-                              {formatBytes(extra.speed)}/s · {t("common.eta", { time: formatDuration(Number(extra.eta)) })}
-                            </Caption1>
-                          )}
-                        </div>
-                      ) : isDone ? (
-                        <div className={styles.doneMeta}>
-                          {item.size != null && item.size > 0 && (
-                            <Badge appearance="tint" color="informative" className={styles.queueItemSize}>
-                              {formatBytes(item.size)}
-                            </Badge>
-                          )}
-                          {item.duration != null && item.duration > 0 && (
-                            <Caption1 className={styles.queueItemDuration}>
-                              <Clock16Regular className={styles.smallIcon} />
-                              {formatDuration(item.duration)}
-                            </Caption1>
-                          )}
-                        </div>
-                      ) : isError ? (
-                        <Badge appearance="tint" color="danger">
-                          {t("download.itemStatus.error")}
-                        </Badge>
-                      ) : (
-                        <Caption1 className={styles.muted}>{t("download.itemStatus.pending")}</Caption1>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          {doneCount > 0 && (
-            <div className={styles.batchSummaryBar}>
-              <div className={styles.summaryStats}>
-                <Text weight="semibold">
-                  {t("download.summary", { done: doneCount, total: queue.length })}
-                </Text>
-                {batchTotalSize != null && (
-                  <Caption1 className={styles.muted}>
-                    {t("download.totalSize", { size: formatBytes(batchTotalSize) })}
-                  </Caption1>
-                )}
-                {batchTotalDuration != null && (
-                  <Caption1 className={styles.muted}>
-                    {t("download.totalDuration", { duration: formatDuration(batchTotalDuration) })}
-                  </Caption1>
-                )}
-              </div>
-              <Button
-                size="small"
-                appearance="subtle"
-                icon={<FolderOpen16Regular />}
-                onClick={() => api.system.openPath(outdir).catch(() => undefined)}
-              >
-                {t("common.openFolder")}
-              </Button>
-            </div>
-          )}
-        </Panel>
+        <BatchQueue
+          queue={queue}
+          running={batch.running}
+          speed={speed}
+          eta={eta}
+          totalSize={batchTotal(batchResult?.totalSize, queue, "size")}
+          totalDuration={batchTotal(batchResult?.totalDuration, queue, "duration")}
+        />
       )}
 
       <Panel title={t("download.output")}>
@@ -773,9 +296,6 @@ export default function DownloadPage() {
         }
         onCancel={() => (batch.running ? batch.cancel() : download.running ? download.cancel() : probe.cancel())}
       >
-        <Button icon={<FolderOpen16Regular />} disabled={!outdir} onClick={() => api.system.openPath(outdir).catch(() => undefined)}>
-          {t("common.openFolder")}
-        </Button>
         {form.tab === "batch" && failedItems.length > 0 && !running && (
           <Button icon={<ArrowClockwise16Regular />} onClick={retryFailed}>
             {t("download.retryFailed", { count: failedItems.length })}
@@ -788,12 +308,14 @@ export default function DownloadPage() {
           onClick={startDownload}
         >
           {form.tab === "batch"
-            ? (batch.running ? t("download.addToBatch") : t("download.downloadAll"))
+            ? batch.running
+              ? t("download.addToBatch")
+              : t("download.downloadAll")
             : form.probe?.isPlaylist
               ? t("download.downloadPlaylist", { count: form.probe.entries?.length ?? 0 })
               : t("download.download")}
         </Button>
       </ActionBar>
-    </Page>
+    </ToolPage>
   );
 }

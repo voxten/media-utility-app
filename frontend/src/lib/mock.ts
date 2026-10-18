@@ -429,6 +429,7 @@ export function createMockBackend(emit: Emit) {
       },
     },
     image_editor: {
+      thumbnail: (_path: string) => ok({ width: 1920, height: 1080, format: "PNG", size: 2_400_000, dataUrl: fakePhoto(0) }),
       load_preview: (path: string) =>
         ok({
           path,

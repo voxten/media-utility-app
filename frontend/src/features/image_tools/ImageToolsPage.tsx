@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Button, Caption1, Dropdown, makeStyles, Option, Spinner, tokens } from "@fluentui/react-components";
+import { Button, Caption1, makeStyles, Spinner, tokens } from "@fluentui/react-components";
 import {
   Add16Regular,
   ArrowRight16Regular,
@@ -10,17 +10,17 @@ import {
   Save16Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
-import { toolById } from "../../app/tools";
 import { ActionBar } from "../../components/ActionBar";
 import { AfterGallery } from "../../components/AfterGallery";
 import { DropZone } from "../../components/DropZone";
 import { FileStrip } from "../../components/FileStrip";
 import { useNotify } from "../../components/notify";
-import { Page } from "../../components/Page";
+import { ToolPage } from "../../components/Page";
 import { Panel } from "../../components/Panel";
 import { ResultCard } from "../../components/ResultCard";
+import { Select } from "../../components/Select";
 import { api } from "../../lib/bridge";
-import { allFilesFilter, dialogFilter, IMAGE_EXTENSIONS } from "../../lib/fileTypes";
+import { allFilesFilter, dialogFilter, formatList, formatName, IMAGE_EXTENSIONS, imageFormatLabel, type ImageOutputFormat } from "../../lib/fileTypes";
 import { fileName, formatBytes } from "../../lib/format";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { useJobRunner } from "../../lib/useJobRunner";
@@ -39,8 +39,7 @@ import {
 } from "./types";
 
 const PREVIEW_DELAY_MS = 150;
-const OUTPUT_FORMATS = ["original", "png", "jpeg", "webp"] as const;
-type OutputFormat = (typeof OUTPUT_FORMATS)[number];
+const OUTPUT_FORMATS: ImageOutputFormat[] = ["original", "png", "jpeg", "webp"];
 
 const CROP_RATIOS: Record<string, number> = { "1_1": 1, "16_9": 16 / 9, "9_16": 9 / 16, "4_3": 4 / 3, "3_2": 3 / 2 };
 
@@ -86,7 +85,6 @@ export default function ImageToolsPage() {
   const { t } = useTranslation();
   const styles = useStyles();
   const notify = useNotify();
-  const tool = toolById("image_tools")!;
 
   const [files, setFiles] = useState<string[]>([]);
   const [selected, setSelected] = useState(0);
@@ -97,7 +95,7 @@ export default function ImageToolsPage() {
   const [sizes, setSizes] = useState<Record<string, { width: number; height: number }>>({});
   const [activeTool, setActiveTool] = useState<ActiveTool>("crop");
   const [crop, setCrop] = useState<CropRect>({ x: 0, y: 0, w: 0, h: 0 });
-  const [outputFormat, setOutputFormat] = useState<OutputFormat>("original");
+  const [outputFormat, setOutputFormat] = useState<ImageOutputFormat>("original");
   const [saved, setSaved] = useState<{ outPath: string; width: number; height: number; bytes: number } | null>(null);
 
   const job = useJobRunner<BatchResult>("image_editor", {
@@ -294,26 +292,25 @@ export default function ImageToolsPage() {
 
   if (!files.length) {
     return (
-      <Page title={t("tools.image_tools.name")} description={t("tools.image_tools.description")} icon={tool.icon} accent={tool.accent}>
+      <ToolPage toolId="image_tools">
         <DropZone
           icon={Image24Regular}
           title={t("imageTools.dropTitle")}
-          hint={t("imageTools.dropHint")}
+          hint={t("imageTools.dropHint", { formats: formatList(IMAGE_EXTENSIONS) })}
           accept={IMAGE_EXTENSIONS}
           onFiles={addFiles}
           onBrowse={browse}
         />
-      </Page>
+      </ToolPage>
     );
   }
 
   const edited = new Set(files.filter((f) => isEdited(opsByFile[f])));
   const resized = transformed && preview && (transformed.width !== preview.width || transformed.height !== preview.height);
   const result = job.result;
-  const formatLabel = (f: OutputFormat) => (f === "original" ? t("compressor.formatOriginal") : f.toUpperCase());
 
   return (
-    <Page title={t("tools.image_tools.name")} description={t("tools.image_tools.description")} icon={tool.icon} accent={tool.accent}>
+    <ToolPage toolId="image_tools">
       {preview && ops && (
         <ToolOptionsBar
           activeTool={activeTool}
@@ -349,7 +346,7 @@ export default function ImageToolsPage() {
         >
           {preview && (
             <Caption1 className={styles.meta}>
-              {preview.width} × {preview.height} px · {preview.format.toUpperCase()} · {formatBytes(preview.size)}
+              {preview.width} × {preview.height} px · {formatName(preview.format)} · {formatBytes(preview.size)}
               {resized && ` → ${transformed.width} × ${transformed.height} px`}
             </Caption1>
           )}
@@ -420,24 +417,19 @@ export default function ImageToolsPage() {
           {t("imageTools.copyClipboard")}
         </Button>
         {files.length > 1 && (
-          <Dropdown
+          <Select
+            searchable
             className={styles.format}
-            aria-label={t("compressor.format")}
-            value={formatLabel(outputFormat)}
-            selectedOptions={[outputFormat]}
-            onOptionSelect={(_, d) => setOutputFormat(d.optionValue as OutputFormat)}
-          >
-            {OUTPUT_FORMATS.map((f) => (
-              <Option key={f} value={f}>
-                {formatLabel(f)}
-              </Option>
-            ))}
-          </Dropdown>
+            aria-label={t("common.outputFormat")}
+            options={OUTPUT_FORMATS.map((f) => ({ value: f, label: imageFormatLabel(t, f) }))}
+            value={outputFormat}
+            onChange={setOutputFormat}
+          />
         )}
         <Button appearance="primary" icon={<Save16Regular />} disabled={!preview || job.running} onClick={save}>
           {files.length > 1 ? t("imageTools.processBatch", { count: files.length }) : t("imageTools.saveAction")}
         </Button>
       </ActionBar>
-    </Page>
+    </ToolPage>
   );
 }

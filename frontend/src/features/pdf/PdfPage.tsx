@@ -18,17 +18,11 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
-  Badge,
   Button,
   Caption1,
-  Dialog,
-  DialogBody,
-  DialogSurface,
-  DialogTitle,
   makeStyles,
   mergeClasses,
   Spinner,
-  Text,
   tokens,
   Tooltip,
 } from "@fluentui/react-components";
@@ -45,33 +39,30 @@ import {
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { create } from "zustand";
-import { toolById } from "../../app/tools";
 import { ActionBar } from "../../components/ActionBar";
 import { DropZone } from "../../components/DropZone";
 import { LogPanel } from "../../components/LogPanel";
 import { useNotify } from "../../components/notify";
-import { Page } from "../../components/Page";
+import { ToolPage } from "../../components/Page";
 import { Panel } from "../../components/Panel";
 import { api } from "../../lib/bridge";
 import { dialogFilter, PDF_EXTENSIONS } from "../../lib/fileTypes";
 import { fileName } from "../../lib/format";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
+import { ON_IMAGE } from "../../lib/onImage";
 import { useTransferStore } from "../../stores/transfer";
+import { groupColor } from "./groupColors";
+import { usePdfPagePreview } from "./PdfPagePreview";
+import type { PdfPageInfo } from "./usePdfPages";
 
-interface PdfPageItem {
+interface PdfPageItem extends PdfPageInfo {
   key: string;
-  file: string;
-  fileName: string;
-  page: number;
-  thumb: string;
-  width: number;
-  height: number;
   rotation?: number;
 }
 
 interface InspectResult {
-  pages: Omit<PdfPageItem, "key">[];
+  pages: PdfPageInfo[];
   errors: { file: string; error: string }[];
 }
 
@@ -82,19 +73,15 @@ interface MergeResult {
 }
 
 let keySeq = 0;
-const withKey = (p: Omit<PdfPageItem, "key">): PdfPageItem => ({ ...p, key: `p${++keySeq}` });
+const withKey = (p: PdfPageInfo): PdfPageItem => ({ ...p, key: `p${++keySeq}` });
 
 const useForm = create<{ pages: PdfPageItem[]; setPages: (pages: PdfPageItem[]) => void }>((set) => ({
   pages: [],
   setPages: (pages) => set({ pages }),
 }));
 
-const FILE_COLORS = ["#2f8fd8", "#d9480f", "#14a37f", "#8a5cf6", "#c2851a", "#e0475b", "#0e9aa7", "#5b6b7f"];
-
 const useStyles = makeStyles({
   toolbar: { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" },
-  legend: { display: "flex", gap: "6px", flexWrap: "wrap" },
-  dot: { width: "8px", height: "8px", borderRadius: "50%", display: "inline-block", marginRight: "6px" },
   grid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
@@ -130,7 +117,7 @@ const useStyles = makeStyles({
     maxWidth: "100%",
     maxHeight: "100%",
     boxShadow: tokens.shadow4,
-    backgroundColor: "#fff",
+    backgroundColor: ON_IMAGE.paper,
     transition: "transform 0.2s ease-in-out",
   },
   meta: { display: "flex", alignItems: "center", gap: "6px", minWidth: 0 },
@@ -167,20 +154,11 @@ const useStyles = makeStyles({
     placeItems: "center",
     fontSize: tokens.fontSizeBase100,
     fontWeight: tokens.fontWeightSemibold,
-    color: "#fff",
-    backgroundColor: "rgba(0,0,0,0.55)",
-  },
-  preview: { maxWidth: "min(80vw, 900px)" },
-  previewImg: {
-    width: "100%",
-    maxHeight: "75vh",
-    objectFit: "contain",
-    backgroundColor: "#fff",
-    borderRadius: tokens.borderRadiusMedium,
+    color: ON_IMAGE.light,
+    backgroundColor: ON_IMAGE.scrim,
   },
   muted: { color: tokens.colorNeutralForeground3 },
   streaming: { opacity: 0.6 },
-  previewBody: { gridColumn: "1 / -1" },
 });
 
 interface CardProps {
@@ -271,11 +249,10 @@ export default function PdfPage() {
   const { t } = useTranslation();
   const styles = useStyles();
   const notify = useNotify();
-  const tool = toolById("pdf")!;
 
   const { pages, setPages } = useForm();
   const [activeKey, setActiveKey] = useState<string | null>(null);
-  const [preview, setPreview] = useState<{ item: PdfPageItem; src: string | null } | null>(null);
+  const preview = usePdfPagePreview();
 
   const inspect = useJobRunner<InspectResult>("pdf.inspect", {
     onDone: (result) => {
@@ -301,8 +278,8 @@ export default function PdfPage() {
   );
 
   const files = useMemo(() => Array.from(new Set(pages.map((p) => p.file))), [pages]);
-  const colorOf = (file: string) => FILE_COLORS[Math.max(0, files.indexOf(file)) % FILE_COLORS.length];
-  const streaming = (inspect.job?.status === "running" ? inspect.job.partials : []) as Omit<PdfPageItem, "key">[];
+  const colorOf = (file: string) => groupColor(Math.max(0, files.indexOf(file)));
+  const streaming = (inspect.job?.status === "running" ? inspect.job.partials : []) as PdfPageInfo[];
 
   const addMergeFiles = (paths: string[]) => {
     const pdfs = paths.filter((p) => p.toLowerCase().endsWith(".pdf"));
@@ -321,14 +298,6 @@ export default function PdfPage() {
     const from = pages.findIndex((p) => p.key === active.id);
     const to = pages.findIndex((p) => p.key === over.id);
     setPages(arrayMove(pages, from, to));
-  };
-
-  const openPreview = (item: PdfPageItem) => {
-    setPreview({ item, src: null });
-    api.pdf
-      .renderPage(item.file, item.page)
-      .then((src) => setPreview((p) => (p && p.item.key === item.key ? { ...p, src } : p)))
-      .catch(() => setPreview((p) => (p ? { ...p, src: item.thumb } : p)));
   };
 
   const rotatePage = (key: string) => {
@@ -356,7 +325,7 @@ export default function PdfPage() {
   const busy = inspect.running || merge.running;
 
   return (
-    <Page title={t("tools.pdf.name")} description={t("tools.pdf.description")} icon={tool.icon} accent={tool.accent}>
+    <ToolPage toolId="pdf">
       <DropZone
         compact={pages.length > 0 || streaming.length > 0}
         icon={DocumentPdf24Regular}
@@ -369,7 +338,7 @@ export default function PdfPage() {
 
       {(pages.length > 0 || streaming.length > 0) && (
         <Panel
-          title={t("pdf.pages", { count: pages.length })}
+          title={t("pdf.pagesTitle")}
           actions={
             <div className={styles.toolbar}>
               {inspect.running && <Spinner size="tiny" label={t("pdf.loading")} />}
@@ -395,16 +364,6 @@ export default function PdfPage() {
             </div>
           }
         >
-          {files.length > 1 && (
-            <div className={styles.legend}>
-              {files.map((file) => (
-                <Badge key={file} appearance="outline" color="informative" title={file}>
-                  <span className={styles.dot} style={{ backgroundColor: colorOf(file) }} />
-                  {fileName(file)}
-                </Badge>
-              ))}
-            </div>
-          )}
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -421,7 +380,7 @@ export default function PdfPage() {
                     index={index}
                     color={colorOf(item.file)}
                     onRemove={() => setPages(pages.filter((p) => p.key !== item.key))}
-                    onPreview={() => openPreview(item)}
+                    onPreview={() => preview.show(item)}
                     onRotate={() => rotatePage(item.key)}
                   />
                 ))}
@@ -455,7 +414,7 @@ export default function PdfPage() {
 
       <ActionBar
         job={merge.job ?? inspect.job}
-        idleText={pages.length ? t("pdf.idle.ready", { count: pages.length, files: files.length }) : t("pdf.idle.empty")}
+        idleText={pages.length ? t("pdf.idle.ready", { count: pages.length }) : t("pdf.idle.empty")}
         onCancel={merge.running ? merge.cancel : inspect.cancel}
       >
         {merge.result && (
@@ -480,22 +439,7 @@ export default function PdfPage() {
         </Button>
       </ActionBar>
 
-      <Dialog open={!!preview} onOpenChange={(_, d) => !d.open && setPreview(null)}>
-        <DialogSurface className={styles.preview}>
-          <DialogBody>
-            <DialogTitle>
-              {preview && (
-                <Text weight="semibold">
-                  {preview.item.fileName} · {t("pdf.pageShort", { page: preview.item.page + 1 })}
-                </Text>
-              )}
-            </DialogTitle>
-            <div className={styles.previewBody}>
-              {preview?.src ? <img className={styles.previewImg} src={preview.src} alt="" /> : <Spinner />}
-            </div>
-          </DialogBody>
-        </DialogSurface>
-      </Dialog>
-    </Page>
+      {preview.dialog}
+    </ToolPage>
   );
 }

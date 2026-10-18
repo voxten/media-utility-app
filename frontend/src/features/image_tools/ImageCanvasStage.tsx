@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { makeStyles, Spinner, tokens } from "@fluentui/react-components";
+import { checkerboard } from "../../lib/checkerboard";
 import { InteractiveCropOverlay, type CropRect } from "./InteractiveCropOverlay";
 import type { ActiveTool } from "./types";
 
@@ -14,15 +15,7 @@ const useStyles = makeStyles({
     justifyContent: "center",
     overflow: "hidden",
     borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: tokens.colorNeutralBackground3,
-    backgroundImage: `
-      linear-gradient(45deg, rgba(0,0,0,0.06) 25%, transparent 25%),
-      linear-gradient(-45deg, rgba(0,0,0,0.06) 25%, transparent 25%),
-      linear-gradient(45deg, transparent 75%, rgba(0,0,0,0.06) 75%),
-      linear-gradient(-45deg, transparent 75%, rgba(0,0,0,0.06) 75%)
-    `,
-    backgroundSize: "20px 20px",
-    backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px",
+    ...checkerboard(),
     padding: "16px",
     boxSizing: "border-box",
   },
