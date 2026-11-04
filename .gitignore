@@ -185,5 +185,5 @@ cython_debug/
 !frontend/src/lib/
 !packaging/*.spec
 
-# Instagram session cookies (never commit)
+# Session cookies for YouTube, X and Instagram (never commit)
 cookies/
