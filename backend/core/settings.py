@@ -24,6 +24,10 @@ DEFAULT_COOKIES = {
         app_data_dir() / "cookies" / "x.com_cookies.txt",
         resource_path("features", "download", "x.com_cookies.txt"),
     ],
+    "instagram": [
+        resource_path("cookies", "instagram_cookies.txt"),
+        app_data_dir() / "cookies" / "instagram_cookies.txt",
+    ],
 }
 LEGACY_COOKIES = {
     "youtube": resource_path("cookies", "youtube_cookies.txt"),
@@ -37,7 +41,7 @@ def default_settings() -> Dict[str, Any]:
         "language": "pl",  # pl | en
         "mica": True,  # Windows 11 backdrop; applied on next start
         "outputDir": str(default_output_dir()),
-        "cookies": {"youtube": "", "x": ""},
+        "cookies": {"youtube": "", "x": "", "instagram": ""},
         "recentFolders": [],
         "hardwareAcceleration": True,
         "maxConcurrency": min(4, os.cpu_count() or 4),
@@ -45,6 +49,7 @@ def default_settings() -> Dict[str, Any]:
         "completionSound": True,
         "customFfmpegPath": "",
         "confirmExitOnActiveJobs": True,
+        "lastSeenVersion": "",  # app version whose release notes the user was pointed to
     }
 
 

@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { makeStyles, Spinner, tokens } from "@fluentui/react-components";
-import { checkerboard } from "../../lib/checkerboard";
+import { checkerboard } from "../lib/checkerboard";
 import { InteractiveCropOverlay, type CropRect } from "./InteractiveCropOverlay";
-import type { ActiveTool } from "./types";
 
 const useStyles = makeStyles({
   stage: {
@@ -40,7 +39,7 @@ interface ImageCanvasStageProps {
   imageSrc: string | null;
   naturalWidth: number;
   naturalHeight: number;
-  activeTool: ActiveTool;
+  cropping: boolean;
   crop: CropRect;
   cropPreset: string;
   isLoading?: boolean;
@@ -54,7 +53,7 @@ export function ImageCanvasStage({
   imageSrc,
   naturalWidth,
   naturalHeight,
-  activeTool,
+  cropping,
   crop,
   cropPreset,
   isLoading,
@@ -109,7 +108,7 @@ export function ImageCanvasStage({
             style={{ width: `${displaySize.w}px`, height: `${displaySize.h}px` }}
           />
 
-          {activeTool === "crop" && (
+          {cropping && (
             <InteractiveCropOverlay
               naturalWidth={naturalWidth}
               naturalHeight={naturalHeight}

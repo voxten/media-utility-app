@@ -28,6 +28,7 @@ export interface ProbeResult {
   viewCount: number | null;
   thumbnail: string | null;
   isPlaylist?: boolean;
+  photoCount?: number;
   entries?: PlaylistEntry[];
   formats: Record<Mode, Format[]>;
 }

@@ -11,7 +11,7 @@ const DEFAULT_SETTINGS: Settings = {
   language: "pl",
   mica: false,
   outputDir: "C:\\Users\\demo\\Downloads",
-  cookies: { youtube: "", x: "" },
+  cookies: { youtube: "", x: "", instagram: "" },
   recentFolders: ["C:\\Users\\demo\\Pictures", "C:\\Users\\demo\\Videos"],
   hardwareAcceleration: true,
   maxConcurrency: 4,
@@ -19,6 +19,7 @@ const DEFAULT_SETTINGS: Settings = {
   completionSound: true,
   customFfmpegPath: "",
   confirmExitOnActiveJobs: true,
+  lastSeenVersion: "",
 };
 
 function loadSettings(): Settings {
@@ -114,6 +115,10 @@ export function createMockBackend(emit: Emit) {
         ok(
           types.some((t) => t.toLowerCase().includes("pdf"))
             ? ["C:\\Users\\demo\\Documents\\raport.pdf", "C:\\Users\\demo\\Documents\\umowa.pdf"]
+            : types.some((t) => t.includes("*.mp4"))
+              ? ["C:\\Users\\demo\\Videos\\clip.mp4"]
+            : types.some((t) => t.includes("*.apng"))
+              ? ["C:\\Users\\demo\\Pictures\\cat.gif", "C:\\Users\\demo\\Pictures\\dance.gif"].slice(0, multiple ? 2 : 1)
             : multiple
               ? ["C:\\Users\\demo\\Pictures\\photo.png", "C:\\Users\\demo\\Pictures\\beach.jpg", "C:\\Users\\demo\\Pictures\\city.webp"]
               : ["C:\\Users\\demo\\Pictures\\photo.png"],
@@ -259,6 +264,7 @@ export function createMockBackend(emit: Emit) {
           duration: 754,
           viewCount: 128_400,
           thumbnail: fakePhoto(1),
+          photoCount: url.includes("/photo/") ? 4 : 0,
           formats: {
             video: [auto, v("401", 2160, 610_000_000, 60), v("137", 1080, 142_000_000), v("136", 720, 64_000_000), muxed],
             audio: [a("251", 160, "webm", 13_000_000), a("140", 129, "m4a", 12_100_000)],
@@ -353,6 +359,31 @@ export function createMockBackend(emit: Emit) {
       lama_available: () => ok(false),
       remove: () => simulateJob("watermark", "image.png", { resultPath: "C:\\cache\\result.png", dataUrl: fakePhoto(2), notice: null }, 1200),
       save: (_r: string, out: string) => ok(out),
+    },
+    instagram: {
+      probe: (url: string) => {
+        const profile = !/\/(p|reels?|stories)\//.test(url);
+        return simulateJob("instagram.probe", url, {
+          url,
+          kind: profile ? "profile" : url.includes("/stories/") ? "stories" : "post",
+          uploader: "demo.account",
+          items: Array.from({ length: profile ? 18 : 4 }, (_, index) => ({
+            index,
+            kind: index % 4 === 1 ? "video" : profile && index % 3 === 0 ? "carousel" : "image",
+            count: profile && index % 3 === 0 ? 5 : 1,
+            width: 1080,
+            height: 1350,
+            duration: index % 4 === 1 ? 14.5 : null,
+            thumbnail: fakePhoto(index + 2),
+            selected: true,
+          })),
+        }, 900);
+      },
+      start: (params?: { outdir?: string; indices?: number[] }) => {
+        const outdir = params?.outdir || "C:\\Downloads";
+        const files = (params?.indices ?? [0]).map((i) => `${outdir}\\demo.account_DemoPost123_${i + 1}.jpg`);
+        return simulateJob("instagram", "DemoPost123", { files, indices: params?.indices ?? [0], failed: 0, size: 2_400_000, duration: 2.1, outdir });
+      },
     },
     progress: {
       load_banner: () => ok(""),
@@ -538,6 +569,104 @@ export function createMockBackend(emit: Emit) {
           bytes: 45_200_000,
           offsetSec: params.offsetSec,
         }, 1500),
+    },
+    video_to_gif: {
+      probe: (path: string) =>
+        ok({
+          path,
+          fileName: path.split(/[\\/]/).pop() || "clip.mp4",
+          size: 18_000_000,
+          format: "mp4",
+          duration: 42.5,
+          hasVideo: true,
+          hasAudio: true,
+          width: 1280,
+          height: 720,
+          fps: 30,
+          videoCodec: "h264",
+          audioTracks: [],
+          thumbnail: fakePhoto(3),
+          gifsicle: false,
+        }),
+      frames: (_path: string, startSec: number, duration: number, count: number) =>
+        ok({
+          frames: Array.from({ length: count }, (_, i) => {
+            const time = startSec + ((i + 0.5) * duration) / count;
+            return { time, dataUrl: fakePhoto(Math.floor(time / 5)) };
+          }),
+        }),
+      preview: (params: { start: number; end: number; speed: number; fps: number }) => {
+        const seconds = (params.end - params.start) / params.speed;
+        const shown = Math.min(5, seconds);
+        const size = Math.round(shown * params.fps * 18_000);
+        return ok({ dataUrl: fakePhoto(4), size, previewSeconds: shown, estimatedSize: Math.round((size * seconds) / shown) });
+      },
+      start: (params: { outPath: string; start: number; end: number; speed: number; fps: number; width: number }) => {
+        const duration = (params.end - params.start) / params.speed;
+        const width = params.width || 1280;
+        return simulateJob("video_to_gif.render", params.outPath.split(/[\\/]/).pop() || "clip.gif", {
+          outPath: params.outPath,
+          size: Math.round(duration * params.fps * 18_000),
+          width,
+          height: Math.round((width * 9) / 16),
+          frames: Math.round(duration * params.fps),
+          duration,
+          fit: null,
+        }, 1800);
+      },
+    },
+    gif_editor: {
+      load: (path: string) =>
+        ok({
+          path,
+          fileName: path.split(/[\\/]/).pop() || "anim.gif",
+          size: 3_400_000,
+          width: 480,
+          height: 270,
+          frames: 48,
+          duration: 4.8,
+          plays: 0,
+          format: "gif",
+          dataUrl: fakePhoto(path.length),
+          gifsicle: false,
+        }),
+      frames: (_path: string, startSec: number, duration: number, count: number) =>
+        ok({
+          frames: Array.from({ length: count }, (_, i) => {
+            const time = startSec + ((i + 0.5) * duration) / count;
+            return { time, dataUrl: fakePhoto(Math.floor(time)) };
+          }),
+        }),
+      preview: (path: string) =>
+        ok({ width: 480, height: 270, frames: 48, duration: 4.8, size: 1_900_000, fit: null, dataUrl: fakePhoto(path.length + 1) }),
+      start: (params: { path?: string; outPath?: string; files?: string[]; outputDir?: string }) => {
+        const files = params.files ?? (params.path ? [params.path] : []);
+        const results = files.map((file, i) => ({
+          file,
+          dest: params.outPath ?? `${params.outputDir}\\${file.split(/[\\/]/).pop()}`,
+          width: 480,
+          height: 270,
+          frames: 48,
+          duration: 4.8,
+          size: 1_900_000 - i * 100_000,
+          originalSize: 3_400_000,
+          savedPercent: 44.1 + i,
+          fit: null,
+        }));
+        const title = files.length === 1 ? files[0].split(/[\\/]/).pop() || "" : `${files.length} files`;
+        return simulateJob("gif_editor.render", title, {
+          total: files.length,
+          processed: files.length,
+          failed: 0,
+          inBytes: 3_400_000 * files.length,
+          outBytes: results.reduce((sum, r) => sum + r.size, 0),
+          savedPercent: 44.1,
+          outPath: results[0]?.dest ?? "",
+          outputDir: params.outputDir ?? "",
+          files: results.map((r) => r.dest),
+          results,
+        }, 1800);
+      },
     },
   };
 }

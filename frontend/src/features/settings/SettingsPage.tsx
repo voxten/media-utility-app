@@ -47,6 +47,7 @@ import { useTranslation } from "react-i18next";
 import { SETTINGS_ACCENT } from "../../app/tools";
 import { confirm } from "../../components/ConfirmDialog";
 import { useNotify } from "../../components/notify";
+import { showWhatsNew } from "../../components/WhatsNewDialog";
 import { Page, Section } from "../../components/Page";
 import { PathPicker } from "../../components/PathPicker";
 import { Select } from "../../components/Select";
@@ -58,6 +59,8 @@ import type { AppInfo, Dependency, HardwareInfo, Language, StorageInfo, ThemePre
 import { playChime, showDesktopNotification, useJob } from "../../stores/jobs";
 import { useSettings } from "../../stores/settings";
 import { useUi } from "../../stores/ui";
+
+const COOKIE_SITES = ["youtube", "x", "instagram"] as const;
 
 const useStyles = makeStyles({
   dropdown: { minWidth: "180px", maxWidth: "100%" },
@@ -639,9 +642,9 @@ export default function SettingsPage() {
           </SettingRow>
           <SettingRow icon={Cookies24Regular} title={t("settings.cookies")} description={t("settings.cookiesDescription")} wide>
             <div className={styles.cookieRows}>
-              {(["youtube", "x"] as const).map((site) => (
+              {COOKIE_SITES.map((site) => (
                 <div key={site} className={styles.cookieRow}>
-                  <Caption1>{t(site === "youtube" ? "settings.cookiesYoutube" : "settings.cookiesX")}</Caption1>
+                  <Caption1>{t(`settings.cookieSites.${site}`)}</Caption1>
                   <PathPicker
                     mode="file"
                     fileTypes={[dialogFilter(t, "cookies")]}
@@ -678,7 +681,9 @@ export default function SettingsPage() {
                 ? t("settings.backendMock")
                 : `${t("settings.python", { version: info?.python ?? "…" })} · ${info?.platform ?? ""}`
             }
-          />
+          >
+            <Button onClick={showWhatsNew}>{t("whatsNew.title")}</Button>
+          </SettingRow>
         </SettingGroup>
       </Section>
     </Page>

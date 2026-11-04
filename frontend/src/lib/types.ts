@@ -8,7 +8,7 @@ export interface Settings {
   language: Language;
   mica: boolean;
   outputDir: string;
-  cookies: { youtube: string; x: string };
+  cookies: { youtube: string; x: string; instagram: string };
   recentFolders: string[];
   hardwareAcceleration: boolean;
   maxConcurrency: number;
@@ -16,6 +16,10 @@ export interface Settings {
   completionSound: boolean;
   customFfmpegPath: string;
   confirmExitOnActiveJobs: boolean;
+  /** App version whose release notes the user was last pointed to; empty on a fresh install. */
+  lastSeenVersion: string;
+  /** Last output settings used by the GIF tools. */
+  gifOutput?: GifOutputOptions;
 }
 
 export interface StorageInfo {
@@ -223,3 +227,147 @@ export interface VideoSyncParams {
   mode: "fast_copy" | "reencode";
 }
 
+
+export type GifFormat = "gif" | "webp" | "apng" | "mp4";
+
+export interface GifOutputOptions {
+  format: GifFormat;
+  lossy: number;
+  colors: number;
+  dither: boolean;
+  /** Number of plays; 0 loops forever. */
+  plays: number;
+  quality: number;
+  /** 0 keeps the settings as they are; otherwise the result is shrunk until it fits. */
+  targetBytes: number;
+}
+
+export interface GifFit {
+  size: number;
+  reached: boolean;
+}
+
+export interface CropArea {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface VideoToGifParams {
+  path: string;
+  duration: number;
+  start: number;
+  end: number;
+  fps: number;
+  /** 0 keeps the source (or cropped) width. */
+  width: number;
+  speed: number;
+  crop: CropArea | null;
+  reverse: boolean;
+  output: GifOutputOptions;
+}
+
+export interface VideoToGifPreview {
+  dataUrl: string;
+  size: number;
+  previewSeconds: number;
+  estimatedSize: number;
+}
+
+export interface VideoToGifResult {
+  outPath: string;
+  size: number;
+  width: number;
+  height: number;
+  frames: number;
+  duration: number;
+  fit: GifFit | null;
+}
+
+export interface AnimationInfo {
+  path: string;
+  fileName: string;
+  size: number;
+  width: number;
+  height: number;
+  frames: number;
+  duration: number;
+  plays: number;
+  format: string;
+  /** Empty for files too large to show inline. */
+  dataUrl: string;
+  gifsicle: boolean;
+}
+
+export interface GifOperations {
+  trim?: { start: number; end: number };
+  crop?: CropArea;
+  rotate?: number;
+  flip_h?: boolean;
+  flip_v?: boolean;
+  resize?: { percent?: number; width?: number; height?: number };
+  speed?: number;
+  reverse?: boolean;
+  boomerang?: boolean;
+}
+
+/** One slide of a post, one story, or one post of a profile (then possibly a carousel of `count` files). */
+export interface InstagramItem {
+  index: number;
+  kind: "image" | "video" | "carousel";
+  count: number;
+  width: number | null;
+  height: number | null;
+  duration: number | null;
+  thumbnail: string | null;
+  /** Checked when the link was opened; a story link checks only that story. */
+  selected: boolean;
+}
+
+export interface InstagramListing {
+  url: string;
+  kind: "post" | "stories" | "profile";
+  uploader: string;
+  items: InstagramItem[];
+}
+
+export interface InstagramResult {
+  files: string[];
+  /** Item index of each file in `files`. */
+  indices: number[];
+  failed: number;
+  size: number;
+  duration: number;
+  outdir: string;
+}
+
+export interface GifEditorPreview {
+  width: number;
+  height: number;
+  frames: number;
+  duration: number;
+  size: number;
+  fit: GifFit | null;
+  dataUrl: string;
+}
+
+export interface GifEditorItem extends Omit<GifEditorPreview, "dataUrl"> {
+  file: string;
+  dest: string;
+  originalSize: number;
+  savedPercent: number;
+}
+
+export interface GifEditorResult {
+  total: number;
+  processed: number;
+  failed: number;
+  inBytes: number;
+  outBytes: number;
+  savedPercent: number;
+  outPath: string;
+  outputDir: string;
+  files: string[];
+  results: GifEditorItem[];
+}

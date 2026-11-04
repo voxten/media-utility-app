@@ -6,10 +6,14 @@ import { forwardRef } from "react";
 export interface ProgressRow {
   id: string;
   name: string;
+  /** Percent (0–100) or, in "count" mode, the amount done out of `total`. */
   value: number;
+  total: number;
   from: string;
   to: string;
 }
+
+export type ValueMode = "percent" | "count";
 
 export interface CardOptions {
   title: string;
@@ -18,7 +22,14 @@ export interface CardOptions {
   barHeight: number;
   rounded: boolean;
   theme: "dark" | "light";
-  showPercent: boolean;
+  valueMode: ValueMode;
+  showValue: boolean;
+}
+
+/** How full the bar is, 0–100. */
+export function rowPercent(row: ProgressRow, mode: ValueMode): number {
+  const percent = mode === "count" ? (row.total > 0 ? (row.value / row.total) * 100 : 0) : row.value;
+  return Math.max(0, Math.min(100, percent));
 }
 
 const THEMES = {
@@ -57,7 +68,7 @@ export const ProgressCard = forwardRef<HTMLDivElement, { rows: ProgressRow[]; op
               style={{
                 position: "absolute",
                 inset: 0,
-                width: `${Math.max(0, Math.min(100, row.value))}%`,
+                width: `${rowPercent(row, options.valueMode)}%`,
                 background: `linear-gradient(90deg, ${row.from}, ${row.to})`,
                 transition: "width 0.4s ease",
               }}
@@ -78,7 +89,7 @@ export const ProgressCard = forwardRef<HTMLDivElement, { rows: ProgressRow[]; op
               }}
             >
               <span>{row.name}</span>
-              {options.showPercent && <span>{row.value}%</span>}
+              {options.showValue && <span>{options.valueMode === "count" ? `${row.value}/${row.total}` : `${row.value}%`}</span>}
             </div>
           </div>
         ))}

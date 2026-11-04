@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState, type ComponentType, type LazyExoti
 import { makeStyles, mergeClasses, Spinner, tokens, Toaster } from "@fluentui/react-components";
 import { ConfirmHost } from "../components/ConfirmDialog";
 import { TransferModal } from "../components/TransferModal";
+import { WhatsNewHost } from "../components/WhatsNewDialog";
 import { TOASTER_ID } from "../components/notify";
 import { useRoute } from "../lib/router";
 import { useUi } from "../stores/ui";
@@ -27,7 +28,10 @@ const TOOL_PAGES: Record<string, LazyExoticComponent<ComponentType>> = {
   duplicates: lazy(() => import("../features/duplicates/DuplicatesPage")),
   tts: lazy(() => import("../features/tts/TtsPage")),
   download: lazy(() => import("../features/download/DownloadPage")),
+  instagram: lazy(() => import("../features/instagram/InstagramPage")),
   video_sync: lazy(() => import("../features/video_sync/VideoSyncPage")),
+  video_to_gif: lazy(() => import("../features/gif/VideoToGifPage")),
+  gif_editor: lazy(() => import("../features/gif/GifEditorPage")),
   watermark: lazy(() => import("../features/watermark/WatermarkPage")),
   progress: lazy(() => import("../features/progress/ProgressPage")),
 };
@@ -134,6 +138,7 @@ export function Shell() {
       <Toaster toasterId={TOASTER_ID} position="top-end" offset={{ vertical: 16 }} pauseOnHover />
       <ConfirmHost />
       <TransferModal />
+      <WhatsNewHost />
       <JobsPopup collapsed={collapsed} />
       <CommandPalette />
     </div>

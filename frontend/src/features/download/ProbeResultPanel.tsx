@@ -17,7 +17,7 @@ import {
   Text,
   tokens,
 } from "@fluentui/react-components";
-import { Clock16Regular, Eye16Regular, MusicNote224Regular, Person16Regular, Video24Regular, VideoClipMultiple24Regular } from "@fluentui/react-icons";
+import { Clock16Regular, Eye16Regular, Image16Regular, MusicNote224Regular, Person16Regular, Video24Regular, VideoClipMultiple24Regular } from "@fluentui/react-icons";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { Panel } from "../../components/Panel";
@@ -106,6 +106,11 @@ export function ProbeResultPanel({ probe }: { probe: ProbeResult }) {
             {probe.viewCount != null && (
               <span className={styles.meta}>
                 <Eye16Regular /> {probe.viewCount.toLocaleString()}
+              </span>
+            )}
+            {!!probe.photoCount && (
+              <span className={styles.meta}>
+                <Image16Regular /> {t("download.photos", { count: probe.photoCount })}
               </span>
             )}
           </div>

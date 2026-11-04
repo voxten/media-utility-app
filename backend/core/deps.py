@@ -94,6 +94,7 @@ def check_dependencies(custom_ffmpeg: Optional[str] = None) -> List[Dict[str, An
     ensure_app_paths(custom_ffmpeg)
     ffmpeg = shutil.which("ffmpeg")
     ffmpeg_ok = ffmpeg is not None
+    gifsicle = shutil.which("gifsicle")
 
     lama_ok = is_lama_ready()
     has_torch = _has_module("torch")
@@ -117,10 +118,19 @@ def check_dependencies(custom_ffmpeg: Optional[str] = None) -> List[Dict[str, An
             "id": "ffmpeg",
             "ok": ffmpeg_ok,
             "detail": ffmpeg or "settings.deps.detailFfmpegMissing",
-            "usedBy": ["download", "tts"],
+            "usedBy": ["download", "tts", "video_sync", "video_to_gif", "gif_editor"],
             "required": True,
             "installable": not ffmpeg_ok,
             "sizeEstimate": "~35 MB" if not ffmpeg_ok else "",
+        },
+        {
+            "id": "gifsicle",
+            "ok": gifsicle is not None,
+            "detail": gifsicle or "settings.deps.detailGifsicleMissing",
+            "usedBy": ["video_to_gif", "gif_editor"],
+            "required": False,
+            "installable": gifsicle is None,
+            "sizeEstimate": "~0.3 MB" if gifsicle is None else "",
         },
         {
             "id": "mediainfo",

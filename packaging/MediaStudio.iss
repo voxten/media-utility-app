@@ -1,5 +1,5 @@
 ; Inno Setup Script for Media Studio
-; Creates a native Windows Setup Wizard (Installer)
+; Creates a native Windows Setup Wizard (Installer). Running it over an existing installation updates it in place.
 
 #ifndef MyAppVersion
   #define MyAppVersion "0.0.0-dev"
@@ -9,9 +9,12 @@
 #define MyAppPublisher "Voxten"
 #define MyAppURL "https://github.com/voxten/media-utility-app"
 #define MyAppExeName "MediaStudio.exe"
+; Installed copies are registered under "{8B7A...}}_is1" (two closing braces); changing the AppId
+; would make Setup treat existing installations as a different app instead of updating them.
+#define MyAppGuid "8B7A1C94-4F3D-4A8E-952B-7E8B1A2C3D4E"
 
 [Setup]
-AppId={{8B7A1C94-4F3D-4A8E-952B-7E8B1A2C3D4E}}
+AppId={{{#MyAppGuid}}}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppVerName={#MyAppName} {#MyAppVersion}
@@ -20,6 +23,7 @@ AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
 DefaultDirName={autopf}\{#MyAppName}
 UninstallDisplayIcon={app}\{#MyAppExeName}
+UninstallDisplayName={#MyAppName}
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 OutputDir=..\dist\installer
@@ -34,31 +38,44 @@ DisableProgramGroupPage=auto
 DisableReadyPage=no
 CloseApplications=yes
 RestartApplications=no
+; A non-elevated Setup passes RedirectionGuard on to the app it launches after installing, and the app
+; then fails with WinError 448 on any junction made by a regular user (e.g. tool folders on PATH).
+RedirectionGuard=no
 
 [Languages]
 Name: "polish"; MessagesFile: "compiler:Languages\Polish.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
+[CustomMessages]
+polish.UpdateReadyHeading=Aktualizacja
+polish.UpdateReadyLine=Zainstalowana wersja %1 zostanie zaktualizowana do %2. Ustawienia i dodatki zostaną zachowane.
+polish.ReinstallReadyLine=Wersja %1 zostanie zainstalowana ponownie.
+polish.UpdateButton=&Aktualizuj
+polish.DowngradeConfirm=Zainstalowana jest nowsza wersja (%1) niż ta w instalatorze (%2).%n%nCzy na pewno zainstalować starszą wersję?
+english.UpdateReadyHeading=Update
+english.UpdateReadyLine=Installed version %1 will be updated to %2. Settings and add-ons are kept.
+english.ReinstallReadyLine=Version %1 will be reinstalled.
+english.UpdateButton=&Update
+english.DowngradeConfirm=A newer version (%1) is installed than the one in this installer (%2).%n%nInstall the older version anyway?
+
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [InstallDelete]
-; Delete previous frontend build completely before copying new assets so no stale files remain
-Type: filesandordirs; Name: "{app}\_internal\frontend\dist\*"
-Type: filesandordirs; Name: "{app}\_internal\frontend\dist"
+; The PyInstaller bundle is replaced as a whole so DLLs and modules dropped from a newer build don't linger.
+; Settings and add-ons live in %APPDATA%\MediaStudio and are not touched.
+Type: filesandordirs; Name: "{app}\_internal"
 ; Invalidate stale WebView2 caches from previous installations
-Type: filesandordirs; Name: "{userappdata}\MediaStudio\webview\EBWebView\Default\Cache\*"
 Type: filesandordirs; Name: "{userappdata}\MediaStudio\webview\EBWebView\Default\Cache"
-Type: filesandordirs; Name: "{userappdata}\MediaStudio\webview\EBWebView\Default\Code Cache\*"
 Type: filesandordirs; Name: "{userappdata}\MediaStudio\webview\EBWebView\Default\Code Cache"
 
 [Files]
 Source: "..\dist\MediaStudio\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\assets\app.ico"
+Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\assets\app.ico"; Tasks: desktopicon
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
@@ -66,3 +83,95 @@ Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChang
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}\_internal"
 Type: filesandordirs; Name: "{userappdata}\MediaStudio\webview"
+
+[Code]
+const
+  UninstallKey = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{{#MyAppGuid}}}_is1';
+
+var
+  InstalledVersion: String;
+
+function GetInstalledVersion(): String;
+begin
+  Result := '';
+  if not RegQueryStringValue(HKCU, UninstallKey, 'DisplayVersion', Result) then
+    RegQueryStringValue(HKLM, UninstallKey, 'DisplayVersion', Result);
+end;
+
+function NextVersionPart(var Version: String): Integer;
+var
+  Dot: Integer;
+begin
+  Dot := Pos('.', Version);
+  if Dot = 0 then
+  begin
+    Result := StrToIntDef(Version, 0);
+    Version := '';
+  end else
+  begin
+    Result := StrToIntDef(Copy(Version, 1, Dot - 1), 0);
+    Delete(Version, 1, Dot);
+  end;
+end;
+
+{ Compares "major.minor.patch" versions: negative if A < B, 0 if equal, positive if A > B. }
+function CompareVersions(A, B: String): Integer;
+var
+  I: Integer;
+begin
+  Result := 0;
+  for I := 1 to 3 do
+  begin
+    Result := NextVersionPart(A) - NextVersionPart(B);
+    if Result <> 0 then
+      Exit;
+  end;
+end;
+
+function IsUpdate(): Boolean;
+begin
+  Result := InstalledVersion <> '';
+end;
+
+function InitializeSetup(): Boolean;
+begin
+  Result := True;
+  InstalledVersion := GetInstalledVersion();
+  if IsUpdate() and (CompareVersions(InstalledVersion, '{#MyAppVersion}') > 0) then
+    Result := SuppressibleMsgBox(FmtMessage(CustomMessage('DowngradeConfirm'), [InstalledVersion, '{#MyAppVersion}']),
+      mbConfirmation, MB_YESNO, IDYES) = IDYES;
+end;
+
+{ An update reuses the previous folder and task choices, so it goes straight to the Ready page. }
+function ShouldSkipPage(PageID: Integer): Boolean;
+begin
+  Result := IsUpdate() and (PageID = wpSelectTasks);
+end;
+
+procedure CurPageChanged(CurPageID: Integer);
+begin
+  if IsUpdate() and (CurPageID = wpReady) then
+    WizardForm.NextButton.Caption := CustomMessage('UpdateButton');
+end;
+
+function UpdateReadyMemo(Space, NewLine, MemoUserInfoInfo, MemoDirInfo, MemoTypeInfo, MemoComponentsInfo,
+  MemoGroupInfo, MemoTasksInfo: String): String;
+var
+  Line: String;
+begin
+  Result := '';
+  if IsUpdate() then
+  begin
+    if CompareVersions(InstalledVersion, '{#MyAppVersion}') = 0 then
+      Line := FmtMessage(CustomMessage('ReinstallReadyLine'), ['{#MyAppVersion}'])
+    else
+      Line := FmtMessage(CustomMessage('UpdateReadyLine'), [InstalledVersion, '{#MyAppVersion}']);
+    Result := CustomMessage('UpdateReadyHeading') + NewLine + Space + Line + NewLine + NewLine;
+  end;
+  if MemoDirInfo <> '' then
+    Result := Result + MemoDirInfo + NewLine + NewLine;
+  if MemoGroupInfo <> '' then
+    Result := Result + MemoGroupInfo + NewLine + NewLine;
+  if MemoTasksInfo <> '' then
+    Result := Result + MemoTasksInfo + NewLine + NewLine;
+end;

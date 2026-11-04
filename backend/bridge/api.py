@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 from backend import APP_NAME, APP_VERSION
 from backend.bridge.events import EventBus
-from backend.core import deps, paths, system, win_theme
+from backend.core import deps, ffmpeg, paths, system, win_theme
 from backend.core.jobs import JobManager
 from backend.core.settings import Settings
 from backend.services import (
@@ -27,7 +27,10 @@ from backend.services import (
     deps_installer,
     download,
     duplicates,
+    gif_editor,
+    gif_render,
     image_editor,
+    instagram,
     pdf,
     progress_image,
     rembg_service,
@@ -35,6 +38,7 @@ from backend.services import (
     tts,
     upscale,
     video_sync,
+    video_to_gif,
     watermark,
 )
 
@@ -161,6 +165,8 @@ class SystemApi(_Namespace):
             tool_prefix = "watermark"
         elif dep_id == "rembg":
             tool_prefix = "rembg"
+        elif dep_id == "gifsicle":
+            tool_prefix = "gif_editor"
         else:
             tool_prefix = "download"
         return self._ctx.jobs.submit(
@@ -329,6 +335,22 @@ class DownloadApi(_Namespace):
         job_id = params.get("jobId")
         success = download.add_to_batch(job_id, urls)
         return {"success": success}
+
+
+class InstagramApi(_Namespace):
+    def probe(self, url: str) -> str:
+        cookies = self._ctx.settings.cookie_files()
+        return self._ctx.jobs.submit("instagram.probe", lambda ctx: instagram.probe(ctx, url, cookies), title=url)
+
+    def start(self, params: Dict[str, Any]) -> str:
+        cookies = self._ctx.settings.cookie_files()
+        return self._ctx.jobs.submit(
+            "instagram",
+            lambda ctx: instagram.download(
+                ctx, params["url"], params["outdir"], params.get("indices") or None, cookies
+            ),
+            title=params.get("title") or params["url"],
+        )
 
 
 class WatermarkApi(_Namespace):
@@ -506,9 +528,48 @@ class VideoSyncApi(_Namespace):
         )
 
 
+class VideoToGifApi(_Namespace):
+    def probe(self, path: str) -> Dict[str, Any]:
+        return {**ffmpeg.probe_media(path), "gifsicle": gif_render.gifsicle_available()}
+
+    def frames(self, path: str, start_sec: float, duration: float, count: int, height: int = 96) -> Dict[str, Any]:
+        return ffmpeg.extract_frames(path, float(start_sec), float(duration), int(count), int(height))
+
+    def preview(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        return video_to_gif.preview(params["path"], params)
+
+    def start(self, params: Dict[str, Any]) -> str:
+        return self._ctx.jobs.submit(
+            "video_to_gif.render",
+            lambda ctx: video_to_gif.render(ctx, params),
+            title=Path(params["path"]).name,
+        )
+
+
+class GifEditorApi(_Namespace):
+    def load(self, path: str) -> Dict[str, Any]:
+        return {**gif_editor.load(path), "gifsicle": gif_render.gifsicle_available()}
+
+    def frames(self, path: str, start_sec: float, duration: float, count: int, height: int = 96) -> Dict[str, Any]:
+        return gif_editor.frames(path, float(start_sec), float(duration), int(count), int(height))
+
+    def preview(self, path: str, operations: Dict[str, Any], output: Dict[str, Any]) -> Dict[str, Any]:
+        return gif_editor.preview(path, operations, output)
+
+    def start(self, params: Dict[str, Any]) -> str:
+        files = params.get("files") or [params["path"]]
+        title = Path(files[0]).name if len(files) == 1 else f"{len(files)} files"
+        return self._ctx.jobs.submit(
+            "gif_editor.render",
+            lambda ctx: gif_editor.render(ctx, params),
+            title=title,
+        )
+
+
 class Api:
     def __init__(self, bus: EventBus, settings: Settings) -> None:
         self._ctx = _Context(bus, settings)
+        deps.ensure_app_paths(settings.get("customFfmpegPath"))
         self.app = AppApi(self._ctx)
         self.settings = SettingsApi(self._ctx)
         self.dialogs = DialogsApi(self._ctx)
@@ -519,6 +580,7 @@ class Api:
         self.duplicates = DuplicatesApi(self._ctx)
         self.tts = TtsApi(self._ctx)
         self.download = DownloadApi(self._ctx)
+        self.instagram = InstagramApi(self._ctx)
         self.watermark = WatermarkApi(self._ctx)
         self.progress = ProgressApi(self._ctx)
         self.upscale = UpscaleApi(self._ctx)
@@ -526,6 +588,8 @@ class Api:
         self.compressor = CompressorApi(self._ctx)
         self.image_editor = ImageEditorApi(self._ctx)
         self.video_sync = VideoSyncApi(self._ctx)
+        self.video_to_gif = VideoToGifApi(self._ctx)
+        self.gif_editor = GifEditorApi(self._ctx)
 
     def _attach_window(self, window: Any) -> None:
         self._ctx.window = window

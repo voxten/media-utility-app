@@ -14,6 +14,8 @@ import { ActionBar } from "../../components/ActionBar";
 import { AfterGallery } from "../../components/AfterGallery";
 import { DropZone } from "../../components/DropZone";
 import { FileStrip } from "../../components/FileStrip";
+import { ImageCanvasStage } from "../../components/ImageCanvasStage";
+import type { CropRect } from "../../components/InteractiveCropOverlay";
 import { useNotify } from "../../components/notify";
 import { ToolPage } from "../../components/Page";
 import { Panel } from "../../components/Panel";
@@ -25,9 +27,7 @@ import { fileName, formatBytes } from "../../lib/format";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useTransferStore } from "../../stores/transfer";
-import { ImageCanvasStage } from "./ImageCanvasStage";
 import { ImageToolbox } from "./ImageToolbox";
-import type { CropRect } from "./InteractiveCropOverlay";
 import { ToolOptionsBar } from "./ToolOptionsBar";
 import {
   type ActiveTool,
@@ -356,7 +356,7 @@ export default function ImageToolsPage() {
                 imageSrc={activeTool === "crop" ? preview.dataUrl : (transformed?.dataUrl ?? preview.dataUrl)}
                 naturalWidth={preview.width}
                 naturalHeight={preview.height}
-                activeTool={activeTool}
+                cropping={activeTool === "crop"}
                 crop={crop}
                 cropPreset={ops.cropPreset}
                 isLoading={updating}

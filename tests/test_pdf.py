@@ -1,4 +1,5 @@
 import fitz
+import pytest
 from pathlib import Path
 
 from backend.services import pdf
@@ -68,7 +69,7 @@ def test_compress_pdf(tmp_path, ctx):
     assert res["inBytes"] > 0
 
 
-def test_split_all_and_range(tmp_path, ctx):
+def test_split_all_and_groups(tmp_path, ctx):
     src = tmp_path / "multipage.pdf"
     _make_pdf(src, ["P1", "P2", "P3", "P4"])
     
@@ -78,11 +79,14 @@ def test_split_all_and_range(tmp_path, ctx):
     assert res_all["count"] == 4
     assert len(res_all["files"]) == 4
 
-    # Test split range
-    out_dir_range = tmp_path / "split_range"
-    res_range = pdf.split(ctx, str(src), str(out_dir_range), mode="range", range_spec="2-3")
-    assert res_range["count"] == 1
-    assert _page_texts(res_range["files"][0]) == ["P2", "P3"]
+    # Adjacent groups stay separate files; pages inside a group come out in page order.
+    out_dir_groups = tmp_path / "split_groups"
+    res_groups = pdf.split(ctx, str(src), str(out_dir_groups), mode="groups", groups=[[0], [2, 1], [3, 99]])
+    assert res_groups["count"] == 3
+    assert [_page_texts(f) for f in res_groups["files"]] == [["P1"], ["P2", "P3"], ["P4"]]
+
+    with pytest.raises(ValueError):
+        pdf.split(ctx, str(src), str(tmp_path / "bad"), mode="range")
 
 
 def test_pdf_to_images(tmp_path, ctx):

@@ -12,6 +12,7 @@
   },
   "categories": {
     "video": "Video",
+    "gif": "GIF",
     "image": "Images",
     "text": "Text",
     "pdf": "PDF",
@@ -23,9 +24,21 @@
       "name": "Video downloader",
       "description": "Download video and audio from YouTube, X and more."
     },
+    "instagram": {
+      "name": "Instagram Download",
+      "description": "Save photos and videos from Instagram posts, carousels, stories and whole profiles."
+    },
     "video_sync": {
       "name": "Audio-Video Sync",
       "description": "Align out-of-sync audio tracks with video, preview with waveforms and export."
+    },
+    "video_to_gif": {
+      "name": "Video to GIF",
+      "description": "Turn a clip of a video into an animated GIF, WebP or APNG."
+    },
+    "gif_editor": {
+      "name": "GIF Editor",
+      "description": "Optimize, resize, crop, speed up or reverse animated GIFs."
     },
     "compressor": {
       "name": "Image compressor",
@@ -91,6 +104,11 @@
     "recentJobs": "Recent tasks",
     "noJobs": "No tasks have been run yet."
   },
+  "whatsNew": {
+    "title": "What's new",
+    "current": "Current",
+    "updated": "Updated to version {{version}}"
+  },
   "settings": {
     "title": "Settings",
     "subtitle": "Appearance, language, default locations and dependencies.",
@@ -109,12 +127,16 @@
     "outputDirDescription": "Tools save files here unless you choose another location.",
     "cookies": "Cookie files",
     "cookiesDescription": "Netscape-format cookie files for downloading content that requires signing in.",
-    "cookiesYoutube": "YouTube",
-    "cookiesX": "X (Twitter)",
+    "cookieSites": {
+      "youtube": "YouTube",
+      "x": "X (Twitter)",
+      "instagram": "Instagram"
+    },
     "cookiesHint": "Leave empty to use the file in cookies/ (if present).",
     "dependencies": "Dependencies",
     "deps": {
       "ffmpeg": "FFmpeg",
+      "gifsicle": "gifsicle",
       "mediainfo": "MediaInfo",
       "lama": "LaMa AI model (optional)",
       "rembg": "BiRefNet background removal model",
@@ -128,6 +150,7 @@
       "detailLamaFull": "Requires installing PyTorch and LaMa model",
       "detailRembgMissing": "Requires installing rembg and onnxruntime (~140 MB)",
       "detailFfmpegMissing": "FFmpeg executable not found in PATH",
+      "detailGifsicleMissing": "gifsicle not found",
       "detailUpscaleGenMissing": "Requires downloading realesr-general-x4v3.pth weights (~4.8 MB)",
       "detailUpscaleAnimeMissing": "Requires downloading RealESRGAN_x4plus_anime_6B.pth weights (~17.9 MB)"
     },
@@ -255,11 +278,17 @@
     "changeImage": "Change image",
     "continueWithResult": "Continue with the result",
     "search": "Type to search…",
-    "noResults": "No matches"
+    "noResults": "No matches",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "cropApply": "Apply crop",
+    "cropCancel": "Cancel crop",
+    "cropReset": "Full image"
   },
   "fileTypes": {
     "images": "Images",
     "videos": "Videos",
+    "animations": "Animations",
     "audio": "Audio",
     "pdf": "PDF documents",
     "text": "Text files",
@@ -582,6 +611,8 @@
     "noFormats": "No formats in this category.",
     "playlistBadge_one": "Playlist / Folder ({{count}} video)",
     "playlistBadge_other": "Playlist / Folder ({{count}} videos)",
+    "photos_one": "{{count}} photo",
+    "photos_other": "{{count}} photos",
     "downloadPlaylist_one": "Download playlist ({{count}} video)",
     "downloadPlaylist_other": "Download playlist ({{count}} videos)",
     "retryFailed_one": "Retry failed ({{count}})",
@@ -719,6 +750,7 @@
     "reorder": "Drag to reorder",
     "name": "Name",
     "value": "Progress",
+    "total": "Total",
     "appearance": "Appearance",
     "title": "Title",
     "titlePlaceholder": "e.g. Project progress – October",
@@ -728,7 +760,10 @@
     "barHeight": "Bar height",
     "background": "Background",
     "rounded": "Rounded corners",
-    "showPercent": "Show percentages",
+    "values": "Values",
+    "valuesPercent": "Percentages",
+    "valuesCount": "Numbers",
+    "showValue": "Show values",
     "preview": "Live preview",
     "defaultName": "progress.png",
     "export": "Export PNG",
@@ -828,6 +863,7 @@
       "verifying": "Verifying installation…",
       "downloadingFfmpeg": "Downloading FFmpeg ({{percent}}%)…",
       "extractingFfmpeg": "Extracting FFmpeg…",
+      "downloadingGifsicle": "Downloading gifsicle ({{percent}}%)…",
       "done": "Installation complete."
     },
     "log": {
@@ -841,11 +877,14 @@
       "extractingFfmpeg": "Extracting FFmpeg executables…",
       "ffmpegInstalled": "FFmpeg extracted and added to PATH.",
       "verifying": "Verifying model loading in PyTorch…",
-      "done": "Installation completed successfully."
+      "done": "Installation completed successfully.",
+      "downloadingGifsicle": "Downloading gifsicle…",
+      "gifsicleInstalled": "gifsicle is ready to use."
     },
     "installTitle": {
       "lama": "LaMa AI Model",
       "ffmpeg": "FFmpeg",
+      "gifsicle": "gifsicle",
       "rembg": "BiRefNet background removal model",
       "upscale_general": "Real-ESRGAN General AI Model",
       "upscale_anime": "Real-ESRGAN Anime AI Model"
@@ -890,9 +929,6 @@
       "transform": "Rotate & Flip",
       "reset": "Reset to original"
     },
-    "cropApply": "Apply crop",
-    "cropCancel": "Cancel crop",
-    "cropReset": "Full image",
     "copyClipboard": "Copy to clipboard",
     "copied": "Image copied to clipboard!",
     "saveAction": "Save image as…",
@@ -928,6 +964,53 @@
     "processedTitle": "Processing results",
     "openOutputFolder": "Show output folder"
   },
+  "instagram": {
+    "urlPlaceholder": "https://www.instagram.com/…",
+    "emptyTitle": "Paste a link to a post, story or profile",
+    "emptyBody": "Photos, videos and every slide of a carousel are saved in full quality. Stories and whole profiles need an Instagram cookie file.",
+    "selectAll": "Select all",
+    "selectNone": "Select none",
+    "photoN": "Photo {{n}}",
+    "videoN": "Video {{n}}",
+    "downloadCount_one": "Download {{count}} file",
+    "downloadCount_other": "Download {{count}} files",
+    "saved": "Saved files",
+    "idle": {
+      "empty": "Paste a link to an Instagram post, story or profile",
+      "ready": "Choose what to download"
+    },
+    "status": {
+      "probing": "Reading post…",
+      "thumbnails": "Loading previews…",
+      "probed": "Post loaded",
+      "downloading": "Downloading {{current}} of {{count}}…",
+      "done": "Done",
+      "listing": "Loading… ({{count}})"
+    },
+    "error": {
+      "noMedia": "This post has no photos or videos to download.",
+      "loginRequired": "Instagram did not share this post without signing in (age-restricted, private or rate-limited). Add an Instagram cookie file in Settings → Cookie files and try again.",
+      "notSupported": "Paste a link to an Instagram post, reel, story, highlight or profile.",
+      "noUser": "This Instagram account was not found.",
+      "noStories": "This account has no active stories.",
+      "storyExpired": "This story is no longer available. Stories disappear after 24 hours.",
+      "noPosts": "This profile has no posts, or it is private and you do not follow it.",
+      "rateLimited": "Instagram is limiting requests from this account. Wait a few minutes and try again."
+    },
+    "toast": {
+      "probeError": "Could not read the post",
+      "error": "Download failed",
+      "done_one": "Saved {{count}} file",
+      "done_other": "Saved {{count}} files",
+      "failed_one": "{{count}} item could not be saved; see the job log.",
+      "failed_other": "{{count}} items could not be saved; see the job log."
+    },
+    "carouselN": "Carousel {{n}}",
+    "storiesOf": "Stories of @{{user}}",
+    "log": {
+      "itemFailed": "{{name}}: {{error}}"
+    }
+  },
   "video_sync": {
     "dropTitle": "Drop a video file here or click to browse",
     "dropHint": "Supports {{formats}}",
@@ -939,8 +1022,6 @@
       "frames": "Could not load video frames"
     },
     "timeline": {
-      "zoomIn": "Zoom In",
-      "zoomOut": "Zoom Out",
       "trackAudio": "Video audio",
       "trackExternal": "Audio file"
     },
@@ -968,5 +1049,103 @@
     "previewLength": "Preview length",
     "preview": "Preview",
     "output": "Output file"
+  },
+  "gif": {
+    "speed": "Speed",
+    "reverse": "Play backwards",
+    "preview": "Preview",
+    "output": {
+      "title": "Output",
+      "colors": "Colors",
+      "lossy": "Lossy compression",
+      "dither": "Dithering",
+      "quality": "Quality",
+      "plays": "Loop",
+      "forever": "Forever",
+      "playsCount_one": "Play once",
+      "playsCount_other": "{{count}} times",
+      "sizeLimit": "Size limit",
+      "noLimit": "No limit",
+      "customSize": "Custom…"
+    },
+    "gifsicle": {
+      "title": "gifsicle is not installed",
+      "description": "Needed for lossy compression and size limits on GIFs (~0.3 MB).",
+      "install": "Install",
+      "ready": "gifsicle installed"
+    },
+    "errors": {
+      "frames": "Could not load timeline frames"
+    }
+  },
+  "video_to_gif": {
+    "dropTitle": "Drop a video here",
+    "dropHint": "Supported: {{formats}}",
+    "changeVideo": "Change video",
+    "crop": "Crop",
+    "start": "Start",
+    "end": "End",
+    "length": "Length {{duration}}",
+    "frameCount_one": "{{count}} frame",
+    "frameCount_other": "{{count}} frames",
+    "estimatedSize": "≈ {{size}}",
+    "frames": "Frames",
+    "fps": "Frames per second",
+    "width": "Width",
+    "create": "Create {{format}}",
+    "done": "Animation created",
+    "errors": {
+      "load": "Could not open the video",
+      "noVideo": "The file has no video stream.",
+      "preview": "Preview failed",
+      "render": "Could not create the animation"
+    },
+    "status": {
+      "encoding": "Encoding…",
+      "optimizing": "Optimizing…",
+      "fitting": "Shrinking to fit the size limit…",
+      "done": "Done"
+    },
+    "log": {
+      "starting": "Creating {{format}} from {{file}}",
+      "done": "Saved {{file}} ({{size}})",
+      "targetMissed": "Could not get under {{target}}; the smallest result is {{size}}."
+    }
+  },
+  "gif_editor": {
+    "dropTitle": "Drop animated GIFs here",
+    "dropHint": "Supported: {{formats}}",
+    "crop": "Crop",
+    "frameCount_one": "{{count}} frame",
+    "frameCount_other": "{{count}} frames",
+    "edit": "Edit",
+    "reset": "Reset",
+    "scale": "Size",
+    "orientation": "Rotate and flip",
+    "rotateLeft": "Rotate left",
+    "rotateRight": "Rotate right",
+    "flipH": "Flip horizontally",
+    "flipV": "Flip vertically",
+    "boomerang": "Boomerang",
+    "applyToAll": "Apply to all",
+    "save": "Save {{format}}",
+    "saveAll": "Save all ({{count}})",
+    "done": "Animation saved",
+    "summary": "{{processed}} of {{total}} saved · {{percent}}% smaller",
+    "errors": {
+      "load": "Could not open the animation",
+      "preview": "Preview failed",
+      "render": "Could not save the animation"
+    },
+    "status": {
+      "rendering": "Processing {{file}} ({{index}}/{{total}})…",
+      "done": "Done"
+    },
+    "log": {
+      "done_one": "Saved {{count}} file",
+      "done_other": "Saved {{count}} files",
+      "failed": "{{file}}: {{error}}",
+      "targetMissed": "{{file}} stays above the size limit ({{size}})."
+    }
   }
 }

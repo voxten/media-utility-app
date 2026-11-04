@@ -8,6 +8,9 @@ import time
 from typing import Any, Dict, List, Optional
 
 import yt_dlp
+from yt_dlp.extractor.tiktok import TikTokIE, TikTokUserIE
+from yt_dlp.networking import Request
+from yt_dlp.utils import ExtractorError, mimetype2ext, traverse_obj, url_or_none
 
 from backend.core import thumbs
 from backend.core.jobs import JobCancelled, JobContext
@@ -28,6 +31,54 @@ def clean_error_message(msg: str) -> str:
 # yt-dlp enables only deno by default. Without a JS runtime YouTube falls back to clients whose
 # streams fail with HTTP 403 part-way through, so allow every runtime yt-dlp can use.
 JS_RUNTIMES = ("deno", "node", "bun", "quickjs")
+TIKTOK_PAGE_ATTEMPTS = 4
+
+
+class TikTokProfileIE(TikTokUserIE):
+    """TikTok profile listing that survives TikTok's bot checks.
+
+    yt-dlp requests the profile's item_list API without browser impersonation, so TikTok answers
+    roughly every other run with an empty body and the whole profile fails on page 1. Impersonating
+    the browser makes those pages load; a failed page is retried instead of aborting the listing.
+    """
+
+    def _download_json(self, url_or_request: Any, video_id: str, *args: Any, **kwargs: Any) -> Any:
+        if url_or_request != self._API_BASE_URL:
+            return super()._download_json(url_or_request, video_id, *args, **kwargs)
+        kwargs["impersonate"] = True
+        for attempt in range(TIKTOK_PAGE_ATTEMPTS):
+            try:
+                return super()._download_json(url_or_request, video_id, *args, **kwargs)
+            except ExtractorError:
+                if attempt == TIKTOK_PAGE_ATTEMPTS - 1:
+                    raise
+                time.sleep(2.0 * (attempt + 1))
+
+
+TIKTOK_PHOTOS_KEY = "tiktok_photos"
+
+
+class TikTokPostIE(TikTokIE):
+    """TikTok post that also accepts ``/photo/`` links and keeps the images of photo posts.
+
+    yt-dlp handles only ``/video/`` links and reduces a photo post to its soundtrack. Each entry
+    under ``TIKTOK_PHOTOS_KEY`` lists the mirror URLs of one image.
+    """
+
+    _VALID_URL = TikTokIE._VALID_URL.replace(")/video)/", ")/(?:video|photo))/")
+
+    def _parse_aweme_video_web(
+        self, aweme_detail: Dict[str, Any], webpage_url: str, video_id: str, extract_flat: bool = False
+    ) -> Dict[str, Any]:
+        info = super()._parse_aweme_video_web(aweme_detail, webpage_url, video_id, extract_flat)
+        photos = [
+            mirrors
+            for mirrors in traverse_obj(aweme_detail, ("imagePost", "images", ..., "imageURL", "urlList"))
+            if isinstance(mirrors, list) and any(url_or_none(u) for u in mirrors)
+        ]
+        if photos:
+            info[TIKTOK_PHOTOS_KEY] = photos
+        return info
 
 
 def fmt_bytes(n: Optional[float]) -> str:
@@ -49,6 +100,10 @@ def is_x(url: str) -> bool:
     return "x.com" in url_lower or "twitter.com" in url_lower
 
 
+def is_instagram(url: str) -> bool:
+    return "instagram.com" in url.lower()
+
+
 def sanitize_x_url(url: str) -> str:
     """Strip trailing ``/video/N`` markers from X/Twitter URLs (they cause 404s)."""
     url = url.strip()
@@ -62,6 +117,8 @@ def cookie_file_for(url: str, cookies: Dict[str, Optional[str]]) -> Optional[str
         path = cookies.get("youtube")
     elif is_x(url):
         path = cookies.get("x")
+    elif is_instagram(url):
+        path = cookies.get("instagram")
     else:
         return None
     return path if path and Path(path).is_file() else None
@@ -91,6 +148,20 @@ def _base_opts(url: str, cookies: Dict[str, Optional[str]]) -> Dict[str, Any]:
     if cookie:
         opts["cookiefile"] = cookie
     return opts
+
+
+def _extract(ydl: yt_dlp.YoutubeDL, url: str, **kwargs: Any) -> Optional[Dict[str, Any]]:
+    for ie_class in (TikTokProfileIE, TikTokPostIE):
+        if ie_class.suitable(url):
+            ie = ie_class()
+            ydl.add_info_extractor(ie)
+            return ydl.extract_info(url, ie_key=ie.ie_key(), **kwargs)
+    return ydl.extract_info(url, **kwargs)
+
+
+def _extract_listing(url: str, opts: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        return _extract(ydl, url, download=False)
 
 
 def classify_formats(url: str, raw_formats: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
@@ -171,14 +242,11 @@ def _fetch_thumbnail(url: Optional[str]) -> Optional[str]:
 
 
 def probe(ctx: JobContext, url: str, cookies: Dict[str, Optional[str]]) -> Dict[str, Any]:
-    import yt_dlp
-
     url = sanitize_x_url(url)
     ctx.progress(None, "download.status.probing")
     opts = _base_opts(url, cookies)
     opts["extract_flat"] = "in_playlist"
-    with yt_dlp.YoutubeDL(opts) as ydl:
-        info = ydl.extract_info(url, download=False)
+    info = _extract_listing(url, opts)
 
     ctx.check_cancelled()
     ctx.progress(90, "download.status.thumbnail")
@@ -239,6 +307,7 @@ def probe(ctx: JobContext, url: str, cookies: Dict[str, Optional[str]]) -> Dict[
         "viewCount": info.get("view_count"),
         "thumbnail": _fetch_thumbnail(info.get("thumbnail")),
         "isPlaylist": False,
+        "photoCount": len(info.get(TIKTOK_PHOTOS_KEY) or []),
         "entries": [],
         "formats": classify_formats(url, info.get("formats") or []),
     }
@@ -343,10 +412,56 @@ class UniqueYoutubeDL(yt_dlp.YoutubeDL):
         return str(p.parent / f"{unique_stem}{p.suffix}")
 
 
-def _run_ydl(ctx: JobContext, url: str, opts: Dict[str, Any], target_ext: Optional[str] = None) -> Dict[str, Any]:
+def _unique_path(path: Path) -> Path:
+    counter = 1
+    candidate = path
+    while candidate.exists():
+        candidate = path.with_name(f"{path.stem} ({counter}){path.suffix}")
+        counter += 1
+    return candidate
+
+
+def _download_photos(ydl: yt_dlp.YoutubeDL, info: Dict[str, Any], hook: "_ProgressHook") -> Dict[str, Any]:
+    """Save every image of a TikTok photo post as ``<name> 1.jpg``, ``<name> 2.jpg``…"""
+    photos = info[TIKTOK_PHOTOS_KEY]
+    base = Path(ydl.prepare_filename({**info, "ext": "jpg"}))
+    headers = {"Referer": info.get("webpage_url") or ""}
+    paths: List[Path] = []
+    total = 0
+    for number, mirrors in enumerate(photos, 1):
+        last_error: Optional[Exception] = None
+        for image_url in filter(url_or_none, mirrors):
+            try:
+                with ydl.urlopen(Request(image_url, headers=headers)) as resp:
+                    data = resp.read()
+                    ext = mimetype2ext(resp.headers.get("Content-Type")) or "jpg"
+                break
+            except Exception as exc:  # noqa: BLE001 - try the next mirror
+                last_error = exc
+        else:
+            raise RuntimeError(f"Photo {number}/{len(photos)}: {last_error}")
+        path = _unique_path(base.with_name(f"{base.stem.rstrip()} {number}.{ext}"))
+        path.write_bytes(data)
+        paths.append(path)
+        total += len(data)
+        hook({"status": "downloading", "downloaded_bytes": total, "total_bytes_estimate": total * len(photos) / number})
+    hook({"status": "finished"})
+    return {"title": info.get("title") or "", "path": str(paths[0]), "size": total}
+
+
+def _run_ydl(
+    ctx: JobContext, url: str, opts: Dict[str, Any], target_ext: Optional[str] = None, photos: bool = False
+) -> Dict[str, Any]:
+    """Download ``url``; with ``photos``, a TikTok photo post saves its images instead of its soundtrack."""
     try:
         with UniqueYoutubeDL(opts, target_ext=target_ext) as ydl:
-            info = ydl.extract_info(url, download=True)
+            if TikTokPostIE.suitable(url):
+                info = _extract(ydl, url, download=False, process=False)
+                if photos and info.get(TIKTOK_PHOTOS_KEY):
+                    return _download_photos(ydl, info, opts["progress_hooks"][0])
+                info = ydl.process_ie_result(info, download=True)
+            else:
+                info = ydl.extract_info(url, download=True)
             path = info.get("filepath") or ydl.prepare_filename(info)
             p = Path(path)
             if not p.is_file() and target_ext:
@@ -391,7 +506,7 @@ def download(
     )
     target_ext = target_codec if mode == "audio" else "mp4"
     ctx.progress(0, "download.status.starting")
-    result = _run_ydl(ctx, url, opts, target_ext=target_ext)
+    result = _run_ydl(ctx, url, opts, target_ext=target_ext, photos=mode != "audio")
     duration = round(time.monotonic() - t0, 1)
     ctx.progress(100, "download.status.done")
     return {**result, "duration": duration, "outdir": str(Path(outdir).expanduser())}
@@ -409,12 +524,9 @@ def expand_batch_urls(
         if not url:
             continue
         try:
-            import yt_dlp
-
             opts = _base_opts(url, cookies or {})
             opts["extract_flat"] = True
-            with yt_dlp.YoutubeDL(opts) as ydl:
-                info = ydl.extract_info(url, download=False)
+            info = _extract_listing(url, opts)
 
             if info and (info.get("_type") == "playlist" or info.get("entries")):
                 entries = list(info.get("entries") or [])
@@ -533,7 +645,7 @@ def download_batch(
 
             t0 = time.monotonic()
             try:
-                info = _run_ydl(ctx, url, opts, target_ext="mp4")
+                info = _run_ydl(ctx, url, opts, target_ext="mp4", photos=True)
                 duration = round(time.monotonic() - t0, 1)
                 entry = {
                     "index": index,

@@ -8,6 +8,7 @@ import {
   Field,
   Input,
   makeStyles,
+  mergeClasses,
   Popover,
   PopoverSurface,
   PopoverTrigger,
@@ -41,7 +42,7 @@ import { api } from "../../lib/bridge";
 import { checkerboard } from "../../lib/checkerboard";
 import { dialogFilter } from "../../lib/fileTypes";
 import { fileName } from "../../lib/format";
-import { ProgressCard, type CardOptions, type ProgressRow } from "./ProgressCard";
+import { ProgressCard, rowPercent, type CardOptions, type ProgressRow, type ValueMode } from "./ProgressCard";
 
 // Gradients from the original style.css plus a few extras.
 const PRESETS: { from: string; to: string }[] = [
@@ -56,7 +57,17 @@ const PRESETS: { from: string; to: string }[] = [
 ];
 
 let idSeq = 0;
-const row = (name: string, value: number, preset: number): ProgressRow => ({ id: `r${++idSeq}`, name, value, ...PRESETS[preset] });
+const row = (name: string, value: number, preset: number): ProgressRow => ({ id: `r${++idSeq}`, name, value, total: 100, ...PRESETS[preset] });
+
+const MAX_TOTAL = 100_000;
+
+/** Keeps each bar equally full when switching between percentages and counts. */
+function convertRows(rows: ProgressRow[], to: ValueMode): ProgressRow[] {
+  return rows.map((r) => ({
+    ...r,
+    value: to === "percent" ? Math.round(rowPercent(r, "count")) : Math.round((r.value / 100) * r.total),
+  }));
+}
 const DEFAULT_ROWS = () => [
   row("Planning", 100, 5),
   row("Writing", 95, 0),
@@ -75,7 +86,7 @@ interface ProgressState {
 
 const useForm = create<ProgressState>((set) => ({
   rows: DEFAULT_ROWS(),
-  options: { title: "", banner: null, width: 900, barHeight: 52, rounded: false, theme: "dark", showPercent: true },
+  options: { title: "", banner: null, width: 900, barHeight: 52, rounded: false, theme: "dark", valueMode: "percent", showValue: true },
   bannerPath: "",
   set: (patch) => set(patch),
 }));
@@ -99,6 +110,8 @@ const useStyles = makeStyles({
     backgroundColor: tokens.colorNeutralBackground1,
     border: `1px solid ${tokens.colorNeutralStroke3}`,
   },
+  countRow: { gridTemplateColumns: "20px 28px minmax(60px, 1.2fr) minmax(40px, 1fr) 72px auto 72px 28px" },
+  slash: { color: tokens.colorNeutralForeground3 },
   slider: { minWidth: "0 !important", width: "100%" },
   handle: { cursor: "grab", color: tokens.colorNeutralForeground3, display: "grid", placeItems: "center", touchAction: "none" },
   swatch: {
@@ -164,12 +177,30 @@ function ColorButton({ row: r, onChange }: { row: ProgressRow; onChange: (c: { f
   );
 }
 
-function SortableRow({ row: r, onChange, onRemove }: { row: ProgressRow; onChange: (patch: Partial<ProgressRow>) => void; onRemove: () => void }) {
+/** Whole number typed into a SpinButton, read from the step value or the edited text (which may end in "%"). */
+function spinNumber(value: number | null | undefined, displayValue: string | undefined): number | null {
+  const v = value ?? parseInt(String(displayValue ?? "").replace("%", ""), 10);
+  return Number.isFinite(v) ? Math.round(Number(v)) : null;
+}
+
+interface SortableRowProps {
+  row: ProgressRow;
+  mode: ValueMode;
+  onChange: (patch: Partial<ProgressRow>) => void;
+  onRemove: () => void;
+}
+
+function SortableRow({ row: r, mode, onChange, onRemove }: SortableRowProps) {
   const styles = useStyles();
   const { t } = useTranslation();
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: r.id });
+  const max = mode === "count" ? r.total : 100;
   return (
-    <div ref={setNodeRef} className={styles.row} style={{ transform: CSS.Transform.toString(transform), transition }}>
+    <div
+      ref={setNodeRef}
+      className={mergeClasses(styles.row, mode === "count" && styles.countRow)}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+    >
       <span className={styles.handle} {...attributes} {...listeners} aria-label={t("progress.reorder")}>
         <ReOrderDotsVertical16Regular />
       </span>
@@ -178,23 +209,41 @@ function SortableRow({ row: r, onChange, onRemove }: { row: ProgressRow; onChang
       <Slider
         className={styles.slider}
         min={0}
-        max={100}
-        value={r.value}
+        max={max}
+        value={Math.min(r.value, max)}
         onChange={(_, d) => onChange({ value: d.value })}
         aria-label={t("progress.value")}
       />
       <SpinButton
         className={styles.spin}
         min={0}
-        max={100}
+        max={max}
         value={r.value}
-        displayValue={`${r.value}%`}
+        displayValue={mode === "count" ? `${r.value}` : `${r.value}%`}
         onChange={(_, d) => {
-          const v = d.value ?? parseInt(String(d.displayValue ?? "").replace("%", ""), 10);
-          if (Number.isFinite(v)) onChange({ value: Math.max(0, Math.min(100, Number(v))) });
+          const v = spinNumber(d.value, d.displayValue);
+          if (v !== null) onChange({ value: Math.max(0, Math.min(max, v)) });
         }}
         aria-label={t("progress.value")}
       />
+      {mode === "count" && (
+        <>
+          <span className={styles.slash}>/</span>
+          <SpinButton
+            className={styles.spin}
+            min={1}
+            max={MAX_TOTAL}
+            value={r.total}
+            onChange={(_, d) => {
+              const v = spinNumber(d.value, d.displayValue);
+              if (v === null) return;
+              const total = Math.max(1, Math.min(MAX_TOTAL, v));
+              onChange({ total, value: Math.min(r.value, total) });
+            }}
+            aria-label={t("progress.total")}
+          />
+        </>
+      )}
       <Tooltip content={t("common.remove")} relationship="label">
         <Button appearance="subtle" size="small" icon={<Delete16Regular />} onClick={onRemove} />
       </Tooltip>
@@ -272,7 +321,14 @@ export default function ProgressPage() {
     }
   };
 
-  const average = form.rows.length ? Math.round(form.rows.reduce((s, r) => s + r.value, 0) / form.rows.length) : 0;
+  const average = form.rows.length
+    ? Math.round(form.rows.reduce((sum, r) => sum + rowPercent(r, form.options.valueMode), 0) / form.rows.length)
+    : 0;
+
+  const setValueMode = (valueMode: ValueMode) => {
+    if (valueMode === form.options.valueMode) return;
+    form.set({ rows: convertRows(form.rows, valueMode), options: { ...form.options, valueMode } });
+  };
 
   return (
     <ToolPage toolId="progress">
@@ -295,7 +351,7 @@ export default function ProgressPage() {
               <SortableContext items={form.rows.map((r) => r.id)} strategy={verticalListSortingStrategy}>
                 <div className={styles.rows}>
                   {form.rows.map((r) => (
-                    <SortableRow key={r.id} row={r} onChange={(patch) => updateRow(r.id, patch)} onRemove={() => form.set({ rows: form.rows.filter((x) => x.id !== r.id) })} />
+                    <SortableRow key={r.id} row={r} mode={form.options.valueMode} onChange={(patch) => updateRow(r.id, patch)} onRemove={() => form.set({ rows: form.rows.filter((x) => x.id !== r.id) })} />
                   ))}
                 </div>
               </SortableContext>
@@ -331,9 +387,15 @@ export default function ProgressPage() {
                   </Tab>
                 </TabList>
               </Field>
+              <Field label={t("progress.values")}>
+                <TabList size="small" selectedValue={form.options.valueMode} onTabSelect={(_, d) => setValueMode(d.value as ValueMode)}>
+                  <Tab value="percent">{t("progress.valuesPercent")}</Tab>
+                  <Tab value="count">{t("progress.valuesCount")}</Tab>
+                </TabList>
+              </Field>
               <div>
                 <Switch checked={form.options.rounded} label={t("progress.rounded")} onChange={(_, d) => setOption("rounded", d.checked)} />
-                <Switch checked={form.options.showPercent} label={t("progress.showPercent")} onChange={(_, d) => setOption("showPercent", d.checked)} />
+                <Switch checked={form.options.showValue} label={t("progress.showValue")} onChange={(_, d) => setOption("showValue", d.checked)} />
               </div>
             </div>
           </Panel>

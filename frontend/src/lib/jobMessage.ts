@@ -17,7 +17,7 @@ export function jobMessage(
 ) {
   if (job.status === "error") {
     const err = job.error ?? t("common.jobStatus.error");
-    return err.replace(ANSI_REGEX, "").replace(/^ERROR:\s*/i, "").trim();
+    return translateMessage(t, err.replace(ANSI_REGEX, "").replace(/^ERROR:\s*/i, "").trim());
   }
   const percent = job.percent != null ? Math.round(job.percent) : undefined;
   return translateMessage(t, job.message, { percent, ...job.params });

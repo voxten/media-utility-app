@@ -7,11 +7,15 @@
 // can be developed and previewed without Python.
 
 import type {
+  AnimationInfo,
   AppInfo,
   BridgeEventName,
   BridgeEvents,
   ClearCacheResult,
   Dependency,
+  GifEditorPreview,
+  GifOperations,
+  GifOutputOptions,
   HardwareInfo,
   JobInfo,
   RemBgOptions,
@@ -24,6 +28,8 @@ import type {
   VideoFrame,
   VideoInfo,
   VideoSyncParams,
+  VideoToGifParams,
+  VideoToGifPreview,
   WaveformData,
 } from "./types";
 import { createMockBackend } from "./mock";
@@ -197,6 +203,10 @@ export const api = {
     addToBatch: (params: { jobId?: string; urls: string[] }) =>
       call<{ success: boolean }>("download", "add_to_batch", params),
   },
+  instagram: {
+    probe: (url: string) => call<JobId>("instagram", "probe", url),
+    start: (params: { url: string; outdir: string; indices: number[]; title?: string }) => call<JobId>("instagram", "start", params),
+  },
   watermark: {
     load: (path: string) => call<{ path: string; width: number; height: number; dataUrl: string }>("watermark", "load", path),
     lamaAvailable: () => call<boolean>("watermark", "lama_available"),
@@ -318,6 +328,25 @@ export const api = {
       audioTrackIndex?: number;
     }) => call<SyncPreviewResult>("video_sync", "preview", params),
     start: (params: VideoSyncParams) => call<JobId>("video_sync", "start", params),
+  },
+  video_to_gif: {
+    probe: (path: string) => call<VideoInfo & { gifsicle: boolean }>("video_to_gif", "probe", path),
+    frames: (path: string, startSec: number, duration: number, count: number, height = 96) =>
+      call<{ frames: VideoFrame[] }>("video_to_gif", "frames", path, startSec, duration, count, height),
+    preview: (params: VideoToGifParams) => call<VideoToGifPreview>("video_to_gif", "preview", params),
+    start: (params: VideoToGifParams & { outPath: string }) => call<JobId>("video_to_gif", "start", params),
+  },
+  gif_editor: {
+    load: (path: string) => call<AnimationInfo>("gif_editor", "load", path),
+    frames: (path: string, startSec: number, duration: number, count: number, height = 96) =>
+      call<{ frames: VideoFrame[] }>("gif_editor", "frames", path, startSec, duration, count, height),
+    preview: (path: string, operations: GifOperations, output: GifOutputOptions) =>
+      call<GifEditorPreview>("gif_editor", "preview", path, operations, output),
+    start: (
+      params:
+        | { path: string; outPath: string; operations: GifOperations; output: GifOutputOptions }
+        | { files: string[]; outputDir: string; operations: Record<string, GifOperations>; output: GifOutputOptions },
+    ) => call<JobId>("gif_editor", "start", params),
   },
 };
 

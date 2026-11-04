@@ -184,3 +184,6 @@ cython_debug/
 # Frontend sources (the generic "lib/" rule above targets Python build dirs)
 !frontend/src/lib/
 !packaging/*.spec
+
+# Instagram session cookies (never commit)
+cookies/

@@ -356,7 +356,7 @@ export function InteractiveCropOverlay({
           className={mergeClasses(styles.toolbar, boxY + boxH + 40 < displayedHeight ? styles.toolbarBelow : styles.toolbarInside)}
           onPointerDown={(e) => e.stopPropagation()}
         >
-          <Tooltip content={`${t("imageTools.cropApply")} (Enter)`} relationship="label">
+          <Tooltip content={`${t("common.cropApply")} (Enter)`} relationship="label">
             <Button
               size="small"
               appearance="primary"
@@ -366,11 +366,11 @@ export function InteractiveCropOverlay({
                 onApplyCrop();
               }}
             >
-              {t("imageTools.cropApply")}
+              {t("common.cropApply")}
             </Button>
           </Tooltip>
 
-          <Tooltip content={`${t("imageTools.cropCancel")} (Esc)`} relationship="label">
+          <Tooltip content={`${t("common.cropCancel")} (Esc)`} relationship="label">
             <Button
               size="small"
               appearance="subtle"
@@ -382,7 +382,7 @@ export function InteractiveCropOverlay({
             />
           </Tooltip>
 
-          <Tooltip content={t("imageTools.cropReset")} relationship="label">
+          <Tooltip content={t("common.cropReset")} relationship="label">
             <Button
               size="small"
               appearance="subtle"

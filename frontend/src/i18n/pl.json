@@ -14,6 +14,7 @@
   },
   "categories": {
     "video": "Wideo",
+    "gif": "GIF",
     "image": "Obrazy",
     "text": "Tekst",
     "pdf": "PDF",
@@ -25,9 +26,21 @@
       "name": "Pobieranie wideo",
       "description": "Pobieraj filmy i audio z YouTube, X i innych serwisów."
     },
+    "instagram": {
+      "name": "Pobieranie z Instagrama",
+      "description": "Zapisuj zdjęcia i filmy z postów, karuzel, relacji i całych profili na Instagramie."
+    },
     "video_sync": {
       "name": "Synchronizacja Audio-Wideo",
       "description": "Synchronizuj rozjechane ścieżki dźwiękowe z obrazem, dopasowuj po amplitudzie i twórz podgląd."
+    },
+    "video_to_gif": {
+      "name": "Wideo do GIF",
+      "description": "Zamień fragment filmu w animowany GIF, WebP lub APNG."
+    },
+    "gif_editor": {
+      "name": "Edytor GIF",
+      "description": "Optymalizuj, zmieniaj rozmiar, kadruj, przyspieszaj i odwracaj animacje."
     },
     "compressor": {
       "name": "Kompresor obrazów",
@@ -93,6 +106,11 @@
     "recentJobs": "Ostatnie zadania",
     "noJobs": "Nie uruchomiono jeszcze żadnego zadania."
   },
+  "whatsNew": {
+    "title": "Co nowego",
+    "current": "Bieżąca",
+    "updated": "Zaktualizowano do wersji {{version}}"
+  },
   "settings": {
     "title": "Ustawienia",
     "subtitle": "Wygląd, język, domyślne lokalizacje i zależności.",
@@ -111,12 +129,16 @@
     "outputDirDescription": "Tu narzędzia zapisują pliki, jeśli nie wskażesz innego miejsca.",
     "cookies": "Pliki cookies",
     "cookiesDescription": "Pliki cookies (format Netscape) potrzebne do pobierania treści wymagających zalogowania.",
-    "cookiesYoutube": "YouTube",
-    "cookiesX": "X (Twitter)",
+    "cookieSites": {
+      "youtube": "YouTube",
+      "x": "X (Twitter)",
+      "instagram": "Instagram"
+    },
     "cookiesHint": "Pozostaw puste, aby użyć pliku z folderu cookies/ (jeśli istnieje).",
     "dependencies": "Zależności",
     "deps": {
       "ffmpeg": "FFmpeg",
+      "gifsicle": "gifsicle",
       "mediainfo": "MediaInfo",
       "lama": "Model AI LaMa (opcjonalny)",
       "rembg": "Model BiRefNet do usuwania tła",
@@ -130,6 +152,7 @@
       "detailLamaFull": "Wymaga instalacji PyTorch oraz modelu LaMa",
       "detailRembgMissing": "Wymaga instalacji rembg oraz onnxruntime (~140 MB)",
       "detailFfmpegMissing": "Brak programu FFmpeg na ścieżce PATH",
+      "detailGifsicleMissing": "Nie znaleziono gifsicle",
       "detailUpscaleGenMissing": "Wymaga pobrania wag modelu realesr-general-x4v3.pth (~4.8 MB)",
       "detailUpscaleAnimeMissing": "Wymaga pobrania wag modelu RealESRGAN_x4plus_anime_6B.pth (~17.9 MB)"
     },
@@ -261,11 +284,17 @@
     "changeImage": "Zmień obraz",
     "continueWithResult": "Kontynuuj z wynikiem",
     "search": "Wpisz, aby wyszukać…",
-    "noResults": "Brak wyników"
+    "noResults": "Brak wyników",
+    "zoomIn": "Powiększ",
+    "zoomOut": "Pomniejsz",
+    "cropApply": "Zatwierdź kadr",
+    "cropCancel": "Anuluj kadr",
+    "cropReset": "Pełny obraz"
   },
   "fileTypes": {
     "images": "Obrazy",
     "videos": "Wideo",
+    "animations": "Animacje",
     "audio": "Audio",
     "pdf": "Dokumenty PDF",
     "text": "Pliki tekstowe",
@@ -634,6 +663,10 @@
     "playlistBadge_few": "Playlista / Folder ({{count}} filmy)",
     "playlistBadge_many": "Playlista / Folder ({{count}} filmów)",
     "playlistBadge_other": "Playlista / Folder ({{count}} filmów)",
+    "photos_one": "{{count}} zdjęcie",
+    "photos_few": "{{count}} zdjęcia",
+    "photos_many": "{{count}} zdjęć",
+    "photos_other": "{{count}} zdjęcia",
     "downloadPlaylist_one": "Pobierz playlistę ({{count}} film)",
     "downloadPlaylist_few": "Pobierz playlistę ({{count}} filmy)",
     "downloadPlaylist_many": "Pobierz playlistę ({{count}} filmów)",
@@ -777,6 +810,7 @@
     "reorder": "Przeciągnij, aby zmienić kolejność",
     "name": "Nazwa",
     "value": "Postęp",
+    "total": "Łącznie",
     "appearance": "Wygląd",
     "title": "Tytuł",
     "titlePlaceholder": "np. Postęp projektu – październik",
@@ -786,7 +820,10 @@
     "barHeight": "Wysokość paska",
     "background": "Tło",
     "rounded": "Zaokrąglone rogi",
-    "showPercent": "Pokaż procenty",
+    "values": "Wartości",
+    "valuesPercent": "Procenty",
+    "valuesCount": "Liczby",
+    "showValue": "Pokaż wartości",
     "preview": "Podgląd na żywo",
     "defaultName": "postep.png",
     "export": "Eksportuj PNG",
@@ -888,6 +925,7 @@
       "verifying": "Weryfikacja instalacji…",
       "downloadingFfmpeg": "Pobieranie FFmpeg ({{percent}}%)…",
       "extractingFfmpeg": "Rozpakowywanie FFmpeg…",
+      "downloadingGifsicle": "Pobieranie gifsicle ({{percent}}%)…",
       "done": "Instalacja zakończona."
     },
     "log": {
@@ -901,11 +939,14 @@
       "extractingFfmpeg": "Rozpakowywanie plików wykonywalnych FFmpeg…",
       "ffmpegInstalled": "FFmpeg rozpakowany i dodany do ścieżki PATH.",
       "verifying": "Weryfikacja ładowania modelu w PyTorch…",
-      "done": "Instalacja zakończona sukcesem."
+      "done": "Instalacja zakończona sukcesem.",
+      "downloadingGifsicle": "Pobieranie gifsicle…",
+      "gifsicleInstalled": "gifsicle jest gotowy."
     },
     "installTitle": {
       "lama": "Model AI LaMa",
       "ffmpeg": "FFmpeg",
+      "gifsicle": "gifsicle",
       "rembg": "Model BiRefNet do usuwania tła",
       "upscale_general": "Model AI Real-ESRGAN General",
       "upscale_anime": "Model AI Real-ESRGAN Anime"
@@ -950,9 +991,6 @@
       "transform": "Obrót i odbicie",
       "reset": "Przywróć oryginalny"
     },
-    "cropApply": "Zatwierdź kadr",
-    "cropCancel": "Anuluj kadr",
-    "cropReset": "Pełny obraz",
     "copyClipboard": "Kopiuj do schowka",
     "copied": "Skopiowano obraz do schowka!",
     "saveAction": "Zapisz obraz jako…",
@@ -988,6 +1026,59 @@
     "processedTitle": "Wyniki przetwarzania",
     "openOutputFolder": "Pokaż folder wyjściowy"
   },
+  "instagram": {
+    "urlPlaceholder": "https://www.instagram.com/…",
+    "emptyTitle": "Wklej link do posta, relacji lub profilu",
+    "emptyBody": "Zdjęcia, filmy i wszystkie slajdy karuzeli zapisują się w pełnej jakości. Relacje i całe profile wymagają pliku cookies Instagrama.",
+    "selectAll": "Zaznacz wszystko",
+    "selectNone": "Odznacz wszystko",
+    "photoN": "Zdjęcie {{n}}",
+    "videoN": "Film {{n}}",
+    "downloadCount_one": "Pobierz {{count}} plik",
+    "downloadCount_few": "Pobierz {{count}} pliki",
+    "downloadCount_many": "Pobierz {{count}} plików",
+    "downloadCount_other": "Pobierz {{count}} pliku",
+    "saved": "Zapisane pliki",
+    "idle": {
+      "empty": "Wklej link do posta, relacji lub profilu z Instagrama",
+      "ready": "Wybierz, co pobrać"
+    },
+    "status": {
+      "probing": "Odczytywanie posta…",
+      "thumbnails": "Wczytywanie podglądów…",
+      "probed": "Post wczytany",
+      "downloading": "Pobieranie {{current}} z {{count}}…",
+      "done": "Gotowe",
+      "listing": "Wczytywanie… ({{count}})"
+    },
+    "error": {
+      "noMedia": "Ten post nie zawiera zdjęć ani filmów do pobrania.",
+      "loginRequired": "Instagram nie udostępnił tego posta bez logowania (ograniczenie wiekowe, konto prywatne albo limit zapytań). Dodaj plik cookies Instagrama w Ustawieniach → Pliki cookies i spróbuj ponownie.",
+      "notSupported": "Wklej link do posta, rolki, relacji, wyróżnionej relacji lub profilu na Instagramie.",
+      "noUser": "Nie znaleziono tego konta na Instagramie.",
+      "noStories": "To konto nie ma teraz aktywnych relacji.",
+      "storyExpired": "Ta relacja nie jest już dostępna. Relacje znikają po 24 godzinach.",
+      "noPosts": "Ten profil nie ma postów albo jest prywatny i go nie obserwujesz.",
+      "rateLimited": "Instagram ogranicza zapytania z tego konta. Odczekaj kilka minut i spróbuj ponownie."
+    },
+    "toast": {
+      "probeError": "Nie udało się odczytać posta",
+      "error": "Pobieranie nie powiodło się",
+      "done_one": "Zapisano {{count}} plik",
+      "done_few": "Zapisano {{count}} pliki",
+      "done_many": "Zapisano {{count}} plików",
+      "done_other": "Zapisano {{count}} pliku",
+      "failed_one": "Nie udało się zapisać {{count}} pozycji; szczegóły w logu zadania.",
+      "failed_few": "Nie udało się zapisać {{count}} pozycji; szczegóły w logu zadania.",
+      "failed_many": "Nie udało się zapisać {{count}} pozycji; szczegóły w logu zadania.",
+      "failed_other": "Nie udało się zapisać {{count}} pozycji; szczegóły w logu zadania."
+    },
+    "carouselN": "Karuzela {{n}}",
+    "storiesOf": "Relacje @{{user}}",
+    "log": {
+      "itemFailed": "{{name}}: {{error}}"
+    }
+  },
   "video_sync": {
     "dropTitle": "Upuść plik wideo tutaj lub kliknij, aby wybrać",
     "dropHint": "Obsługuje {{formats}}",
@@ -999,8 +1090,6 @@
       "frames": "Nie udało się wczytać klatek wideo"
     },
     "timeline": {
-      "zoomIn": "Powiększ",
-      "zoomOut": "Pomniejsz",
       "trackAudio": "Dźwięk z wideo",
       "trackExternal": "Plik audio"
     },
@@ -1028,5 +1117,111 @@
     "previewLength": "Długość podglądu",
     "preview": "Podgląd",
     "output": "Plik wyjściowy"
+  },
+  "gif": {
+    "speed": "Prędkość",
+    "reverse": "Odtwarzaj od końca",
+    "preview": "Podgląd",
+    "output": {
+      "title": "Wynik",
+      "colors": "Kolory",
+      "lossy": "Kompresja stratna",
+      "dither": "Dithering",
+      "quality": "Jakość",
+      "plays": "Zapętlenie",
+      "forever": "Bez końca",
+      "playsCount_one": "Raz",
+      "playsCount_few": "{{count}} razy",
+      "playsCount_many": "{{count}} razy",
+      "playsCount_other": "{{count}} razy",
+      "sizeLimit": "Limit rozmiaru",
+      "noLimit": "Bez limitu",
+      "customSize": "Własny…"
+    },
+    "gifsicle": {
+      "title": "gifsicle nie jest zainstalowany",
+      "description": "Potrzebny do kompresji stratnej i limitu rozmiaru GIF-ów (~0,3 MB).",
+      "install": "Zainstaluj",
+      "ready": "Zainstalowano gifsicle"
+    },
+    "errors": {
+      "frames": "Nie udało się wczytać klatek osi czasu"
+    }
+  },
+  "video_to_gif": {
+    "dropTitle": "Upuść tutaj film",
+    "dropHint": "Obsługiwane: {{formats}}",
+    "changeVideo": "Zmień film",
+    "crop": "Kadruj",
+    "start": "Początek",
+    "end": "Koniec",
+    "length": "Długość {{duration}}",
+    "frameCount_one": "{{count}} klatka",
+    "frameCount_few": "{{count}} klatki",
+    "frameCount_many": "{{count}} klatek",
+    "frameCount_other": "{{count}} klatki",
+    "estimatedSize": "≈ {{size}}",
+    "frames": "Klatki",
+    "fps": "Klatki na sekundę",
+    "width": "Szerokość",
+    "create": "Utwórz {{format}}",
+    "done": "Animacja utworzona",
+    "errors": {
+      "load": "Nie udało się otworzyć filmu",
+      "noVideo": "Plik nie zawiera obrazu wideo.",
+      "preview": "Nie udało się utworzyć podglądu",
+      "render": "Nie udało się utworzyć animacji"
+    },
+    "status": {
+      "encoding": "Kodowanie…",
+      "optimizing": "Optymalizacja…",
+      "fitting": "Zmniejszanie do limitu rozmiaru…",
+      "done": "Gotowe"
+    },
+    "log": {
+      "starting": "Tworzenie {{format}} z {{file}}",
+      "done": "Zapisano {{file}} ({{size}})",
+      "targetMissed": "Nie udało się zejść poniżej {{target}}; najmniejszy wynik to {{size}}."
+    }
+  },
+  "gif_editor": {
+    "dropTitle": "Upuść tutaj animowane GIF-y",
+    "dropHint": "Obsługiwane: {{formats}}",
+    "crop": "Kadruj",
+    "frameCount_one": "{{count}} klatka",
+    "frameCount_few": "{{count}} klatki",
+    "frameCount_many": "{{count}} klatek",
+    "frameCount_other": "{{count}} klatki",
+    "edit": "Edycja",
+    "reset": "Resetuj",
+    "scale": "Rozmiar",
+    "orientation": "Obrót i odbicie",
+    "rotateLeft": "Obróć w lewo",
+    "rotateRight": "Obróć w prawo",
+    "flipH": "Odbij poziomo",
+    "flipV": "Odbij pionowo",
+    "boomerang": "Bumerang",
+    "applyToAll": "Zastosuj do wszystkich",
+    "save": "Zapisz {{format}}",
+    "saveAll": "Zapisz wszystkie ({{count}})",
+    "done": "Animacja zapisana",
+    "summary": "Zapisano {{processed}} z {{total}} · mniejsze o {{percent}}%",
+    "errors": {
+      "load": "Nie udało się otworzyć animacji",
+      "preview": "Nie udało się utworzyć podglądu",
+      "render": "Nie udało się zapisać animacji"
+    },
+    "status": {
+      "rendering": "Przetwarzanie {{file}} ({{index}}/{{total}})…",
+      "done": "Gotowe"
+    },
+    "log": {
+      "done_one": "Zapisano {{count}} plik",
+      "done_few": "Zapisano {{count}} pliki",
+      "done_many": "Zapisano {{count}} plików",
+      "done_other": "Zapisano {{count}} pliku",
+      "failed": "{{file}}: {{error}}",
+      "targetMissed": "{{file}} przekracza limit rozmiaru ({{size}})."
+    }
   }
 }

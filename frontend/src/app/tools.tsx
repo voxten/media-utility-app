@@ -8,14 +8,20 @@ import {
   ArrowMinimize24Filled,
   ArrowMinimize24Regular,
   bundleIcon,
+  Camera24Filled,
+  Camera24Regular,
   Crop24Filled,
   Crop24Regular,
   DataBarHorizontal24Filled,
   DataBarHorizontal24Regular,
   DocumentMultiple24Filled,
   DocumentMultiple24Regular,
+  FilmstripImage24Filled,
+  FilmstripImage24Regular,
   FolderSearch24Filled,
   FolderSearch24Regular,
+  Gif24Filled,
+  Gif24Regular,
   ImageArrowForward24Filled,
   ImageArrowForward24Regular,
   ImageEdit24Filled,
@@ -36,7 +42,7 @@ import {
 } from "./customIcons";
 import type { MediaKind } from "../lib/fileTypes";
 
-export type CategoryId = "video" | "image" | "text" | "pdf" | "system" | "generators";
+export type CategoryId = "video" | "gif" | "image" | "text" | "pdf" | "system" | "generators";
 
 export interface ToolDefinition {
   id: string;
@@ -48,10 +54,11 @@ export interface ToolDefinition {
   accepts?: Partial<Record<MediaKind, true | { subTab: string; noteKey: string }>>;
 }
 
-export const CATEGORIES: CategoryId[] = ["video", "image", "text", "pdf", "system", "generators"];
+export const CATEGORIES: CategoryId[] = ["video", "gif", "image", "text", "pdf", "system", "generators"];
 
 export const CATEGORY_ACCENTS: Record<CategoryId, string> = {
   video: "#e0475b",
+  gif: "#8b5cf6",
   image: "#3b82f6",
   text: "#14a37f",
   pdf: "#d9480f",
@@ -63,10 +70,13 @@ export const SETTINGS_ACCENT = "#5b6b7f";
 
 export const TOOLS: ToolDefinition[] = [
   { id: "download", category: "video", icon: bundleIcon(ArrowDownload24Filled, ArrowDownload24Regular), accent: CATEGORY_ACCENTS.video },
+  { id: "instagram", category: "video", icon: bundleIcon(Camera24Filled, Camera24Regular), accent: CATEGORY_ACCENTS.video },
   { id: "video_sync", category: "video", icon: bundleIcon(Timeline24Filled, Timeline24Regular), accent: CATEGORY_ACCENTS.video, accepts: { video: true } },
+  { id: "video_to_gif", category: "gif", icon: bundleIcon(FilmstripImage24Filled, FilmstripImage24Regular), accent: CATEGORY_ACCENTS.gif, accepts: { video: true } },
+  { id: "gif_editor", category: "gif", icon: bundleIcon(Gif24Filled, Gif24Regular), accent: CATEGORY_ACCENTS.gif, accepts: { gif: true } },
   { id: "compressor", category: "image", icon: bundleIcon(ArrowMinimize24Filled, ArrowMinimize24Regular), accent: CATEGORY_ACCENTS.image, accepts: { image: true } },
   { id: "image_tools", category: "image", icon: bundleIcon(Crop24Filled, Crop24Regular), accent: CATEGORY_ACCENTS.image, accepts: { image: true } },
-  { id: "converter", category: "image", icon: bundleIcon(ImageArrowForward24Filled, ImageArrowForward24Regular), accent: CATEGORY_ACCENTS.image, accepts: { image: true } },
+  { id: "converter", category: "image", icon: bundleIcon(ImageArrowForward24Filled, ImageArrowForward24Regular), accent: CATEGORY_ACCENTS.image, accepts: { image: true, gif: true } },
   { id: "rembg", category: "image", icon: bundleIcon(Wand24Filled, Wand24Regular), accent: CATEGORY_ACCENTS.image, accepts: { image: true } },
   { id: "upscale", category: "image", icon: bundleIcon(ArrowMaximize24Filled, ArrowMaximize24Regular), accent: CATEGORY_ACCENTS.image, accepts: { image: true } },
   { id: "watermark", category: "image", icon: bundleIcon(ImageEdit24Filled, ImageEdit24Regular), accent: CATEGORY_ACCENTS.image, accepts: { image: true } },
@@ -81,6 +91,7 @@ export const TOOLS: ToolDefinition[] = [
     accent: CATEGORY_ACCENTS.pdf,
     accepts: {
       image: { subTab: "imagesToPdf", noteKey: "pdf.convert.imagesToPdf" },
+      gif: { subTab: "imagesToPdf", noteKey: "pdf.convert.imagesToPdf" },
       pdf: { subTab: "pdfToImages", noteKey: "pdf.convert.pdfToImages" },
     },
   },

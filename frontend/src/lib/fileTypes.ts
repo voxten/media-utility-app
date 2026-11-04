@@ -7,8 +7,11 @@ export const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif
 export const VIDEO_EXTENSIONS = [".mp4", ".mkv", ".mov", ".avi", ".webm", ".flv", ".wmv", ".ts", ".m4v"];
 export const AUDIO_EXTENSIONS = [".mp3", ".wav", ".aac", ".m4a", ".flac", ".ogg", ".opus"];
 export const PDF_EXTENSIONS = [".pdf"];
+export const GIF_EXTENSIONS = [".gif"];
 /** IMAGE_EXTENSIONS plus GIF, for the tools that can read animated or palette GIFs. */
-export const ALL_IMAGE_EXTENSIONS = [...IMAGE_EXTENSIONS, ".gif"];
+export const ALL_IMAGE_EXTENSIONS = [...IMAGE_EXTENSIONS, ...GIF_EXTENSIONS];
+/** Formats the GIF Editor can open as animations. */
+export const ANIMATION_EXTENSIONS = [...GIF_EXTENSIONS, ".webp", ".png", ".apng"];
 
 /** Lower-case extension with the dot, or "" when the path has none. */
 export function fileExtension(path: string) {
@@ -16,10 +19,11 @@ export function fileExtension(path: string) {
 }
 
 /** Kinds of files that tools can pass to each other through "Send to". */
-export type MediaKind = "image" | "pdf" | "video";
+export type MediaKind = "gif" | "image" | "pdf" | "video";
 
 export function mediaKind(path: string): MediaKind | null {
   const ext = fileExtension(path);
+  if (GIF_EXTENSIONS.includes(ext)) return "gif";
   if (ALL_IMAGE_EXTENSIONS.includes(ext)) return "image";
   if (PDF_EXTENSIONS.includes(ext)) return "pdf";
   if (VIDEO_EXTENSIONS.includes(ext)) return "video";
@@ -29,6 +33,7 @@ export function mediaKind(path: string): MediaKind | null {
 export const FILE_TYPES = {
   images: IMAGE_EXTENSIONS,
   videos: VIDEO_EXTENSIONS,
+  animations: ANIMATION_EXTENSIONS,
   audio: AUDIO_EXTENSIONS,
   pdf: PDF_EXTENSIONS,
   text: [".txt"],

@@ -27,6 +27,7 @@ MODULES = [
     "imagehash",
     "pymediainfo",
     "yt_dlp",
+    "curl_cffi",  # browser impersonation, TikTok rejects plain requests
     "requests",
     "edge_tts",
     "pyttsx3",
@@ -230,6 +231,23 @@ def _check_video_sync(tmp: Path) -> Any:
     return {"duration": meta["duration"], "hasAudio": meta["hasAudio"]}
 
 
+def _check_gif(tmp: Path) -> Any:
+    from PIL import Image
+
+    from backend.core.ffmpeg import has_binary
+    from backend.services import gif_editor, gif_render
+
+    src = tmp / "gif_smoke.gif"
+    frames = [Image.new("RGB", (48, 32), (i * 60, 90, 200)) for i in range(4)]
+    frames[0].save(src, save_all=True, append_images=frames[1:], duration=80, loop=0)
+    res = gif_editor.render(JobContext(), {
+        "path": str(src), "outPath": str(tmp / "gif_smoke_out.gif"),
+        "operations": {"reverse": True, "speed": 2}, "output": {"format": "gif"},
+    })
+    assert res["results"][0]["frames"] == 4
+    return {"gifsicle": gif_render.gifsicle_available(), "ffmpeg": has_binary("ffmpeg")}
+
+
 CHECKS: Dict[str, Callable[[Path], Any]] = {
     "streams": _check_streams,
     "frontend": _check_frontend,
@@ -243,6 +261,7 @@ CHECKS: Dict[str, Callable[[Path], Any]] = {
     "image_editor": _check_image_editor,
     "system_info": _check_system_info,
     "video_sync": _check_video_sync,
+    "gif": _check_gif,
     "addons": _check_addon_support,
 }
 

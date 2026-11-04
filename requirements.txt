@@ -1,6 +1,6 @@
 # Runtime dependencies (native window + backend services).
 pywebview
-yt-dlp[default]>=2026.8.19  # [default] pulls yt-dlp-ejs, needed for YouTube's JS challenges
+yt-dlp[default,curl-cffi]>=2026.8.19  # yt-dlp-ejs for YouTube JS challenges, curl_cffi for TikTok impersonation
 requests
 Pillow
 PyMuPDF

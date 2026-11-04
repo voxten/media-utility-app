@@ -191,7 +191,7 @@ export function TransferModal() {
   const fileType = firstFile ? mediaKind(firstFile) : null;
   const ext = firstFile ? formatName(fileExtension(firstFile)) : "";
 
-  const thumb = useThumbnail(fileType === "image" ? firstFile : null);
+  const thumb = useThumbnail(fileType === "image" || fileType === "gif" ? firstFile : null);
 
   const targetTools: TargetToolItem[] = TOOLS.flatMap((tool) => {
     const accept = fileType && tool.id !== sourceToolId ? tool.accepts?.[fileType] : undefined;
@@ -227,7 +227,7 @@ export function TransferModal() {
             {firstFile && (
               <div className={styles.sourceCard}>
                 <div className={styles.sourceThumbBox}>
-                  {fileType === "image" ? (
+                  {fileType === "image" || fileType === "gif" ? (
                     <FileThumbnail path={firstFile} className={styles.sourceThumbImg} fallback={<Image24Regular fontSize={24} />} />
                   ) : fileType === "pdf" ? (
                     <DocumentPdf24Regular fontSize={26} color={CATEGORY_ACCENTS.pdf} />

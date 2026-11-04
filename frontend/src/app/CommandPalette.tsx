@@ -6,12 +6,14 @@ import {
   DarkTheme24Regular,
   Home24Regular,
   LocalLanguage24Regular,
+  News24Regular,
   Search20Regular,
   Settings24Regular,
   TaskListLtr24Regular,
   type FluentIcon,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
+import { showWhatsNew } from "../components/WhatsNewDialog";
 import { navigate } from "../lib/router";
 import { useSettings } from "../stores/settings";
 import { useUi } from "../stores/ui";
@@ -95,6 +97,7 @@ export function CommandPalette() {
       })),
       { id: "settings", title: t("nav.settings"), icon: Settings24Regular, keywords: "settings ustawienia", run: go("settings") },
       { id: "jobs", title: t("palette.showJobs"), icon: TaskListLtr24Regular, keywords: "jobs zadania tasks", run: () => setJobsPopupOpen(true) },
+      { id: "whatsNew", title: t("whatsNew.title"), icon: News24Regular, keywords: "changelog what's new co nowego zmiany wersja version", run: showWhatsNew },
       {
         id: "theme",
         title: t("palette.theme", { theme: t(`settings.themes.${nextTheme}`) }),

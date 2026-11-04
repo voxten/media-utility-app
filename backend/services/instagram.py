@@ -1,0 +1,428 @@
+"""Instagram posts, stories, highlights and whole profiles via yt-dlp's Instagram extractors."""
+
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+import re
+import time
+from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
+
+import yt_dlp
+from yt_dlp.extractor.instagram import InstagramBaseIE, InstagramIE
+from yt_dlp.networking import Request
+from yt_dlp.utils import filter_dict, mimetype2ext, sanitize_filename, traverse_obj, url_or_none
+
+from backend.core import thumbs
+from backend.core.jobs import JobCancelled, JobContext
+from backend.services.download import AUTO_FORMAT, UniqueYoutubeDL, _base_opts, _unique_path, clean_error_message
+
+INSTAGRAM_MEDIA_KEY = "instagram_media"
+# Fragments of yt-dlp errors for posts that need a logged-in session (age gate, private account).
+LOGIN_HINTS = ("--cookies", "available to everyone", "login page", "logged-in")
+THUMB_WIDTH = 360
+THUMB_WORKERS = 6
+CHUNK = 256 * 1024
+PAGE_SIZE = 33
+PAGE_DELAY_S = 1.5  # between profile pages, to stay under Instagram's rate limit
+LISTING_TTL_S = 20 * 60  # media URLs from a check stay valid for a while; downloads reuse them
+REFERER = {"Referer": "https://www.instagram.com/"}
+
+STORY_RE = re.compile(r"https?://(?:www\.)?instagram\.com/stories/(?P<user>[^/?#]+)(?:/(?P<id>\d+))?")
+PROFILE_RE = re.compile(r"https?://(?:www\.)?instagram\.com/(?P<user>[A-Za-z0-9._]{1,30})/?(?:(?:reels|tagged)/?)?(?:[?#]|$)")
+RESERVED_PATHS = {"p", "reel", "reels", "tv", "stories", "explore", "accounts", "direct", "about", "developer", "legal", "web", "api"}
+
+
+def _largest(candidates: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    return max(candidates, key=lambda c: (c.get("width") or 0) * (c.get("height") or 0), default=None)
+
+
+def _thumb_candidate(candidates: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """Smallest image at least ``THUMB_WIDTH`` wide, so the preview does not fetch the full photo."""
+    wide = [c for c in candidates if (c.get("width") or 0) >= THUMB_WIDTH]
+    return min(wide, key=lambda c: c.get("width") or 0) if wide else _largest(candidates)
+
+
+def _slide(media: Dict[str, Any]) -> Dict[str, Any]:
+    images = traverse_obj(media, ("image_versions2", "candidates", lambda _, v: url_or_none(v["url"])))
+    videos = traverse_obj(media, ("video_versions", lambda _, v: url_or_none(v["url"])))
+    best = _largest(videos) or _largest(images) or {}
+    return {
+        "kind": "video" if videos else "image",
+        "url": best.get("url"),
+        "width": media.get("original_width") or best.get("width"),
+        "height": media.get("original_height") or best.get("height"),
+        "duration": media.get("video_duration"),
+        "thumbnail": (_thumb_candidate(images) or {}).get("url"),
+    }
+
+
+def _slides(ie: InstagramBaseIE, product: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Every slide of a post in order. Video slides also carry yt-dlp ``formats``: the direct
+    ``url`` is often a lower resolution than DASH."""
+    slides = []
+    for media in traverse_obj(product, ("carousel_media", ..., {dict})) or [product]:
+        slide = _slide(media)
+        if slide["kind"] == "video":
+            slide["formats"] = ie._extract_product_media(media)["formats"]
+        if slide["url"]:
+            slides.append(slide)
+    return slides
+
+
+class InstagramPostIE(InstagramIE):
+    """Instagram post that keeps its photos; yt-dlp extracts only the videos and rejects photo posts.
+
+    The result is always a playlist whose ``INSTAGRAM_MEDIA_KEY`` lists every slide in order.
+    """
+
+    def _extract_product(self, product_info: Any, video_id: Optional[str] = None, get_comments: bool = True) -> Dict[str, Any]:
+        info = super()._extract_product(product_info, video_id, get_comments=False)
+        if isinstance(product_info, list):
+            product_info = product_info[0]
+        return {
+            **info,
+            "_type": "playlist",
+            "entries": info.get("entries") or [],
+            "shortcode": video_id or info.get("id"),
+            INSTAGRAM_MEDIA_KEY: _slides(self, product_info),
+        }
+
+
+class InstagramFeedIE(InstagramBaseIE):
+    """Client for the story and profile feed APIs; called directly, never matched by URL."""
+
+    IE_NAME = "instagram:feed"
+    _VALID_URL = r"(?!)"
+
+    def _api(self, path: str, referer: str, **query: Any) -> Dict[str, Any]:
+        csrf = self._get_cookies(self._BASE_URL).get("csrftoken")
+        headers = filter_dict({
+            **self._api_headers,
+            "X-CSRFToken": csrf.value if csrf else None,
+            "X-Requested-With": "XMLHttpRequest",
+            "Referer": referer,
+        })
+        return self._download_json(
+            f"{self._API_BASE_URL}/{path}", path, note=False, headers=headers, query=query,
+            impersonate=self._can_impersonate,
+        )
+
+    def user_id(self, username: str) -> str:
+        profile_url = f"{self._BASE_URL}{username}/"
+        page, urlh = self._download_webpage_handle(profile_url, username, note=False, impersonate=self._can_impersonate)
+        if self._is_login_redirect(urlh.url):
+            raise RuntimeError("instagram.error.loginRequired")
+        user_id = self._search_regex(
+            (r'"profile_id":"(\d+)"', r'"page_id":"profilePage_(\d+)"'), page, "user id", default=None)
+        if not user_id:
+            info = self._api("users/web_profile_info/", profile_url, username=username)
+            user_id = traverse_obj(info, ("data", "user", "id", {str}))
+        if not user_id:
+            raise RuntimeError("instagram.error.noUser")
+        return user_id
+
+    def reel_items(self, reel_id: str, referer: str) -> List[Dict[str, Any]]:
+        """Items of a user's current stories (``reel_id`` = user id) or of a highlight (``highlight:<id>``)."""
+        data = self._api("feed/reels_media/", referer, reel_ids=reel_id)
+        return traverse_obj(data, ("reels", reel_id, "items", ..., {dict})) or []
+
+    def posts(self, user_id: str, referer: str) -> Iterator[List[Dict[str, Any]]]:
+        """Pages of a profile's posts, newest first."""
+        max_id = None
+        while True:
+            data = self._api(f"feed/user/{user_id}/", referer, **filter_dict({"count": PAGE_SIZE, "max_id": max_id}))
+            yield traverse_obj(data, ("items", ..., {dict})) or []
+            max_id = data.get("next_max_id")
+            if not data.get("more_available") or not max_id:
+                return
+            time.sleep(PAGE_DELAY_S)
+
+
+def parse_url(url: str) -> Tuple[str, Dict[str, Optional[str]]]:
+    """``("post" | "stories" | "highlight" | "profile", parts)`` for a supported Instagram link."""
+    url = url.strip()
+    if InstagramPostIE.suitable(url):
+        return "post", {}
+    story = STORY_RE.match(url)
+    if story:
+        if story["user"] == "highlights":
+            if story["id"]:
+                return "highlight", {"id": story["id"]}
+        else:
+            return "stories", {"user": story["user"], "id": story["id"]}
+    profile = PROFILE_RE.match(url)
+    if profile and profile["user"].lower() not in RESERVED_PATHS:
+        return "profile", {"user": profile["user"]}
+    raise RuntimeError("instagram.error.notSupported")
+
+
+def _stem(*parts: Optional[str]) -> str:
+    return sanitize_filename("_".join(filter(None, parts))) or "instagram"
+
+
+def _extract_post(ydl: yt_dlp.YoutubeDL, url: str) -> Dict[str, Any]:
+    ie = InstagramPostIE()
+    ydl.add_info_extractor(ie)
+    info = ydl.extract_info(url, ie_key=ie.ie_key(), download=False, process=False)
+    if not info or not info.get(INSTAGRAM_MEDIA_KEY):
+        raise RuntimeError("instagram.error.noMedia")
+    return info
+
+
+def _list(
+    ydl: yt_dlp.YoutubeDL, url: str, on_page: Callable[[List[Dict[str, Any]]], None]
+) -> Dict[str, Any]:
+    """Everything a link points to as entries (one file group each): ``{"kind", "uploader", "subdir", "entries"}``.
+
+    A post lists its slides; stories list story items; a profile lists its posts, reported page by page.
+    """
+    kind, parts = parse_url(url)
+    if kind == "post":
+        info = _extract_post(ydl, url)
+        user, slides = info.get("channel"), info[INSTAGRAM_MEDIA_KEY]
+        base = _stem(user, info.get("shortcode"))
+        entries = [
+            {"stem": f"{base}_{n}" if len(slides) > 1 else base, "slides": [slide]} for n, slide in enumerate(slides, 1)
+        ]
+        on_page(entries)
+        return {"kind": kind, "uploader": user or "", "subdir": None, "entries": entries}
+
+    ie = InstagramFeedIE(ydl)
+    ie.initialize()
+    if not ie._is_logged_in:
+        raise RuntimeError("instagram.error.loginRequired")
+
+    def story_entries(items: List[Dict[str, Any]], user: Optional[str]) -> List[Dict[str, Any]]:
+        entries = [
+            {"stem": _stem(user, "story", str(item.get("pk") or "")), "slides": _slides(ie, item), "pk": str(item.get("pk"))}
+            for item in items
+        ]
+        return [e for e in entries if e["slides"]]
+
+    if kind == "highlight":
+        items = ie.reel_items(f"highlight:{parts['id']}", url)
+        user = traverse_obj(items, (0, "user", "username", {str}))
+        entries = story_entries(items, user)
+        if not entries:
+            raise RuntimeError("instagram.error.noMedia")
+        on_page(entries)
+        return {"kind": "stories", "uploader": user or "", "subdir": None, "entries": entries}
+
+    user = parts["user"]
+    user_id = ie.user_id(user)
+    if kind == "stories":
+        entries = story_entries(ie.reel_items(user_id, url), user)
+        if not entries:
+            raise RuntimeError("instagram.error.noStories")
+        if parts["id"]:
+            if not any(e["pk"] == parts["id"] for e in entries):
+                raise RuntimeError("instagram.error.storyExpired")
+            for e in entries:
+                e["selected"] = e["pk"] == parts["id"]
+        on_page(entries)
+        return {"kind": kind, "uploader": user, "subdir": None, "entries": entries}
+
+    entries = []
+    for page in ie.posts(user_id, f"{ie._BASE_URL}{user}/"):
+        new = [{"stem": _stem(user, media.get("code")), "slides": _slides(ie, media)} for media in page]
+        new = [e for e in new if e["slides"]]
+        entries.extend(new)
+        on_page(new)
+    if not entries:
+        raise RuntimeError("instagram.error.noPosts")
+    return {"kind": kind, "uploader": user, "subdir": user, "entries": entries}
+
+
+def _opts(url: str, cookies: Dict[str, Optional[str]]) -> Dict[str, Any]:
+    opts = _base_opts(url, cookies)
+    opts.pop("sleep_interval_requests", None)
+    return opts
+
+
+def _wrap_errors(ctx: JobContext, exc: Exception) -> Exception:
+    if isinstance(exc, JobCancelled) or ctx.cancelled:
+        return JobCancelled()
+    message = clean_error_message(str(exc))
+    if "HTTP Error 429" in message:
+        return RuntimeError("instagram.error.rateLimited")
+    if any(hint in message for hint in LOGIN_HINTS):
+        return RuntimeError("instagram.error.loginRequired")
+    return RuntimeError(message)
+
+
+def _thumbnail(url: Optional[str]) -> Optional[str]:
+    if not url:
+        return None
+    try:
+        import requests
+
+        resp = requests.get(url, headers=REFERER, timeout=10)
+        if resp.status_code == 200 and resp.content:
+            return thumbs.to_data_url(resp.content, (THUMB_WIDTH, THUMB_WIDTH))
+    except Exception:  # noqa: BLE001 - a missing thumbnail is not an error
+        pass
+    return None
+
+
+def _item(index: int, entry: Dict[str, Any], thumbnail: Optional[str]) -> Dict[str, Any]:
+    slides = entry["slides"]
+    first = slides[0]
+    return {
+        "index": index,
+        "kind": "carousel" if len(slides) > 1 else first["kind"],
+        "count": len(slides),
+        "width": first["width"],
+        "height": first["height"],
+        "duration": first["duration"],
+        "thumbnail": thumbnail,
+        "selected": entry.get("selected", True),
+    }
+
+
+_listings: Dict[str, Tuple[float, Dict[str, Any]]] = {}
+
+
+def probe(ctx: JobContext, url: str, cookies: Dict[str, Optional[str]]) -> Dict[str, Any]:
+    url = url.strip()
+    parse_url(url)
+    ctx.progress(None, "instagram.status.probing")
+    items: List[Dict[str, Any]] = []
+
+    def on_page(entries: List[Dict[str, Any]]) -> None:
+        ctx.check_cancelled()
+        with ThreadPoolExecutor(THUMB_WORKERS) as pool:
+            previews = list(pool.map(_thumbnail, (e["slides"][0]["thumbnail"] for e in entries)))
+        for entry, preview in zip(entries, previews):
+            item = _item(len(items), entry, preview)
+            items.append(item)
+            ctx.partial(item)
+        ctx.progress(None, "instagram.status.listing", {"count": len(items)})
+
+    try:
+        with yt_dlp.YoutubeDL(_opts(url, cookies)) as ydl:
+            listing = _list(ydl, url, on_page)
+    except Exception as exc:
+        raise _wrap_errors(ctx, exc) from exc
+    _listings[url] = (time.monotonic(), listing)
+    ctx.progress(100, "instagram.status.probed")
+    return {"url": url, "kind": listing["kind"], "uploader": listing["uploader"], "items": items}
+
+
+def _save(ctx: JobContext, ydl: yt_dlp.YoutubeDL, slide: Dict[str, Any], base: Path, on_bytes: Any) -> Path:
+    with ydl.urlopen(Request(slide["url"], headers=REFERER)) as resp:
+        default_ext = "mp4" if slide["kind"] == "video" else "jpg"
+        ext = mimetype2ext(resp.headers.get("Content-Type")) or default_ext
+        path = _unique_path(base.with_name(f"{base.name}.{ext}"))
+        total = int(resp.headers.get("Content-Length") or 0)
+        part = path.with_name(path.name + ".part")
+        done = 0
+        try:
+            with part.open("wb") as fh:
+                while chunk := resp.read(CHUNK):
+                    ctx.check_cancelled()
+                    fh.write(chunk)
+                    done += len(chunk)
+                    on_bytes(done, total)
+            part.replace(path)
+        finally:
+            part.unlink(missing_ok=True)
+    return path
+
+
+def _save_video(ctx: JobContext, opts: Dict[str, Any], slide: Dict[str, Any], base: Path, on_bytes: Any) -> Path:
+    """Best video + audio through yt-dlp, merged to mp4 when Instagram serves them apart."""
+
+    def hook(d: Dict[str, Any]) -> None:
+        if ctx.cancelled:
+            raise JobCancelled()
+        if d.get("status") == "downloading":
+            on_bytes(d.get("downloaded_bytes") or 0, d.get("total_bytes") or d.get("total_bytes_estimate") or 0)
+
+    video_opts = {
+        **opts,
+        "format": AUTO_FORMAT,
+        "merge_output_format": "mp4",
+        "noprogress": True,
+        "outtmpl": f"{base}.%(ext)s",
+        "progress_hooks": [hook],
+    }
+    with UniqueYoutubeDL(video_opts, target_ext="mp4") as ydl:
+        info = ydl.process_ie_result(
+            {"id": base.name, "title": base.name, "formats": slide["formats"], "http_headers": REFERER},
+            download=True,
+        )
+        return Path(info.get("filepath") or ydl.prepare_filename(info))
+
+
+def download(
+    ctx: JobContext,
+    url: str,
+    outdir: str,
+    indices: Optional[List[int]] = None,
+    cookies: Optional[Dict[str, Optional[str]]] = None,
+) -> Dict[str, Any]:
+    """Save the chosen items of a link (all of them when ``indices`` is empty).
+
+    A profile goes into a sub-folder named after the account. When several items are saved, a
+    failed one is logged and skipped; Instagram's rate limit stops the whole job.
+    """
+    t0 = time.monotonic()
+    url = url.strip()
+    ctx.progress(None, "instagram.status.probing")
+    files: List[str] = []
+    file_items: List[int] = []
+    failed = 0
+    size = 0
+    try:
+        opts = _opts(url, cookies or {})
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            cached = _listings.get(url)
+            if cached and time.monotonic() - cached[0] < LISTING_TTL_S:
+                listing = cached[1]
+            else:
+                listing = _list(ydl, url, lambda entries: ctx.check_cancelled())
+            entries = listing["entries"]
+            out = Path(outdir).expanduser()
+            if listing["subdir"]:
+                out = out / sanitize_filename(listing["subdir"])
+            out.mkdir(parents=True, exist_ok=True)
+            chosen = sorted({i for i in (indices or range(len(entries))) if 0 <= i < len(entries)})
+            for position, index in enumerate(chosen):
+                ctx.check_cancelled()
+                entry = entries[index]
+                slides = entry["slides"]
+                params = {"current": position + 1, "count": len(chosen)}
+                try:
+                    for number, slide in enumerate(slides, 1):
+
+                        def on_bytes(done: int, total: int, number: int = number) -> None:
+                            fraction = (number - 1 + (done / total if total else 0)) / len(slides)
+                            ctx.progress((position + fraction) * 100 / len(chosen), "instagram.status.downloading", params)
+
+                        on_bytes(0, 0)
+                        base = out / (entry["stem"] if len(slides) == 1 else f"{entry['stem']}_{number}")
+                        if slide.get("formats"):
+                            path = _save_video(ctx, opts, slide, base, on_bytes)
+                        else:
+                            path = _save(ctx, ydl, slide, base, on_bytes)
+                        files.append(str(path))
+                        file_items.append(index)
+                        size += path.stat().st_size
+                except JobCancelled:
+                    raise
+                except Exception as exc:
+                    error = clean_error_message(str(exc))
+                    if len(chosen) == 1 or "HTTP Error 429" in error:
+                        raise
+                    failed += 1
+                    ctx.log("instagram.log.itemFailed", "error", name=entry["stem"], error=error)
+    except Exception as exc:
+        raise _wrap_errors(ctx, exc) from exc
+    ctx.progress(100, "instagram.status.done")
+    return {
+        "files": files,
+        "indices": file_items,
+        "failed": failed,
+        "size": size,
+        "duration": round(time.monotonic() - t0, 1),
+        "outdir": str(out),
+    }

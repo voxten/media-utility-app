@@ -5,6 +5,11 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   base: "./",
   plugins: [react()],
-  server: { port: 5173, strictPort: true },
+  server: {
+    port: 5173,
+    strictPort: true,
+    // The in-app "What's new" dialog bundles the changelogs from the repository root.
+    fs: { allow: [".", "../CHANGELOG.md", "../CHANGELOG.pl.md"] },
+  },
   build: { outDir: "dist", emptyOutDir: true, chunkSizeWarningLimit: 2000 },
 });

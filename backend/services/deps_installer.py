@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 
 LAMA_MODEL_URL = "https://github.com/Sanster/models/releases/download/add_big_lama/big-lama.pt"
 FFMPEG_WINDOWS_URL = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
+GIFSICLE_WINDOWS_URL = "https://eternallybored.org/misc/gifsicle/releases/gifsicle-1.97-win64.zip"
 
 
 def _download_file_with_progress(
@@ -293,12 +294,57 @@ def install_rembg(ctx: JobContext) -> Dict[str, Any]:
     return {"id": "rembg", "ok": True}
 
 
+def install_gifsicle(ctx: JobContext) -> Dict[str, Any]:
+    """Downloads the portable gifsicle build on Windows and places it into %APPDATA%/MediaStudio/bin."""
+    bin_dir = app_data_dir() / "bin"
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    target = bin_dir / "gifsicle.exe"
+
+    if shutil.which("gifsicle") or target.is_file():
+        ensure_app_paths()
+        ctx.progress(100, "deps.status.done")
+        return {"id": "gifsicle", "ok": True}
+
+    zip_path = cache_dir() / "gifsicle.zip"
+    ctx.progress(5, "deps.status.downloadingGifsicle", {"percent": 0})
+    ctx.log("deps.log.downloadingGifsicle")
+
+    _download_file_with_progress(
+        ctx,
+        url=GIFSICLE_WINDOWS_URL,
+        target_path=zip_path,
+        status_key="deps.status.downloadingGifsicle",
+        progress_start=5,
+        progress_span=85,
+    )
+
+    try:
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            for member in zf.namelist():
+                if Path(member).name.lower() == "gifsicle.exe":
+                    with zf.open(member) as source, target.open("wb") as out:
+                        shutil.copyfileobj(source, out)
+                    break
+    finally:
+        zip_path.unlink(missing_ok=True)
+
+    ensure_app_paths()
+    if not target.is_file():
+        raise RuntimeError("gifsicle.exe was not found inside the downloaded archive")
+
+    ctx.progress(100, "deps.status.done")
+    ctx.log("deps.log.gifsicleInstalled")
+    return {"id": "gifsicle", "ok": True}
+
+
 def install_dependency(ctx: JobContext, dep_id: str) -> Dict[str, Any]:
     """Entry point for installing a background dependency."""
     if dep_id == "lama":
         return install_lama(ctx)
     if dep_id == "ffmpeg":
         return install_ffmpeg(ctx)
+    if dep_id == "gifsicle":
+        return install_gifsicle(ctx)
     if dep_id == "rembg":
         return install_rembg(ctx)
     if dep_id in UPSCALE_MODELS:
