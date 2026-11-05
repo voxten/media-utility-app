@@ -361,6 +361,7 @@ export function createMockBackend(emit: Emit) {
       save: (_r: string, out: string) => ok(out),
     },
     instagram: {
+      stop: () => ok(true),
       probe: (url: string) => {
         const profile = !/\/(p|reels?|stories)\//.test(url);
         return simulateJob("instagram.probe", url, {

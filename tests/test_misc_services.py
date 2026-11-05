@@ -17,7 +17,7 @@ def test_settings_defaults_persist_and_deep_merge(tmp_path):
     s.update({"theme": "dark", "cookies": {"youtube": "C:/c.txt"}})
     reloaded = Settings(path)
     assert reloaded.get("theme") == "dark"
-    assert reloaded.get("cookies") == {"youtube": "C:/c.txt", "x": ""}
+    assert reloaded.get("cookies") == {"youtube": "C:/c.txt", "x": "", "instagram": ""}
 
 
 def test_settings_recent_folders_dedup(tmp_path):

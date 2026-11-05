@@ -342,6 +342,10 @@ class InstagramApi(_Namespace):
         cookies = self._ctx.settings.cookie_files()
         return self._ctx.jobs.submit("instagram.probe", lambda ctx: instagram.probe(ctx, url, cookies), title=url)
 
+    def stop(self, job_id: str) -> bool:
+        instagram.stop_listing(job_id)
+        return True
+
     def start(self, params: Dict[str, Any]) -> str:
         cookies = self._ctx.settings.cookie_files()
         return self._ctx.jobs.submit(

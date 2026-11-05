@@ -134,7 +134,7 @@
       "x": "X (Twitter)",
       "instagram": "Instagram"
     },
-    "cookiesHint": "Pozostaw puste, aby użyć pliku z folderu cookies/ (jeśli istnieje).",
+    "cookiesHint": "Pozostaw puste, aby użyć pliku z %APPDATA%\\MediaStudio\\cookies (x.com_cookies.txt, youtube_cookies.txt, instagram_cookies.txt).",
     "dependencies": "Zależności",
     "deps": {
       "ffmpeg": "FFmpeg",
@@ -639,6 +639,9 @@
     "log": {
       "itemFailed": "Nie udało się pobrać {{url}}: {{error}}"
     },
+    "error": {
+      "xLoginRequired": "X udostępnia filmy tylko zalogowanym. Dodaj plik cookies X w Ustawieniach → Pliki cookies i spróbuj ponownie."
+    },
     "single": "Pojedynczy link",
     "batch": "Kolejka",
     "urlPlaceholder": "Wklej link do filmu z YouTube, X lub innego serwisu…",
@@ -1032,6 +1035,8 @@
     "emptyBody": "Zdjęcia, filmy i wszystkie slajdy karuzeli zapisują się w pełnej jakości. Relacje i całe profile wymagają pliku cookies Instagrama.",
     "selectAll": "Zaznacz wszystko",
     "selectNone": "Odznacz wszystko",
+    "stop": "Zatrzymaj",
+    "stopHint": "Kończy wczytywanie i zostawia posty wczytane do tej pory. Anuluj je odrzuca.",
     "photoN": "Zdjęcie {{n}}",
     "videoN": "Film {{n}}",
     "downloadCount_one": "Pobierz {{count}} plik",

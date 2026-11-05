@@ -1,6 +1,7 @@
 # Runtime dependencies (native window + backend services).
 pywebview
 yt-dlp[default,curl-cffi]>=2026.8.19  # yt-dlp-ejs for YouTube JS challenges, curl_cffi for TikTok impersonation
+gallery-dl>=1.32.19  # Instagram stories and profile feeds (GraphQL)
 requests
 Pillow
 PyMuPDF

@@ -4,16 +4,23 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import re
 import time
-from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 import yt_dlp
 from yt_dlp.extractor.instagram import InstagramBaseIE, InstagramIE
 from yt_dlp.networking import Request
-from yt_dlp.utils import filter_dict, mimetype2ext, sanitize_filename, traverse_obj, url_or_none
+from yt_dlp.utils import mimetype2ext, sanitize_filename, traverse_obj, url_or_none
 
 from backend.core import thumbs
 from backend.core.jobs import JobCancelled, JobContext
-from backend.services.download import AUTO_FORMAT, UniqueYoutubeDL, _base_opts, _unique_path, clean_error_message
+from backend.services.download import (
+    AUTO_FORMAT,
+    UniqueYoutubeDL,
+    _base_opts,
+    _unique_path,
+    clean_error_message,
+    cookie_file_for,
+)
 
 INSTAGRAM_MEDIA_KEY = "instagram_media"
 # Fragments of yt-dlp errors for posts that need a logged-in session (age gate, private account).
@@ -21,8 +28,7 @@ LOGIN_HINTS = ("--cookies", "available to everyone", "login page", "logged-in")
 THUMB_WIDTH = 360
 THUMB_WORKERS = 6
 CHUNK = 256 * 1024
-PAGE_SIZE = 33
-PAGE_DELAY_S = 1.5  # between profile pages, to stay under Instagram's rate limit
+PROFILE_BATCH = 12  # profile posts shown per update while the feed loads
 LISTING_TTL_S = 20 * 60  # media URLs from a check stay valid for a while; downloads reuse them
 REFERER = {"Referer": "https://www.instagram.com/"}
 
@@ -87,54 +93,31 @@ class InstagramPostIE(InstagramIE):
         }
 
 
-class InstagramFeedIE(InstagramBaseIE):
-    """Client for the story and profile feed APIs; called directly, never matched by URL."""
+def _feed_extractor(url: str, cookie_file: Optional[str]) -> Any:
+    """gallery-dl's Instagram extractor for a stories or ``/<user>/posts/`` link, logged in from ``cookie_file``.
 
-    IE_NAME = "instagram:feed"
-    _VALID_URL = r"(?!)"
+    Instagram serves stories and profile feeds through GraphQL queries that change often; gallery-dl
+    keeps up with them, while the REST endpoints yt-dlp uses answer 404/500. Its own pacing between
+    requests keeps long profiles under the rate limit.
+    """
+    from gallery_dl import config as gdl_config
+    from gallery_dl.extractor import instagram as gdl_instagram
 
-    def _api(self, path: str, referer: str, **query: Any) -> Dict[str, Any]:
-        csrf = self._get_cookies(self._BASE_URL).get("csrftoken")
-        headers = filter_dict({
-            **self._api_headers,
-            "X-CSRFToken": csrf.value if csrf else None,
-            "X-Requested-With": "XMLHttpRequest",
-            "Referer": referer,
-        })
-        return self._download_json(
-            f"{self._API_BASE_URL}/{path}", path, note=False, headers=headers, query=query,
-            impersonate=self._can_impersonate,
-        )
-
-    def user_id(self, username: str) -> str:
-        profile_url = f"{self._BASE_URL}{username}/"
-        page, urlh = self._download_webpage_handle(profile_url, username, note=False, impersonate=self._can_impersonate)
-        if self._is_login_redirect(urlh.url):
-            raise RuntimeError("instagram.error.loginRequired")
-        user_id = self._search_regex(
-            (r'"profile_id":"(\d+)"', r'"page_id":"profilePage_(\d+)"'), page, "user id", default=None)
-        if not user_id:
-            info = self._api("users/web_profile_info/", profile_url, username=username)
-            user_id = traverse_obj(info, ("data", "user", "id", {str}))
-        if not user_id:
-            raise RuntimeError("instagram.error.noUser")
-        return user_id
-
-    def reel_items(self, reel_id: str, referer: str) -> List[Dict[str, Any]]:
-        """Items of a user's current stories (``reel_id`` = user id) or of a highlight (``highlight:<id>``)."""
-        data = self._api("feed/reels_media/", referer, reel_ids=reel_id)
-        return traverse_obj(data, ("reels", reel_id, "items", ..., {dict})) or []
-
-    def posts(self, user_id: str, referer: str) -> Iterator[List[Dict[str, Any]]]:
-        """Pages of a profile's posts, newest first."""
-        max_id = None
-        while True:
-            data = self._api(f"feed/user/{user_id}/", referer, **filter_dict({"count": PAGE_SIZE, "max_id": max_id}))
-            yield traverse_obj(data, ("items", ..., {dict})) or []
-            max_id = data.get("next_max_id")
-            if not data.get("more_available") or not max_id:
-                return
-            time.sleep(PAGE_DELAY_S)
+    if not cookie_file:
+        raise RuntimeError("instagram.error.loginRequired")
+    gdl_config.clear()
+    gdl_config.set(("extractor",), "cookies", cookie_file)
+    gdl_config.set(("extractor",), "cookies-update", False)
+    for cls in (gdl_instagram.InstagramStoriesExtractor, gdl_instagram.InstagramPostsExtractor):
+        pattern = re.compile(cls.pattern) if isinstance(cls.pattern, str) else cls.pattern
+        if match := pattern.match(url):
+            extractor = cls(match)
+            extractor.initialize()
+            extractor.login()
+            if not extractor._logged_in:
+                raise RuntimeError("instagram.error.loginRequired")
+            return extractor
+    raise RuntimeError("instagram.error.notSupported")
 
 
 def parse_url(url: str) -> Tuple[str, Dict[str, Optional[str]]]:
@@ -169,11 +152,16 @@ def _extract_post(ydl: yt_dlp.YoutubeDL, url: str) -> Dict[str, Any]:
 
 
 def _list(
-    ydl: yt_dlp.YoutubeDL, url: str, on_page: Callable[[List[Dict[str, Any]]], None]
+    ydl: yt_dlp.YoutubeDL,
+    url: str,
+    cookie_file: Optional[str],
+    on_page: Callable[[List[Dict[str, Any]]], None],
+    should_stop: Callable[[], bool] = lambda: False,
 ) -> Dict[str, Any]:
     """Everything a link points to as entries (one file group each): ``{"kind", "uploader", "subdir", "entries"}``.
 
-    A post lists its slides; stories list story items; a profile lists its posts, reported page by page.
+    A post lists its slides; stories list story items; a profile lists its posts, reported page by
+    page, and ends early with what it has once ``should_stop`` returns True.
     """
     kind, parts = parse_url(url)
     if kind == "post":
@@ -186,47 +174,51 @@ def _list(
         on_page(entries)
         return {"kind": kind, "uploader": user or "", "subdir": None, "entries": entries}
 
-    ie = InstagramFeedIE(ydl)
-    ie.initialize()
-    if not ie._is_logged_in:
-        raise RuntimeError("instagram.error.loginRequired")
+    parser = InstagramPostIE(ydl)
 
-    def story_entries(items: List[Dict[str, Any]], user: Optional[str]) -> List[Dict[str, Any]]:
-        entries = [
-            {"stem": _stem(user, "story", str(item.get("pk") or "")), "slides": _slides(ie, item), "pk": str(item.get("pk"))}
-            for item in items
-        ]
-        return [e for e in entries if e["slides"]]
-
-    if kind == "highlight":
-        items = ie.reel_items(f"highlight:{parts['id']}", url)
-        user = traverse_obj(items, (0, "user", "username", {str}))
-        entries = story_entries(items, user)
+    if kind in ("stories", "highlight"):
+        user = parts.get("user")
+        reel_url = (
+            f"https://www.instagram.com/stories/highlights/{parts['id']}/"
+            if kind == "highlight"
+            else f"https://www.instagram.com/stories/{user}/"
+        )
+        reels = list(_feed_extractor(reel_url, cookie_file).posts())
+        user = user or traverse_obj(reels, (0, "user", "username", {str}))
+        entries = []
+        for item in traverse_obj(reels, (0, "items", ..., {dict})) or []:
+            pk = str(item.get("pk") or "")
+            if slides := _slides(parser, item):
+                entries.append({"stem": _stem(user, "story", pk), "slides": slides, "pk": pk})
         if not entries:
-            raise RuntimeError("instagram.error.noMedia")
-        on_page(entries)
-        return {"kind": "stories", "uploader": user or "", "subdir": None, "entries": entries}
-
-    user = parts["user"]
-    user_id = ie.user_id(user)
-    if kind == "stories":
-        entries = story_entries(ie.reel_items(user_id, url), user)
-        if not entries:
-            raise RuntimeError("instagram.error.noStories")
-        if parts["id"]:
+            raise RuntimeError("instagram.error.noStories" if kind == "stories" else "instagram.error.noMedia")
+        if parts.get("id") and kind == "stories":
             if not any(e["pk"] == parts["id"] for e in entries):
                 raise RuntimeError("instagram.error.storyExpired")
             for e in entries:
                 e["selected"] = e["pk"] == parts["id"]
         on_page(entries)
-        return {"kind": kind, "uploader": user, "subdir": None, "entries": entries}
+        return {"kind": "stories", "uploader": user or "", "subdir": None, "entries": entries}
 
-    entries = []
-    for page in ie.posts(user_id, f"{ie._BASE_URL}{user}/"):
-        new = [{"stem": _stem(user, media.get("code")), "slides": _slides(ie, media)} for media in page]
-        new = [e for e in new if e["slides"]]
-        entries.extend(new)
-        on_page(new)
+    user = parts["user"]
+    entries: List[Dict[str, Any]] = []
+    batch: List[Dict[str, Any]] = []
+    seen = set()
+    for media in _feed_extractor(f"https://www.instagram.com/{user}/posts/", cookie_file).posts():
+        code = media.get("code")
+        if code not in seen:
+            seen.add(code)
+            if slides := _slides(parser, media):
+                batch.append({"stem": _stem(user, code), "slides": slides})
+            if len(batch) >= PROFILE_BATCH:
+                entries.extend(batch)
+                on_page(batch)
+                batch = []
+        # Checked after each post so a stop never waits for the next page request.
+        if should_stop():
+            break
+    entries.extend(batch)
+    on_page(batch)
     if not entries:
         raise RuntimeError("instagram.error.noPosts")
     return {"kind": kind, "uploader": user, "subdir": user, "entries": entries}
@@ -241,6 +233,14 @@ def _opts(url: str, cookies: Dict[str, Optional[str]]) -> Dict[str, Any]:
 def _wrap_errors(ctx: JobContext, exc: Exception) -> Exception:
     if isinstance(exc, JobCancelled) or ctx.cancelled:
         return JobCancelled()
+    from gallery_dl import exception as gdl_exception
+
+    if isinstance(exc, gdl_exception.HttpError) and exc.status == 429:
+        return RuntimeError("instagram.error.rateLimited")
+    if isinstance(exc, gdl_exception.AuthorizationError):
+        return RuntimeError("instagram.error.loginRequired")
+    if isinstance(exc, gdl_exception.NotFoundError):
+        return RuntimeError("instagram.error.noUser")
     message = clean_error_message(str(exc))
     if "HTTP Error 429" in message:
         return RuntimeError("instagram.error.rateLimited")
@@ -279,6 +279,12 @@ def _item(index: int, entry: Dict[str, Any], thumbnail: Optional[str]) -> Dict[s
 
 
 _listings: Dict[str, Tuple[float, Dict[str, Any]]] = {}
+_stop_requests: Set[str] = set()
+
+
+def stop_listing(job_id: str) -> None:
+    """Finish a running profile check with the posts loaded so far (cancelling discards them)."""
+    _stop_requests.add(job_id)
 
 
 def probe(ctx: JobContext, url: str, cookies: Dict[str, Optional[str]]) -> Dict[str, Any]:
@@ -299,9 +305,13 @@ def probe(ctx: JobContext, url: str, cookies: Dict[str, Optional[str]]) -> Dict[
 
     try:
         with yt_dlp.YoutubeDL(_opts(url, cookies)) as ydl:
-            listing = _list(ydl, url, on_page)
+            listing = _list(
+                ydl, url, cookie_file_for(url, cookies), on_page, lambda: ctx.job_id in _stop_requests
+            )
     except Exception as exc:
         raise _wrap_errors(ctx, exc) from exc
+    finally:
+        _stop_requests.discard(ctx.job_id)
     _listings[url] = (time.monotonic(), listing)
     ctx.progress(100, "instagram.status.probed")
     return {"url": url, "kind": listing["kind"], "uploader": listing["uploader"], "items": items}
@@ -379,7 +389,7 @@ def download(
             if cached and time.monotonic() - cached[0] < LISTING_TTL_S:
                 listing = cached[1]
             else:
-                listing = _list(ydl, url, lambda entries: ctx.check_cancelled())
+                listing = _list(ydl, url, cookie_file_for(url, cookies or {}), lambda entries: ctx.check_cancelled())
             entries = listing["entries"]
             out = Path(outdir).expanduser()
             if listing["subdir"]:

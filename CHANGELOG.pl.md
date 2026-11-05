@@ -2,6 +2,24 @@
 
 Polskie tłumaczenie [CHANGELOG.md](CHANGELOG.md), pokazywane w aplikacji przy polskim języku. Każde wydanie trzeba dopisać w obu plikach.
 
+## [0.12.0] - 2026-11-05
+
+### Dodano
+
+- **Pobieranie z Instagrama:** „Zatrzymaj” podczas wczytywania profilu zachowuje dotąd znalezione posty, więc długiego profilu nie trzeba już wczytywać w całości przed zapisem.
+
+### Zmieniono
+
+- **Pobieranie z Instagrama:** relacje, wyróżnione relacje i profile wczytują się przez gallery-dl, który nadąża za aktualnymi kanałami GraphQL Instagrama; profil pokazuje posty partiami w trakcie wczytywania.
+- **Ustawienia → Pliki cookies:** podpowiedź wskazuje folder, z którego zainstalowana aplikacja czyta pliki cookies, gdy ścieżka jest pusta (`%APPDATA%\MediaStudio\cookies`).
+
+### Naprawiono
+
+- **Pobieranie z Instagrama:** relacje, wyróżnione relacje i całe profile znów się pobierają (Instagram wyłączył kanały, z których korzystało narzędzie).
+- **Pobieranie wideo:** post z X, który nie pobiera się z powodu braku pliku cookies X, pokazuje o tym komunikat ze wskazaniem Ustawień → Pliki cookies zamiast „No video could be found in this tweet”. Nieudane pozycje kolejki pokazują przetłumaczone błędy.
+
+---
+
 ## [0.11.0] - 2026-11-04
 
 ### Dodano

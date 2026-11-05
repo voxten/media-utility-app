@@ -132,7 +132,7 @@
       "x": "X (Twitter)",
       "instagram": "Instagram"
     },
-    "cookiesHint": "Leave empty to use the file in cookies/ (if present).",
+    "cookiesHint": "Leave empty to use a file from %APPDATA%\\MediaStudio\\cookies (x.com_cookies.txt, youtube_cookies.txt, instagram_cookies.txt).",
     "dependencies": "Dependencies",
     "deps": {
       "ffmpeg": "FFmpeg",
@@ -589,6 +589,9 @@
     "log": {
       "itemFailed": "Failed to download {{url}}: {{error}}"
     },
+    "error": {
+      "xLoginRequired": "X shares videos only with signed-in users. Add an X cookie file in Settings → Cookie files and try again."
+    },
     "single": "Single link",
     "batch": "Queue",
     "urlPlaceholder": "Paste a link from YouTube, X or another site…",
@@ -970,6 +973,8 @@
     "emptyBody": "Photos, videos and every slide of a carousel are saved in full quality. Stories and whole profiles need an Instagram cookie file.",
     "selectAll": "Select all",
     "selectNone": "Select none",
+    "stop": "Stop",
+    "stopHint": "Stop loading and keep the posts loaded so far. Cancel discards them.",
     "photoN": "Photo {{n}}",
     "videoN": "Video {{n}}",
     "downloadCount_one": "Download {{count}} file",

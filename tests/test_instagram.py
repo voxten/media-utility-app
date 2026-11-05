@@ -101,6 +101,11 @@ def test_item_marks_carousels():
     assert (item["index"], item["kind"], item["count"], item["selected"]) == (4, "carousel", 3, True)
 
 
+def test_stories_and_profiles_need_cookies():
+    with pytest.raises(RuntimeError, match="instagram.error.loginRequired"):
+        instagram._feed_extractor("https://www.instagram.com/stories/someone/", None)
+
+
 def test_login_errors_map_to_cookie_hint():
     err = instagram._wrap_errors(JobContext(), RuntimeError("ERROR: [Instagram] X: This content isn't available to everyone"))
     assert str(err) == "instagram.error.loginRequired"
@@ -115,3 +120,39 @@ def test_instagram_cookie_file_is_used(tmp_path):
     cookie = tmp_path / "ig.txt"
     cookie.write_text("# Netscape HTTP Cookie File\n")
     assert download.cookie_file_for("https://www.instagram.com/p/X/", {"instagram": str(cookie)}) == str(cookie)
+
+
+class _FakeFeed:
+    def __init__(self, total):
+        self.total = total
+        self.fetched = 0
+
+    def posts(self):
+        for n in range(self.total):
+            self.fetched += 1
+            yield {"code": f"C{n}", "image_versions2": {"candidates": [_image(1080)]}}
+
+
+def test_stopping_a_profile_keeps_loaded_posts(monkeypatch):
+    feed = _FakeFeed(30)
+    monkeypatch.setattr(instagram, "_feed_extractor", lambda url, cookie_file: feed)
+    monkeypatch.setattr(instagram, "_thumbnail", lambda url: None)
+    ctx = JobContext("probe-1")
+    partials = []
+    monkeypatch.setattr(ctx, "partial", partials.append)
+    original = instagram._slides
+
+    def slides_then_stop(parser, media):
+        if media["code"] == "C4":
+            instagram.stop_listing(ctx.job_id)
+        return original(parser, media)
+
+    monkeypatch.setattr(instagram, "_slides", slides_then_stop)
+    url = "https://www.instagram.com/someone/"
+    result = instagram.probe(ctx, url, {})
+
+    assert [it["index"] for it in result["items"]] == [0, 1, 2, 3, 4]
+    assert len(partials) == 5
+    assert feed.fetched == 5
+    assert len(instagram._listings[url][1]["entries"]) == 5
+    assert ctx.job_id not in instagram._stop_requests

@@ -124,6 +124,18 @@ def cookie_file_for(url: str, cookies: Dict[str, Optional[str]]) -> Optional[str
     return path if path and Path(path).is_file() else None
 
 
+# X answers requests without a logged-in session with these errors, even for public video posts.
+X_LOGIN_HINTS = ("No video could be found", "requires authentication", "not authorized")
+
+
+def explain_error(url: str, opts: Dict[str, Any], exc: Exception) -> str:
+    """Cleaned yt-dlp error, or an i18n key when an X post failed because no cookie file was used."""
+    message = clean_error_message(str(exc))
+    if is_x(url) and not opts.get("cookiefile") and any(hint in message for hint in X_LOGIN_HINTS):
+        return "download.error.xLoginRequired"
+    return message
+
+
 def output_template(outdir: str, filename_template: str = DEFAULT_TEMPLATE) -> str:
     template = (filename_template or DEFAULT_TEMPLATE).strip()
     template = template.replace("{title}", "%(title)s").replace("{ext}", "%(ext)s").replace("{id}", "%(id)s")
@@ -246,7 +258,10 @@ def probe(ctx: JobContext, url: str, cookies: Dict[str, Optional[str]]) -> Dict[
     ctx.progress(None, "download.status.probing")
     opts = _base_opts(url, cookies)
     opts["extract_flat"] = "in_playlist"
-    info = _extract_listing(url, opts)
+    try:
+        info = _extract_listing(url, opts)
+    except yt_dlp.utils.DownloadError as exc:
+        raise RuntimeError(explain_error(url, opts, exc)) from exc
 
     ctx.check_cancelled()
     ctx.progress(90, "download.status.thumbnail")
@@ -476,8 +491,7 @@ def _run_ydl(
     except Exception as exc:
         if ctx.cancelled:
             raise JobCancelled()
-        cleaned = clean_error_message(str(exc))
-        raise RuntimeError(cleaned) from exc
+        raise RuntimeError(explain_error(url, opts, exc)) from exc
 
 
 def download(

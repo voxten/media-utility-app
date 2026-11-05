@@ -53,6 +53,14 @@ def test_clean_error_message():
     assert cleaned == "[CDA] 2718156844: Requested format is not available."
 
 
+def test_explain_error_asks_for_x_cookies_only_without_them():
+    url = "https://x.com/a/status/1"
+    err = Exception("ERROR: [twitter] 1: No video could be found in this tweet")
+    assert download.explain_error(url, {}, err) == "download.error.xLoginRequired"
+    assert download.explain_error(url, {"cookiefile": "x.txt"}, err) == "[twitter] 1: No video could be found in this tweet"
+    assert download.explain_error("https://vimeo.com/1", {}, Exception("ERROR: gone")) == "gone"
+
+
 def test_cookie_file_only_when_present(tmp_path):
     existing = tmp_path / "yt.txt"
     existing.write_text("# cookies")

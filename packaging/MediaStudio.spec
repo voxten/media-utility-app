@@ -61,6 +61,8 @@ a = Analysis(
         "backend.services.watermark",
         "backend.services.converter",
         "backend.services.download",
+        "backend.services.instagram",
+        "gallery_dl.extractor.instagram",
         "backend.services.duplicates",
         "backend.services.pdf",
         "backend.services.progress_image",

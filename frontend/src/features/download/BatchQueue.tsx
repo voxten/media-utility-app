@@ -5,6 +5,7 @@ import { CheckmarkCircle16Filled, Clock16Regular, DismissCircle16Filled } from "
 import { useTranslation } from "react-i18next";
 import { Panel } from "../../components/Panel";
 import { formatBytes, formatDuration } from "../../lib/format";
+import { translateMessage } from "../../lib/jobMessage";
 import { useDownloadForm } from "./store";
 import type { BatchItem } from "./types";
 
@@ -99,9 +100,10 @@ export function BatchQueue({ queue, running, speed, eta, totalSize, totalDuratio
             const isDone = item.status === "done";
             const isError = item.status === "error";
             const isRunning = item.status === "running" && running;
+            const error = item.error ? translateMessage(t, item.error) : undefined;
 
             return (
-              <div key={item.index} className={styles.item} title={item.error ?? item.url}>
+              <div key={item.index} className={styles.item} title={error ?? item.url}>
                 <div className={styles.icon}>
                   {isDone ? (
                     <CheckmarkCircle16Filled className={styles.ok} />
@@ -117,8 +119,8 @@ export function BatchQueue({ queue, running, speed, eta, totalSize, totalDuratio
                   <Text weight={isRunning ? "semibold" : "medium"} className={styles.title}>
                     {item.title || item.url}
                   </Text>
-                  {((isError && item.error) || item.title) && (
-                    <Caption1 className={isError ? styles.bad : styles.sub}>{isError && item.error ? item.error : item.url}</Caption1>
+                  {((isError && error) || item.title) && (
+                    <Caption1 className={isError ? styles.bad : styles.sub}>{isError && error ? error : item.url}</Caption1>
                   )}
                 </div>
                 <div className={styles.meta}>

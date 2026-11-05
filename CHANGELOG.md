@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 The app shows this file (and its Polish translation, [CHANGELOG.pl.md](CHANGELOG.pl.md)) under "What's new", so every release goes into both files.
 
+## [0.12.0] - 2026-11-05
+
+### Added
+
+- **Instagram Download:** "Stop" while a profile is loading keeps the posts found so far, so a long profile no longer has to load in full before saving.
+
+### Changed
+
+- **Instagram Download:** stories, highlights and profiles load through gallery-dl, which follows Instagram's current GraphQL feeds; a profile shows its posts in batches while it loads.
+- **Settings → Cookie files:** the hint names the folder the installed app reads cookie files from when no path is set (`%APPDATA%\MediaStudio\cookies`).
+
+### Fixed
+
+- **Instagram Download:** stories, highlights and whole profiles download again (Instagram had dropped the feeds the tool used).
+- **Video Downloader:** an X post that fails because no X cookie file is set says so and points to Settings → Cookie files, instead of "No video could be found in this tweet". Failed queue items show translated errors.
+
+---
+
 ## [0.11.0] - 2026-11-04
 
 ### Added

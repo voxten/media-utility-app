@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Button, Checkbox, Field, Input, makeStyles, mergeClasses, Spinner, tokens, Tooltip } from "@fluentui/react-components";
 import {
   ArrowDownload16Filled,
@@ -8,6 +8,7 @@ import {
   ImageMultiple16Filled,
   Link24Regular,
   Search16Regular,
+  Stop16Regular,
   Video16Filled,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
@@ -110,6 +111,13 @@ export default function InstagramPage() {
 
   const running = probe.running || download.running;
   const activeJob = download.running ? download.job : probe.running ? probe.job : (download.job ?? probe.job);
+
+  const [stoppedJob, setStoppedJob] = useState<string | null>(null);
+  const stopListing = () => {
+    if (!probe.jobId) return;
+    setStoppedJob(probe.jobId);
+    api.instagram.stop(probe.jobId).catch((err) => notify.error(String(err)));
+  };
 
   const runProbe = () => {
     const url = form.url.trim();
@@ -279,6 +287,13 @@ export default function InstagramPage() {
         idleText={post ? t("instagram.idle.ready") : t("instagram.idle.empty")}
         onCancel={() => (download.running ? download.cancel() : probe.cancel())}
       >
+        {probe.running && items.length > 0 && (
+          <Tooltip content={t("instagram.stopHint")} relationship="description">
+            <Button icon={<Stop16Regular />} disabled={stoppedJob === probe.jobId} onClick={stopListing}>
+              {t("instagram.stop")}
+            </Button>
+          </Tooltip>
+        )}
         <Button
           appearance="primary"
           icon={<ArrowDownload16Filled />}
