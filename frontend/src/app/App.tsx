@@ -52,10 +52,11 @@ export function App() {
     withTimeout(boot(load), BOOT_TIMEOUT_MS).catch((err) => setBootError(errorMessage(i18n.t, err)));
   }, [load]);
 
+  const language = settings?.language;
   useEffect(() => {
-    if (!settings) return;
-    i18n.changeLanguage(settings.language);
-    document.documentElement.lang = settings.language;
+    if (!language) return;
+    i18n.changeLanguage(language);
+    document.documentElement.lang = language;
     api.app
       .setShellLabels({
         open: i18n.t("shell.open"),
@@ -68,7 +69,7 @@ export function App() {
         clipboardEmpty: i18n.t("shell.clipboardEmpty"),
       })
       .catch(() => undefined);
-  }, [settings?.language]);
+  }, [language]);
 
   useEffect(() => {
     // With Mica the window base must stay transparent so DWM's backdrop shows through.

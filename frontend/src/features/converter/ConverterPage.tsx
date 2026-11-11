@@ -205,19 +205,20 @@ export default function ConverterPage() {
   });
 
   // Live count of matching files in folder mode.
+  const { source, inputDir, inFormat, set: setForm } = form;
   useEffect(() => {
-    if (form.source !== "folder" || !form.inputDir) {
-      form.set({ matching: null });
+    if (source !== "folder" || !inputDir) {
+      setForm({ matching: null });
       return;
     }
     const timer = window.setTimeout(() => {
       api.converter
-        .countFiles(form.inputDir, form.inFormat)
-        .then((matching) => form.set({ matching }))
-        .catch(() => form.set({ matching: null }));
+        .countFiles(inputDir, inFormat)
+        .then((matching) => setForm({ matching }))
+        .catch(() => setForm({ matching: null }));
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [form.source, form.inputDir, form.inFormat]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [source, inputDir, inFormat, setForm]);
 
   const fileCount = form.source === "folder" ? form.matching ?? 0 : form.source === "file" ? Number(!!form.file) : form.files.length;
   const canStart = fileCount > 0 && !!outputDir && !runner.running;

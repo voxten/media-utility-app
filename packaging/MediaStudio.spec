@@ -13,7 +13,7 @@ ROOT = os.path.abspath(os.path.join(SPECPATH, ".."))  # noqa: F821 - SPECPATH is
 # Optional AI packages (PyTorch, rembg) are pip-installed after setup by backend/core/addons.py and may
 # import any part of the standard library, so the whole stdlib ships, minus GUI, tests and installers.
 STDLIB_SKIP = {
-    "tkinter", "turtle", "turtledemo", "idlelib", "test", "ensurepip", "venv",
+    "tkinter", "_tkinter", "turtle", "turtledemo", "idlelib", "test", "ensurepip", "venv",
     "this", "antigravity", "__hello__", "__phello__",
 }
 
@@ -65,6 +65,7 @@ a = Analysis(
         "backend.services.watermark",
         "backend.services.converter",
         "backend.services.download",
+        "backend.services.download_queue",
         "backend.services.instagram",
         "gallery_dl.extractor.instagram",
         "backend.services.duplicates",
@@ -88,7 +89,6 @@ a = Analysis(
         "qtgui",
         "qtwidgets",
         "playwright",
-        "features",
         # imagehash imports these lazily; duplicates.py has its own SciPy-free phash (~70 MB saved).
         "scipy",
         "pywt",
@@ -101,6 +101,7 @@ a = Analysis(
         "onnxruntime",
         # Dev/test tooling and unused GUI toolkits.
         "tkinter",
+        "_tkinter",
         "matplotlib",
         "IPython",
         "pytest",

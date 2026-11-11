@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Button,
   Caption1,
@@ -112,7 +112,10 @@ export default function CompressorPage() {
   });
 
   const current = files[selected] ?? null;
-  const params = { format, mode, quality, targetKb: mode === "target" ? Number(targetKb) || 500 : undefined };
+  const params = useMemo(
+    () => ({ format, mode, quality, targetKb: mode === "target" ? Number(targetKb) || 500 : undefined }),
+    [format, mode, quality, targetKb],
+  );
 
   const addFiles = (paths: string[]) => {
     const accepted = paths.filter((p) => matchesExtensions(p, IMAGE_EXTENSIONS));
@@ -147,7 +150,7 @@ export default function CompressorPage() {
     return () => {
       live = false;
     };
-  }, [current, notify]);
+  }, [current, notify, t]);
 
   useEffect(() => {
     if (!preview) return;
@@ -167,8 +170,7 @@ export default function CompressorPage() {
       live = false;
       window.clearTimeout(timer);
     };
-    // `params` is rebuilt every render from the values listed here.
-  }, [preview, format, mode, quality, targetKb]);
+  }, [preview, params]);
 
   const canStart = !job.running && !!compressed && !!outputDir;
   const start = () =>

@@ -95,7 +95,7 @@ export const MaskCanvas = forwardRef<MaskCanvasHandle, MaskCanvasProps>(function
     history.current = { undo: [], redo: [] };
     dirty.current = false;
     report();
-  }, [src, width, height]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [src, width, height]); // eslint-disable-line react-hooks/exhaustive-deps -- only a new image clears the mask and its history
 
   const scale = display.w ? width / display.w : 1;
 

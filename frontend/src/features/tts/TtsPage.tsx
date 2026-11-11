@@ -132,19 +132,21 @@ export default function TtsPage() {
   });
 
   // Clean up preview if the output file was deleted on disk.
+  const lastOutput = form.lastOutput;
+  const setForm = form.set;
   useEffect(() => {
-    if (!form.lastOutput) return;
+    if (!lastOutput) return;
     const verifyFile = () => {
-      api.system.pathInfo(form.lastOutput!).then((info) => {
+      api.system.pathInfo(lastOutput).then((info) => {
         if (!info.exists) {
-          form.set({ audioSrc: null, lastOutput: null });
+          setForm({ audioSrc: null, lastOutput: null });
         }
       }).catch(() => undefined);
     };
     verifyFile();
     window.addEventListener("focus", verifyFile);
     return () => window.removeEventListener("focus", verifyFile);
-  }, [form.lastOutput]);
+  }, [lastOutput, setForm]);
 
   // Load voices per engine (Edge needs the network; cached for the session).
   useEffect(() => {
@@ -176,7 +178,7 @@ export default function TtsPage() {
     const locale = locales.includes(form.locale) ? form.locale : locales.includes(preferred) ? preferred : locales[0] ?? "";
     const voiceOk = voices.some((v) => v.id === form.voice && (!locale || v.locale === locale));
     form.set({ locale, voice: voiceOk ? form.voice : voices.find((v) => v.locale === locale)?.id ?? voices[0].id });
-  }, [voices]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [voices]); // eslint-disable-line react-hooks/exhaustive-deps -- defaults only when a voice list loads, never over the user's pick
 
   const localeOptions = useMemo(() => {
     const names = new Intl.DisplayNames([i18n.language], { type: "language" });

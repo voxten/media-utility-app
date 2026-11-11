@@ -37,17 +37,18 @@ export function ModelBanner({ depId, title, description, installLabel, readyMess
   const notify = useNotify();
   const [jobId, setJobId] = useState<string | null>(null);
   const job = useJob(jobId);
+  const status = job?.status;
+  const error = job?.error;
 
   useEffect(() => {
-    if (!job) return;
-    if (job.status === "done") {
+    if (status === "done") {
       notify.success(readyMessage);
       onInstalled();
       setJobId(null);
-    } else if (job.status === "error") {
-      notify.error(t("settings.deps.failed"), { body: job.error ?? undefined });
+    } else if (status === "error") {
+      notify.error(t("settings.deps.failed"), { body: error ?? undefined });
     }
-  }, [job?.status, job?.error, notify, onInstalled, readyMessage, t]);
+  }, [status, error, notify, onInstalled, readyMessage, t]);
 
   const install = async () => {
     try {

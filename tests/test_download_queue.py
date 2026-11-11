@@ -5,7 +5,7 @@ import pytest
 
 from backend.core.jobs import JobCancelled
 from backend.core.settings import validate_patch
-from backend.services import download
+from backend.services import download, download_queue
 
 URLS = ["https://example.com/a", "https://example.com/b", "https://example.com/c"]
 
@@ -13,9 +13,9 @@ URLS = ["https://example.com/a", "https://example.com/b", "https://example.com/c
 @pytest.fixture
 def queue_file(monkeypatch, tmp_path):
     path = tmp_path / "download_queue.json"
-    monkeypatch.setattr(download, "queue_path", lambda: path)
-    monkeypatch.setattr(download.time, "sleep", lambda s: None)
-    monkeypatch.setattr(download, "expand_batch_urls", lambda urls, cookies=None: [{"url": u, "title": u} for u in urls])
+    monkeypatch.setattr(download_queue, "queue_path", lambda: path)
+    monkeypatch.setattr(download_queue.time, "sleep", lambda s: None)
+    monkeypatch.setattr(download_queue, "expand_batch_urls", lambda urls, cookies=None: [{"url": u, "title": u} for u in urls])
     return path
 
 
@@ -61,11 +61,11 @@ def test_archive_count_and_clear(tmp_path):
 def test_queue_file_round_trip(tmp_path):
     path = tmp_path / "queue.json"
     options = {"outdir": "C:/Pobrane ąę", "mode": "audio"}
-    download.save_queue(URLS, options, path)
-    assert download.load_queue(path) == {"urls": URLS, "options": options}
-    download.save_queue([], options, path)
+    download_queue.save_queue(URLS, options, path)
+    assert download_queue.load_queue(path) == {"urls": URLS, "options": options}
+    download_queue.save_queue([], options, path)
     assert not path.exists()
-    assert download.load_queue(path) is None
+    assert download_queue.load_queue(path) is None
 
 
 @pytest.mark.parametrize(
@@ -77,7 +77,7 @@ def test_queue_file_round_trip(tmp_path):
 def test_broken_queue_file_is_ignored(tmp_path, content):
     path = tmp_path / "queue.json"
     path.write_text(content, encoding="utf-8")
-    assert download.load_queue(path) is None
+    assert download_queue.load_queue(path) is None
 
 
 class _FakeYDL:
@@ -148,9 +148,9 @@ def _fake_run(outcomes):
 
 def test_batch_audio_mode_skips_and_clears_the_saved_queue(monkeypatch, ctx, tmp_path, queue_file):
     run = _fake_run({URLS[1]: "skipped"})
-    monkeypatch.setattr(download, "_run_ydl", run)
+    monkeypatch.setattr(download_queue, "_run_ydl", run)
 
-    result = download.download_batch(
+    result = download_queue.download_batch(
         ctx, URLS, str(tmp_path), mode="audio", audio_codec="m4a", skip_archived=True, persist=True
     )
 
@@ -163,34 +163,34 @@ def test_batch_audio_mode_skips_and_clears_the_saved_queue(monkeypatch, ctx, tmp
 
 
 def test_cancelled_batch_keeps_the_unfinished_links(monkeypatch, ctx, tmp_path, queue_file):
-    monkeypatch.setattr(download, "_run_ydl", _fake_run({URLS[1]: "cancel"}))
+    monkeypatch.setattr(download_queue, "_run_ydl", _fake_run({URLS[1]: "cancel"}))
 
     with pytest.raises(JobCancelled):
-        download.download_batch(ctx, URLS, str(tmp_path), mode="video", max_height=720, persist=True)
+        download_queue.download_batch(ctx, URLS, str(tmp_path), mode="video", max_height=720, persist=True)
 
-    saved = download.load_queue()
+    saved = download_queue.load_queue()
     assert saved["urls"] == URLS[1:]
     assert saved["options"]["maxHeight"] == 720
     assert saved["options"]["outdir"] == str(tmp_path)
 
 
 def test_batch_without_persist_writes_no_file(monkeypatch, ctx, tmp_path, queue_file):
-    monkeypatch.setattr(download, "_run_ydl", _fake_run({URLS[0]: "cancel"}))
+    monkeypatch.setattr(download_queue, "_run_ydl", _fake_run({URLS[0]: "cancel"}))
     with pytest.raises(JobCancelled):
-        download.download_batch(ctx, URLS, str(tmp_path))
+        download_queue.download_batch(ctx, URLS, str(tmp_path))
     assert not queue_file.exists()
 
 
 def test_pending_queue_is_hidden_while_a_batch_runs(ctx, queue_file):
-    download.save_queue(URLS, {"outdir": "C:/x"})
-    assert download.pending_queue()["urls"] == URLS
-    download._active_batches["running"] = download.ActiveBatchQueue(ctx, {})
+    download_queue.save_queue(URLS, {"outdir": "C:/x"})
+    assert download_queue.pending_queue()["urls"] == URLS
+    download_queue._active_batches["running"] = download_queue.ActiveBatchQueue(ctx, {})
     try:
-        assert download.pending_queue() is None
+        assert download_queue.pending_queue() is None
     finally:
-        download._active_batches.pop("running")
-    download.discard_queue()
-    assert download.pending_queue() is None
+        download_queue._active_batches.pop("running")
+    download_queue.discard_queue()
+    assert download_queue.pending_queue() is None
 
 
 def test_download_settings_are_booleans():

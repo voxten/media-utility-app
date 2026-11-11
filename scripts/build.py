@@ -72,6 +72,14 @@ def check_environment(python: str = sys.executable) -> None:
         failed = failed or result.returncode != 0
     if failed:
         sys.exit("Fix the problems above (pip install -r requirements.txt) before building.")
+    lock = subprocess.run(
+        [python, str(ROOT / "scripts" / "check_requirements.py"), "--lock", str(ROOT / "requirements.lock")],
+        capture_output=True, text=True,
+    )
+    if lock.returncode != 0:
+        print((lock.stdout + lock.stderr).strip())
+        print("Warning: the build environment differs from requirements.lock "
+              "(pip install -r requirements.lock, or regenerate the lock after an intended upgrade).")
 
 
 def build_frontend(clean_install: bool) -> None:

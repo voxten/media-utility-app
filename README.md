@@ -4,39 +4,44 @@ Windows desktop toolbox for media, documents and text. It is a native window (py
 
 | Tool | What it does |
 |---|---|
-| Background remover | AI cutouts with BiRefNet, RMBG 1.4, U2Net, IS-Net; edge anti-halo debleed, touch-up brush & split slider |
-| Image upscaler | AI 2× / 4× super-resolution via Real-ESRGAN (general & anime) with tiled inference for large graphics |
-| Image compressor | Reduce file size of images (PNG, JPEG, WebP) with adjustable quality and dimension caps |
-| Image editor / Crop | Freeform & aspect-ratio cropping, rotation, flip, and geometry adjustments |
-| Image converter | Folder or file batch conversion (PNG, WEBP, JPEG, GIF, TIFF, BMP, PDF) with per-file status |
-| Watermark remover | Paint a mask, inpaint with OpenCV (Telea / Navier-Stokes) or the optional LaMa AI model |
-| Video downloader | YouTube / X / other sites via yt-dlp: format table, audio-only, batch queue with live item progress |
+| Video downloader | YouTube, TikTok, X and other sites via yt-dlp: format table, audio only, subtitles, cover art and metadata, playlists with per-entry picks, a batch queue with a quality or audio format for every link, a download archive that skips links saved before, and a queue that resumes after a restart |
+| Instagram download | Posts, carousels, reels, stories, highlights and whole profiles in full quality, picked from a preview grid (yt-dlp for posts, gallery-dl for stories and profiles) |
+| Audio-video sync | Waveform and frame timeline for fixing out-of-sync audio, short preview clips, export by stream copy or re-encode |
+| Video to GIF | A clip of a video as GIF, WebP or APNG: frame range, frame rate, width, speed, crop, reverse, size estimate |
+| GIF editor | Trim, crop, resize, rotate, speed, reverse and boomerang for GIF, WebP and APNG; colour count, dithering, lossy compression and a size limit (optional gifsicle) |
+| Transcription | Speech to SRT, VTT or TXT on this computer with Whisper (Base, Small, Turbo), optional translation into English |
+| Background remover | AI cutouts with BiRefNet, RMBG 1.4, U2Net, IS-Net; edge debleed, touch-up brush and split slider |
+| Image upscaler | AI 2× / 4× super-resolution via Real-ESRGAN (general and anime) with tiled inference for large images |
+| Watermark remover | Paint a mask, inpaint with OpenCV (Telea / Navier-Stokes) or the optional LaMa model |
+| Image compressor | Smaller PNG, JPEG and WebP files with adjustable quality and size caps |
+| Image tools | Crop, rotate, flip and resize, one file or a batch |
+| Image converter | File or folder conversion (PNG, WebP, JPEG, GIF, TIFF, BMP, PDF) with per-file status |
 | Text to speech | Edge neural voices (online) or Windows voices (offline), with an in-app player |
 | PDF merger | Drag-to-reorder pages from several PDFs and merge them into one document |
-| PDF compressor | Optimize and compress PDF documents with DPI and quality presets |
-| PDF splitter | Split PDF documents into single pages, page ranges, or extracts |
-| PDF converter | Convert PDF pages into image sequences (PNG, JPEG, WebP) or compile images into PDF |
-| PDF extractor | Extract embedded text and imagery from PDF documents |
+| PDF compressor | Smaller PDFs with DPI and quality presets |
+| PDF splitter | Click pages into coloured groups, each saved as its own PDF |
+| PDF converter | PDF pages to PNG, JPEG or WebP, or images to a PDF |
+| PDF extractor | Embedded text and images from PDF documents |
 | Duplicate finder | Perceptual-hash search for similar images and videos; moves duplicates to the Recycle Bin, exports CSV |
-| Progress generator | Designs progress-bar graphics and exports them as PNG |
+| Progress generator | Progress-bar graphics exported as PNG |
 
 Other features:
-- light, dark and system themes;
-- Polish and English interface;
-- Windows 11 Mica backdrop;
-- `Ctrl+K` command palette;
-- **Unified Fluent UI Icon System**: curated, collision-free icons with matching geometries and scale across image, video, PDF, text, and system tools;
-- **Floating tasks popup & live timer**: corner flyout showing overall batch progress alongside individual subtask queues (e.g. 10 video downloads or batch file conversions) with continuous real-time ticking; expandable into the full tasks drawer with one-click cleanup of finished jobs;
-- **Runtime AI dependency installer**: one-click automatic installation of PyTorch, model weights (BiRefNet, Real-ESRGAN, LaMa), and portable FFmpeg directly within the application;
-- **Interactive image comparison viewer**: draggable split slider, side-by-side, original and processed cutout/upscale inspection modes.
+- **Tasks panel:** "Now" and "History" tabs, history from earlier runs with search and filters, "Open file", "Show in folder", "Retry" and "Send to" on every task; tasks run in a queue with an adjustable number at once;
+- **Tray icon:** closing the window hides it to the notification area while jobs keep running; "Download link from clipboard" opens a copied link in the matching download tool;
+- **Drop anywhere:** files dropped outside a drop area open "Open in a tool";
+- **Download engine updates:** newer yt-dlp and gallery-dl install from Settings, are checked before use and can be rolled back;
+- **Add-ons:** PyTorch, rembg, model weights (BiRefNet, Real-ESRGAN, LaMa, Whisper), FFmpeg and gifsicle install from Settings; every download is checked against a pinned SHA-256;
+- `Ctrl+K` command palette; `Ctrl+Enter` runs, `Esc` cancels and `Ctrl+O` adds files in every tool;
+- light, dark and system themes, Windows 11 Mica backdrop, Polish and English interface;
+- "What's new" in Settings shows [CHANGELOG.md](CHANGELOG.md) / [CHANGELOG.pl.md](CHANGELOG.pl.md).
 
 ## Requirements
 
 - Windows 10/11 with the **WebView2 Runtime**. It is built into Windows 11; on Windows 10 install it from Microsoft if the window stays blank.
 - Python 3.12+ (developed on 3.14) and Node.js 20+.
-- **FFmpeg** on `PATH` (can also be downloaded and configured automatically via the in-app dependency installer in **Settings → Dependencies**).
+- **FFmpeg** on `PATH`, or installed from **Settings → Dependencies**.
 - MediaInfo is bundled with `pymediainfo`; the video duplicate finder uses it.
-- **Optional AI dependencies**: PyTorch, torchvision, and neural network weights (BiRefNet, Real-ESRGAN, LaMa) can be installed with a single click in **Settings → Dependencies** or directly via banners inside the respective tool pages.
+- Optional AI add-ons (PyTorch, rembg, model weights) install from **Settings → Dependencies** or from the banner in each AI tool.
 
 ## Setup
 
@@ -46,67 +51,76 @@ python -m venv .venv
 cd frontend && npm ci
 ```
 
+`requirements.lock` lists the exact versions the release is built with; `scripts/build.py` warns when the installed ones differ.
+
 ## Development
 
 ```bash
-cd frontend && npm run dev        # terminal 1: Vite dev server with HMR
-python main.py --dev              # terminal 2: native window + DevTools
+cd frontend && npm run dev        # terminal 1: Vite dev server with HMR on port 5173
+python main.py --dev              # terminal 2: native window on the dev server + DevTools
 ```
 
-Opening <http://localhost:5173> in a normal browser also works. It uses a mock backend (`frontend/src/lib/mock.ts`), so you can work on the UI without Python.
+The frontend reloads on save; the Python side needs a restart of `main.py --dev` after backend changes. The dev run logs to `%APPDATA%\MediaStudio\logs\dev.log`.
+
+Opening <http://localhost:5173> in a normal browser also works. It uses a mock backend (`frontend/src/lib/mock.ts`), so you can work on the UI without Python. `npm run storybook` shows the shared components on port 6006.
 
 To run the production UI locally, run `npm run build` in `frontend/` and then `python main.py`.
 
 ## Tests
 
 ```bash
-.venv\Scripts\python -m pytest            # backend services
+.venv\Scripts\python -m pytest            # backend services and the window bridge
+cd frontend && npm test                   # Vitest unit tests
+cd frontend && npm run lint               # ESLint (TypeScript + React hooks)
 cd frontend && npm run build              # i18n check + type check + build
 python scripts/e2e_ui.py                  # drives every tool in a real window (needs a build)
 ```
 
-## Building the .exe & Windows Installer
+## Building the .exe and Windows installer
 
-### 1. Interactive Build Wizard (Recommended)
+### 1. Build wizard (recommended)
 
-Run the interactive build wizard from the terminal or double-click `build_installer.bat` on Windows:
-
-```bash
-python scripts/build_wizard.py           # interactive step-by-step wizard
-python scripts/build_wizard.py --all     # automated full build & installer
-python scripts/build_wizard.py --installer-only # compile installer from existing dist
-```
-
-The wizard guides you through:
-- Frontend compilation (`npm run build`)
-- PyInstaller standalone bundle (`dist/MediaStudio/`)
-- Bundle integrity self-test
-- Native Windows Setup Wizard compilation (`dist/installer/MediaStudio-Setup-<version>.exe`)
-- Optional portable ZIP creation
-
-### 2. Command-Line Build Script
+Run the wizard from the terminal or double-click `build_installer.bat`:
 
 ```bash
-python scripts/build.py                  # PyInstaller one-folder build
-python scripts/build.py --installer      # build bundle + Inno Setup installer
+python scripts/build_wizard.py                  # step-by-step wizard
+python scripts/build_wizard.py --all            # full build and installer
+python scripts/build_wizard.py --installer-only # installer from an existing dist
 ```
 
-The resulting installer (`dist/installer/MediaStudio-Setup-0.8.0.exe`, ~200 MB) provides a modern Windows setup wizard (Polish & English, Start Menu & Desktop shortcuts, clean uninstaller registered in Windows Settings / Control Panel).
+The wizard runs the frontend build (`npm run build`), the PyInstaller bundle (`dist/MediaStudio/`), the bundle self-test, the Inno Setup installer (`dist/installer/MediaStudio-Setup-<version>.exe`) and an optional portable ZIP.
+
+### 2. Build script
+
+```bash
+python scripts/build.py                  # PyInstaller one-folder build + self-test
+python scripts/build.py --installer      # bundle + Inno Setup installer
+```
+
+The installer is a Windows setup wizard in Polish and English with Start menu and desktop shortcuts and an uninstaller in Windows Settings. Running it over an installed copy updates it in place and keeps settings and add-ons.
 
 ## Project layout
 
 ```
-main.py                 entry point (window, drag & drop, title bar, Mica)
-backend/bridge/         API exposed to JavaScript + Python→JS event bus
-backend/core/           jobs (threads, progress, cancel), settings, paths, OS helpers
+main.py                 entry point (window, drag & drop, tray, single instance, Mica)
+backend/bridge/         API exposed to JavaScript (api.py) + Python→JS event bus
+backend/core/           jobs, settings, paths, logs, history, add-ons, engine updates, tray, OS helpers
 backend/services/       one module per tool – plain Python, unit-tested
-frontend/src/           React app: app shell, shared components, one folder per tool
+backend/selftest.py     bundle smoke test (main.py --selftest)
+frontend/src/app/       shell, navigation, command palette, tasks panel
+frontend/src/components shared components (Panel, PathPicker, ActionBar, JobCard …)
+frontend/src/features/  one folder per tool and Settings
+frontend/src/i18n/      en.json / pl.json
+frontend/src/lib/       bridge to Python, browser mock, helpers
+frontend/src/stores/    zustand stores
+frontend/scripts/       i18n check and other frontend helpers
 tests/                  pytest suite
-scripts/                build, end-to-end test, icon and i18n helpers
-packaging/              PyInstaller spec
-tools/                  standalone helper scripts (UI sprite generators, folder comparison)
+scripts/                build, build wizard, version, requirements check, end-to-end test, icon
+packaging/              PyInstaller spec and Inno Setup script
+assets/                 app icon
+tools/                  standalone helper scripts (folder comparison)
 ```
 
-Settings live in `%APPDATA%\MediaStudio\settings.json`.
+Settings live in `%APPDATA%\MediaStudio\settings.json`, logs in `%APPDATA%\MediaStudio\logs` and AI models in `%LOCALAPPDATA%\MediaStudio\models`.
 
-Cookie files for sites that need a login can be chosen in **Settings → Cookie files**. If none is set, the app falls back to `cookies/*_cookies.txt`.
+Cookie files for sites that need a login can be chosen in **Settings → Cookie files**. If none is set, the app falls back to `cookies/*_cookies.txt` in development and `%APPDATA%\MediaStudio\cookies` in the installed app.

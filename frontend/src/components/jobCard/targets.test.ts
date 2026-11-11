@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { JobState } from "../stores/jobs";
-import { extractSubtasks, openTarget, revealTarget, transferTargets } from "./JobCard";
+import type { JobState } from "../../stores/jobs";
+import { extractSubtasks, openTarget, revealTarget, transferTargets } from "./targets";
 
 const job = (fields: Partial<JobState>): JobState => ({
   id: "j",

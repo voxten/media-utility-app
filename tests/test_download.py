@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from backend.core.jobs import JobCancelled, JobContext
-from backend.services import download
+from backend.services import download, download_queue
 
 
 def test_sanitize_x_url():
@@ -96,7 +96,7 @@ def test_download_opts_fetch_fragments_in_parallel():
 def test_expand_batch_urls_single_url():
     urls = ["https://example.com/video1", "https://example.com/video2"]
     # For plain URLs that yt-dlp cannot extract online in offline test environment, it falls back to raw URLs
-    items = download.expand_batch_urls(urls)
+    items = download_queue.expand_batch_urls(urls)
     assert len(items) == 2
     assert items[0]["url"] == "https://example.com/video1"
     assert items[1]["url"] == "https://example.com/video2"
@@ -168,9 +168,9 @@ def test_add_to_batch():
     partials = []
     ctx.partial = lambda data: partials.append(data)
 
-    queue = download.ActiveBatchQueue(ctx, None)
-    with download._active_batches_lock:
-        download._active_batches["test-batch"] = queue
+    queue = download_queue.ActiveBatchQueue(ctx, None)
+    with download_queue._active_batches_lock:
+        download_queue._active_batches["test-batch"] = queue
 
     try:
         # Initial add
@@ -180,15 +180,15 @@ def test_add_to_batch():
         assert queue.items[1]["index"] == 1
 
         # Dynamic append via add_to_batch
-        res = download.add_to_batch("test-batch", ["https://example.com/3", "https://example.com/4"])
+        res = download_queue.add_to_batch("test-batch", ["https://example.com/3", "https://example.com/4"])
         assert res is True
         assert len(queue.items) == 4
         assert queue.items[2]["index"] == 2
         assert queue.items[3]["index"] == 3
         assert len(partials) == 4
     finally:
-        with download._active_batches_lock:
-            download._active_batches.pop("test-batch", None)
+        with download_queue._active_batches_lock:
+            download_queue._active_batches.pop("test-batch", None)
 
 
 
@@ -267,10 +267,8 @@ def test_media_summary_takes_the_height_from_the_video_stream():
 
 
 def test_links_added_after_the_batch_finished_are_refused(monkeypatch, ctx):
-    from backend.services import download as dl
-
-    monkeypatch.setattr(dl, "expand_batch_urls", lambda urls, cookies=None: [{"url": u, "title": u} for u in urls])
-    queue = dl.ActiveBatchQueue(ctx, {})
+    monkeypatch.setattr(download_queue, "expand_batch_urls", lambda urls, cookies=None: [{"url": u, "title": u} for u in urls])
+    queue = download_queue.ActiveBatchQueue(ctx, {})
     assert queue.add_urls(["https://a"]) == 1
     queue.closed = True
     assert queue.add_urls(["https://b"]) is None

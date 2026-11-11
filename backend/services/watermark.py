@@ -9,6 +9,7 @@ import cv2
 import numpy as np
 
 from backend.core import thumbs
+from backend.core.imaging import split_alpha
 from backend.core.jobs import JobContext
 from backend.core.paths import cache_dir
 
@@ -94,16 +95,6 @@ def decode_mask(mask_png: str, shape: tuple) -> np.ndarray:
     return cv2.dilate(binary, kernel)
 
 
-def _split_alpha(img: np.ndarray) -> tuple:
-    if img.ndim == 2:
-        return cv2.cvtColor(img, cv2.COLOR_GRAY2BGR), None
-    if img.shape[2] == 4:
-        return img[:, :, :3].copy(), img[:, :, 3]
-    if img.shape[2] == 3:
-        return img, None
-    raise ValueError(f"Unsupported channel count: {img.shape[2]}")
-
-
 def _inpaint_lama_direct(model: Any, device: str, bgr: np.ndarray, mask: np.ndarray) -> np.ndarray:
     import torch
 
@@ -156,7 +147,7 @@ def _inpaint_lama(bgr: np.ndarray, mask: np.ndarray) -> np.ndarray:
 
 def inpaint_array(img: np.ndarray, mask: np.ndarray, method: str) -> tuple:
     """Returns ``(result, notice)``; ``notice`` is an i18n key when LaMa fell back to Telea."""
-    bgr, alpha = _split_alpha(img)
+    bgr, alpha = split_alpha(img)
     if not np.any(mask):
         raise ValueError("Mask is empty")
 
@@ -180,7 +171,7 @@ def inpaint_array(img: np.ndarray, mask: np.ndarray, method: str) -> tuple:
 def load_preview(path: str) -> Dict[str, Any]:
     """Full-resolution image as a data URL for the painting canvas."""
     img = read_image(path)
-    bgr, alpha = _split_alpha(img)
+    bgr, alpha = split_alpha(img)
     rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
     if alpha is not None:
         rgb = np.dstack([rgb, alpha])
@@ -207,7 +198,7 @@ def remove(ctx: JobContext, image_path: str, mask_png: str, method: str = "telea
     result_path = cache_dir() / f"inpaint_{uuid.uuid4().hex[:10]}.png"
     write_image(result, str(result_path))
 
-    bgr, alpha = _split_alpha(result)
+    bgr, alpha = split_alpha(result)
     rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
     if alpha is not None:
         rgb = np.dstack([rgb, alpha])

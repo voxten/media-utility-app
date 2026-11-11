@@ -211,7 +211,7 @@ export default function DownloadPage() {
     if (!useDownloadForm.getState().autoProbe) return; // fresh state: a repeated effect must not probe twice
     form.set({ autoProbe: false });
     runProbe();
-  }, [form.autoProbe]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [form.autoProbe]); // eslint-disable-line react-hooks/exhaustive-deps -- probes once per auto-probe request, not on every new runProbe
 
   const paste = async () => {
     try {

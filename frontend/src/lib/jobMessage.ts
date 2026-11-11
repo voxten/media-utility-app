@@ -14,6 +14,7 @@ export function translateMessage(t: TFunction, message: string | null | undefine
 
 // A colour code may arrive without its ESC byte ("[0;31m"); without ESC only digit codes ending in "m"
 // are colours, so "[twitter]" and "[youtube]" in yt-dlp errors stay intact.
+// eslint-disable-next-line no-control-regex -- the ESC byte is exactly what this strips
 const ANSI_REGEX = /\x1b\[[0-9;]*[a-zA-Z]|\[[0-9;]+m/g;
 
 export function jobMessage(

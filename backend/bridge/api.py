@@ -30,6 +30,7 @@ from backend.services import (
     converter,
     deps_installer,
     download,
+    download_queue,
     duplicates,
     gif_editor,
     gif_render,
@@ -414,7 +415,7 @@ class DownloadApi(_Namespace):
         max_height = params.get("maxHeight") or 0
         return self._ctx.jobs.submit(
             "download.batch",
-            lambda ctx: download.download_batch(
+            lambda ctx: download_queue.download_batch(
                 ctx,
                 urls,
                 params["outdir"],
@@ -437,17 +438,17 @@ class DownloadApi(_Namespace):
 
     def pending_queue(self) -> Optional[Dict[str, Any]]:
         """The queue left unfinished by the last run (closed app or cancel), or None."""
-        return download.pending_queue()
+        return download_queue.pending_queue()
 
     def resume_queue(self) -> str:
         """Start the unfinished queue again with the options it was started with."""
-        saved = download.pending_queue()
+        saved = download_queue.pending_queue()
         if not saved:
             raise RuntimeError("download.error.noPendingQueue")
         return self._submit_batch(saved["urls"], saved["options"])
 
     def discard_queue(self) -> bool:
-        download.discard_queue()
+        download_queue.discard_queue()
         return True
 
     def archive_count(self) -> int:
@@ -460,7 +461,7 @@ class DownloadApi(_Namespace):
     def add_to_batch(self, params: Dict[str, Any]) -> Dict[str, Any]:
         urls = [u for u in params.get("urls", []) if u.strip()]
         job_id = params.get("jobId")
-        success = download.add_to_batch(job_id, urls)
+        success = download_queue.add_to_batch(job_id, urls)
         return {"success": success}
 
 

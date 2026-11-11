@@ -51,9 +51,10 @@ export function LogPanel({ logs, title, defaultOpen = false }: LogPanelProps) {
   }, [logs.length, open]);
 
   // Errors deserve attention: open the panel automatically when the first one arrives.
+  const hasErrors = errors > 0;
   useEffect(() => {
-    if (errors > 0) setOpen(true);
-  }, [errors > 0]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (hasErrors) setOpen(true);
+  }, [hasErrors]);
 
   const lines = logs.slice(-MAX_VISIBLE).map((log) => ({
     ...log,

@@ -139,8 +139,10 @@ export default function WatermarkPage() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!form.image || form.result || isTypingTarget(e.target)) return;
-      if (e.ctrlKey && e.key.toLowerCase() === "z") (e.shiftKey ? canvasRef.current?.redo() : canvasRef.current?.undo());
-      else if (e.ctrlKey && e.key.toLowerCase() === "y") canvasRef.current?.redo();
+      if (e.ctrlKey && e.key.toLowerCase() === "z") {
+        if (e.shiftKey) canvasRef.current?.redo();
+        else canvasRef.current?.undo();
+      } else if (e.ctrlKey && e.key.toLowerCase() === "y") canvasRef.current?.redo();
       else if (hasCommandModifier(e)) return;
       else if (e.key === "b") form.set({ tool: "brush" });
       else if (e.key === "e") form.set({ tool: "eraser" });

@@ -1,3 +1,4 @@
 -r requirements.txt
 pytest
 pyinstaller
+packaging  # scripts/check_requirements.py

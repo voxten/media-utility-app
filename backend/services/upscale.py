@@ -6,12 +6,13 @@ the app (and this module) must load without it.
 
 import uuid
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 import cv2
 import numpy as np
 
 from backend.core import thumbs
+from backend.core.imaging import split_alpha
 from backend.core.jobs import JobCancelled, JobContext
 from backend.core.paths import cache_dir, models_dir, project_root
 
@@ -66,17 +67,6 @@ def write_image(img: np.ndarray, path: str) -> str:
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     buf.tofile(path)
     return path
-
-
-def split_alpha(img: np.ndarray) -> Tuple[np.ndarray, Optional[np.ndarray]]:
-    """Splits image into (BGR, Alpha)."""
-    if img.ndim == 2:
-        return cv2.cvtColor(img, cv2.COLOR_GRAY2BGR), None
-    if img.shape[2] == 4:
-        return img[:, :, :3].copy(), img[:, :, 3].copy()
-    if img.shape[2] == 3:
-        return img, None
-    raise ValueError(f"Unsupported channel count: {img.shape[2]}")
 
 
 def anti_halo_debleed(bgr: np.ndarray, alpha: np.ndarray) -> np.ndarray:

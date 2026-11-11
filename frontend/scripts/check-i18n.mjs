@@ -115,7 +115,7 @@ const pyFiles = walk(path.join(repoRoot, "backend"), (p) => p.endsWith(".py"));
 
 const pyProgressRegex = /ctx\.progress\([^,]+,\s*["']([^"']+)["']/g;
 const pyLogRegex = /ctx\.log\(\s*["']([^"']+)["']/g;
-const pyTitleRegex = /title\s*=\s*["']([a-zA-Z0-9_\.]+)["']/g;
+const pyTitleRegex = /title\s*=\s*["']([a-zA-Z0-9_.]+)["']/g;
 
 for (const file of pyFiles) {
   const content = fs.readFileSync(file, "utf8");

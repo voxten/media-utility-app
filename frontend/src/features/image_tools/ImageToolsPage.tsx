@@ -155,19 +155,21 @@ export default function ImageToolsPage() {
         setPreview(data);
         const state = useImageToolsForm.getState();
         state.set({ sizes: { ...state.sizes, [current]: { width: data.width, height: data.height } } });
-        setOpsByFile((prev) => (prev[current] ? prev : { ...prev, [current]: createDefaultOperations(data.width, data.height) }));
+        const { opsByFile } = useImageToolsForm.getState();
+        if (!opsByFile[current]) {
+          state.set({ opsByFile: { ...opsByFile, [current]: createDefaultOperations(data.width, data.height) } });
+        }
       })
       .catch((err) => notify.error(errorMessage(t, err)));
     return () => {
       live = false;
     };
-  }, [current, notify]);
+  }, [current, notify, t]);
 
   // Sync the crop box with the stored crop whenever the file changes or its preview arrives.
   useEffect(() => {
     if (preview && ops) setCrop(cropOf(ops, preview.width, preview.height));
-    // Only on file/preview change; `ops` changes on every edit and must not reset an in-progress crop.
-  }, [preview]);
+  }, [preview]); // eslint-disable-line react-hooks/exhaustive-deps -- `ops` changes on every edit and must not reset an in-progress crop
 
   useEffect(() => {
     if (!current || !preview || !ops) return;

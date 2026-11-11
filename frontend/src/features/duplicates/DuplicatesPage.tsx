@@ -214,7 +214,7 @@ export default function DuplicatesPage() {
     onError: (error) => notify.error(t("duplicates.toast.error"), { body: error }),
   });
 
-  const groups = form.groups ?? [];
+  const groups = useMemo(() => form.groups ?? [], [form.groups]);
   const totals = useMemo(() => {
     const files = groups.reduce((n, g) => n + g.length, 0);
     const wasted = groups.reduce((n, g) => {

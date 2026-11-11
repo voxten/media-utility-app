@@ -6,13 +6,14 @@ import os
 import time
 import uuid
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Tuple
 
 import cv2
 import numpy as np
 from PIL import Image
 
 from backend.core import thumbs
+from backend.core.imaging import split_alpha
 from backend.core.jobs import JobCancelled, JobContext
 from backend.core.paths import cache_dir, models_dir
 
@@ -81,17 +82,6 @@ def write_image(img: np.ndarray, path: str) -> str:
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     buf.tofile(path)
     return path
-
-
-def split_alpha(img: np.ndarray) -> Tuple[np.ndarray, Optional[np.ndarray]]:
-    """Splits image into (BGR, Alpha)."""
-    if img.ndim == 2:
-        return cv2.cvtColor(img, cv2.COLOR_GRAY2BGR), None
-    if img.shape[2] == 4:
-        return img[:, :, :3].copy(), img[:, :, 3].copy()
-    if img.shape[2] == 3:
-        return img, None
-    raise ValueError(f"Unsupported channel count: {img.shape[2]}")
 
 
 def filter_small_components(alpha: np.ndarray, min_area_ratio: float = 0.002, fill_holes: bool = True) -> np.ndarray:

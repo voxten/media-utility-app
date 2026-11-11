@@ -12,18 +12,16 @@ from backend.core.paths import app_data_dir, default_output_dir, resource_path
 
 MAX_RECENT = 8
 
-# Default cookie files: project cookies/ dir, app data dir, or legacy fallback.
+# Default cookie files: project cookies/ dir, then the app data dir.
 DEFAULT_COOKIES = {
     "youtube": [
         resource_path("cookies", "youtube_cookies.txt"),
         app_data_dir() / "cookies" / "youtube_cookies.txt",
-        resource_path("features", "download", "youtube_cookies.txt"),
     ],
     "x": [
         resource_path("cookies", "x.com_cookies.txt"),
         resource_path("cookies", "x_cookies.txt"),
         app_data_dir() / "cookies" / "x.com_cookies.txt",
-        resource_path("features", "download", "x.com_cookies.txt"),
     ],
     "instagram": [
         resource_path("cookies", "instagram_cookies.txt"),

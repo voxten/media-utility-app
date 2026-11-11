@@ -139,3 +139,45 @@ def test_every_download_has_a_pinned_sha256():
         assert set(model.sha256) == set(model.files), model.id
         pinned += model.sha256.values()
     assert all(len(h) == 64 and int(h, 16) >= 0 for h in pinned)
+
+
+def _fake_zip_download(members):
+    def download(ctx, url, target_path, expected_sha256, status_key, progress_start, progress_span):
+        import zipfile
+
+        with zipfile.ZipFile(target_path, "w") as zf:
+            for name in members:
+                zf.writestr(name, b"exe")
+    return download
+
+
+@pytest.mark.parametrize(
+    "dep_id, members, expected",
+    [
+        ("ffmpeg", ["ffmpeg-9/bin/ffmpeg.exe", "ffmpeg-9/bin/ffprobe.exe", "ffmpeg-9/doc/readme.txt"], {"ffmpeg.exe", "ffprobe.exe"}),
+        ("gifsicle", ["gifsicle-1.95/gifsicle.exe", "gifsicle-1.95/gifdiff.exe"], {"gifsicle.exe"}),
+    ],
+)
+def test_portable_zip_install_copies_only_the_executables(monkeypatch, tmp_path, ctx, dep_id, members, expected):
+    monkeypatch.setattr(deps_installer, "app_data_dir", lambda: tmp_path / "data")
+    monkeypatch.setattr(deps_installer, "cache_dir", lambda: tmp_path)
+    monkeypatch.setattr(deps_installer, "ensure_app_paths", lambda: None)
+    monkeypatch.setattr(deps_installer.shutil, "which", lambda name: None)
+    monkeypatch.setattr(deps_installer, "_download_file_with_progress", _fake_zip_download(members))
+
+    assert deps_installer.install_dependency(ctx, dep_id) == {"id": dep_id, "ok": True}
+    assert {p.name for p in (tmp_path / "data" / "bin").iterdir()} == expected
+    assert not (tmp_path / f"{dep_id}.zip").exists()
+    assert ctx.of("job:progress")[-1]["percent"] == 100
+
+
+def test_portable_zip_without_the_executable_fails(monkeypatch, tmp_path, ctx):
+    monkeypatch.setattr(deps_installer, "app_data_dir", lambda: tmp_path / "data")
+    monkeypatch.setattr(deps_installer, "cache_dir", lambda: tmp_path)
+    monkeypatch.setattr(deps_installer, "ensure_app_paths", lambda: None)
+    monkeypatch.setattr(deps_installer.shutil, "which", lambda name: None)
+    monkeypatch.setattr(deps_installer, "_download_file_with_progress", _fake_zip_download(["readme.txt"]))
+
+    with pytest.raises(RuntimeError, match="gifsicle.exe"):
+        deps_installer.install_gifsicle(ctx)
+    assert not (tmp_path / "gifsicle.zip").exists()

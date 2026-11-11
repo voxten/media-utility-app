@@ -178,53 +178,83 @@ def install_lama(ctx: JobContext) -> Dict[str, Any]:
     return {"id": "lama", "ok": True}
 
 
-def install_ffmpeg(ctx: JobContext) -> Dict[str, Any]:
-    """Downloads portable FFmpeg build on Windows and places it into %APPDATA%/MediaStudio/bin."""
+def _install_portable_zip(
+    ctx: JobContext,
+    dep_id: str,
+    url: str,
+    sha256: str,
+    executables: Sequence[str],
+    status_key: str,
+    log_key: str,
+    done_log_key: str,
+    extract_keys: Optional[Sequence[str]] = None,
+) -> Dict[str, Any]:
+    """Download a pinned Windows zip and copy ``executables`` from it into %APPDATA%/MediaStudio/bin.
+
+    Skipped when the first executable is already on PATH or in the bin folder. ``extract_keys``
+    (status, log) show an extracting step at 80 %; without it the download takes the whole bar.
+    """
     bin_dir = app_data_dir() / "bin"
     bin_dir.mkdir(parents=True, exist_ok=True)
-    target_ffmpeg = bin_dir / "ffmpeg.exe"
+    main_exe = bin_dir / executables[0]
 
-    if shutil.which("ffmpeg") or target_ffmpeg.is_file():
+    if shutil.which(Path(executables[0]).stem) or main_exe.is_file():
         ensure_app_paths()
         ctx.progress(100, "deps.status.done")
-        return {"id": "ffmpeg", "ok": True}
+        return {"id": dep_id, "ok": True}
 
-    zip_path = cache_dir() / "ffmpeg.zip"
-    ctx.progress(5, "deps.status.downloadingFfmpeg", {"percent": 0})
-    ctx.log("deps.log.downloadingFfmpeg")
+    zip_path = cache_dir() / f"{dep_id}.zip"
+    ctx.progress(5, status_key, {"percent": 0})
+    ctx.log(log_key)
 
     _download_file_with_progress(
         ctx,
-        url=FFMPEG_WINDOWS_URL,
+        url=url,
         target_path=zip_path,
-        expected_sha256=FFMPEG_WINDOWS_SHA256,
-        status_key="deps.status.downloadingFfmpeg",
+        expected_sha256=sha256,
+        status_key=status_key,
         progress_start=5,
-        progress_span=75,
+        progress_span=75 if extract_keys else 85,
     )
 
-    ctx.progress(80, "deps.status.extractingFfmpeg")
-    ctx.log("deps.log.extractingFfmpeg")
+    if extract_keys:
+        ctx.progress(80, extract_keys[0])
+        ctx.log(extract_keys[1])
 
+    wanted = {name.lower() for name in executables}
     try:
         with zipfile.ZipFile(zip_path, "r") as zf:
             for member in zf.namelist():
                 base_name = Path(member).name.lower()
-                if base_name in ("ffmpeg.exe", "ffprobe.exe"):
-                    source = zf.open(member)
-                    target = bin_dir / base_name
-                    with target.open("wb") as out:
+                if base_name in wanted:
+                    wanted.discard(base_name)
+                    with zf.open(member) as source, (bin_dir / base_name).open("wb") as out:
                         shutil.copyfileobj(source, out)
     finally:
         zip_path.unlink(missing_ok=True)
 
     ensure_app_paths()
-    if not target_ffmpeg.is_file():
-        raise RuntimeError("ffmpeg.exe was not found inside the downloaded archive")
+    if not main_exe.is_file():
+        raise RuntimeError(f"{executables[0]} was not found inside the downloaded archive")
 
     ctx.progress(100, "deps.status.done")
-    ctx.log("deps.log.ffmpegInstalled")
-    return {"id": "ffmpeg", "ok": True}
+    ctx.log(done_log_key)
+    return {"id": dep_id, "ok": True}
+
+
+def install_ffmpeg(ctx: JobContext) -> Dict[str, Any]:
+    """Downloads portable FFmpeg build on Windows and places it into %APPDATA%/MediaStudio/bin."""
+    return _install_portable_zip(
+        ctx,
+        "ffmpeg",
+        FFMPEG_WINDOWS_URL,
+        FFMPEG_WINDOWS_SHA256,
+        ("ffmpeg.exe", "ffprobe.exe"),
+        "deps.status.downloadingFfmpeg",
+        "deps.log.downloadingFfmpeg",
+        "deps.log.ffmpegInstalled",
+        ("deps.status.extractingFfmpeg", "deps.log.extractingFfmpeg"),
+    )
 
 
 UPSCALE_MODELS = {
@@ -359,46 +389,16 @@ def install_whisper(ctx: JobContext, model: whisper_models.WhisperModel) -> Dict
 
 def install_gifsicle(ctx: JobContext) -> Dict[str, Any]:
     """Downloads the portable gifsicle build on Windows and places it into %APPDATA%/MediaStudio/bin."""
-    bin_dir = app_data_dir() / "bin"
-    bin_dir.mkdir(parents=True, exist_ok=True)
-    target = bin_dir / "gifsicle.exe"
-
-    if shutil.which("gifsicle") or target.is_file():
-        ensure_app_paths()
-        ctx.progress(100, "deps.status.done")
-        return {"id": "gifsicle", "ok": True}
-
-    zip_path = cache_dir() / "gifsicle.zip"
-    ctx.progress(5, "deps.status.downloadingGifsicle", {"percent": 0})
-    ctx.log("deps.log.downloadingGifsicle")
-
-    _download_file_with_progress(
+    return _install_portable_zip(
         ctx,
-        url=GIFSICLE_WINDOWS_URL,
-        target_path=zip_path,
-        expected_sha256=GIFSICLE_WINDOWS_SHA256,
-        status_key="deps.status.downloadingGifsicle",
-        progress_start=5,
-        progress_span=85,
+        "gifsicle",
+        GIFSICLE_WINDOWS_URL,
+        GIFSICLE_WINDOWS_SHA256,
+        ("gifsicle.exe",),
+        "deps.status.downloadingGifsicle",
+        "deps.log.downloadingGifsicle",
+        "deps.log.gifsicleInstalled",
     )
-
-    try:
-        with zipfile.ZipFile(zip_path, "r") as zf:
-            for member in zf.namelist():
-                if Path(member).name.lower() == "gifsicle.exe":
-                    with zf.open(member) as source, target.open("wb") as out:
-                        shutil.copyfileobj(source, out)
-                    break
-    finally:
-        zip_path.unlink(missing_ok=True)
-
-    ensure_app_paths()
-    if not target.is_file():
-        raise RuntimeError("gifsicle.exe was not found inside the downloaded archive")
-
-    ctx.progress(100, "deps.status.done")
-    ctx.log("deps.log.gifsicleInstalled")
-    return {"id": "gifsicle", "ok": True}
 
 
 def _verify_engine(engine_id: str, folder: Path) -> None:

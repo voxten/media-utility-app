@@ -1,10 +1,13 @@
-"""Pillow helpers shared by the image tools (converter, compressor, image editor)."""
+"""Image helpers shared by the tools: Pillow formats (converter, compressor, image editor) and OpenCV channels."""
 
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator, Union
+from typing import TYPE_CHECKING, Iterator, Optional, Tuple, Union
 
 from PIL import Image, ImageOps
+
+if TYPE_CHECKING:
+    import numpy as np
 
 # Output formats that can keep transparency.
 ALPHA_FORMATS = {"png", "webp", "gif", "tiff"}
@@ -60,3 +63,16 @@ def open_image(path: Union[str, Path]) -> Iterator[Image.Image]:
         finally:
             if upright is not img:
                 upright.close()
+
+
+def split_alpha(img: "np.ndarray") -> Tuple["np.ndarray", Optional["np.ndarray"]]:
+    """Split an OpenCV image into (BGR, alpha); alpha is None for images without one."""
+    if img.ndim == 2:
+        import cv2
+
+        return cv2.cvtColor(img, cv2.COLOR_GRAY2BGR), None
+    if img.shape[2] == 4:
+        return img[:, :, :3].copy(), img[:, :, 3].copy()
+    if img.shape[2] == 3:
+        return img, None
+    raise ValueError(f"Unsupported channel count: {img.shape[2]}")
