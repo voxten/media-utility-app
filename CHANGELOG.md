@@ -6,6 +6,49 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 The app shows this file (and its Polish translation, [CHANGELOG.pl.md](CHANGELOG.pl.md)) under "What's new", so every release goes into both files.
 
+## [0.14.0] - 2026-11-11
+
+### Added
+
+- **Video Downloader: queue format.** The queue and playlists download video up to a chosen maximum quality, or only audio in a chosen format (MP3, M4A, FLAC and others), instead of always the best video.
+- **Video Downloader: download archive.** Every finished download is remembered, and "Skip videos downloaded before" lets a queue skip links you already have. Settings → Storage & Cache → "Download archive" shows how many videos it remembers and clears it.
+- **Video Downloader:** "Cover and metadata in the file" writes the thumbnail and details such as the title into the downloaded video or audio file.
+- **Video Downloader:** playlist entries can be ticked one by one, or a run of them with Shift+click.
+- **Video Downloader: resumable queue.** Links that were not downloaded when the app closed or the queue was cancelled are kept, and the tool offers "Resume" or "Discard" next time. Starting a new queue asks before replacing them. The last queue result stays on the page after you switch to another tool.
+- **Error screen:** when a page fails, it shows "Try again" and "Go to Home" instead of going blank; a failure of the whole window offers "Reload window". If the app cannot start or does not respond within 30 seconds, it says so instead of loading forever.
+- **Logs:** errors and app activity are written to a log file, useful when reporting a problem. Settings → Storage & Cache → "Logs" opens the folder.
+- **Output folder** field, filled with the default folder from Settings, in Image Compressor, the GIF tools, Image Tools, the PDF tools, Transcription and when saving AI results.
+- **Shortcuts in every tool:** Ctrl+Enter starts, Esc cancels and Ctrl+O adds files.
+- **Duplicate Finder** accepts a dropped folder; **Text to Speech** opens a dropped or chosen .txt file.
+- Settings → Storage & Cache shows the size of the AI models with an "Open folder" button.
+
+### Changed
+
+- **"Tasks at once"** in Settings now really limits how many tasks run at the same time and takes effect right away. Checking links, reading PDFs and download engine updates never wait in the queue.
+- Tools keep their files and settings when you switch to another page and back: Image Compressor, the GIF tools, Image Tools, the PDF tools, Audio-Video Sync and Transcription.
+- A finished task shows its result on the tool page; a toast appears only when you are on another page.
+- Saving never overwrites an existing file: Image Converter, Image Compressor, Image Tools, PDF Splitter, PDF ↔ Images and every single-file result add "(1)", "(2)" to the name instead.
+- Error messages are shorter and translated, without technical prefixes such as "ValueError:".
+- AI models are kept in `%LOCALAPPDATA%\MediaStudio\models`, so they no longer travel with a roaming Windows profile; models downloaded earlier are moved there once at start-up.
+- **Safer add-ons:** FFmpeg, gifsicle, LaMa, Real-ESRGAN and Whisper downloads are checked against a known checksum before use, and FFmpeg comes from a fixed release. Download engine updates are checked against the checksums published on PyPI.
+- Opening a file from the app never runs a program: `.exe`, `.bat`, shortcuts and similar files are shown in Explorer instead.
+- Settings → Advanced → custom FFmpeg must point to `ffmpeg.exe` or its folder; anything else shows an error.
+- The "GPU acceleration" switch is gone from Settings; it had no effect.
+- The installed app is about 9 MB smaller (an unused GUI toolkit is no longer included).
+- The Tasks panel stays fast with a long history: a running task redraws only its own card, and the app keeps the last 100 finished tasks in memory.
+
+### Fixed
+
+- **Image Tools:** a batch can be cancelled, and Ctrl+C / Ctrl+V while typing in a field no longer switch tools.
+- Photos rotated by the camera come out the right way up, transparent images saved as JPEG, BMP or PDF get a white background instead of black, and TIFF files work with the "Same as original" format.
+- FFmpeg can no longer overwrite the file it reads from, and it is stopped when it fails or hangs.
+- **PDF tools:** saving a compressed or rotated PDF over the original works; PDF Splitter names files after their pages; extracted text and file names are no longer Polish only.
+- **Video Downloader:** links added while a queue is finishing start a new queue instead of being lost, and a link with nothing to download gives a clear error.
+- **Duplicate Finder:** the exported CSV shows Polish letters correctly in Excel.
+- A PDF page preview that cannot be loaded shows a message instead of staying empty.
+
+---
+
 ## [0.13.0] - 2026-11-09
 
 ### Added

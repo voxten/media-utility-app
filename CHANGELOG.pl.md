@@ -2,6 +2,49 @@
 
 Polskie tłumaczenie [CHANGELOG.md](CHANGELOG.md), pokazywane w aplikacji przy polskim języku. Każde wydanie trzeba dopisać w obu plikach.
 
+## [0.14.0] - 2026-11-11
+
+### Dodano
+
+- **Pobieranie wideo: format kolejki.** Kolejka i playlisty pobierają film do wybranej maksymalnej jakości albo sam dźwięk w wybranym formacie (MP3, M4A, FLAC i inne), zamiast zawsze najlepszego filmu.
+- **Pobieranie wideo: archiwum pobranych.** Każde zakończone pobieranie jest zapamiętywane, a „Pomijaj pobrane wcześniej” pozwala kolejce pominąć linki, które już masz. Ustawienia → Pamięć i pamięć podręczna → „Archiwum pobranych” pokazuje, ile filmów pamięta, i pozwala je wyczyścić.
+- **Pobieranie wideo:** „Okładka i metadane w pliku” zapisuje miniaturkę i dane, np. tytuł, w pobranym pliku wideo lub audio.
+- **Pobieranie wideo:** pozycje playlisty można zaznaczać pojedynczo albo całym zakresem przez Shift+klik.
+- **Pobieranie wideo: wznawianie kolejki.** Linki, które nie zdążyły się pobrać przed zamknięciem aplikacji albo anulowaniem kolejki, zostają zapamiętane, a narzędzie przy następnym razie proponuje „Wznów” albo „Odrzuć”. Nowa kolejka pyta, zanim je zastąpi. Wynik ostatniej kolejki zostaje na stronie po przejściu do innego narzędzia.
+- **Ekran błędu:** gdy strona się zepsuje, pokazuje „Spróbuj ponownie” i „Przejdź do Startu” zamiast pustego miejsca; błąd całego okna proponuje „Odśwież okno”. Jeśli aplikacja nie może wystartować albo nie odpowiada przez 30 sekund, mówi o tym zamiast kręcić się bez końca.
+- **Logi:** błędy i przebieg pracy aplikacji zapisują się w pliku, przydatnym przy zgłaszaniu problemu. Ustawienia → Pamięć i pamięć podręczna → „Logi” otwiera folder.
+- Pole **„Folder zapisu”**, wypełnione domyślnym folderem z Ustawień, w Kompresorze obrazów, narzędziach GIF, Narzędziach obrazu, narzędziach PDF, Transkrypcji i przy zapisie wyników AI.
+- **Skróty w każdym narzędziu:** Ctrl+Enter uruchamia, Esc anuluje, a Ctrl+O dodaje pliki.
+- **Wyszukiwarka duplikatów** przyjmuje upuszczony folder; **Tekst na mowę** otwiera upuszczony albo wybrany plik .txt.
+- Ustawienia → Pamięć i pamięć podręczna pokazują rozmiar modeli AI z przyciskiem „Otwórz folder”.
+
+### Zmieniono
+
+- **„Zadania naraz”** w Ustawieniach naprawdę ogranicza, ile zadań działa jednocześnie, i działa od razu po zmianie. Sprawdzanie linków, odczyt PDF i aktualizacja silnika pobierania nigdy nie czekają w kolejce.
+- Narzędzia pamiętają pliki i ustawienia po przejściu na inną stronę i z powrotem: Kompresor obrazów, narzędzia GIF, Narzędzia obrazu, narzędzia PDF, Synchronizacja Audio-Wideo i Transkrypcja.
+- Zakończone zadanie pokazuje wynik na stronie narzędzia; dymek pojawia się tylko wtedy, gdy jesteś na innej stronie.
+- Zapis nigdy nie nadpisuje istniejącego pliku: Konwerter obrazów, Kompresor obrazów, Narzędzia obrazu, Podział PDF, PDF ↔ Obrazy i każdy wynik zapisywany jako jeden plik dodają do nazwy „(1)”, „(2)”.
+- Komunikaty o błędach są krótsze i przetłumaczone, bez technicznych przedrostków w rodzaju „ValueError:”.
+- Modele AI są trzymane w `%LOCALAPPDATA%\MediaStudio\models`, więc nie wędrują już z profilem Windows; modele pobrane wcześniej zostają tam przeniesione raz przy starcie.
+- **Bezpieczniejsze dodatki:** pobrane FFmpeg, gifsicle, LaMa, Real-ESRGAN i Whisper są sprawdzane ze znaną sumą kontrolną przed użyciem, a FFmpeg pochodzi z ustalonego wydania. Aktualizacje silnika pobierania są sprawdzane z sumami kontrolnymi opublikowanymi w PyPI.
+- Otwieranie pliku z aplikacji nigdy nie uruchamia programu: pliki `.exe`, `.bat`, skróty i podobne są zamiast tego pokazywane w Eksploratorze.
+- Ustawienia → Zaawansowane → niestandardowa ścieżka do FFmpeg musi wskazywać `ffmpeg.exe` albo jego folder; w innym razie pojawia się błąd.
+- Z Ustawień zniknął przełącznik „Akceleracja GPU”; nic nie zmieniał.
+- Zainstalowana aplikacja jest mniejsza o około 9 MB (nie zawiera już nieużywanej biblioteki okienek).
+- Panel Zadania działa szybko także przy długiej historii: trwające zadanie odświeża tylko swoją kartę, a aplikacja trzyma w pamięci 100 ostatnich zakończonych zadań.
+
+### Naprawiono
+
+- **Narzędzia obrazu:** przetwarzanie wielu plików można anulować, a Ctrl+C / Ctrl+V podczas pisania w polu nie przełączają już narzędzi.
+- Zdjęcia obrócone przez aparat wychodzą we właściwej orientacji, przezroczyste obrazy zapisane jako JPEG, BMP lub PDF dostają białe tło zamiast czarnego, a pliki TIFF działają z formatem „Taki sam jak oryginał”.
+- FFmpeg nie może już nadpisać pliku, z którego czyta, i jest zatrzymywany, gdy się wysypie albo zawiesi.
+- **Narzędzia PDF:** zapis skompresowanego lub obróconego PDF w miejsce oryginału działa; Podział PDF nazywa pliki według stron; wyciągnięty tekst i nazwy plików nie są już tylko po polsku.
+- **Pobieranie wideo:** linki dodane, gdy kolejka się kończy, zaczynają nową kolejkę zamiast przepadać, a link bez niczego do pobrania daje jasny komunikat.
+- **Wyszukiwarka duplikatów:** wyeksportowany plik CSV pokazuje polskie litery poprawnie w Excelu.
+- Podgląd strony PDF, którego nie da się wczytać, pokazuje komunikat zamiast pustego miejsca.
+
+---
+
 ## [0.13.0] - 2026-11-09
 
 ### Dodano
