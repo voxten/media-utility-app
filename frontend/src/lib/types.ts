@@ -27,6 +27,10 @@ export interface Settings {
   engineUpdateCheck: boolean;
   /** Unix time (seconds) of the last look. */
   engineLastCheck: number;
+  /** Write the cover image, title and artist into downloaded files. */
+  downloadEmbedMeta: boolean;
+  /** Queued links already downloaded once (listed in the download archive) are skipped. */
+  downloadSkipArchived: boolean;
   /** Last output settings used by the GIF tools. */
   gifOutput?: GifOutputOptions;
   /** Last options used by the Transcription tool. */
@@ -509,4 +513,10 @@ export interface GifEditorResult {
   outputDir: string;
   files: string[];
   results: GifEditorItem[];
+}
+
+/** A download queue left unfinished by the last run (app closed or queue cancelled). */
+export interface PendingQueue {
+  urls: string[];
+  options: { outdir: string; mode?: "video" | "audio"; audioCodec?: string; maxHeight?: number };
 }

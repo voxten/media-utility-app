@@ -402,13 +402,16 @@ class DownloadApi(_Namespace):
                 params.get("audioCodec", "mp3"),
                 cookies,
                 params.get("subtitles"),
+                bool(self._ctx.settings.get("downloadEmbedMeta")),
+                str(download.archive_path()),
             ),
             title=params.get("title") or params["url"],
         )
 
-    def batch(self, params: Dict[str, Any]) -> str:
+    def _submit_batch(self, urls: List[str], params: Dict[str, Any]) -> str:
         cookies = self._ctx.settings.cookie_files()
-        urls = [u for u in params["urls"] if u.strip()]
+        settings = self._ctx.settings
+        max_height = params.get("maxHeight") or 0
         return self._ctx.jobs.submit(
             "download.batch",
             lambda ctx: download.download_batch(
@@ -418,9 +421,41 @@ class DownloadApi(_Namespace):
                 params.get("template") or download.DEFAULT_TEMPLATE,
                 cookies,
                 params.get("subtitles"),
+                mode=params.get("mode") or "video",
+                audio_codec=params.get("audioCodec") or "mp3",
+                max_height=max_height if isinstance(max_height, int) else 0,
+                embed_meta=bool(settings.get("downloadEmbedMeta")),
+                skip_archived=bool(settings.get("downloadSkipArchived")),
+                archive=str(download.archive_path()),
+                persist=True,
             ),
             title=f"{len(urls)} URL",
         )
+
+    def batch(self, params: Dict[str, Any]) -> str:
+        return self._submit_batch([u for u in params["urls"] if u.strip()], params)
+
+    def pending_queue(self) -> Optional[Dict[str, Any]]:
+        """The queue left unfinished by the last run (closed app or cancel), or None."""
+        return download.pending_queue()
+
+    def resume_queue(self) -> str:
+        """Start the unfinished queue again with the options it was started with."""
+        saved = download.pending_queue()
+        if not saved:
+            raise RuntimeError("download.error.noPendingQueue")
+        return self._submit_batch(saved["urls"], saved["options"])
+
+    def discard_queue(self) -> bool:
+        download.discard_queue()
+        return True
+
+    def archive_count(self) -> int:
+        return download.archive_count()
+
+    def clear_archive(self) -> bool:
+        download.clear_archive()
+        return True
 
     def add_to_batch(self, params: Dict[str, Any]) -> Dict[str, Any]:
         urls = [u for u in params.get("urls", []) if u.strip()]

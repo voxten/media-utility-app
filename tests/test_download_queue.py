@@ -1,0 +1,199 @@
+import json
+from pathlib import Path
+
+import pytest
+
+from backend.core.jobs import JobCancelled
+from backend.core.settings import validate_patch
+from backend.services import download
+
+URLS = ["https://example.com/a", "https://example.com/b", "https://example.com/c"]
+
+
+@pytest.fixture
+def queue_file(monkeypatch, tmp_path):
+    path = tmp_path / "download_queue.json"
+    monkeypatch.setattr(download, "queue_path", lambda: path)
+    monkeypatch.setattr(download.time, "sleep", lambda s: None)
+    monkeypatch.setattr(download, "expand_batch_urls", lambda urls, cookies=None: [{"url": u, "title": u} for u in urls])
+    return path
+
+
+def test_batch_format():
+    assert download.batch_format("audio") == "bestaudio/best"
+    assert download.batch_format("audio", 720) == "bestaudio/best"
+    assert download.batch_format("video") == download.AUTO_FORMAT
+    assert download.batch_format("video", 720) == "bestvideo[height<=720]+bestaudio/best[height<=720]/best"
+
+
+def _opts(mode, codec, embed, archive=None):
+    hook = download._ProgressHook(None)
+    return download._download_opts("https://example.com/v", "best", "%(title)s.%(ext)s", mode, codec, {}, hook, embed, archive)
+
+
+def test_download_opts_embed_cover_and_metadata():
+    video = _opts("video", "mp3", True, "C:/archive.txt")
+    keys = [pp["key"] for pp in video["postprocessors"]]
+    assert keys == ["FFmpegVideoConvertor", "FFmpegMetadata"]
+    assert video["writethumbnail"] is True
+    assert video["download_archive"] == "C:/archive.txt"
+
+    assert _opts("audio", "mp3", True)["writethumbnail"] is True
+    wav = _opts("audio", "wav", True)
+    assert wav["writethumbnail"] is False
+    assert [pp["key"] for pp in wav["postprocessors"]] == ["FFmpegExtractAudio", "FFmpegMetadata"]
+
+    plain = _opts("video", "mp3", False)
+    assert "writethumbnail" not in plain and "download_archive" not in plain
+    assert [pp["key"] for pp in plain["postprocessors"]] == ["FFmpegVideoConvertor"]
+
+
+def test_archive_count_and_clear(tmp_path):
+    archive = tmp_path / "archive.txt"
+    assert download.archive_count(archive) == 0
+    archive.write_text("youtube abc\nyoutube def\n\nyoutube abc\n", encoding="utf-8")
+    assert download.archive_count(archive) == 2
+    download.clear_archive(archive)
+    assert not archive.exists()
+    download.clear_archive(archive)
+
+
+def test_queue_file_round_trip(tmp_path):
+    path = tmp_path / "queue.json"
+    options = {"outdir": "C:/Pobrane ąę", "mode": "audio"}
+    download.save_queue(URLS, options, path)
+    assert download.load_queue(path) == {"urls": URLS, "options": options}
+    download.save_queue([], options, path)
+    assert not path.exists()
+    assert download.load_queue(path) is None
+
+
+@pytest.mark.parametrize(
+    "content",
+    ["not json", json.dumps([1, 2]), json.dumps({"version": 99, "urls": URLS, "options": {"outdir": "x"}}),
+     json.dumps({"version": 1, "urls": [], "options": {"outdir": "x"}}),
+     json.dumps({"version": 1, "urls": URLS, "options": {}})],
+)
+def test_broken_queue_file_is_ignored(tmp_path, content):
+    path = tmp_path / "queue.json"
+    path.write_text(content, encoding="utf-8")
+    assert download.load_queue(path) is None
+
+
+class _FakeYDL:
+    """Stands in for UniqueYoutubeDL: one video with id ``abc`` that the archive already lists."""
+
+    def __init__(self, opts, target_ext=None):
+        self.opts = opts
+        self.archive = {"youtube abc"}
+        self.downloaded = False
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def add_post_processor(self, pp, when=None):
+        pass
+
+    def add_info_extractor(self, ie):
+        pass
+
+    def extract_info(self, url, download=True, process=True, **kwargs):
+        return {"id": "abc", "extractor_key": "Youtube", "title": "Film"}
+
+    def in_download_archive(self, info):
+        return bool(self.archive)
+
+    def process_ie_result(self, info, download=True):
+        self.downloaded = True
+        path = Path(self.opts["outtmpl"]).with_name("Film.mp4")
+        path.write_bytes(b"x")
+        return {**info, "filepath": str(path), "ext": "mp4"}
+
+    def prepare_filename(self, info):
+        return info["filepath"]
+
+
+def test_run_ydl_skips_archived_links_only_when_asked(monkeypatch, ctx, tmp_path):
+    monkeypatch.setattr(download, "UniqueYoutubeDL", _FakeYDL)
+
+    def opts():
+        return _opts("video", "mp3", False) | {"outtmpl": str(tmp_path / "%(title)s.%(ext)s")}
+
+    assert download._run_ydl(ctx, "https://youtu.be/abc", opts(), "mp4", skip_archived=True) == {"skipped": True, "title": "Film"}
+    assert not (tmp_path / "Film.mp4").exists()
+
+    result = download._run_ydl(ctx, "https://youtu.be/abc", opts(), "mp4")
+    assert result["path"] == str(tmp_path / "Film.mp4")
+    assert "skipped" not in result
+
+
+def _fake_run(outcomes):
+    """A _run_ydl replacement answering per URL: "done", "skipped" or "cancel"."""
+
+    def run(ctx, url, opts, target_ext=None, photos=False, skip_archived=False):
+        run.calls.append({"url": url, "format": opts["format"], "target_ext": target_ext, "skip": skip_archived})
+        outcome = outcomes.get(url, "done")
+        if outcome == "cancel":
+            raise JobCancelled()
+        if outcome == "skipped":
+            return {"skipped": True, "title": "Old"}
+        return {"title": url, "path": f"{url}.mp3", "size": 10}
+
+    run.calls = []
+    return run
+
+
+def test_batch_audio_mode_skips_and_clears_the_saved_queue(monkeypatch, ctx, tmp_path, queue_file):
+    run = _fake_run({URLS[1]: "skipped"})
+    monkeypatch.setattr(download, "_run_ydl", run)
+
+    result = download.download_batch(
+        ctx, URLS, str(tmp_path), mode="audio", audio_codec="m4a", skip_archived=True, persist=True
+    )
+
+    assert {c["format"] for c in run.calls} == {"bestaudio/best"}
+    assert {c["target_ext"] for c in run.calls} == {"m4a"}
+    assert all(c["skip"] for c in run.calls)
+    assert (result["succeeded"], result["skipped"], result["failed"]) == (2, 1, 0)
+    assert [p["data"]["status"] for p in ctx.of("job:partial") if p["data"]["index"] == 1][-1] == "skipped"
+    assert not queue_file.exists()
+
+
+def test_cancelled_batch_keeps_the_unfinished_links(monkeypatch, ctx, tmp_path, queue_file):
+    monkeypatch.setattr(download, "_run_ydl", _fake_run({URLS[1]: "cancel"}))
+
+    with pytest.raises(JobCancelled):
+        download.download_batch(ctx, URLS, str(tmp_path), mode="video", max_height=720, persist=True)
+
+    saved = download.load_queue()
+    assert saved["urls"] == URLS[1:]
+    assert saved["options"]["maxHeight"] == 720
+    assert saved["options"]["outdir"] == str(tmp_path)
+
+
+def test_batch_without_persist_writes_no_file(monkeypatch, ctx, tmp_path, queue_file):
+    monkeypatch.setattr(download, "_run_ydl", _fake_run({URLS[0]: "cancel"}))
+    with pytest.raises(JobCancelled):
+        download.download_batch(ctx, URLS, str(tmp_path))
+    assert not queue_file.exists()
+
+
+def test_pending_queue_is_hidden_while_a_batch_runs(ctx, queue_file):
+    download.save_queue(URLS, {"outdir": "C:/x"})
+    assert download.pending_queue()["urls"] == URLS
+    download._active_batches["running"] = download.ActiveBatchQueue(ctx, {})
+    try:
+        assert download.pending_queue() is None
+    finally:
+        download._active_batches.pop("running")
+    download.discard_queue()
+    assert download.pending_queue() is None
+
+
+def test_download_settings_are_booleans():
+    assert validate_patch({"downloadEmbedMeta": False, "downloadSkipArchived": True})
+    with pytest.raises(ValueError):
+        validate_patch({"downloadSkipArchived": "yes"})

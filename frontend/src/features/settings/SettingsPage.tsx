@@ -406,6 +406,7 @@ function StorageSection() {
   const clearRecentFolders = useSettings((s) => s.clearRecentFolders);
   const [storage, setStorage] = useState<StorageInfo | null>(null);
   const [clearing, setClearing] = useState(false);
+  const [archiveCount, setArchiveCount] = useState(0);
 
   const loadStorage = useCallback(async () => {
     try {
@@ -418,7 +419,18 @@ function StorageSection() {
 
   useEffect(() => {
     loadStorage();
+    api.download.archiveCount().then(setArchiveCount).catch(() => setArchiveCount(0));
   }, [loadStorage]);
+
+  const handleClearArchive = async () => {
+    try {
+      await api.download.clearArchive();
+      setArchiveCount(0);
+      notify.success(t("settings.storage.archiveCleared"));
+    } catch (err) {
+      notify.error(errorMessage(t, err));
+    }
+  };
 
   const handleClearCache = async () => {
     setClearing(true);
@@ -514,6 +526,16 @@ function StorageSection() {
         <SettingRow icon={DocumentText24Regular} title={t("settings.storage.logsTitle")} description={t("settings.storage.logsDesc")}>
           <Button appearance="subtle" size="medium" icon={<FolderOpen16Regular />} onClick={handleOpenLogs}>
             {t("settings.storage.openFolder")}
+          </Button>
+        </SettingRow>
+
+        <SettingRow
+          icon={ArrowDownload24Regular}
+          title={t("settings.storage.archiveTitle")}
+          description={t("settings.storage.archiveDesc", { count: archiveCount })}
+        >
+          <Button appearance="subtle" size="medium" icon={<Delete16Regular />} disabled={!archiveCount} onClick={handleClearArchive}>
+            {t("settings.storage.clearArchive")}
           </Button>
         </SettingRow>
 

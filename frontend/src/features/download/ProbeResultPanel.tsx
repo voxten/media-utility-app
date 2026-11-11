@@ -1,8 +1,11 @@
 // Checked link: video or playlist details and the format picker.
 
+import { useRef } from "react";
 import {
   Badge,
   Body1,
+  Button,
+  Checkbox,
   makeStyles,
   Subtitle2,
   Tab,
@@ -24,10 +27,9 @@ import { Panel } from "../../components/Panel";
 import { Select } from "../../components/Select";
 import { formatName, formatOptions } from "../../lib/fileTypes";
 import { formatBytes, formatDuration } from "../../lib/format";
+import { toggleEntries } from "./playlistSelection";
 import { useDownloadForm } from "./store";
-import type { Format, Mode, ProbeResult } from "./types";
-
-const AUDIO_CODECS = ["mp3", "m4a", "flac", "wav", "aac", "opus"];
+import { AUDIO_CODECS, type Format, type Mode, type ProbeResult } from "./types";
 
 const useStyles = makeStyles({
   media: { display: "grid", gridTemplateColumns: "200px minmax(0, 1fr)", gap: "20px", alignItems: "start", "@media (max-width: 800px)": { gridTemplateColumns: "1fr" } },
@@ -59,11 +61,13 @@ const useStyles = makeStyles({
   playlistEntryItem: {
     display: "flex",
     alignItems: "center",
-    gap: "8px",
-    padding: "6px 10px",
+    gap: tokens.spacingHorizontalXS,
+    paddingRight: tokens.spacingHorizontalS,
     borderRadius: tokens.borderRadiusSmall,
     backgroundColor: tokens.colorNeutralBackground1,
+    minWidth: 0,
   },
+  entryLabel: { display: "flex", gap: tokens.spacingHorizontalS, minWidth: 0 },
   entryIdx: { color: tokens.colorNeutralForeground3, fontVariantNumeric: "tabular-nums", minWidth: "28px" },
   recommended: { marginLeft: "8px" },
 });
@@ -85,6 +89,9 @@ export function ProbeResultPanel({ probe }: { probe: ProbeResult }) {
   const styles = useStyles();
   const form = useDownloadForm();
   const formats = probe.formats[form.mode] ?? [];
+  const entries = probe.entries ?? [];
+  const anchor = useRef<number | null>(null);
+  const allSelected = entries.length > 0 && form.selectedEntries.length === entries.length;
 
   return (
     <Panel>
@@ -118,17 +125,41 @@ export function ProbeResultPanel({ probe }: { probe: ProbeResult }) {
             <div>
               <div className={styles.playlistHeader}>
                 <Badge appearance="tint" color="brand">
-                  {t("download.playlistBadge", { count: probe.entries?.length ?? 0 })}
+                  {t("download.playlistBadge", { count: entries.length })}
                 </Badge>
+                {entries.length > 0 && (
+                  <Button
+                    size="small"
+                    appearance="subtle"
+                    onClick={() => {
+                      anchor.current = null;
+                      form.set({ selectedEntries: allSelected ? [] : entries.map((_, i) => i) });
+                    }}
+                  >
+                    {allSelected ? t("download.selectNone") : t("download.selectAll")}
+                  </Button>
+                )}
               </div>
-              {probe.entries && probe.entries.length > 0 && (
+              {entries.length > 0 && (
                 <div className={styles.playlistEntriesList}>
-                  {probe.entries.map((entry, idx) => (
+                  {entries.map((entry, idx) => (
                     <div key={entry.url + idx} className={styles.playlistEntryItem}>
-                      <Text weight="semibold" className={styles.entryIdx}>
-                        #{idx + 1}
-                      </Text>
-                      <Text className={styles.ellipsis}>{entry.title || entry.url}</Text>
+                      <Checkbox
+                        checked={form.selectedEntries.includes(idx)}
+                        onChange={(e, d) => {
+                          const range = (e.nativeEvent as MouseEvent).shiftKey === true;
+                          form.set({ selectedEntries: toggleEntries(form.selectedEntries, idx, !!d.checked, anchor.current, range) });
+                          anchor.current = idx;
+                        }}
+                        label={
+                          <span className={styles.entryLabel}>
+                            <Text weight="semibold" className={styles.entryIdx}>
+                              #{idx + 1}
+                            </Text>
+                            <Text className={styles.ellipsis}>{entry.title || entry.url}</Text>
+                          </span>
+                        }
+                      />
                     </div>
                   ))}
                 </div>

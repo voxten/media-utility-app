@@ -1,7 +1,9 @@
 """YouTube / X (Twitter) / generic video downloads via yt-dlp."""
 
 import glob
+import json
 import math
+import os
 from pathlib import Path
 import re
 import threading
@@ -11,18 +13,21 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 import yt_dlp
 from yt_dlp.extractor.tiktok import TikTokIE, TikTokUserIE
 from yt_dlp.networking import Request
-from yt_dlp.postprocessor import PostProcessor
-from yt_dlp.utils import ExtractorError, mimetype2ext, traverse_obj, url_or_none
+from yt_dlp.postprocessor import EmbedThumbnailPP, PostProcessor
+from yt_dlp.utils import ExtractorError, PostProcessingError, mimetype2ext, traverse_obj, url_or_none
 
 from backend.core import thumbs, whisper_models
 from backend.core.jobs import JobCancelled, JobContext
-from backend.core.paths import unique_path
+from backend.core.paths import app_data_dir, unique_path
 from backend.services import transcribe
 
 AUTO_FORMAT = "bestvideo+bestaudio/best"
 AUTO_FORMAT_YOUTUBE = AUTO_FORMAT
 AUTO_FORMAT_GENERIC = AUTO_FORMAT
 AUDIO_CODECS = ("mp3", "wav", "m4a", "flac", "aac", "opus")
+# Audio formats yt-dlp can put a cover image into; the others only get the metadata.
+COVER_CODECS = ("mp3", "m4a", "flac", "opus")
+QUEUE_VERSION = 1
 DEFAULT_TEMPLATE = "{title}.{ext}"
 SUBTITLE_MODES = ("site", "auto")
 # Share of a download's progress bar left for subtitles (fetching them or transcribing with Whisper).
@@ -471,7 +476,10 @@ def _download_opts(
     audio_codec: str,
     cookies: Dict[str, Optional[str]],
     hook: _ProgressHook,
+    embed_meta: bool = False,
+    archive: Optional[str] = None,
 ) -> Dict[str, Any]:
+    """yt-dlp options for one download; ``archive`` is the file that records every finished download."""
     opts = _base_opts(url, cookies)
     opts.update({
         "format": format_id,
@@ -486,7 +494,50 @@ def _download_opts(
     else:
         opts["merge_output_format"] = "mp4"
         opts["postprocessors"] = [{"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}]
+    if embed_meta:
+        opts["postprocessors"].append({"key": "FFmpegMetadata", "add_metadata": True})
+        opts["writethumbnail"] = mode != "audio" or audio_codec in COVER_CODECS
+    if archive:
+        opts["download_archive"] = archive
     return opts
+
+
+def batch_format(mode: str, max_height: int = 0) -> str:
+    """Format for a queued link: the best audio, or the best video up to ``max_height`` (0 = no limit)."""
+    if mode == "audio":
+        return "bestaudio/best"
+    if max_height > 0:
+        return f"bestvideo[height<={max_height}]+bestaudio/best[height<={max_height}]/best"
+    return AUTO_FORMAT
+
+
+def archive_path() -> Path:
+    """yt-dlp's download archive: one ``<site> <id>`` line per finished download."""
+    return app_data_dir() / "download_archive.txt"
+
+
+def archive_count(path: Optional[Path] = None) -> int:
+    try:
+        lines = (path or archive_path()).read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return 0
+    return len({line.strip() for line in lines if line.strip()})
+
+
+def clear_archive(path: Optional[Path] = None) -> None:
+    (path or archive_path()).unlink(missing_ok=True)
+
+
+class _CoverPP(EmbedThumbnailPP):
+    """Embeds the cover image; a failure keeps the downloaded file and only logs a warning."""
+
+    def run(self, info: Dict[str, Any]):  # type: ignore[override]
+        try:
+            return super().run(info)
+        except PostProcessingError as exc:
+            self.report_warning(f"Cover not embedded: {exc}")
+            leftovers = [t.get("filepath") for t in info.get("thumbnails") or [] if t.get("filepath")]
+            return leftovers, info
 
 
 def resolve_format(url: str, format_id: str, mode: str) -> str:
@@ -592,20 +643,32 @@ def _close_fragment_streams(exc: BaseException) -> None:
 
 
 def _run_ydl(
-    ctx: JobContext, url: str, opts: Dict[str, Any], target_ext: Optional[str] = None, photos: bool = False
+    ctx: JobContext,
+    url: str,
+    opts: Dict[str, Any],
+    target_ext: Optional[str] = None,
+    photos: bool = False,
+    skip_archived: bool = False,
 ) -> Dict[str, Any]:
-    """Download ``url``; with ``photos``, a TikTok photo post saves its images instead of its soundtrack."""
+    """Download ``url``; with ``photos``, a TikTok photo post saves its images instead of its soundtrack.
+
+    With ``skip_archived``, a link already in the download archive is not downloaded and the result
+    is ``{"skipped": True, "title": …}``; otherwise the archive is only written to.
+    """
     hook = opts["progress_hooks"][0]
     try:
         with UniqueYoutubeDL(opts, target_ext=target_ext) as ydl:
+            if not skip_archived:
+                ydl.archive = set()
             ydl.add_post_processor(_InfoPP(hook), when="video")
-            if TikTokPostIE.suitable(url):
-                info = _extract(ydl, url, download=False, process=False)
-                if photos and info.get(TIKTOK_PHOTOS_KEY):
-                    return _download_photos(ydl, info, hook)
-                info = ydl.process_ie_result(info, download=True)
-            else:
-                info = ydl.extract_info(url, download=True)
+            if opts.get("writethumbnail"):
+                ydl.add_post_processor(_CoverPP(ydl), when="post_process")
+            info = _extract(ydl, url, download=False, process=False)
+            if skip_archived and ydl.in_download_archive(info):
+                return {"skipped": True, "title": info.get("title") or ""}
+            if photos and TikTokPostIE.suitable(url) and info.get(TIKTOK_PHOTOS_KEY):
+                return _download_photos(ydl, info, hook)
+            info = ydl.process_ie_result(info, download=True)
             path = info.get("filepath") or ydl.prepare_filename(info)
             p = Path(path)
             if not p.is_file() and target_ext:
@@ -613,6 +676,8 @@ def _run_ydl(
                 if cand.is_file():
                     p = cand
                     path = str(cand)
+            if not p.is_file() and skip_archived and ydl.in_download_archive(info):
+                return {"skipped": True, "title": info.get("title") or ""}
             file_size = p.stat().st_size if p.is_file() else (info.get("filesize") or info.get("filesize_approx"))
             summary = media_summary(info)
             if p.suffix:
@@ -732,10 +797,13 @@ def download(
     audio_codec: str = "mp3",
     cookies: Optional[Dict[str, Optional[str]]] = None,
     subtitles: Optional[Dict[str, Any]] = None,
+    embed_meta: bool = False,
+    archive: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Download one URL. ``mode`` is ``video`` | ``audio`` | ``muxed``.
 
     ``subtitles`` is ``{mode: off | site | auto, languages, model, language}`` (see add_subtitles).
+    A single link is always downloaded, even when the archive already lists it.
     """
     t0 = time.monotonic()
     url = sanitize_x_url(url)
@@ -750,6 +818,8 @@ def download(
         target_codec,
         cookies or {},
         _ProgressHook(ctx, scale=1.0 - share),
+        embed_meta,
+        archive,
     )
     target_ext = target_codec if mode == "audio" else "mp4"
     ctx.progress(0, "download.status.starting")
@@ -811,20 +881,80 @@ def expand_batch_urls(
     return items
 
 
+def queue_path() -> Path:
+    """Links of the last queue that did not finish, so the next start can resume it."""
+    return app_data_dir() / "download_queue.json"
+
+
+def save_queue(urls: List[str], options: Dict[str, Any], path: Optional[Path] = None) -> None:
+    """Write the unfinished links; no links removes the file."""
+    target = path or queue_path()
+    if not urls:
+        target.unlink(missing_ok=True)
+        return
+    target.parent.mkdir(parents=True, exist_ok=True)
+    tmp = target.with_suffix(".tmp")
+    tmp.write_text(json.dumps({"version": QUEUE_VERSION, "urls": urls, "options": options}, ensure_ascii=False), encoding="utf-8")
+    os.replace(tmp, target)
+
+
+def load_queue(path: Optional[Path] = None) -> Optional[Dict[str, Any]]:
+    """The saved unfinished queue as ``{urls, options}``, or None when there is none or it is unreadable."""
+    try:
+        data = json.loads((path or queue_path()).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(data, dict) or data.get("version") != QUEUE_VERSION:
+        return None
+    urls = [u for u in data.get("urls") or [] if isinstance(u, str) and u.strip()]
+    options = data.get("options")
+    if not urls or not isinstance(options, dict) or not isinstance(options.get("outdir"), str):
+        return None
+    return {"urls": urls, "options": options}
+
+
+def pending_queue() -> Optional[Dict[str, Any]]:
+    """The unfinished queue to offer for resuming; None while a queue is downloading (it owns the file)."""
+    with _active_batches_lock:
+        if _active_batches:
+            return None
+    return load_queue()
+
+
+def discard_queue() -> None:
+    save_queue([], {})
+
+
 class ActiveBatchQueue:
     def __init__(
         self,
         ctx: JobContext,
         cookies: Optional[Dict[str, Optional[str]]],
+        saved_options: Optional[Dict[str, Any]] = None,
     ) -> None:
+        """``saved_options`` (the batch parameters) turn on saving the unfinished links after every change."""
         self.ctx = ctx
         self.cookies = cookies
+        self.saved_options = saved_options
         self.lock = threading.Lock()
         self.items: List[Dict[str, Any]] = []
         self.results: List[Dict[str, Any]] = []
+        self.finished: Set[int] = set()
         self.cursor: int = 0
         # Set under ``lock`` once the loop has taken its last item; later URLs need a new batch.
         self.closed = False
+
+    def remaining_urls(self) -> List[str]:
+        with self.lock:
+            return [item["url"] for item in self.items if item["index"] not in self.finished]
+
+    def save(self) -> None:
+        if self.saved_options is None:
+            return
+        try:
+            save_queue(self.remaining_urls(), self.saved_options)
+        except OSError as exc:
+            self.ctx.log("download.log.queueNotSaved", "warning", error=str(exc))
 
     def add_urls(self, urls: List[str]) -> Optional[int]:
         """Queue ``urls``; None when the batch has already finished and they were not added."""
@@ -839,6 +969,7 @@ class ActiveBatchQueue:
                 self.items.append(entry)
                 self.ctx.partial({**entry, "status": "pending"})
                 added_count += 1
+        self.save()
         return added_count
 
 
@@ -871,16 +1002,40 @@ def download_batch(
     filename_template: str = DEFAULT_TEMPLATE,
     cookies: Optional[Dict[str, Optional[str]]] = None,
     subtitles: Optional[Dict[str, Any]] = None,
+    mode: str = "video",
+    audio_codec: str = "mp3",
+    max_height: int = 0,
+    embed_meta: bool = False,
+    skip_archived: bool = False,
+    archive: Optional[str] = None,
+    persist: bool = False,
 ) -> Dict[str, Any]:
-    """Download several URLs with best quality; per-item state is streamed via ``ctx.partial``."""
+    """Download several URLs; per-item state is streamed via ``ctx.partial``.
+
+    ``mode`` is ``video`` (best quality up to ``max_height``) or ``audio`` (converted to ``audio_codec``).
+    With ``persist``, the links not finished yet are kept in ``queue_path()`` until the batch ends normally.
+    """
     ctx.progress(None, "download.status.probing")
     Path(outdir).expanduser().mkdir(parents=True, exist_ok=True)
     template = output_template(outdir, filename_template)
+    mode = "audio" if mode == "audio" else "video"
+    target_codec = audio_codec if audio_codec in AUDIO_CODECS else "mp3"
+    target_ext = target_codec if mode == "audio" else "mp4"
+    fmt = batch_format(mode, max_height)
+    saved_options = {
+        "outdir": outdir,
+        "template": filename_template,
+        "subtitles": subtitles,
+        "mode": mode,
+        "audioCodec": target_codec,
+        "maxHeight": max_height,
+    }
 
-    batch_queue = ActiveBatchQueue(ctx, cookies)
+    batch_queue = ActiveBatchQueue(ctx, cookies, saved_options if persist else None)
     with _active_batches_lock:
         _active_batches[ctx.job_id] = batch_queue
 
+    finished_normally = False
     try:
         batch_queue.add_urls(urls)
 
@@ -900,12 +1055,25 @@ def download_batch(
             slot = 100 / max(1, total)
             share = SUBTITLE_SHARE if _wants_subtitles(subtitles) else 0.0
             hook = _ProgressHook(ctx, scale=(1 - share) / max(1, total), offset=index * slot, item=index)
-            fmt = AUTO_FORMAT
-            opts = _download_opts(url, fmt, template, "video", "mp3", cookies or {}, hook)
+            opts = _download_opts(url, fmt, template, mode, target_codec, cookies or {}, hook, embed_meta, archive)
 
             t0 = time.monotonic()
             try:
-                info = _run_ydl(ctx, url, opts, target_ext="mp4", photos=True)
+                info = _run_ydl(ctx, url, opts, target_ext=target_ext, photos=mode != "audio", skip_archived=skip_archived)
+                if info.get("skipped"):
+                    entry = {
+                        "index": index,
+                        "url": url,
+                        "title": info.get("title") or current_item["title"],
+                        "status": "skipped",
+                    }
+                    ctx.log("download.log.itemSkipped", url=url)
+                    with batch_queue.lock:
+                        batch_queue.results.append(entry)
+                        batch_queue.finished.add(index)
+                    ctx.partial(entry)
+                    batch_queue.save()
+                    continue
                 if share:
                     info["subtitles"] = add_subtitles(
                         ctx, url, info["path"], subtitles or {}, cookies or {},
@@ -938,7 +1106,9 @@ def download_batch(
 
             with batch_queue.lock:
                 batch_queue.results.append(entry)
+                batch_queue.finished.add(index)
             ctx.partial(entry)
+            batch_queue.save()
 
             with batch_queue.lock:
                 more_items = batch_queue.cursor < len(batch_queue.items)
@@ -953,10 +1123,12 @@ def download_batch(
         total_duration = sum(
             r["duration"] for r in results if isinstance(r.get("duration"), (int, float))
         )
+        finished_normally = True
         return {
             "items": results,
             "succeeded": sum(1 for r in results if r["status"] == "done"),
             "failed": sum(1 for r in results if r["status"] == "error"),
+            "skipped": sum(1 for r in results if r["status"] == "skipped"),
             "totalSize": total_size,
             "totalDuration": round(total_duration, 1),
             "outdir": str(Path(outdir).expanduser()),
@@ -966,3 +1138,8 @@ def download_batch(
             batch_queue.closed = True
         with _active_batches_lock:
             _active_batches.pop(ctx.job_id, None)
+        if persist and finished_normally:
+            try:
+                discard_queue()
+            except OSError:
+                pass

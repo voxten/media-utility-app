@@ -1,8 +1,25 @@
 import { useEffect, useMemo, useState } from "react";
-import { Badge, Button, Field, Input, makeStyles, Spinner, Tab, TabList, Tooltip } from "@fluentui/react-components";
+import {
+  Badge,
+  Button,
+  Field,
+  Input,
+  makeStyles,
+  MessageBar,
+  MessageBarActions,
+  MessageBarBody,
+  MessageBarTitle,
+  Spinner,
+  Switch,
+  Tab,
+  TabList,
+  Tooltip,
+} from "@fluentui/react-components";
 import {
   Add16Regular,
   ArrowClockwise16Regular,
+  Dismiss16Regular,
+  Play16Regular,
   ArrowDownload16Filled,
   ClipboardPaste16Regular,
   Link24Regular,
@@ -12,6 +29,7 @@ import {
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { ActionBar } from "../../components/ActionBar";
+import { confirm } from "../../components/ConfirmDialog";
 import { EmptyState } from "../../components/EmptyState";
 import { LogPanel } from "../../components/LogPanel";
 import { useNotify } from "../../components/notify";
@@ -23,11 +41,13 @@ import { api } from "../../lib/bridge";
 import { formatBytes, formatDuration } from "../../lib/format";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useSettings } from "../../stores/settings";
+import { BatchFormatField } from "./BatchFormatField";
 import { BatchQueue } from "./BatchQueue";
 import { ProbeResultPanel } from "./ProbeResultPanel";
 import { SubtitlesField, useDownloadSubtitles } from "./SubtitlesField";
 import { useDownloadForm } from "./store";
 import type { BatchItem, ProbeResult } from "./types";
+import type { PendingQueue } from "../../lib/types";
 import { errorMessage } from "../../lib/errors";
 import { ResultCard } from "../../components/ResultCard";
 import { useToolShortcuts } from "../../lib/useToolShortcuts";
@@ -38,6 +58,7 @@ interface BatchResult {
   items: BatchItem[];
   succeeded: number;
   failed: number;
+  skipped?: number;
   totalSize?: number;
   totalDuration?: number;
   outdir: string;
@@ -66,13 +87,17 @@ export default function DownloadPage() {
   const form = useDownloadForm();
   const defaultOutdir = useSettings((s) => s.settings?.outputDir ?? "");
   const outdir = form.outdir || defaultOutdir;
-  const [lastBatch, setLastBatch] = useState<BatchItem[] | null>(null);
+  const lastBatch = form.lastBatch;
+  const setLastBatch = (items: BatchItem[] | null) => form.set({ lastBatch: items });
+  const [pending, setPending] = useState<PendingQueue | null>(null);
   const subtitles = useDownloadSubtitles();
+  const embedMeta = useSettings((s) => s.settings?.downloadEmbedMeta ?? true);
+  const updateSettings = useSettings((s) => s.update);
 
   const probe = useJobRunner<ProbeResult>("download.probe", {
     onDone: (result) => {
       const first = result.formats.video[0]?.id ?? "";
-      form.set({ probe: result, mode: "video", formatId: first });
+      form.set({ probe: result, mode: "video", formatId: first, selectedEntries: (result.entries ?? []).map((_, i) => i) });
     },
     onError: (error) => notify.error(t("download.toast.probeError"), { body: error }),
   });
@@ -108,14 +133,62 @@ export default function DownloadPage() {
   const failedItems = useMemo(() => queue.filter((i) => i.status === "error"), [queue]);
   const batchResult = batch.job?.result as Partial<BatchResult> | undefined;
 
+  useEffect(() => {
+    if (batch.running) return;
+    let current = true;
+    api.download
+      .pendingQueue()
+      .then((saved) => current && setPending(saved))
+      .catch(() => current && setPending(null));
+    return () => {
+      current = false;
+    };
+  }, [batch.running]);
+
+  /** Starts a queue; an unfinished one from before is replaced only after the user agrees. */
+  const runBatch = async (batchUrls: string[]) => {
+    if (
+      pending &&
+      !(await confirm({
+        title: t("download.pending.replaceTitle"),
+        body: t("download.pending.replaceBody", { count: pending.urls.length }),
+        confirmLabel: t("download.pending.replace"),
+      }))
+    )
+      return null;
+    setPending(null);
+    setLastBatch(null);
+    return batch.start(() =>
+      api.download.batch({
+        urls: batchUrls,
+        outdir,
+        template: form.template,
+        subtitles: subtitles.params,
+        mode: form.batchMode,
+        audioCodec: form.audioCodec,
+        maxHeight: form.maxHeight,
+      }),
+    );
+  };
+
   const retryFailed = () => {
     const targetUrls = failedItems.length > 0 ? failedItems.map((i) => i.url) : urls;
     if (targetUrls.length === 0) return;
-    setLastBatch(null);
-    batch
-      .start(() => api.download.batch({ urls: targetUrls, outdir, template: form.template, subtitles: subtitles.params }))
-      .catch((err) => notify.error(errorMessage(t, err)));
+    runBatch(targetUrls).catch((err) => notify.error(errorMessage(t, err)));
   };
+
+  const resumeQueue = () => {
+    setLastBatch(null);
+    setPending(null);
+    form.set({ tab: "batch" });
+    batch.start(() => api.download.resumeQueue()).catch((err) => notify.error(errorMessage(t, err)));
+  };
+
+  const discardQueue = () =>
+    api.download
+      .discardQueue()
+      .then(() => setPending(null))
+      .catch((err) => notify.error(errorMessage(t, err)));
 
   const activeJob = form.tab === "batch" ? batch.job : download.running ? download.job : probe.running ? probe.job : download.job;
   const running = probe.running || download.running || batch.running;
@@ -149,13 +222,13 @@ export default function DownloadPage() {
     }
   };
 
-  const startBatch = (batchUrls: string[]) => {
-    setLastBatch(null);
-    batch
-      .start(() => api.download.batch({ urls: batchUrls, outdir, template: form.template, subtitles: subtitles.params }))
-      .then(() => form.set({ batchText: "" }))
+  const startBatch = (batchUrls: string[]) =>
+    runBatch(batchUrls)
+      .then((jobId) => jobId && form.set({ batchText: "" }))
       .catch((err) => notify.error(errorMessage(t, err)));
-  };
+
+  const playlistEntries = form.probe?.isPlaylist ? (form.probe.entries ?? []) : [];
+  const selectedUrls = playlistEntries.filter((_, i) => form.selectedEntries.includes(i)).map((e) => e.url);
 
   const startDownload = () => {
     if (form.tab === "batch") {
@@ -177,13 +250,10 @@ export default function DownloadPage() {
       return;
     }
     if (!form.probe) return;
-    if (form.probe.isPlaylist && form.probe.entries && form.probe.entries.length > 0) {
-      const playlistUrls = form.probe.entries.map((e) => e.url);
-      form.set({ tab: "batch", batchText: playlistUrls.join("\n") });
-      setLastBatch(null);
-      batch
-        .start(() => api.download.batch({ urls: playlistUrls, outdir, template: form.template, subtitles: subtitles.params }))
-        .catch((err) => notify.error(errorMessage(t, err)));
+    if (playlistEntries.length > 0) {
+      if (selectedUrls.length === 0) return;
+      form.set({ tab: "batch" });
+      runBatch(selectedUrls).catch((err) => notify.error(errorMessage(t, err)));
       return;
     }
     download
@@ -205,7 +275,8 @@ export default function DownloadPage() {
   const canDownload =
     form.tab === "batch"
       ? urls.length > 0 && !!outdir
-      : !running && !!outdir && !!form.probe && (form.probe.isPlaylist || !!form.formatId);
+      : !running && !!outdir && !!form.probe && (form.probe.isPlaylist ? selectedUrls.length > 0 : !!form.formatId);
+  const showBatchFormat = form.tab === "batch" || !!form.probe?.isPlaylist;
 
   useToolShortcuts({ run: canDownload && startDownload });
 
@@ -224,6 +295,12 @@ export default function DownloadPage() {
           ))}
         </div>
       </Field>
+      {showBatchFormat && <BatchFormatField />}
+      <Switch
+        checked={embedMeta}
+        label={t("download.embedMeta")}
+        onChange={(_, d) => updateSettings({ downloadEmbedMeta: d.checked }).catch(() => undefined)}
+      />
       <SubtitlesField subtitles={subtitles} />
     </Panel>
   );
@@ -239,6 +316,23 @@ export default function DownloadPage() {
             {t("download.batch")}
           </Tab>
         </TabList>
+
+        {pending && !batch.running && (
+          <MessageBar intent="info" layout="multiline">
+            <MessageBarBody>
+              <MessageBarTitle>{t("download.pending.title", { count: pending.urls.length })}</MessageBarTitle>
+              {pending.options.outdir}
+            </MessageBarBody>
+            <MessageBarActions>
+              <Button size="small" appearance="primary" icon={<Play16Regular />} onClick={resumeQueue}>
+                {t("download.pending.resume")}
+              </Button>
+              <Button size="small" icon={<Dismiss16Regular />} onClick={discardQueue}>
+                {t("download.pending.discard")}
+              </Button>
+            </MessageBarActions>
+          </MessageBar>
+        )}
 
         {form.tab === "single" ? (
           <>
@@ -294,7 +388,11 @@ export default function DownloadPage() {
           <>
             {batch.result && !batch.running && (
               <ResultCard
-                title={t("download.toast.batchDone", { ok: batch.result.succeeded, failed: batch.result.failed })}
+                title={
+                  batch.result.skipped
+                    ? t("download.toast.batchDoneSkipped", { ok: batch.result.succeeded, failed: batch.result.failed, skipped: batch.result.skipped })
+                    : t("download.toast.batchDone", { ok: batch.result.succeeded, failed: batch.result.failed })
+                }
                 path={batch.result.outdir}
                 folder
                 sourceToolId="download"
@@ -344,7 +442,9 @@ export default function DownloadPage() {
               ? t("download.addToBatch")
               : t("download.downloadAll")
             : form.probe?.isPlaylist
-              ? t("download.downloadPlaylist", { count: form.probe.entries?.length ?? 0 })
+              ? selectedUrls.length < playlistEntries.length
+                ? t("download.downloadSelected", { count: selectedUrls.length, total: playlistEntries.length })
+                : t("download.downloadPlaylist", { count: playlistEntries.length })
               : t("download.download")}
         </Button>
       </ActionBar>

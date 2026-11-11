@@ -22,6 +22,7 @@ import type {
   HardwareInfo,
   HistoryEntry,
   JobInfo,
+  PendingQueue,
   RemBgOptions,
   RemBgPreview,
   Settings,
@@ -221,8 +222,20 @@ export const api = {
       title?: string;
       subtitles?: DownloadSubtitles;
     }) => call<JobId>("download", "start", params),
-    batch: (params: { urls: string[]; outdir: string; template?: string; subtitles?: DownloadSubtitles }) =>
-      call<JobId>("download", "batch", params),
+    batch: (params: {
+      urls: string[];
+      outdir: string;
+      template?: string;
+      subtitles?: DownloadSubtitles;
+      mode?: "video" | "audio";
+      audioCodec?: string;
+      maxHeight?: number;
+    }) => call<JobId>("download", "batch", params),
+    pendingQueue: () => call<PendingQueue | null>("download", "pending_queue"),
+    resumeQueue: () => call<JobId>("download", "resume_queue"),
+    discardQueue: () => call<boolean>("download", "discard_queue"),
+    archiveCount: () => call<number>("download", "archive_count"),
+    clearArchive: () => call<boolean>("download", "clear_archive"),
     addToBatch: (params: { jobId?: string; urls: string[] }) =>
       call<{ success: boolean }>("download", "add_to_batch", params),
   },

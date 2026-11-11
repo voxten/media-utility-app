@@ -23,6 +23,8 @@ const DEFAULT_SETTINGS: Settings = {
   clipboardLastLink: "",
   lastSeenVersion: "",
   engineUpdateCheck: true,
+  downloadEmbedMeta: true,
+  downloadSkipArchived: false,
   engineLastCheck: 0,
 };
 
@@ -97,6 +99,8 @@ export function createMockBackend(emit: Emit) {
   let counter = 0;
   let engines = MOCK_ENGINES;
   let history = mockHistory(Date.now() / 1000);
+  let mockPendingQueue = ["https://youtube.com/watch?v=left1", "https://youtube.com/watch?v=left2", "https://youtube.com/watch?v=left3"];
+  let mockArchiveCount = 42;
   const NOT_RETRYABLE = ["download.probe", "instagram.probe", "pdf.inspect"];
   const NOT_IN_HISTORY = [...NOT_RETRYABLE, "download.engines"];
 
@@ -127,7 +131,7 @@ export function createMockBackend(emit: Emit) {
 
   const ok = <T>(value: T) => Promise.resolve(value);
 
-  return {
+  const backend = {
     app: {
       ready: () => ok({ name: "Media Studio", version: "dev-mock", python: "—", platform: navigator.userAgent }),
       info: () => ok({ name: "Media Studio", version: "dev-mock", python: "—", platform: navigator.userAgent }),
@@ -341,6 +345,17 @@ export function createMockBackend(emit: Emit) {
           viewCount: 128_400,
           thumbnail: fakePhoto(1),
           photoCount: url.includes("/photo/") ? 4 : 0,
+          ...(url.includes("list=")
+            ? {
+                isPlaylist: true,
+                entries: Array.from({ length: 8 }, (_, i) => ({
+                  url: `https://youtube.com/watch?v=demo${i + 1}`,
+                  title: `Odcinek ${i + 1}`,
+                  id: `demo${i + 1}`,
+                  duration: 600 + i * 30,
+                })),
+              }
+            : {}),
           formats: {
             video: [auto, v("401", 2160, 610_000_000, 60), v("137", 1080, 142_000_000), v("136", 720, 64_000_000), muxed],
             audio: [a("251", 160, "webm", 13_000_000), a("140", 129, "m4a", 12_100_000)],
@@ -418,6 +433,26 @@ export function createMockBackend(emit: Emit) {
         }, 150);
         running.set(jobId, timer);
         return Promise.resolve(jobId);
+      },
+      pending_queue: () =>
+        ok(
+          mockPendingQueue.length
+            ? { urls: mockPendingQueue, options: { outdir: "C:\\Users\\demo\\Downloads", mode: "audio", audioCodec: "mp3", maxHeight: 0 } }
+            : null,
+        ),
+      resume_queue: (): Promise<string> => {
+        const urls = mockPendingQueue;
+        mockPendingQueue = [];
+        return backend.download.batch({ urls, outdir: "C:\\Users\\demo\\Downloads" });
+      },
+      discard_queue: () => {
+        mockPendingQueue = [];
+        return ok(true);
+      },
+      archive_count: () => ok(mockArchiveCount),
+      clear_archive: () => {
+        mockArchiveCount = 0;
+        return ok(true);
       },
       add_to_batch: (params: { jobId?: string; urls: string[] }) => {
         const newUrls = params?.urls || [];
@@ -783,4 +818,5 @@ export function createMockBackend(emit: Emit) {
       },
     },
   };
+  return backend;
 }

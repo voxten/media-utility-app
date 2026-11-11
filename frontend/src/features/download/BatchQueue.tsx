@@ -1,7 +1,7 @@
 // Batch tab: the link list and the per-link queue with progress and totals.
 
 import { Badge, Caption1, makeStyles, mergeClasses, ProgressBar, Spinner, Text, Textarea, tokens } from "@fluentui/react-components";
-import { CheckmarkCircle16Filled, Clock16Regular, DismissCircle16Filled } from "@fluentui/react-icons";
+import { CheckmarkCircle16Filled, CheckmarkCircle16Regular, Clock16Regular, DismissCircle16Filled } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { Panel } from "../../components/Panel";
 import { formatBytes, formatDuration } from "../../lib/format";
@@ -99,6 +99,7 @@ export function BatchQueue({ queue, running, speed, eta, totalSize, totalDuratio
           {queue.map((item) => {
             const isDone = item.status === "done";
             const isError = item.status === "error";
+            const isSkipped = item.status === "skipped";
             const isRunning = item.status === "running" && running;
             const error = item.error ? translateMessage(t, item.error) : undefined;
 
@@ -109,6 +110,8 @@ export function BatchQueue({ queue, running, speed, eta, totalSize, totalDuratio
                     <CheckmarkCircle16Filled className={styles.ok} />
                   ) : isError ? (
                     <DismissCircle16Filled className={styles.bad} />
+                  ) : isSkipped ? (
+                    <CheckmarkCircle16Regular className={styles.muted} />
                   ) : isRunning ? (
                     <Spinner size="extra-tiny" />
                   ) : (
@@ -152,7 +155,7 @@ export function BatchQueue({ queue, running, speed, eta, totalSize, totalDuratio
                       {t("download.itemStatus.error")}
                     </Badge>
                   ) : (
-                    <Caption1 className={styles.muted}>{t("download.itemStatus.pending")}</Caption1>
+                    <Caption1 className={styles.muted}>{t(isSkipped ? "download.itemStatus.skipped" : "download.itemStatus.pending")}</Caption1>
                   )}
                 </div>
               </div>

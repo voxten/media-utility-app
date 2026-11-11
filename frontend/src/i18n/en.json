@@ -217,7 +217,12 @@
       "cacheCleared": "Cache cleared: freed {{size}}",
       "openFolder": "Open in Explorer",
       "clearRecent": "Clear History",
-      "recentCleared": "Cleared recent folders history"
+      "recentCleared": "Cleared recent folders history",
+      "archiveTitle": "Download archive",
+      "clearArchive": "Clear archive",
+      "archiveCleared": "Download archive cleared",
+      "archiveDesc_one": "{{count}} video remembered; queues skip it when “Skip videos downloaded before” is on.",
+      "archiveDesc_other": "{{count}} videos remembered; queues skip them when “Skip videos downloaded before” is on."
     },
     "hardware": {
       "title": "Hardware & Performance",
@@ -672,11 +677,14 @@
       "noSubtitles": "The site has no subtitles in the chosen languages.",
       "whisperMissing": "The Whisper {{model}} model is not downloaded, so no subtitles were made.",
       "whisperStarted": "No subtitles on the site, transcribing with Whisper {{model}}…",
-      "whisperFailed": "Whisper failed: {{error}}"
+      "whisperFailed": "Whisper failed: {{error}}",
+      "itemSkipped": "Skipped, downloaded before: {{url}}",
+      "queueNotSaved": "Could not save the queue for later: {{error}}"
     },
     "error": {
       "xLoginRequired": "X shares videos only with signed-in users. Add an X cookie file in Settings → Cookie files and try again.",
-      "noMedia": "Nothing to download was found at this link."
+      "noMedia": "Nothing to download was found at this link.",
+      "noPendingQueue": "There is no unfinished queue to resume."
     },
     "single": "Single link",
     "batch": "Queue",
@@ -709,7 +717,8 @@
     "queueTitle": "Links",
     "itemStatus": {
       "pending": "Pending",
-      "error": "Failed"
+      "error": "Failed",
+      "skipped": "Downloaded before"
     },
     "output": "Save",
     "outdir": "Output folder",
@@ -740,8 +749,30 @@
       "error": "Download failed",
       "probeError": "Could not read the link",
       "batchDone": "Queue finished: {{ok}} downloaded, {{failed}} failed",
-      "addedToBatch": "Added {{count}} links to queue"
-    }
+      "addedToBatch": "Added {{count}} links to queue",
+      "batchDoneSkipped": "Queue finished: {{ok}} downloaded, {{failed}} failed, {{skipped}} skipped"
+    },
+    "batchFormat": {
+      "mode": "Download",
+      "quality": "Maximum quality",
+      "best": "Best available"
+    },
+    "skipArchived": "Skip videos downloaded before",
+    "embedMeta": "Cover and metadata in the file",
+    "selectAll": "Select all",
+    "selectNone": "Clear selection",
+    "pending": {
+      "resume": "Resume",
+      "discard": "Discard",
+      "title_one": "Unfinished queue: {{count}} link",
+      "title_other": "Unfinished queue: {{count}} links",
+      "replaceTitle": "Replace the unfinished queue?",
+      "replace": "Replace",
+      "replaceBody_one": "{{count}} link left from the last queue will not be offered for resuming anymore.",
+      "replaceBody_other": "{{count}} links left from the last queue will not be offered for resuming anymore."
+    },
+    "downloadSelected_one": "Download {{count}} of {{total}}",
+    "downloadSelected_other": "Download {{count}} of {{total}}"
   },
   "upscale": {
     "status": {

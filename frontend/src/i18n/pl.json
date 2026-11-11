@@ -221,7 +221,14 @@
       "cacheCleared": "Wyczyszczono pamięć podręczną: zwolniono {{size}}",
       "openFolder": "Otwórz w Eksploratorze",
       "clearRecent": "Wyczyść historię",
-      "recentCleared": "Wyczyszczono historię ostatnich folderów"
+      "recentCleared": "Wyczyszczono historię ostatnich folderów",
+      "archiveTitle": "Archiwum pobranych",
+      "clearArchive": "Wyczyść archiwum",
+      "archiveCleared": "Archiwum pobranych wyczyszczone",
+      "archiveDesc_one": "Zapamiętany {{count}} film; kolejka go pominie, gdy włączysz „Pomijaj pobrane wcześniej”.",
+      "archiveDesc_other": "Zapamiętanych {{count}} filmów; kolejka je pominie, gdy włączysz „Pomijaj pobrane wcześniej”.",
+      "archiveDesc_few": "Zapamiętane {{count}} filmy; kolejka je pominie, gdy włączysz „Pomijaj pobrane wcześniej”.",
+      "archiveDesc_many": "Zapamiętanych {{count}} filmów; kolejka je pominie, gdy włączysz „Pomijaj pobrane wcześniej”."
     },
     "hardware": {
       "title": "Wydajność i sprzęt",
@@ -718,11 +725,14 @@
       "noSubtitles": "Strona nie ma napisów w wybranych językach.",
       "whisperMissing": "Model Whisper {{model}} nie jest pobrany, więc napisy nie powstały.",
       "whisperStarted": "Strona nie ma napisów, transkrypcja modelem Whisper {{model}}…",
-      "whisperFailed": "Whisper nie zadziałał: {{error}}"
+      "whisperFailed": "Whisper nie zadziałał: {{error}}",
+      "itemSkipped": "Pominięto, pobrany wcześniej: {{url}}",
+      "queueNotSaved": "Nie udało się zapisać kolejki na później: {{error}}"
     },
     "error": {
       "xLoginRequired": "X udostępnia filmy tylko zalogowanym. Dodaj plik cookies X w Ustawieniach → Pliki cookies i spróbuj ponownie.",
-      "noMedia": "Pod tym linkiem nie znaleziono nic do pobrania."
+      "noMedia": "Pod tym linkiem nie znaleziono nic do pobrania.",
+      "noPendingQueue": "Nie ma niedokończonej kolejki do wznowienia."
     },
     "single": "Pojedynczy link",
     "batch": "Kolejka",
@@ -763,7 +773,8 @@
     "queueTitle": "Lista linków",
     "itemStatus": {
       "pending": "Oczekuje",
-      "error": "Błąd"
+      "error": "Błąd",
+      "skipped": "Pobrany wcześniej"
     },
     "output": "Zapis",
     "outdir": "Folder docelowy",
@@ -796,8 +807,36 @@
       "error": "Pobieranie nie powiodło się",
       "probeError": "Nie udało się odczytać linku",
       "batchDone": "Kolejka zakończona: {{ok}} pobrano, {{failed}} błędów",
-      "addedToBatch": "Dopisano {{count}} linków do kolejki"
-    }
+      "addedToBatch": "Dopisano {{count}} linków do kolejki",
+      "batchDoneSkipped": "Kolejka zakończona: {{ok}} pobrano, {{failed}} błędów, {{skipped}} pominięto"
+    },
+    "batchFormat": {
+      "mode": "Pobieraj",
+      "quality": "Maksymalna jakość",
+      "best": "Najlepsza dostępna"
+    },
+    "skipArchived": "Pomijaj pobrane wcześniej",
+    "embedMeta": "Okładka i metadane w pliku",
+    "selectAll": "Zaznacz wszystkie",
+    "selectNone": "Odznacz wszystkie",
+    "pending": {
+      "resume": "Wznów",
+      "discard": "Odrzuć",
+      "title_one": "Niedokończona kolejka: {{count}} link",
+      "title_other": "Niedokończona kolejka: {{count}} linków",
+      "title_few": "Niedokończona kolejka: {{count}} linki",
+      "title_many": "Niedokończona kolejka: {{count}} linków",
+      "replaceTitle": "Zastąpić niedokończoną kolejkę?",
+      "replace": "Zastąp",
+      "replaceBody_one": "{{count}} link z poprzedniej kolejki nie będzie już do wznowienia.",
+      "replaceBody_other": "{{count}} linków z poprzedniej kolejki nie będzie już do wznowienia.",
+      "replaceBody_few": "{{count}} linki z poprzedniej kolejki nie będą już do wznowienia.",
+      "replaceBody_many": "{{count}} linków z poprzedniej kolejki nie będzie już do wznowienia."
+    },
+    "downloadSelected_one": "Pobierz {{count}} z {{total}}",
+    "downloadSelected_other": "Pobierz {{count}} z {{total}}",
+    "downloadSelected_few": "Pobierz {{count}} z {{total}}",
+    "downloadSelected_many": "Pobierz {{count}} z {{total}}"
   },
   "upscale": {
     "status": {

@@ -54,6 +54,8 @@ def default_settings() -> Dict[str, Any]:
         "clipboardWatch": False,  # offer a copied video link when the window is activated
         "clipboardLastLink": "",  # the last link offered, so it is not offered again
         "lastSeenVersion": "",  # app version whose release notes the user was pointed to
+        "downloadEmbedMeta": True,  # cover image, title and artist written into downloaded files
+        "downloadSkipArchived": False,  # queued links already downloaded once are skipped
         "engineUpdateCheck": True,  # look for newer yt-dlp / gallery-dl at start-up, at most daily
         "engineLastCheck": 0,  # time.time() of the last look
         "engineLatest": {},  # {"yt-dlp": {"version": …, "pins": {"yt-dlp-ejs": …}}, …}

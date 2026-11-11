@@ -1,4 +1,7 @@
 export type Mode = "video" | "audio" | "muxed";
+export type BatchMode = "video" | "audio";
+
+export const AUDIO_CODECS = ["mp3", "m4a", "flac", "wav", "aac", "opus"];
 
 export interface Format {
   id: string;
@@ -36,7 +39,7 @@ export interface ProbeResult {
 export interface BatchItem {
   index: number;
   url: string;
-  status: "pending" | "running" | "done" | "error" | "cancelled";
+  status: "pending" | "running" | "done" | "error" | "skipped" | "cancelled";
   title?: string;
   error?: string;
   percent?: number;
