@@ -2,6 +2,16 @@
   "app": {
     "name": "Media Studio"
   },
+  "shell": {
+    "open": "Otwórz Media Studio",
+    "quit": "Zakończ",
+    "backgroundTitle": "Media Studio działa w tle",
+    "backgroundBody": "Zadania trwają dalej. Kliknij ikonę w zasobniku, aby wrócić.",
+    "quitConfirmTitle": "Zamknąć Media Studio?",
+    "quitConfirmBody": "Trwają zadania. Zamknięcie programu je przerwie. Zamknąć mimo to?",
+    "clipboard": "Pobierz link ze schowka",
+    "clipboardEmpty": "W schowku nie ma linku YouTube, TikTok, X ani Instagram."
+  },
   "nav": {
     "home": "Start",
     "settings": "Ustawienia",
@@ -70,6 +80,10 @@
       "name": "Tekst na mowę",
       "description": "Zamieniaj tekst w nagranie głosowe w wielu językach."
     },
+    "transcribe": {
+      "name": "Transkrypcja",
+      "description": "Zamieniaj mowę z filmów i nagrań na napisy lub tekst."
+    },
     "pdf": {
       "name": "Łączenie PDF",
       "description": "Układaj i łącz strony z wielu plików PDF w jeden dokument."
@@ -102,7 +116,10 @@
   "home": {
     "greeting": "Witaj w Media Studio",
     "subtitle": "Wybierz narzędzie, aby zacząć. Zadania działają w tle, więc możesz przełączać się między nimi.",
-    "allTools": "Wszystkie narzędzia",
+    "recentTools": "Ostatnio używane",
+    "quickStartPlaceholder": "Wklej link do filmu albo upuść pliki",
+    "quickStartOpen": "Otwórz",
+    "quickStartBrowse": "Wybierz pliki",
     "recentJobs": "Ostatnie zadania",
     "noJobs": "Nie uruchomiono jeszcze żadnego zadania."
   },
@@ -144,6 +161,9 @@
       "rembg": "Model BiRefNet do usuwania tła",
       "upscale_general": "Model AI Real-ESRGAN General",
       "upscale_anime": "Model AI Real-ESRGAN Anime",
+      "whisper_base": "Rozpoznawanie mowy Whisper Base",
+      "whisper_small": "Rozpoznawanie mowy Whisper Small",
+      "whisper_turbo": "Rozpoznawanie mowy Whisper Turbo",
       "install": "Pobierz i zainstaluj",
       "installing": "Instalowanie…",
       "installed": "Pomyślnie zainstalowano zależność",
@@ -154,7 +174,9 @@
       "detailFfmpegMissing": "Brak programu FFmpeg na ścieżce PATH",
       "detailGifsicleMissing": "Nie znaleziono gifsicle",
       "detailUpscaleGenMissing": "Wymaga pobrania wag modelu realesr-general-x4v3.pth (~4.8 MB)",
-      "detailUpscaleAnimeMissing": "Wymaga pobrania wag modelu RealESRGAN_x4plus_anime_6B.pth (~17.9 MB)"
+      "detailUpscaleAnimeMissing": "Wymaga pobrania wag modelu RealESRGAN_x4plus_anime_6B.pth (~17.9 MB)",
+      "detailWhisperModelOnly": "Wymaga pobrania modelu",
+      "detailWhisperFull": "Wymaga instalacji faster-whisper oraz modelu"
     },
     "depOk": "Dostępne",
     "depMissing": "Brak",
@@ -169,6 +191,16 @@
     "micaDescription": "Półprzezroczyste tło okna w stylu Windows 11, dopasowane do tapety.",
     "micaRestart": "Zmiana zostanie zastosowana po ponownym uruchomieniu aplikacji.",
     "micaUnsupported": "Wymaga Windows 11 (22H2 lub nowszego).",
+    "engines": {
+      "title": "Silnik pobierania",
+      "check": "Sprawdź",
+      "checkFailed": "Nie udało się sprawdzić aktualizacji",
+      "upToDate": "Aktualny",
+      "newVersion": "Dostępna {{version}}",
+      "afterRestart": "Po ponownym uruchomieniu",
+      "restore": "Przywróć wbudowany",
+      "autoCheck": "Sprawdzaj aktualizacje przy starcie"
+    },
     "storage": {
       "title": "Pamięć i pamięć podręczna",
       "cacheTitle": "Pamięć podręczna",
@@ -217,6 +249,10 @@
       "title": "Narzędzia i zaawansowane",
       "customFfmpeg": "Niestandardowa ścieżka do FFmpeg",
       "customFfmpegDesc": "Wskaż własny plik ffmpeg.exe jeśli chcesz użyć innej instalacji niż wbudowana w Media Studio.",
+      "closeToTray": "Zamykanie do zasobnika",
+      "closeToTrayDesc": "Przycisk X chowa okno do zasobnika systemowego, a zadania działają dalej. Program zamkniesz z menu ikony w zasobniku.",
+      "clipboardWatch": "Proponowanie skopiowanych linków",
+      "clipboardWatchDesc": "Gdy wrócisz do programu z nowym linkiem YouTube, TikTok, X lub Instagram w schowku, zaproponuje jego pobranie.",
       "confirmExit": "Potwierdzenie zamykania okna",
       "confirmExitDesc": "Wyświetla ostrzeżenie przy próbie zamknięcia programu, gdy w tle trwają aktywne zadania.",
       "resetSettings": "Przywracanie ustawień fabrycznych",
@@ -626,18 +662,64 @@
       "error": "Nie udało się wygenerować mowy"
     }
   },
+  "transcribe": {
+    "dropTitle": "Upuść tutaj film lub nagranie",
+    "dropHint": "Obsługiwane: {{formats}}",
+    "changeFile": "Zmień plik",
+    "model": "Model",
+    "models": {
+      "base": "Base — szybki",
+      "small": "Small — zrównoważony",
+      "turbo": "Turbo — najdokładniejszy, wolny"
+    },
+    "language": "Język mowy",
+    "autoLanguage": "Wykryj automatycznie",
+    "translate": "Przetłumacz na angielski",
+    "start": "Transkrybuj",
+    "done": "Zapisano transkrypcję",
+    "doneDetail": "{{language}} · trwało {{elapsed}}",
+    "transcript": "Transkrypcja",
+    "copied": "Skopiowano tekst",
+    "noSpeech": "Nie znaleziono mowy.",
+    "modelPromo": {
+      "title": "Ten model Whisper nie jest pobrany",
+      "desc": "Pobierasz go raz, potem działa na tym komputerze bez internetu.",
+      "installBtn": "Pobierz ({{size}})",
+      "ready": "Model jest gotowy"
+    },
+    "errors": {
+      "load": "Nie udało się otworzyć pliku",
+      "noAudio": "Plik nie zawiera ścieżki dźwiękowej.",
+      "run": "Transkrypcja nie powiodła się"
+    },
+    "status": {
+      "decoding": "Odczytywanie dźwięku…",
+      "loadingModel": "Wczytywanie modelu…",
+      "transcribing": "Transkrypcja ({{percent}}%)…",
+      "done": "Gotowe"
+    }
+  },
   "download": {
     "status": {
       "probing": "Pobieranie informacji o materiale…",
       "thumbnail": "Pobieranie miniatury…",
       "starting": "Rozpoczynanie pobierania…",
       "downloading": "Pobieranie…",
+      "downloadingVideo": "Pobieranie obrazu ({{stream}}/{{streams}})…",
+      "downloadingAudio": "Pobieranie dźwięku ({{stream}}/{{streams}})…",
       "postprocessing": "Przetwarzanie końcowe…",
       "done": "Pobieranie zakończone.",
-      "batchDone": "Kolejka zakończona."
+      "batchDone": "Kolejka zakończona.",
+      "subtitles": "Pobieranie napisów…"
     },
     "log": {
-      "itemFailed": "Nie udało się pobrać {{url}}: {{error}}"
+      "itemFailed": "Nie udało się pobrać {{url}}: {{error}}",
+      "subtitlesFailed": "Nie udało się pobrać napisów ze strony: {{error}}",
+      "subtitlesSaved": "Zapisano napisy: {{files}}",
+      "noSubtitles": "Strona nie ma napisów w wybranych językach.",
+      "whisperMissing": "Model Whisper {{model}} nie jest pobrany, więc napisy nie powstały.",
+      "whisperStarted": "Strona nie ma napisów, transkrypcja modelem Whisper {{model}}…",
+      "whisperFailed": "Whisper nie zadziałał: {{error}}"
     },
     "error": {
       "xLoginRequired": "X udostępnia filmy tylko zalogowanym. Dodaj plik cookies X w Ustawieniach → Pliki cookies i spróbuj ponownie."
@@ -686,6 +768,13 @@
     "output": "Zapis",
     "outdir": "Folder docelowy",
     "template": "Wzorzec nazwy pliku",
+    "subtitles": {
+      "label": "Napisy",
+      "off": "Brak",
+      "site": "Ze strony",
+      "auto": "Ze strony, a gdy brak — Whisper",
+      "modelHint": "Whisper {{model}} tworzy napisy, gdy strona ich nie ma. Model zmienisz w Transkrypcji."
+    },
     "download": "Pobierz",
     "downloadAll": "Pobierz wszystkie",
     "addToBatch": "Dopisz do kolejki",
@@ -843,22 +932,79 @@
   },
   "jobs": {
     "title": "Zadania",
-    "popupTitle": "Zadania w toku",
     "pending": "W kolejce",
     "activeCount": "{{count}} w toku",
-    "completedCount": "{{count}} ukończonych",
-    "errorCount": "{{count}} z błędem",
-    "cancelledCount": "{{count}} anulowano",
-    "noActiveJobs": "Brak aktywnych zadań",
-    "noActiveJobsBody": "Wszystkie operacje zostały ukończone lub nie ma żadnych w toku.",
-    "openTool": "Przejdź",
+    "openTool": "Przejdź do narzędzia",
     "clearFinished": "Wyczyść zakończone",
+    "clearHistory": "Wyczyść historię",
+    "clearHistoryTitle": "Wyczyścić historię zadań?",
+    "clearHistoryBody": "Zakończone zadania z poprzednich uruchomień znikną z listy. Pliki zostają na dysku.",
+    "outputMissing": "Plik został przeniesiony lub usunięty",
     "collapseDetails": "Zwiń szczegóły",
     "expandDetails": "Rozwiń szczegóły",
     "toastDone": "{{tool}}: zakończono",
     "toastError": "{{tool}}: błąd",
     "notifyDone": "Zadanie ukończone",
-    "notifyError": "Zadanie nie powiodło się"
+    "notifyError": "Zadanie nie powiodło się",
+    "retry": "Ponów",
+    "openFile": "Otwórz plik",
+    "searchHistory": "Szukaj",
+    "filterTool": "Narzędzie",
+    "filterStatus": "Stan",
+    "anyTool": "Wszystkie narzędzia",
+    "anyStatus": "Każdy stan",
+    "noHistoryMatches": "Brak pasujących zadań.",
+    "filter": "Filtruj",
+    "removeFilter": "Usuń filtr",
+    "clearFilters": "Wyczyść filtry",
+    "historyCount": "{{shown}} z {{total}}",
+    "copyPath": "Kopiuj ścieżkę",
+    "copyError": "Kopiuj treść błędu",
+    "copied": "Skopiowano",
+    "progressBytes": "{{done}} z {{total}}",
+    "summary": {
+      "itemsOf": "{{done}} z {{total}}",
+      "failed_one": "{{count}} błąd",
+      "failed_few": "{{count}} błędy",
+      "failed_many": "{{count}} błędów",
+      "failed_other": "{{count}} błędy",
+      "files_one": "{{count}} plik",
+      "files_few": "{{count}} pliki",
+      "files_many": "{{count}} plików",
+      "files_other": "{{count}} pliki",
+      "pages_one": "{{count}} strona",
+      "pages_few": "{{count}} strony",
+      "pages_many": "{{count}} stron",
+      "pages_other": "{{count}} strony",
+      "rotatedPages_one": "obrócono {{count}} stronę",
+      "rotatedPages_few": "obrócono {{count}} strony",
+      "rotatedPages_many": "obrócono {{count}} stron",
+      "rotatedPages_other": "obrócono {{count}} strony",
+      "chars_one": "{{count}} znak",
+      "chars_few": "{{count}} znaki",
+      "chars_many": "{{count}} znaków",
+      "chars_other": "{{count}} znaki",
+      "frames_one": "{{count}} klatka",
+      "frames_few": "{{count}} klatki",
+      "frames_many": "{{count}} klatek",
+      "frames_other": "{{count}} klatki",
+      "groups_one": "{{count}} grupa",
+      "groups_few": "{{count}} grupy",
+      "groups_many": "{{count}} grup",
+      "groups_other": "{{count}} grupy",
+      "scanned_one": "{{count}} sprawdzony plik",
+      "scanned_few": "{{count}} sprawdzone pliki",
+      "scanned_many": "{{count}} sprawdzonych plików",
+      "scanned_other": "{{count}} sprawdzone pliki",
+      "offset": "przesunięcie {{value}} s"
+    },
+    "tabNow": "Teraz",
+    "tabHistory": "Historia",
+    "today": "Dziś",
+    "yesterday": "Wczoraj",
+    "noSessionJobs": "Brak zadań w tej sesji",
+    "showHistory": "Pokaż historię",
+    "historyEmpty": "Historia jest pusta"
   },
   "palette": {
     "title": "Szukaj",
@@ -918,6 +1064,24 @@
       "needModel": "Zainstaluj model AI powyżej, aby rozpocząć."
     }
   },
+  "engines": {
+    "updateTitle": "Aktualizacja silnika pobierania",
+    "available": "Dostępny nowy silnik pobierania",
+    "update": "Aktualizuj",
+    "updated": "Silnik pobierania zaktualizowany",
+    "restart": "Uruchom ponownie",
+    "failed": "Nie udało się zaktualizować silnika pobierania",
+    "status": {
+      "installing": "Instalowanie {{name}} {{version}}…",
+      "verifying": "Sprawdzanie {{name}}…",
+      "done": "Gotowe. Uruchom ponownie, aby użyć nowej wersji."
+    },
+    "log": {
+      "installing": "Instalowanie {{name}} {{version}}",
+      "verifying": "Sprawdzanie, czy {{name}} się wczytuje",
+      "installed": "Zainstalowano {{name}} {{version}}"
+    }
+  },
   "deps": {
     "status": {
       "installingTorch": "Instalowanie PyTorch…",
@@ -929,7 +1093,9 @@
       "downloadingFfmpeg": "Pobieranie FFmpeg ({{percent}}%)…",
       "extractingFfmpeg": "Rozpakowywanie FFmpeg…",
       "downloadingGifsicle": "Pobieranie gifsicle ({{percent}}%)…",
-      "done": "Instalacja zakończona."
+      "done": "Instalacja zakończona.",
+      "installingWhisper": "Instalowanie faster-whisper…",
+      "downloadingWhisper": "Pobieranie modelu Whisper ({{percent}}%)…"
     },
     "log": {
       "installingTorch": "Instalowanie PyTorch przez pip…",
@@ -944,7 +1110,10 @@
       "verifying": "Weryfikacja ładowania modelu w PyTorch…",
       "done": "Instalacja zakończona sukcesem.",
       "downloadingGifsicle": "Pobieranie gifsicle…",
-      "gifsicleInstalled": "gifsicle jest gotowy."
+      "gifsicleInstalled": "gifsicle jest gotowy.",
+      "installingWhisper": "Instalowanie faster-whisper przez pip…",
+      "downloadingWhisper": "Pobieranie modelu Whisper {{model}}…",
+      "verifyingWhisper": "Sprawdzanie, czy model się wczytuje…"
     },
     "installTitle": {
       "lama": "Model AI LaMa",
@@ -952,7 +1121,10 @@
       "gifsicle": "gifsicle",
       "rembg": "Model BiRefNet do usuwania tła",
       "upscale_general": "Model AI Real-ESRGAN General",
-      "upscale_anime": "Model AI Real-ESRGAN Anime"
+      "upscale_anime": "Model AI Real-ESRGAN Anime",
+      "whisper_base": "Model Whisper Base",
+      "whisper_small": "Model Whisper Small",
+      "whisper_turbo": "Model Whisper Turbo"
     }
   },
   "imageTools": {
@@ -1014,10 +1186,20 @@
     "dropTitle": "Upuść obrazy do edycji",
     "dropHint": "Jeden lub więcej plików: {{formats}}"
   },
+  "clipboard": {
+    "found": "Skopiowany link",
+    "foundMany_one": "{{count}} link do kolejki pobierania",
+    "foundMany_few": "{{count}} linki do kolejki pobierania",
+    "foundMany_many": "{{count}} linków do kolejki pobierania",
+    "foundMany_other": "{{count}} linku do kolejki pobierania",
+    "download": "Pobierz"
+  },
   "transfer": {
     "sendTo": "Prześlij do…",
     "sendAllTo": "Prześlij wszystkie do…",
     "modalTitle": "Prześlij plik do innego narzędzia",
+    "dropTitle": "Otwórz w narzędziu",
+    "dropHint": "Upuść, aby wybrać narzędzie",
     "modalDesc": "Wybierz narzędzie, w którym chcesz kontynuować pracę z tym plikiem.",
     "sourceFiles": "Przesyłane pliki ({{count}})",
     "compatibleTools": "Zgodne narzędzia",

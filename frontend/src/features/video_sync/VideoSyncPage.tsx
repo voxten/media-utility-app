@@ -207,6 +207,7 @@ export default function VideoSyncPage() {
     return (
       <ToolPage toolId="video_sync">
         <DropZone
+          fill
           icon={VideoSwitch20Regular}
           title={t("video_sync.dropTitle")}
           hint={t("video_sync.dropHint", { formats: formatList(VIDEO_EXTENSIONS) })}

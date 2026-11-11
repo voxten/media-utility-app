@@ -125,6 +125,7 @@ export function SingleImageTool({
     return (
       <ToolPage toolId={toolId}>
         <DropZone
+          fill
           icon={Image24Regular}
           title={dropTitle}
           hint={dropHint}

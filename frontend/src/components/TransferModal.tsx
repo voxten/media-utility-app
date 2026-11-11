@@ -184,11 +184,14 @@ export function TransferModal() {
   const isModalOpen = useTransferStore((s) => s.isModalOpen);
   const modalFiles = useTransferStore((s) => s.modalFiles);
   const sourceToolId = useTransferStore((s) => s.sourceToolId);
+  const origin = useTransferStore((s) => s.origin);
   const closeModal = useTransferStore((s) => s.closeModal);
   const sendToTool = useTransferStore((s) => s.sendToTool);
 
-  const firstFile = modalFiles[0] ?? "";
+  // Dropped files can be mixed: offer tools for the first one a tool understands and pass on only that kind.
+  const firstFile = modalFiles.find((f) => mediaKind(f)) ?? modalFiles[0] ?? "";
   const fileType = firstFile ? mediaKind(firstFile) : null;
+  const files = fileType ? modalFiles.filter((f) => mediaKind(f) === fileType) : modalFiles;
   const ext = firstFile ? formatName(fileExtension(firstFile)) : "";
 
   const thumb = useThumbnail(fileType === "image" || fileType === "gif" ? firstFile : null);
@@ -200,7 +203,7 @@ export function TransferModal() {
   });
 
   const handleSelectTool = (item: TargetToolItem) => {
-    sendToTool(item.id, modalFiles, item.subTab);
+    sendToTool(item.id, files, item.subTab);
     navigate(item.id);
   };
 
@@ -219,7 +222,7 @@ export function TransferModal() {
           </Tooltip>
 
           <div className={styles.header}>
-            <DialogTitle className={styles.titleText}>{t("transfer.modalTitle")}</DialogTitle>
+            <DialogTitle className={styles.titleText}>{t(origin === "drop" ? "transfer.dropTitle" : "transfer.modalTitle")}</DialogTitle>
             <Caption1 className={styles.muted}>{t("transfer.modalDesc")}</Caption1>
           </div>
 
@@ -240,8 +243,8 @@ export function TransferModal() {
 
                 <div className={styles.sourceMeta}>
                   <Text className={styles.sourceFileName} title={firstFile}>
-                    {modalFiles.length > 1
-                      ? t("transfer.sourceFiles", { count: modalFiles.length })
+                    {files.length > 1
+                      ? t("transfer.sourceFiles", { count: files.length })
                       : fileName(firstFile)}
                   </Text>
                   <div className={styles.inlineRow}>

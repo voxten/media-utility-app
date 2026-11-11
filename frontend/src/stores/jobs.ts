@@ -3,14 +3,25 @@
 
 import { create } from "zustand";
 import i18n from "../i18n";
-import { on } from "../lib/bridge";
-import type { JobInfo, LogEntry } from "../lib/types";
+import { api, on } from "../lib/bridge";
+import { translateMessage } from "../lib/jobMessage";
+import type { HistoryEntry, JobInfo, LogEntry } from "../lib/types";
 import { useSettings } from "./settings";
 
 const MAX_LOGS = 2000;
 
+/**
+ * Jobs left out of the job lists and the running count, and that finish without a toast, desktop
+ * notification or sound: helper steps of a page interaction (link checks, PDF page thumbnails) and
+ * engine updates, which EngineUpdateHost reports.
+ * The same kinds the backend leaves out of the history (backend/core/history.py SKIPPED_KINDS).
+ */
+const QUIET_KINDS = new Set(["download.probe", "instagram.probe", "pdf.inspect", "download.engines"]);
+
+export const isQuietJob = (kind: string | undefined) => !!kind && QUIET_KINDS.has(kind);
+
 const notificationTitle = (jobTitle?: string | null) =>
-  jobTitle ? `${i18n.t("app.name")} · ${i18n.t(jobTitle)}` : i18n.t("app.name");
+  jobTitle ? `${i18n.t("app.name")} · ${translateMessage(i18n.t, jobTitle)}` : i18n.t("app.name");
 
 export function playChime(kind: "done" | "error" = "done") {
   try {
@@ -44,21 +55,9 @@ export function playChime(kind: "done" | "error" = "done") {
   }
 }
 
-export function showDesktopNotification(title: string, body?: string) {
-  if (typeof Notification === "undefined") return;
-  if (Notification.permission === "granted") {
-    try {
-      new Notification(title, { body, silent: true });
-    } catch {}
-  } else if (Notification.permission !== "denied") {
-    Notification.requestPermission().then((perm) => {
-      if (perm === "granted") {
-        try {
-          new Notification(title, { body, silent: true });
-        } catch {}
-      }
-    });
-  }
+/** Native notification; the backend skips it while the window is in front unless `force`. */
+export function showDesktopNotification(title: string, body: string, force = false) {
+  api.app.notify(title, body, force).catch(() => undefined);
 }
 
 export interface JobState extends JobInfo {
@@ -75,12 +74,22 @@ export interface JobState extends JobInfo {
 interface JobsStore {
   jobs: Record<string, JobState>;
   order: string[];
+  /** Finished jobs saved by the backend, newest first (this session's included). */
+  history: HistoryEntry[];
   clearFinished: () => void;
+  loadHistory: () => Promise<void>;
+  clearHistory: () => Promise<void>;
 }
 
 export const useJobs = create<JobsStore>((set) => ({
   jobs: {},
   order: [],
+  history: [],
+  loadHistory: async () => set({ history: await api.jobs.history() }),
+  clearHistory: async () => {
+    await api.jobs.clearHistory();
+    set({ history: [] });
+  },
   clearFinished: () =>
     set((state) => ({
       jobs: Object.fromEntries(
@@ -95,6 +104,13 @@ function patch(jobId: string, fn: (job: JobState) => Partial<JobState>) {
     if (!job) return state;
     return { jobs: { ...state.jobs, [jobId]: { ...job, ...fn(job) } } };
   });
+}
+
+/** Runs a failed job again with the same settings; the failed card gives way to the new job. */
+export async function retryJob(jobId: string) {
+  const newId = await api.jobs.retry(jobId);
+  patch(jobId, () => (newId ? { dismissed: true } : { retryable: false }));
+  return newId;
 }
 
 let initialised = false;
@@ -125,6 +141,8 @@ export function initJobEvents() {
 
   on("job:partial", ({ jobId, data }) => patch(jobId, (job) => ({ partials: [...job.partials, data] })));
 
+  on("job:meta", ({ jobId, meta }) => patch(jobId, (job) => ({ meta: { ...job.meta, ...meta } })));
+
   const finish = (
     jobId: string,
     status: JobState["status"],
@@ -143,30 +161,66 @@ export function initJobEvents() {
       partials: (result as { items?: unknown[] })?.items ?? job.partials,
     }));
     const s = useSettings.getState().settings;
+    const job = useJobs.getState().jobs[jobId];
+    if (isQuietJob(job?.kind)) return;
     if (s?.completionSound) playChime("done");
-    if (s?.desktopNotifications) {
-      const job = useJobs.getState().jobs[jobId];
-      showDesktopNotification(notificationTitle(job?.title), i18n.t("jobs.notifyDone"));
-    }
+    if (s?.desktopNotifications) showDesktopNotification(notificationTitle(job?.title), i18n.t("jobs.notifyDone"));
   });
 
   on("job:error", ({ jobId, error }) => {
     finish(jobId, "error", { error });
     const s = useSettings.getState().settings;
+    const job = useJobs.getState().jobs[jobId];
+    if (isQuietJob(job?.kind)) return;
     if (s?.completionSound) playChime("error");
-    if (s?.desktopNotifications) {
-      const job = useJobs.getState().jobs[jobId];
-      showDesktopNotification(notificationTitle(job?.title), error || i18n.t("jobs.notifyError"));
-    }
+    if (s?.desktopNotifications) showDesktopNotification(notificationTitle(job?.title), error || i18n.t("jobs.notifyError"));
   });
 
   on("job:cancelled", ({ jobId }) => finish(jobId, "cancelled"));
+
+  on("jobs:history", (entry) =>
+    useJobs.setState((state) => ({ history: [entry, ...state.history.filter((e) => e.id !== entry.id)] })),
+  );
+}
+
+/** History entries not already shown as a live card (jobs from this session that were not cleared). */
+export function earlierJobs(history: HistoryEntry[], jobs: Record<string, JobState>): HistoryEntry[] {
+  return history.filter((entry) => !jobs[entry.id] || jobs[entry.id].dismissed);
+}
+
+/** The result shape of a history entry's outputs (one file, its output folder, or several files) with its saved numbers. */
+function historyResult(entry: HistoryEntry) {
+  const stats = entry.stats ?? {};
+  if (entry.singleFile) return { ...stats, path: entry.outputs[0] };
+  if (entry.outputs.length === 1) return { ...stats, outdir: entry.outputs[0] };
+  return { ...stats, files: entry.outputs };
+}
+
+/** A history entry in the shape JobCard renders. */
+export function historyJob(entry: HistoryEntry): JobState {
+  return {
+    ...entry,
+    percent: entry.status === "done" ? 100 : null,
+    message: null,
+    params: {},
+    logs: [],
+    partials: [],
+    extra: {},
+    result: entry.status === "done" ? historyResult(entry) : undefined,
+  };
 }
 
 export function useJob(jobId: string | null | undefined): JobState | undefined {
   return useJobs((state) => (jobId ? state.jobs[jobId] : undefined));
 }
 
+/** This session's jobs for the job lists, newest first: not cleared and not a quiet helper step. */
+export function listedJobs(state: Pick<JobsStore, "jobs" | "order">): JobState[] {
+  return state.order.map((id) => state.jobs[id]).filter((job) => job && !job.dismissed && !isQuietJob(job.kind));
+}
+
 export function useRunningJobCount(): number {
-  return useJobs((state) => state.order.filter((id) => state.jobs[id]?.status === "running").length);
+  return useJobs(
+    (state) => state.order.filter((id) => state.jobs[id]?.status === "running" && !isQuietJob(state.jobs[id].kind)).length,
+  );
 }

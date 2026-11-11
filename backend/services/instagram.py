@@ -396,6 +396,7 @@ def download(
                 out = out / sanitize_filename(listing["subdir"])
             out.mkdir(parents=True, exist_ok=True)
             chosen = sorted({i for i in (indices or range(len(entries))) if 0 <= i < len(entries)})
+            started = time.monotonic()
             for position, index in enumerate(chosen):
                 ctx.check_cancelled()
                 entry = entries[index]
@@ -406,7 +407,15 @@ def download(
 
                         def on_bytes(done: int, total: int, number: int = number) -> None:
                             fraction = (number - 1 + (done / total if total else 0)) / len(slides)
-                            ctx.progress((position + fraction) * 100 / len(chosen), "instagram.status.downloading", params)
+                            received = size + done
+                            elapsed = time.monotonic() - started
+                            ctx.progress(
+                                (position + fraction) * 100 / len(chosen),
+                                "instagram.status.downloading",
+                                params,
+                                downloaded=received,
+                                speed=received / elapsed if received and elapsed > 0 else None,
+                            )
 
                         on_bytes(0, 0)
                         base = out / (entry["stem"] if len(slides) == 1 else f"{entry['stem']}_{number}")

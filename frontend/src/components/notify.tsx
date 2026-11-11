@@ -18,24 +18,35 @@ interface NotifyOptions {
 }
 
 /** Fluent toasts with one call: notify.success("Saved", { action: {...} }). */
+let toastCounter = 0;
+
 export function useNotify() {
-  const { dispatchToast } = useToastController(TOASTER_ID);
+  const { dispatchToast, dismissToast } = useToastController(TOASTER_ID);
 
   const show = useCallback(
-    (intent: ToastIntent, title: string, { body, action, timeout }: NotifyOptions = {}) =>
+    (intent: ToastIntent, title: string, { body, action, timeout }: NotifyOptions = {}) => {
+      const toastId = `toast-${++toastCounter}`;
       dispatchToast(
         <Toast>
           <ToastTitle>{title}</ToastTitle>
           {body && <ToastBody>{body}</ToastBody>}
           {action && (
             <ToastFooter>
-              <Link onClick={action.onClick}>{action.label}</Link>
+              <Link
+                onClick={() => {
+                  dismissToast(toastId);
+                  action.onClick();
+                }}
+              >
+                {action.label}
+              </Link>
             </ToastFooter>
           )}
         </Toast>,
-        { intent, timeout: timeout ?? (intent === "error" ? 8000 : 5000) },
-      ),
-    [dispatchToast],
+        { toastId, intent, timeout: timeout ?? (intent === "error" ? 8000 : 5000) },
+      );
+    },
+    [dispatchToast, dismissToast],
   );
 
   return useMemo(

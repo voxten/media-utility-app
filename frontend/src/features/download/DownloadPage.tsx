@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Badge, Button, Field, Input, makeStyles, Spinner, Tab, TabList, Tooltip } from "@fluentui/react-components";
 import {
   Add16Regular,
@@ -15,6 +15,7 @@ import { ActionBar } from "../../components/ActionBar";
 import { EmptyState } from "../../components/EmptyState";
 import { LogPanel } from "../../components/LogPanel";
 import { useNotify } from "../../components/notify";
+import { Columns } from "../../components/Columns";
 import { ToolPage } from "../../components/Page";
 import { Panel } from "../../components/Panel";
 import { PathPicker } from "../../components/PathPicker";
@@ -24,6 +25,7 @@ import { useJobRunner } from "../../lib/useJobRunner";
 import { useSettings } from "../../stores/settings";
 import { BatchQueue } from "./BatchQueue";
 import { ProbeResultPanel } from "./ProbeResultPanel";
+import { SubtitlesField, useDownloadSubtitles } from "./SubtitlesField";
 import { useDownloadForm } from "./store";
 import type { BatchItem, ProbeResult } from "./types";
 
@@ -42,12 +44,6 @@ const useStyles = makeStyles({
   urlRow: { display: "flex", gap: "8px", width: "100%", minWidth: 0 },
   urlInput: { flexGrow: 1, minWidth: 0 },
   searchBtn: { flexShrink: 0, whiteSpace: "nowrap" },
-  outputGrid: {
-    display: "grid",
-    gridTemplateColumns: "minmax(0, 3fr) minmax(0, 2fr)",
-    gap: "16px",
-    "@media (max-width: 1050px)": { gridTemplateColumns: "minmax(0, 1fr)" },
-  },
   templateInput: { width: "100%", minWidth: 0 },
   tokens: { display: "flex", gap: "6px", marginTop: "6px", flexWrap: "wrap", minWidth: 0 },
   token: { cursor: "pointer", flexShrink: 0 },
@@ -68,6 +64,7 @@ export default function DownloadPage() {
   const defaultOutdir = useSettings((s) => s.settings?.outputDir ?? "");
   const outdir = form.outdir || defaultOutdir;
   const [lastBatch, setLastBatch] = useState<BatchItem[] | null>(null);
+  const subtitles = useDownloadSubtitles();
 
   const probe = useJobRunner<ProbeResult>("download.probe", {
     onDone: (result) => {
@@ -123,7 +120,9 @@ export default function DownloadPage() {
     const targetUrls = failedItems.length > 0 ? failedItems.map((i) => i.url) : urls;
     if (targetUrls.length === 0) return;
     setLastBatch(null);
-    batch.start(() => api.download.batch({ urls: targetUrls, outdir, template: form.template })).catch((err) => notify.error(String(err)));
+    batch
+      .start(() => api.download.batch({ urls: targetUrls, outdir, template: form.template, subtitles: subtitles.params }))
+      .catch((err) => notify.error(String(err)));
   };
 
   const activeJob = form.tab === "batch" ? batch.job : download.running ? download.job : probe.running ? probe.job : download.job;
@@ -141,6 +140,12 @@ export default function DownloadPage() {
     form.set({ probe: null, formatId: "" });
     probe.start(() => api.download.probe(form.url.trim())).catch((err) => notify.error(String(err)));
   };
+
+  useEffect(() => {
+    if (!useDownloadForm.getState().autoProbe) return; // fresh state: a repeated effect must not probe twice
+    form.set({ autoProbe: false });
+    runProbe();
+  }, [form.autoProbe]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const paste = async () => {
     try {
@@ -165,7 +170,7 @@ export default function DownloadPage() {
       }
       setLastBatch(null);
       batch
-        .start(() => api.download.batch({ urls, outdir, template: form.template }))
+        .start(() => api.download.batch({ urls, outdir, template: form.template, subtitles: subtitles.params }))
         .then(() => form.set({ batchText: "" }))
         .catch((err) => notify.error(String(err)));
       return;
@@ -175,7 +180,9 @@ export default function DownloadPage() {
       const playlistUrls = form.probe.entries.map((e) => e.url);
       form.set({ tab: "batch", batchText: playlistUrls.join("\n") });
       setLastBatch(null);
-      batch.start(() => api.download.batch({ urls: playlistUrls, outdir, template: form.template })).catch((err) => notify.error(String(err)));
+      batch
+        .start(() => api.download.batch({ urls: playlistUrls, outdir, template: form.template, subtitles: subtitles.params }))
+        .catch((err) => notify.error(String(err)));
       return;
     }
     download
@@ -188,6 +195,7 @@ export default function DownloadPage() {
           mode: form.mode,
           audioCodec: form.audioCodec,
           title: form.probe!.title,
+          subtitles: subtitles.params,
         }),
       )
       .catch((err) => notify.error(String(err)));
@@ -198,89 +206,92 @@ export default function DownloadPage() {
       ? urls.length > 0 && !!outdir
       : !running && !!outdir && !!form.probe && (form.probe.isPlaylist || !!form.formatId);
 
+  const outputPanel = (
+    <Panel title={t("download.output")}>
+      <Field label={t("download.outdir")}>
+        <PathPicker value={outdir} onChange={(dir) => form.set({ outdir: dir })} openable />
+      </Field>
+      <Field label={t("download.template")}>
+        <Input className={styles.templateInput} value={form.template} onChange={(_, d) => form.set({ template: d.value })} />
+        <div className={styles.tokens}>
+          {TEMPLATE_TOKENS.map((tok) => (
+            <Badge key={tok} appearance="outline" className={styles.token} onClick={() => form.set({ template: form.template + tok })}>
+              {tok}
+            </Badge>
+          ))}
+        </div>
+      </Field>
+      <SubtitlesField subtitles={subtitles} />
+    </Panel>
+  );
+
   return (
     <ToolPage toolId="download">
-      <TabList selectedValue={form.tab} onTabSelect={(_, d) => form.set({ tab: d.value as "single" | "batch" })}>
-        <Tab value="single" icon={<Link24Regular />}>
-          {t("download.single")}
-        </Tab>
-        <Tab value="batch" icon={<TextBulletListLtr24Regular />}>
-          {t("download.batch")}
-        </Tab>
-      </TabList>
+      <Columns side={outputPanel}>
+        <TabList selectedValue={form.tab} onTabSelect={(_, d) => form.set({ tab: d.value as "single" | "batch" })}>
+          <Tab value="single" icon={<Link24Regular />}>
+            {t("download.single")}
+          </Tab>
+          <Tab value="batch" icon={<TextBulletListLtr24Regular />}>
+            {t("download.batch")}
+          </Tab>
+        </TabList>
 
-      {form.tab === "single" ? (
-        <>
-          <Panel>
-            <div className={styles.urlRow}>
-              <Input
-                className={styles.urlInput}
-                size="large"
-                value={form.url}
-                placeholder={t("download.urlPlaceholder")}
-                contentBefore={<Link24Regular />}
-                contentAfter={
-                  <Tooltip content={t("download.paste")} relationship="label">
-                    <Button appearance="transparent" size="small" icon={<ClipboardPaste16Regular />} onClick={paste} />
-                  </Tooltip>
-                }
-                onChange={(_, d) => form.set({ url: d.value })}
-                onKeyDown={(e) => e.key === "Enter" && runProbe()}
-              />
-              <Button
-                className={styles.searchBtn}
-                size="large"
-                icon={probe.running ? <Spinner size="tiny" /> : <Search16Regular />}
-                disabled={!form.url.trim() || probe.running}
-                onClick={runProbe}
-              >
-                {t("download.check")}
-              </Button>
-            </div>
-          </Panel>
+        {form.tab === "single" ? (
+          <>
+            <Panel>
+              <div className={styles.urlRow}>
+                <Input
+                  className={styles.urlInput}
+                  size="large"
+                  value={form.url}
+                  placeholder={t("download.urlPlaceholder")}
+                  contentBefore={<Link24Regular />}
+                  contentAfter={
+                    <Tooltip content={t("download.paste")} relationship="label">
+                      <Button appearance="transparent" size="small" icon={<ClipboardPaste16Regular />} onClick={paste} />
+                    </Tooltip>
+                  }
+                  onChange={(_, d) => form.set({ url: d.value })}
+                  onKeyDown={(e) => e.key === "Enter" && runProbe()}
+                />
+                <Button
+                  className={styles.searchBtn}
+                  size="large"
+                  icon={probe.running ? <Spinner size="tiny" /> : <Search16Regular />}
+                  disabled={!form.url.trim() || probe.running}
+                  onClick={runProbe}
+                >
+                  {t("download.check")}
+                </Button>
+              </div>
+            </Panel>
 
-          {form.probe ? (
-            <ProbeResultPanel probe={form.probe} />
-          ) : (
-            !probe.running && (
-              <Panel>
-                <EmptyState icon={Video24Regular} title={t("download.emptyTitle")}>
-                  {t("download.emptyBody")}
-                </EmptyState>
-              </Panel>
-            )
-          )}
-        </>
-      ) : (
-        <BatchQueue
-          queue={queue}
-          running={batch.running}
-          speed={speed}
-          eta={eta}
-          totalSize={batchTotal(batchResult?.totalSize, queue, "size")}
-          totalDuration={batchTotal(batchResult?.totalDuration, queue, "duration")}
-        />
-      )}
+            {form.probe ? (
+              <ProbeResultPanel probe={form.probe} />
+            ) : (
+              !probe.running && (
+                <Panel>
+                  <EmptyState icon={Video24Regular} title={t("download.emptyTitle")}>
+                    {t("download.emptyBody")}
+                  </EmptyState>
+                </Panel>
+              )
+            )}
+          </>
+        ) : (
+          <BatchQueue
+            queue={queue}
+            running={batch.running}
+            speed={speed}
+            eta={eta}
+            totalSize={batchTotal(batchResult?.totalSize, queue, "size")}
+            totalDuration={batchTotal(batchResult?.totalDuration, queue, "duration")}
+          />
+        )}
 
-      <Panel title={t("download.output")}>
-        <div className={styles.outputGrid}>
-          <Field label={t("download.outdir")}>
-            <PathPicker value={outdir} onChange={(dir) => form.set({ outdir: dir })} openable />
-          </Field>
-          <Field label={t("download.template")}>
-            <Input className={styles.templateInput} value={form.template} onChange={(_, d) => form.set({ template: d.value })} />
-            <div className={styles.tokens}>
-              {TEMPLATE_TOKENS.map((tok) => (
-                <Badge key={tok} appearance="outline" className={styles.token} onClick={() => form.set({ template: form.template + tok })}>
-                  {tok}
-                </Badge>
-              ))}
-            </div>
-          </Field>
-        </div>
-      </Panel>
-
-      {activeJob && activeJob.logs.length > 0 && <LogPanel logs={activeJob.logs} />}
+        {activeJob && activeJob.logs.length > 0 && <LogPanel logs={activeJob.logs} />}
+      </Columns>
 
       <ActionBar
         job={activeJob?.status === "running" || activeJob?.status === "error" ? activeJob : undefined}

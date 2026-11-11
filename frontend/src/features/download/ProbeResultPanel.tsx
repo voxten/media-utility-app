@@ -30,7 +30,7 @@ import type { Format, Mode, ProbeResult } from "./types";
 const AUDIO_CODECS = ["mp3", "m4a", "flac", "wav", "aac", "opus"];
 
 const useStyles = makeStyles({
-  media: { display: "grid", gridTemplateColumns: "240px minmax(0, 1fr)", gap: "20px", alignItems: "start", "@media (max-width: 800px)": { gridTemplateColumns: "1fr" } },
+  media: { display: "grid", gridTemplateColumns: "200px minmax(0, 1fr)", gap: "20px", alignItems: "start", "@media (max-width: 800px)": { gridTemplateColumns: "1fr" } },
   thumb: { width: "100%", aspectRatio: "16 / 9", objectFit: "cover", borderRadius: tokens.borderRadiusLarge, boxShadow: tokens.shadow8, backgroundColor: tokens.colorNeutralBackground3 },
   mediaInfo: { display: "flex", flexDirection: "column", gap: "8px", minWidth: 0 },
   metaRow: { display: "flex", gap: "16px", flexWrap: "wrap", color: tokens.colorNeutralForeground3 },

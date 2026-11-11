@@ -22,6 +22,7 @@ def test_default_settings_keys():
         "completionSound",
         "customFfmpegPath",
         "confirmExitOnActiveJobs",
+        "closeToTray",
     }
     assert expected_keys.issubset(defaults.keys())
     assert defaults["hardwareAcceleration"] is True

@@ -21,6 +21,7 @@ import { FileStrip } from "../../components/FileStrip";
 import { ImageCanvasStage } from "../../components/ImageCanvasStage";
 import type { CropRect } from "../../components/InteractiveCropOverlay";
 import { useNotify } from "../../components/notify";
+import { Columns } from "../../components/Columns";
 import { ToolPage } from "../../components/Page";
 import { Panel } from "../../components/Panel";
 import { ResultCard } from "../../components/ResultCard";
@@ -199,6 +200,7 @@ export default function GifEditorPage() {
     return (
       <ToolPage toolId="gif_editor">
         <DropZone
+          fill
           icon={Gif24Regular}
           title={t("gif_editor.dropTitle")}
           hint={t("gif_editor.dropHint", { formats: formatList(ANIMATION_EXTENSIONS) })}
@@ -227,95 +229,8 @@ export default function GifEditorPage() {
     setEdits({ trim: start <= 0 && end >= info.duration ? null : { start, end } });
   };
 
-  return (
-    <ToolPage toolId="gif_editor">
-      <Panel
-        title={current ? fileName(current) : undefined}
-        actions={
-          <>
-            <Button appearance="subtle" icon={<Crop16Regular />} disabled={!area || cropping} onClick={() => setDraftCrop(area)}>
-              {t("gif_editor.crop")}
-            </Button>
-            <Button appearance="subtle" icon={<Add16Regular />} onClick={browse}>
-              {t("common.addFiles")}
-            </Button>
-            <Button appearance="subtle" icon={<Delete16Regular />} onClick={() => removeAt(selected)}>
-              {t("common.remove")}
-            </Button>
-          </>
-        }
-      >
-        <div className={styles.stage}>
-          {info && area ? (
-            <ImageCanvasStage
-              imageSrc={showPreview ? preview.dataUrl : info.dataUrl}
-              naturalWidth={showPreview ? preview.width : info.width}
-              naturalHeight={showPreview ? preview.height : info.height}
-              cropping={cropping}
-              crop={draftCrop ?? area}
-              cropPreset="free"
-              onCropChange={setDraftCrop}
-              onApplyCrop={applyCrop}
-              onCancelCrop={() => setDraftCrop(null)}
-              onResetCrop={() => fullCrop && setDraftCrop(fullCrop)}
-            />
-          ) : (
-            <Spinner label={t("common.loading")} />
-          )}
-        </div>
-        {info && (
-          <Caption1 className={styles.meta}>
-            <span>
-              {info.width} × {info.height} px → {outWidth} × {outHeight} px
-            </span>
-            <span>
-              {t("gif_editor.frameCount", { count: info.frames })} · {formatDuration(info.duration)} · {formatName(info.format)}
-            </span>
-            <span>
-              {formatBytes(info.size)}
-              {preview && (
-                <>
-                  {" → "}
-                  <span className={styles.saved}>{formatBytes(preview.size)}</span>
-                </>
-              )}
-            </span>
-          </Caption1>
-        )}
-        {info && info.frames > 1 && (
-          <TrimTimeline
-            duration={info.duration}
-            frameAspect={info.height > 0 ? info.width / info.height : 0}
-            loadFrames={loadFrames}
-            start={trim.start}
-            end={trim.end}
-            onChange={changeTrim}
-            minLength={info.duration / info.frames}
-            snap={0.01}
-          />
-        )}
-
-        {files.length > 1 && (
-          <FileStrip
-            files={files}
-            selected={selected}
-            onSelect={setSelected}
-            onRemove={removeAt}
-            edited={edited}
-            actions={
-              <>
-                <Button appearance="subtle" icon={<CopySelect20Regular />} onClick={applyToAll}>
-                  {t("gif_editor.applyToAll")}
-                </Button>
-                <Button appearance="subtle" icon={<Delete16Regular />} onClick={clear}>
-                  {t("common.clearAll")}
-                </Button>
-              </>
-            }
-          />
-        )}
-      </Panel>
-
+  const options = (
+    <>
       <Panel
         title={t("gif_editor.edit")}
         actions={
@@ -349,34 +264,127 @@ export default function GifEditorPage() {
       </Panel>
 
       <GifOutputPanel output={output} onGifsicleInstalled={() => setGifsicle(true)} />
+    </>
+  );
 
-      {single && (
-        <ResultCard
-          title={t("gif_editor.done")}
-          detail={`${single.width} × ${single.height} px · ${formatBytes(single.originalSize)} → ${formatBytes(single.size)}`}
-          path={single.dest}
-          sourceToolId="gif_editor"
-        />
-      )}
-      {result && !single && result.results.length > 0 && (
-        <AfterGallery
-          title={t("transfer.processedTitle")}
-          summary={t("gif_editor.summary", { processed: result.processed, total: result.total, percent: result.savedPercent })}
-          files={result.files}
-          items={result.results.map((r) => ({
-            file: r.file,
-            dest: r.dest,
-            name: fileName(r.dest),
-            originalSize: r.originalSize,
-            size: r.size,
-            savedPercent: r.savedPercent,
-            width: r.width,
-            height: r.height,
-          }))}
-          outputDir={result.outputDir}
-          sourceToolId="gif_editor"
-        />
-      )}
+  return (
+    <ToolPage toolId="gif_editor">
+      <Columns side={options}>
+        <Panel
+          title={current ? fileName(current) : undefined}
+          actions={
+            <>
+              <Button appearance="subtle" icon={<Crop16Regular />} disabled={!area || cropping} onClick={() => setDraftCrop(area)}>
+                {t("gif_editor.crop")}
+              </Button>
+              <Button appearance="subtle" icon={<Add16Regular />} onClick={browse}>
+                {t("common.addFiles")}
+              </Button>
+              <Button appearance="subtle" icon={<Delete16Regular />} onClick={() => removeAt(selected)}>
+                {t("common.remove")}
+              </Button>
+            </>
+          }
+        >
+          <div className={styles.stage}>
+            {info && area ? (
+              <ImageCanvasStage
+                imageSrc={showPreview ? preview.dataUrl : info.dataUrl}
+                naturalWidth={showPreview ? preview.width : info.width}
+                naturalHeight={showPreview ? preview.height : info.height}
+                cropping={cropping}
+                crop={draftCrop ?? area}
+                cropPreset="free"
+                onCropChange={setDraftCrop}
+                onApplyCrop={applyCrop}
+                onCancelCrop={() => setDraftCrop(null)}
+                onResetCrop={() => fullCrop && setDraftCrop(fullCrop)}
+              />
+            ) : (
+              <Spinner label={t("common.loading")} />
+            )}
+          </div>
+          {info && (
+            <Caption1 className={styles.meta}>
+              <span>
+                {info.width} × {info.height} px → {outWidth} × {outHeight} px
+              </span>
+              <span>
+                {t("gif_editor.frameCount", { count: info.frames })} · {formatDuration(info.duration)} · {formatName(info.format)}
+              </span>
+              <span>
+                {formatBytes(info.size)}
+                {preview && (
+                  <>
+                    {" → "}
+                    <span className={styles.saved}>{formatBytes(preview.size)}</span>
+                  </>
+                )}
+              </span>
+            </Caption1>
+          )}
+          {info && info.frames > 1 && (
+            <TrimTimeline
+              duration={info.duration}
+              frameAspect={info.height > 0 ? info.width / info.height : 0}
+              loadFrames={loadFrames}
+              start={trim.start}
+              end={trim.end}
+              onChange={changeTrim}
+              minLength={info.duration / info.frames}
+              snap={0.01}
+            />
+          )}
+
+          {files.length > 1 && (
+            <FileStrip
+              files={files}
+              selected={selected}
+              onSelect={setSelected}
+              onRemove={removeAt}
+              edited={edited}
+              actions={
+                <>
+                  <Button appearance="subtle" icon={<CopySelect20Regular />} onClick={applyToAll}>
+                    {t("gif_editor.applyToAll")}
+                  </Button>
+                  <Button appearance="subtle" icon={<Delete16Regular />} onClick={clear}>
+                    {t("common.clearAll")}
+                  </Button>
+                </>
+              }
+            />
+          )}
+        </Panel>
+
+        {single && (
+          <ResultCard
+            title={t("gif_editor.done")}
+            detail={`${single.width} × ${single.height} px · ${formatBytes(single.originalSize)} → ${formatBytes(single.size)}`}
+            path={single.dest}
+            sourceToolId="gif_editor"
+          />
+        )}
+        {result && !single && result.results.length > 0 && (
+          <AfterGallery
+            title={t("transfer.processedTitle")}
+            summary={t("gif_editor.summary", { processed: result.processed, total: result.total, percent: result.savedPercent })}
+            files={result.files}
+            items={result.results.map((r) => ({
+              file: r.file,
+              dest: r.dest,
+              name: fileName(r.dest),
+              originalSize: r.originalSize,
+              size: r.size,
+              savedPercent: r.savedPercent,
+              width: r.width,
+              height: r.height,
+            }))}
+            outputDir={result.outputDir}
+            sourceToolId="gif_editor"
+          />
+        )}
+      </Columns>
 
       <ActionBar job={job.job?.status === "done" ? undefined : job.job} onCancel={job.cancel}>
         <Button icon={<Eye16Regular />} disabled={!info || previewing || job.running || cropping} onClick={runPreview}>

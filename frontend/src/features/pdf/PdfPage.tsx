@@ -328,6 +328,7 @@ export default function PdfPage() {
     <ToolPage toolId="pdf">
       <DropZone
         compact={pages.length > 0 || streaming.length > 0}
+        fill={pages.length === 0 && streaming.length === 0}
         icon={DocumentPdf24Regular}
         title={pages.length ? t("pdf.dropMore") : t("pdf.dropTitle")}
         hint={t("pdf.dropHint")}

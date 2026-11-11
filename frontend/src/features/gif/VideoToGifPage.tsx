@@ -7,6 +7,7 @@ import { DropZone } from "../../components/DropZone";
 import { ImageCanvasStage } from "../../components/ImageCanvasStage";
 import type { CropRect } from "../../components/InteractiveCropOverlay";
 import { useNotify } from "../../components/notify";
+import { Columns } from "../../components/Columns";
 import { ToolPage } from "../../components/Page";
 import { Panel } from "../../components/Panel";
 import { ResultCard } from "../../components/ResultCard";
@@ -158,6 +159,7 @@ export default function VideoToGifPage() {
     return (
       <ToolPage toolId="video_to_gif">
         <DropZone
+          fill
           icon={FilmstripImage24Regular}
           title={t("video_to_gif.dropTitle")}
           hint={t("video_to_gif.dropHint", { formats: formatList(VIDEO_EXTENSIONS) })}
@@ -178,83 +180,8 @@ export default function VideoToGifPage() {
   const clipSeconds = (range.end - range.start) / speed;
   const result = job.result;
 
-  return (
-    <ToolPage toolId="video_to_gif">
-      <Panel
-        title={video.fileName}
-        actions={
-          <>
-            <Button appearance="subtle" icon={<Crop16Regular />} disabled={cropping} onClick={() => setDraftCrop(area)}>
-              {t("video_to_gif.crop")}
-            </Button>
-            <Button appearance="subtle" icon={<VideoSwitch20Regular />} onClick={browse}>
-              {t("video_to_gif.changeVideo")}
-            </Button>
-          </>
-        }
-      >
-        <div className={styles.stage}>
-          <ImageCanvasStage
-            imageSrc={showPreview ? preview.dataUrl : (still ?? video.thumbnail)}
-            naturalWidth={showPreview ? outWidth : video.width}
-            naturalHeight={showPreview ? outHeight : video.height}
-            cropping={cropping}
-            crop={draftCrop ?? area}
-            cropPreset="free"
-            onCropChange={setDraftCrop}
-            onApplyCrop={applyCrop}
-            onCancelCrop={() => setDraftCrop(null)}
-            onResetCrop={() => setDraftCrop(fullCrop)}
-          />
-        </div>
-        <Caption1 className={styles.meta}>
-          <span>
-            {video.width} × {video.height} px → {outWidth} × {outHeight} px
-          </span>
-          <span>{t("video_to_gif.frameCount", { count: Math.max(1, Math.round(clipSeconds * fps)) })}</span>
-          {preview && <span>{t("video_to_gif.estimatedSize", { size: formatBytes(preview.estimatedSize) })}</span>}
-        </Caption1>
-
-        <TrimTimeline
-          duration={video.duration}
-          frameAspect={video.height > 0 ? video.width / video.height : 0}
-          loadFrames={loadFrames}
-          start={range.start}
-          end={range.end}
-          onChange={(start, end) => setRange({ start, end })}
-          snap={0.01}
-        />
-        <div className={styles.times}>
-          <Field label={t("video_to_gif.start")} className={styles.time}>
-            <Input
-              type="number"
-              step={0.1}
-              min={0}
-              contentAfter="s"
-              value={String(round(range.start))}
-              onChange={(_, d) => {
-                const start = Math.max(0, Math.min(range.end - 0.1, Number(d.value) || 0));
-                setRange((r) => ({ ...r, start }));
-              }}
-            />
-          </Field>
-          <Field label={t("video_to_gif.end")} className={styles.time}>
-            <Input
-              type="number"
-              step={0.1}
-              min={0}
-              contentAfter="s"
-              value={String(round(range.end))}
-              onChange={(_, d) => {
-                const end = Math.min(video.duration, Math.max(range.start + 0.1, Number(d.value) || 0));
-                setRange((r) => ({ ...r, end }));
-              }}
-            />
-          </Field>
-          <Caption1 className={styles.meta}>{t("video_to_gif.length", { duration: formatDuration(clipSeconds) })}</Caption1>
-        </div>
-      </Panel>
-
+  const options = (
+    <>
       <Panel title={t("video_to_gif.frames")}>
         <div className={styles.grid}>
           <SliderField label={t("video_to_gif.fps")} value={fps} min={5} max={30} onChange={setFps} />
@@ -271,15 +198,96 @@ export default function VideoToGifPage() {
       </Panel>
 
       <GifOutputPanel output={output} onGifsicleInstalled={() => setVideo((v) => v && { ...v, gifsicle: true })} />
+    </>
+  );
 
-      {result && (
-        <ResultCard
-          title={t("video_to_gif.done")}
-          detail={`${result.width} × ${result.height} px · ${t("video_to_gif.frameCount", { count: result.frames })} · ${formatBytes(result.size)}`}
-          path={result.outPath}
-          sourceToolId="video_to_gif"
-        />
-      )}
+  return (
+    <ToolPage toolId="video_to_gif">
+      <Columns side={options}>
+        <Panel
+          title={video.fileName}
+          actions={
+            <>
+              <Button appearance="subtle" icon={<Crop16Regular />} disabled={cropping} onClick={() => setDraftCrop(area)}>
+                {t("video_to_gif.crop")}
+              </Button>
+              <Button appearance="subtle" icon={<VideoSwitch20Regular />} onClick={browse}>
+                {t("video_to_gif.changeVideo")}
+              </Button>
+            </>
+          }
+        >
+          <div className={styles.stage}>
+            <ImageCanvasStage
+              imageSrc={showPreview ? preview.dataUrl : (still ?? video.thumbnail)}
+              naturalWidth={showPreview ? outWidth : video.width}
+              naturalHeight={showPreview ? outHeight : video.height}
+              cropping={cropping}
+              crop={draftCrop ?? area}
+              cropPreset="free"
+              onCropChange={setDraftCrop}
+              onApplyCrop={applyCrop}
+              onCancelCrop={() => setDraftCrop(null)}
+              onResetCrop={() => setDraftCrop(fullCrop)}
+            />
+          </div>
+          <Caption1 className={styles.meta}>
+            <span>
+              {video.width} × {video.height} px → {outWidth} × {outHeight} px
+            </span>
+            <span>{t("video_to_gif.frameCount", { count: Math.max(1, Math.round(clipSeconds * fps)) })}</span>
+            {preview && <span>{t("video_to_gif.estimatedSize", { size: formatBytes(preview.estimatedSize) })}</span>}
+          </Caption1>
+
+          <TrimTimeline
+            duration={video.duration}
+            frameAspect={video.height > 0 ? video.width / video.height : 0}
+            loadFrames={loadFrames}
+            start={range.start}
+            end={range.end}
+            onChange={(start, end) => setRange({ start, end })}
+            snap={0.01}
+          />
+          <div className={styles.times}>
+            <Field label={t("video_to_gif.start")} className={styles.time}>
+              <Input
+                type="number"
+                step={0.1}
+                min={0}
+                contentAfter="s"
+                value={String(round(range.start))}
+                onChange={(_, d) => {
+                  const start = Math.max(0, Math.min(range.end - 0.1, Number(d.value) || 0));
+                  setRange((r) => ({ ...r, start }));
+                }}
+              />
+            </Field>
+            <Field label={t("video_to_gif.end")} className={styles.time}>
+              <Input
+                type="number"
+                step={0.1}
+                min={0}
+                contentAfter="s"
+                value={String(round(range.end))}
+                onChange={(_, d) => {
+                  const end = Math.min(video.duration, Math.max(range.start + 0.1, Number(d.value) || 0));
+                  setRange((r) => ({ ...r, end }));
+                }}
+              />
+            </Field>
+            <Caption1 className={styles.meta}>{t("video_to_gif.length", { duration: formatDuration(clipSeconds) })}</Caption1>
+          </div>
+        </Panel>
+
+        {result && (
+          <ResultCard
+            title={t("video_to_gif.done")}
+            detail={`${result.width} × ${result.height} px · ${t("video_to_gif.frameCount", { count: result.frames })} · ${formatBytes(result.size)}`}
+            path={result.outPath}
+            sourceToolId="video_to_gif"
+          />
+        )}
+      </Columns>
 
       <ActionBar job={job.job?.status === "done" ? undefined : job.job} onCancel={job.cancel}>
         <Button icon={<Eye16Regular />} disabled={previewing || job.running || cropping} onClick={runPreview}>

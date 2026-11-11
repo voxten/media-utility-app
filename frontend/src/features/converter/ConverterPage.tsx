@@ -28,6 +28,7 @@ import { ActionBar } from "../../components/ActionBar";
 import { DropZone } from "../../components/DropZone";
 import { LogPanel } from "../../components/LogPanel";
 import { useNotify } from "../../components/notify";
+import { Columns } from "../../components/Columns";
 import { ToolPage } from "../../components/Page";
 import { Panel } from "../../components/Panel";
 import { PathPicker } from "../../components/PathPicker";
@@ -97,12 +98,6 @@ const useForm = create<ConverterForm>((set) => ({
 }));
 
 const useStyles = makeStyles({
-  columns: {
-    display: "grid",
-    gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
-    gap: "16px",
-    "@media (max-width: 1050px)": { gridTemplateColumns: "minmax(0, 1fr)" },
-  },
   row: { display: "flex", gap: "12px", alignItems: "flex-end", flexWrap: "wrap", minWidth: 0 },
   grow: { flexGrow: 1, minWidth: 0 },
   fileList: {
@@ -258,9 +253,38 @@ export default function ConverterPage() {
       )
       .catch((err) => notify.error(t("converter.toast.error"), { body: String(err) }));
 
+  const outputPanel = (
+    <Panel title={t("converter.output")}>
+      <Field label={t("converter.toFormat")}>
+        <Select searchable options={formatOptions(FORMATS)} value={form.outFormat} onChange={(outFormat) => form.set({ outFormat })} />
+      </Field>
+      <SliderField
+        label={t("converter.quality")}
+        value={form.quality}
+        min={1}
+        max={100}
+        disabled={!LOSSY.has(form.outFormat)}
+        onChange={(quality) => form.set({ quality })}
+      />
+      {form.outFormat === "WEBP" && (
+        <SliderField
+          label={t("converter.method")}
+          hint={t("converter.methodHint")}
+          value={form.method}
+          min={0}
+          max={6}
+          onChange={(method) => form.set({ method })}
+        />
+      )}
+      <Field label={t("converter.outputFolder")}>
+        <PathPicker value={outputDir} onChange={(dir) => form.set({ outputDir: dir })} openable />
+      </Field>
+    </Panel>
+  );
+
   return (
     <ToolPage toolId="converter">
-      <div className={styles.columns}>
+      <Columns side={outputPanel}>
         <Panel
           title={t("converter.source")}
           actions={
@@ -360,59 +384,32 @@ export default function ConverterPage() {
           )}
         </Panel>
 
-        <Panel title={t("converter.output")}>
-          <Field label={t("converter.toFormat")}>
-            <Select searchable options={formatOptions(FORMATS)} value={form.outFormat} onChange={(outFormat) => form.set({ outFormat })} />
-          </Field>
-          <SliderField
-            label={t("converter.quality")}
-            value={form.quality}
-            min={1}
-            max={100}
-            disabled={!LOSSY.has(form.outFormat)}
-            onChange={(quality) => form.set({ quality })}
-          />
-          {form.outFormat === "WEBP" && (
-            <SliderField
-              label={t("converter.method")}
-              hint={t("converter.methodHint")}
-              value={form.method}
-              min={0}
-              max={6}
-              onChange={(method) => form.set({ method })}
-            />
-          )}
-          <Field label={t("converter.outputFolder")}>
-            <PathPicker value={outputDir} onChange={(dir) => form.set({ outputDir: dir })} openable />
-          </Field>
-        </Panel>
-      </div>
-
-      {runner.result && (
-        <>
-          <Summary result={runner.result} showFolder={!runner.result.files?.length} />
-          {runner.result.files && runner.result.files.length > 0 && (
-            <AfterGallery
-              title={t("transfer.convertedTitle")}
-              files={runner.result.files}
-              items={runner.result.items?.map((it) => ({
-                file: it.source,
-                dest: it.dest,
-                name: it.name,
-                originalSize: it.originalSize,
-                size: it.size,
-                savedPercent:
-                  it.originalSize > 0
-                    ? Math.round((1 - it.size / it.originalSize) * 100)
-                    : 0,
-              }))}
-              outputDir={runner.result.outputDir}
-              sourceToolId="converter"
-            />
-          )}
-        </>
-      )}
-      {runner.job && runner.job.logs.length > 0 && <LogPanel logs={runner.job.logs} />}
+        {runner.result && (
+          <>
+            <Summary result={runner.result} showFolder={!runner.result.files?.length} />
+            {runner.result.files && runner.result.files.length > 0 && (
+              <AfterGallery
+                title={t("transfer.convertedTitle")}
+                files={runner.result.files}
+                items={runner.result.items?.map((it) => ({
+                  file: it.source,
+                  dest: it.dest,
+                  name: it.name,
+                  originalSize: it.originalSize,
+                  size: it.size,
+                  savedPercent:
+                    it.originalSize > 0
+                      ? Math.round((1 - it.size / it.originalSize) * 100)
+                      : 0,
+                }))}
+                outputDir={runner.result.outputDir}
+                sourceToolId="converter"
+              />
+            )}
+          </>
+        )}
+        {runner.job && runner.job.logs.length > 0 && <LogPanel logs={runner.job.logs} />}
+      </Columns>
 
       <ActionBar job={runner.job} idleText={idleText} onCancel={runner.cancel}>
         <Button appearance="primary" icon={<Play16Filled />} disabled={!canStart} onClick={start}>

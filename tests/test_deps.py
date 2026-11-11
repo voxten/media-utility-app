@@ -11,7 +11,10 @@ def test_check_dependencies_structure():
     result = deps.check_dependencies()
     assert isinstance(result, list)
     ids = {d["id"] for d in result}
-    assert {"ffmpeg", "gifsicle", "mediainfo", "lama", "rembg", "upscale_general", "upscale_anime"} == ids
+    assert {
+        "ffmpeg", "gifsicle", "mediainfo", "lama", "rembg", "upscale_general", "upscale_anime",
+        "whisper_base", "whisper_small", "whisper_turbo",
+    } == ids
 
     for d in result:
         assert "ok" in d

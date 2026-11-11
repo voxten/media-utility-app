@@ -6,6 +6,7 @@ import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from backend.core import whisper_models
 from backend.core.paths import app_data_dir, project_root
 
 LAMA_EXPECTED_SIZE = 205669692
@@ -88,6 +89,30 @@ def _mediainfo_ok() -> bool:
         return bool(MediaInfo.can_parse())
     except Exception:  # noqa: BLE001 - missing native library raises various errors
         return False
+
+
+def _whisper_dependencies() -> List[Dict[str, Any]]:
+    engine_ok = whisper_models.is_engine_installed()
+    items = []
+    for model in whisper_models.MODELS.values():
+        ok = engine_ok and whisper_models.is_model_downloaded(model.id)
+        size = model.size + (0 if engine_ok else whisper_models.ENGINE_SIZE_MB * 1_000_000)
+        if ok:
+            detail = f"faster-whisper · {model.repo.split('/')[-1]}"
+        elif engine_ok:
+            detail = "settings.deps.detailWhisperModelOnly"
+        else:
+            detail = "settings.deps.detailWhisperFull"
+        items.append({
+            "id": f"{whisper_models.DEP_PREFIX}{model.id}",
+            "ok": ok,
+            "detail": detail,
+            "usedBy": ["transcribe", "download"],
+            "required": False,
+            "installable": not ok,
+            "sizeEstimate": "" if ok else whisper_models.size_label(size),
+        })
+    return items
 
 
 def check_dependencies(custom_ffmpeg: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -177,5 +202,6 @@ def check_dependencies(custom_ffmpeg: Optional[str] = None) -> List[Dict[str, An
             "installable": not upscale_anime_ok,
             "sizeEstimate": "~17.9 MB" if not upscale_anime_ok else "",
         },
+        *_whisper_dependencies(),
     ]
 

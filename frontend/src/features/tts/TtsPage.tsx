@@ -17,6 +17,7 @@ import { create } from "zustand";
 import { ActionBar } from "../../components/ActionBar";
 import { AudioPlayer } from "../../components/AudioPlayer";
 import { useNotify } from "../../components/notify";
+import { Columns } from "../../components/Columns";
 import { ToolPage } from "../../components/Page";
 import { Panel } from "../../components/Panel";
 import { PathPicker } from "../../components/PathPicker";
@@ -73,12 +74,6 @@ const useForm = create<TtsForm>((set) => ({
 const voiceCache: Partial<Record<Engine, Voice[]>> = {};
 
 const useStyles = makeStyles({
-  columns: {
-    display: "grid",
-    gridTemplateColumns: "minmax(0, 3fr) minmax(0, 2fr)",
-    gap: "16px",
-    "@media (max-width: 1050px)": { gridTemplateColumns: "minmax(0, 1fr)" },
-  },
   textarea: {
     minHeight: "280px",
     display: "flex",
@@ -212,9 +207,81 @@ export default function TtsPage() {
       )
       .catch((err) => notify.error(t("tts.toast.error"), { body: String(err) }));
 
+  const voicePanel = (
+    <Panel title={t("tts.voice")}>
+      <TabList size="small" selectedValue={form.engine} onTabSelect={(_, d) => form.set({ engine: d.value as Engine })}>
+        <Tab value="edge" icon={<Cloud24Regular />}>
+          {t("tts.engineEdge")}
+        </Tab>
+        <Tab value="pyttsx3" icon={<Desktop24Regular />}>
+          {t("tts.engineLocal")}
+        </Tab>
+      </TabList>
+      <Caption1 className={styles.engineHint}>{form.engine === "edge" ? t("tts.engineEdgeHint") : t("tts.engineLocalHint")}</Caption1>
+
+      {voices === null ? (
+        <Spinner size="small" label={t("tts.loadingVoices")} />
+      ) : (
+        <>
+          {locales.length > 1 && (
+            <Field label={t("tts.language")}>
+              <Select
+                searchable
+                options={localeOptions}
+                value={form.locale}
+                onChange={(locale) => form.set({ locale, voice: voices.find((v) => v.locale === locale)?.id ?? form.voice })}
+              />
+            </Field>
+          )}
+          <Field label={t("tts.voiceLabel")} validationMessage={voices.length === 0 ? t("tts.noVoices") : undefined}>
+            <Select
+              searchable
+              options={voiceOptions}
+              value={form.voice}
+              onChange={(voice) => form.set({ voice })}
+              placeholder={t("tts.searchVoice")}
+            />
+          </Field>
+        </>
+      )}
+
+      <SliderField
+        label={t("tts.rate")}
+        value={form.rate[form.engine]}
+        min={rateCfg.min}
+        max={rateCfg.max}
+        step={rateCfg.step}
+        format={rateCfg.format}
+        onChange={(v) => form.set({ rate: { ...form.rate, [form.engine]: v } })}
+      />
+
+      <Field label={t("tts.outputFolder")}>
+        <PathPicker
+          value={effectiveOutDir}
+          onChange={(dir) => form.set({ outDir: dir })}
+          openable
+        />
+      </Field>
+
+      <div className={styles.row}>
+        <Field label={t("tts.fileName")}>
+          <Input
+            value={form.fileName}
+            placeholder={t("tts.defaultName")}
+            onChange={(_, d) => form.set({ fileName: d.value })}
+            contentAfter={<Caption1 className={styles.muted}>.{form.format}</Caption1>}
+          />
+        </Field>
+        <Field label={t("tts.format")}>
+          <Select searchable className={styles.narrowDropdown} options={formatOptions(FORMATS)} value={form.format} onChange={setFormat} />
+        </Field>
+      </div>
+    </Panel>
+  );
+
   return (
     <ToolPage toolId="tts">
-      <div className={styles.columns}>
+      <Columns side={voicePanel}>
         <Panel title={t("tts.text")}>
           <Textarea
             className={styles.textarea}
@@ -233,100 +300,30 @@ export default function TtsPage() {
           </div>
         </Panel>
 
-        <Panel title={t("tts.voice")}>
-          <TabList size="small" selectedValue={form.engine} onTabSelect={(_, d) => form.set({ engine: d.value as Engine })}>
-            <Tab value="edge" icon={<Cloud24Regular />}>
-              {t("tts.engineEdge")}
-            </Tab>
-            <Tab value="pyttsx3" icon={<Desktop24Regular />}>
-              {t("tts.engineLocal")}
-            </Tab>
-          </TabList>
-          <Caption1 className={styles.engineHint}>{form.engine === "edge" ? t("tts.engineEdgeHint") : t("tts.engineLocalHint")}</Caption1>
-
-          {voices === null ? (
-            <Spinner size="small" label={t("tts.loadingVoices")} />
-          ) : (
-            <>
-              {locales.length > 1 && (
-                <Field label={t("tts.language")}>
-                  <Select
-                    searchable
-                    options={localeOptions}
-                    value={form.locale}
-                    onChange={(locale) => form.set({ locale, voice: voices.find((v) => v.locale === locale)?.id ?? form.voice })}
-                  />
-                </Field>
-              )}
-              <Field label={t("tts.voiceLabel")} validationMessage={voices.length === 0 ? t("tts.noVoices") : undefined}>
-                <Select
-                  searchable
-                  options={voiceOptions}
-                  value={form.voice}
-                  onChange={(voice) => form.set({ voice })}
-                  placeholder={t("tts.searchVoice")}
+        {form.audioSrc && (
+          <Panel
+            title={t("tts.preview")}
+            actions={
+              <>
+                {form.lastOutput && (
+                  <Button appearance="subtle" icon={<FolderOpen16Regular />} onClick={() => api.system.reveal(form.lastOutput!).catch(() => undefined)}>
+                    {t("common.showInFolder")}
+                  </Button>
+                )}
+                <Button
+                  appearance="subtle"
+                  size="small"
+                  icon={<Dismiss16Regular />}
+                  onClick={() => form.set({ audioSrc: null, lastOutput: null })}
+                  aria-label={t("common.clear")}
                 />
-              </Field>
-            </>
-          )}
-
-          <SliderField
-            label={t("tts.rate")}
-            value={form.rate[form.engine]}
-            min={rateCfg.min}
-            max={rateCfg.max}
-            step={rateCfg.step}
-            format={rateCfg.format}
-            onChange={(v) => form.set({ rate: { ...form.rate, [form.engine]: v } })}
-          />
-
-          <Field label={t("tts.outputFolder")}>
-            <PathPicker
-              value={effectiveOutDir}
-              onChange={(dir) => form.set({ outDir: dir })}
-              openable
-            />
-          </Field>
-
-          <div className={styles.row}>
-            <Field label={t("tts.fileName")}>
-              <Input
-                value={form.fileName}
-                placeholder={t("tts.defaultName")}
-                onChange={(_, d) => form.set({ fileName: d.value })}
-                contentAfter={<Caption1 className={styles.muted}>.{form.format}</Caption1>}
-              />
-            </Field>
-            <Field label={t("tts.format")}>
-              <Select searchable className={styles.narrowDropdown} options={formatOptions(FORMATS)} value={form.format} onChange={setFormat} />
-            </Field>
-          </div>
-        </Panel>
-      </div>
-
-      {form.audioSrc && (
-        <Panel
-          title={t("tts.preview")}
-          actions={
-            <>
-              {form.lastOutput && (
-                <Button appearance="subtle" icon={<FolderOpen16Regular />} onClick={() => api.system.reveal(form.lastOutput!).catch(() => undefined)}>
-                  {t("common.showInFolder")}
-                </Button>
-              )}
-              <Button
-                appearance="subtle"
-                size="small"
-                icon={<Dismiss16Regular />}
-                onClick={() => form.set({ audioSrc: null, lastOutput: null })}
-                aria-label={t("common.clear")}
-              />
-            </>
-          }
-        >
-          <AudioPlayer src={form.audioSrc} autoPlay />
-        </Panel>
-      )}
+              </>
+            }
+          >
+            <AudioPlayer src={form.audioSrc} autoPlay />
+          </Panel>
+        )}
+      </Columns>
 
       <ActionBar
         job={runner.running ? runner.job : undefined}

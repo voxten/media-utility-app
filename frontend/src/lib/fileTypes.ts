@@ -15,7 +15,7 @@ export const ANIMATION_EXTENSIONS = [...GIF_EXTENSIONS, ".webp", ".png", ".apng"
 
 /** Lower-case extension with the dot, or "" when the path has none. */
 export function fileExtension(path: string) {
-  return path.match(/.[^.\/]+$/)?.[0].toLowerCase() ?? "";
+  return path.match(/\.[^.\\/]+$/)?.[0].toLowerCase() ?? "";
 }
 
 /** Kinds of files that tools can pass to each other through "Send to". */

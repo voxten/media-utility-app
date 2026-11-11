@@ -1,0 +1,7 @@
+/* global.css locks the app window to 100vh; Storybook pages need to scroll. */
+html,
+body,
+#storybook-root {
+  height: auto;
+  overflow: auto;
+}

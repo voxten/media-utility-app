@@ -12,16 +12,22 @@ import type {
   BridgeEventName,
   BridgeEvents,
   ClearCacheResult,
+  ClipboardLink,
+  DownloadSubtitles,
   Dependency,
+  EngineInfo,
   GifEditorPreview,
   GifOperations,
   GifOutputOptions,
   HardwareInfo,
+  HistoryEntry,
   JobInfo,
   RemBgOptions,
   RemBgPreview,
   Settings,
+  ShellLabels,
   StorageInfo,
+  TranscribeParams,
   SyncPreviewResult,
   UpscaleOptions,
   UpscalePreview,
@@ -31,6 +37,7 @@ import type {
   VideoToGifParams,
   VideoToGifPreview,
   WaveformData,
+  WhisperModelInfo,
 } from "./types";
 import { createMockBackend } from "./mock";
 
@@ -114,6 +121,8 @@ export const api = {
     ready: () => call<AppInfo>("app", "ready"),
     info: () => call<AppInfo>("app", "info"),
     setTitleBarTheme: (dark: boolean) => call<boolean>("app", "set_title_bar_theme", dark),
+    notify: (title: string, body: string, force = false) => call<boolean>("app", "notify", title, body, force),
+    setShellLabels: (labels: ShellLabels) => call<void>("app", "set_shell_labels", labels),
   },
   settings: {
     get: () => call<Settings>("settings", "get"),
@@ -139,6 +148,12 @@ export const api = {
     clearCache: () => call<ClearCacheResult>("system", "clear_cache"),
     hardwareInfo: () => call<HardwareInfo>("system", "hardware_info"),
     openAppData: () => call<void>("system", "open_app_data"),
+    engines: () => call<EngineInfo[]>("system", "engines"),
+    checkEngines: () => call<EngineInfo[]>("system", "check_engines"),
+    updateEngines: () => call<JobId>("system", "update_engines"),
+    resetEngines: () => call<EngineInfo[]>("system", "reset_engines"),
+    restart: () => call<void>("system", "restart"),
+    clipboardLink: () => call<ClipboardLink | null>("system", "clipboard_link"),
     pathInfo: (path: string) =>
       call<{ exists: boolean; isDir: boolean; isFile: boolean; name: string; parent: string }>("system", "path_info", path),
   },
@@ -146,6 +161,9 @@ export const api = {
     list: () => call<JobInfo[]>("jobs", "list"),
     get: (id: JobId) => call<JobInfo | null>("jobs", "get", id),
     cancel: (id: JobId) => call<boolean>("jobs", "cancel", id),
+    retry: (id: JobId) => call<JobId | null>("jobs", "retry", id),
+    history: () => call<HistoryEntry[]>("jobs", "history"),
+    clearHistory: () => call<void>("jobs", "clear_history"),
   },
   converter: {
     formats: () => call<string[]>("converter", "formats"),
@@ -198,8 +216,10 @@ export const api = {
       mode?: "video" | "audio" | "muxed";
       audioCodec?: string;
       title?: string;
+      subtitles?: DownloadSubtitles;
     }) => call<JobId>("download", "start", params),
-    batch: (params: { urls: string[]; outdir: string; template?: string }) => call<JobId>("download", "batch", params),
+    batch: (params: { urls: string[]; outdir: string; template?: string; subtitles?: DownloadSubtitles }) =>
+      call<JobId>("download", "batch", params),
     addToBatch: (params: { jobId?: string; urls: string[] }) =>
       call<{ success: boolean }>("download", "add_to_batch", params),
   },
@@ -336,6 +356,11 @@ export const api = {
       call<{ frames: VideoFrame[] }>("video_to_gif", "frames", path, startSec, duration, count, height),
     preview: (params: VideoToGifParams) => call<VideoToGifPreview>("video_to_gif", "preview", params),
     start: (params: VideoToGifParams & { outPath: string }) => call<JobId>("video_to_gif", "start", params),
+  },
+  transcribe: {
+    models: () => call<WhisperModelInfo[]>("transcribe", "models"),
+    probe: (path: string) => call<VideoInfo>("transcribe", "probe", path),
+    start: (params: TranscribeParams) => call<JobId>("transcribe", "start", params),
   },
   gif_editor: {
     load: (path: string) => call<AnimationInfo>("gif_editor", "load", path),

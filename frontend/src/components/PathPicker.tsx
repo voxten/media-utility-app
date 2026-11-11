@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { Button, Input, makeStyles, Tooltip } from "@fluentui/react-components";
 import { Dismiss16Regular, FolderOpen20Regular, Open16Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
@@ -22,6 +23,22 @@ const useStyles = makeStyles({
     whiteSpace: "nowrap",
   },
 });
+
+// Below this width (e.g. in a Columns side panel) "Browse" becomes an icon button so the path stays readable.
+const NARROW_WIDTH = 380;
+
+function useIsNarrow() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(([entry]) => setNarrow(entry.contentRect.width < NARROW_WIDTH));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  return [ref, narrow] as const;
+}
 
 interface PathPickerProps {
   value: string;
@@ -50,6 +67,7 @@ export function PathPicker({
 }: PathPickerProps) {
   const styles = useStyles();
   const { t } = useTranslation();
+  const [rootRef, narrow] = useIsNarrow();
 
   const browse = async () => {
     let picked: string | null | undefined;
@@ -60,7 +78,7 @@ export function PathPicker({
   };
 
   return (
-    <div className={styles.root}>
+    <div ref={rootRef} className={styles.root}>
       <Input
         className={styles.input}
         value={value}
@@ -78,9 +96,15 @@ export function PathPicker({
           <Button className={styles.actionBtn} icon={<Open16Regular />} onClick={() => api.system.openPath(value).catch(() => undefined)} />
         </Tooltip>
       )}
-      <Button className={styles.actionBtn} icon={<FolderOpen20Regular />} onClick={browse}>
-        {t("common.browse")}
-      </Button>
+      {narrow ? (
+        <Tooltip content={t("common.browse")} relationship="label">
+          <Button className={styles.actionBtn} icon={<FolderOpen20Regular />} onClick={browse} />
+        </Tooltip>
+      ) : (
+        <Button className={styles.actionBtn} icon={<FolderOpen20Regular />} onClick={browse}>
+          {t("common.browse")}
+        </Button>
+      )}
     </div>
   );
 }

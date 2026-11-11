@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from backend.core.jobs import JobCancelled, JobContext
 from backend.services import download
 
 
@@ -82,6 +83,14 @@ def test_base_opts_defaults():
     assert opts["continuedl"] is True
     assert opts["retries"] == 5
     assert "http" in opts["retry_sleep_functions"]
+    assert "fragment" in opts["retry_sleep_functions"]
+    assert "concurrent_fragment_downloads" not in opts
+
+
+def test_download_opts_fetch_fragments_in_parallel():
+    hook = download._ProgressHook(JobContext())
+    opts = download._download_opts("https://x.com/a/status/1", "best", "%(title)s.%(ext)s", "video", "mp3", {}, hook)
+    assert opts["concurrent_fragment_downloads"] == download.FRAGMENT_WORKERS > 1
 
 
 def test_expand_batch_urls_single_url():
@@ -181,3 +190,77 @@ def test_add_to_batch():
         with download._active_batches_lock:
             download._active_batches.pop("test-batch", None)
 
+
+
+def test_remove_fragment_leftovers_keeps_resume_files(tmp_path):
+    part = tmp_path / "clip [1].fhls-954.mp4.part"
+    kept = [part, tmp_path / "clip [1].fhls-954.mp4.ytdl", tmp_path / "other.mp4.part-Frag3"]
+    removed = [tmp_path / "clip [1].fhls-954.mp4.part-Frag7", tmp_path / "clip [1].fhls-954.mp4.part-Frag8.part"]
+    for path in kept + removed:
+        path.write_text("x")
+
+    hook = download._ProgressHook(JobContext())
+    hook({"status": "downloading", "tmpfilename": str(part)})
+    download._remove_fragment_leftovers(hook)
+
+    assert all(p.exists() for p in kept)
+    assert not any(p.exists() for p in removed)
+
+
+def test_close_fragment_streams_releases_part_file(tmp_path):
+    part = tmp_path / "clip.mp4.part"
+
+    def interrupted_fragment_download():
+        ctx = {"dest_stream": open(part, "wb"), "tmpfilename": str(part)}
+        ctx["dest_stream"].write(b"partial")
+        raise JobCancelled()
+
+    try:
+        interrupted_fragment_download()
+    except JobCancelled as exc:
+        stream = exc.__traceback__.tb_next.tb_frame.f_locals["ctx"]["dest_stream"]
+        download._close_fragment_streams(exc)
+        assert stream.closed
+    part.rename(tmp_path / "clip.mp4")
+
+
+class ProgressSink:
+    def __init__(self):
+        self.events = []
+
+    def __call__(self, event, payload):
+        self.events.append((event, payload))
+
+    def progress(self):
+        return [p for e, p in self.events if e == "job:progress"]
+
+
+def test_progress_keeps_rising_across_video_and_audio_streams(monkeypatch):
+    sink = ProgressSink()
+    ctx = JobContext("j", sink)
+    monkeypatch.setattr("backend.core.jobs.PROGRESS_INTERVAL_S", 0)
+    hook = download._ProgressHook(ctx)
+    video = {"format_id": "137", "vcodec": "avc1", "acodec": "none", "filesize": 900}
+    audio = {"format_id": "140", "vcodec": "none", "acodec": "mp4a", "filesize": 100}
+    hook.set_info({"requested_formats": [video, audio], "height": 1080, "ext": "mp4", "duration": 60})
+
+    for fmt, size in ((video, 900), (audio, 100)):
+        for done in (0, size // 2, size):
+            hook({"status": "downloading", "downloaded_bytes": done, "total_bytes": size, "info_dict": fmt})
+        hook({"status": "finished", "info_dict": fmt})
+
+    events = sink.progress()
+    percents = [p["percent"] for p in events if p["percent"] is not None]
+    assert percents == sorted(percents) and percents[-1] == 100
+    assert events[0]["message"] == "download.status.downloadingVideo"
+    assert events[0]["params"] == {"stream": 1, "streams": 2}
+    audio_events = [p for p in events if p["message"] == "download.status.downloadingAudio"]
+    assert audio_events and audio_events[-1]["downloaded"] == 1000 and audio_events[-1]["total"] == 1000
+    assert [p["message"] for p in events].count("download.status.postprocessing") == 1
+    assert ctx.meta == {"height": 1080, "ext": "mp4", "length": 60}
+
+
+def test_media_summary_takes_the_height_from_the_video_stream():
+    info = {"ext": "mp4", "requested_formats": [{"height": 720}, {"height": None}], "uploader": "Someone"}
+    assert download.media_summary(info)["height"] == 720
+    assert download.media_summary(info)["uploader"] == "Someone"

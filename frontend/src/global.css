@@ -38,6 +38,12 @@ textarea,
   max-width: 100%;
 }
 
+/* Let the text part shrink in narrow fields so the chevron stays inside the field. */
+.fui-Combobox__input,
+.fui-Dropdown__button {
+  min-width: 0;
+}
+
 .fui-Slider,
 .fui-Slider.horizontal {
   min-width: 0 !important;

@@ -2,6 +2,40 @@
 
 Polskie tłumaczenie [CHANGELOG.md](CHANGELOG.md), pokazywane w aplikacji przy polskim języku. Każde wydanie trzeba dopisać w obu plikach.
 
+## [0.13.0] - 2026-11-09
+
+### Dodano
+
+- **Transkrypcja:** nowe narzędzie, które zamienia mowę z filmu lub nagrania na napisy SRT lub VTT albo tekst TXT, na tym komputerze i bez internetu. Samo wykrywa język albo używa wybranego, umie przetłumaczyć na angielski i pokazuje tekst z czasami do skopiowania. Korzysta z rozpoznawania mowy Whisper, pobieranego raz z Ustawień albo z narzędzia: Base (szybki), Small (zrównoważony) lub Turbo (najdokładniejszy, wolny).
+- **Pobieranie wideo: napisy** zapisywane obok filmu, ze strony (w Twoim języku i po angielsku) albo, gdy strona ich nie ma, tworzone przez Whispera. Wybierasz to w „Zapis” → „Napisy”.
+- **Zamykanie do zasobnika:** przycisk X chowa okno do obszaru powiadomień, a zadania dalej działają; ikona w zasobniku przywraca okno, a jej menu zamyka aplikację. Można to wyłączyć w Ustawienia → Zaawansowane → „Zamykanie do zasobnika”.
+- Ponowne uruchomienie aplikacji przywraca działające okno zamiast otwierać drugą kopię.
+- **Aktualizacja silnika pobierania:** nowsze yt-dlp i gallery-dl instalują się z Ustawień → „Silnik pobierania”, bez czekania na nowe wydanie aplikacji, gdy YouTube, TikTok, X albo Instagram przestaną się pobierać. Aplikacja raz dziennie przy starcie sprawdza, czy jest nowa wersja, i proponuje aktualizację. Nowa wersja jest sprawdzana przed użyciem, działa po ponownym uruchomieniu i można wrócić do wbudowanej.
+- **Historia zadań:** panel Zadania ma dwie zakładki: „Teraz” z zadaniami z tej sesji i „Historia” z zakończonymi zadaniami, także z poprzednich uruchomień. Historia jest pogrupowana na Dziś, Wczoraj i starsze daty i ma przycisk „Pokaż w folderze” dla ich plików. „Wyczyść historię” opróżnia listę; pliki zostają na dysku.
+- **Pobieranie ze schowka:** „Pobierz link ze schowka” w menu ikony w zasobniku otwiera skopiowany link YouTube, TikTok, X lub Instagram w odpowiednim narzędziu pobierania i od razu go sprawdza. Ustawienia → Zaawansowane → „Proponowanie skopiowanych linków” proponuje też nowo skopiowany link po powrocie do okna (domyślnie wyłączone).
+- **Upuszczanie w dowolnym miejscu:** pliki upuszczone poza polem upuszczania otwierają okno „Otwórz w narzędziu” z narzędziami, które je przyjmują.
+- Kilka skopiowanych linków do filmów trafia od razu do zakładki „Kolejka” w Pobieraniu wideo, z menu zasobnika albo z propozycji skopiowanego linku; linki, które już są w kolejce, są pomijane.
+- **Zadania:** wyszukiwanie oraz filtr narzędzia i stanu na górze zakładki „Historia”, gdy ma kilka wpisów; wyszukiwanie znajduje tytuły i nazwy plików.
+- **Zadania:** „Otwórz plik” obok „Pokaż w folderze” przy zakończonym zadaniu, które zapisało jeden plik, oraz „Ponów” przy nieudanym zadaniu, które uruchamia je jeszcze raz z tymi samymi ustawieniami.
+
+### Zmieniono
+
+- **Pobieranie wideo:** filmy z X i inne filmy przesyłane strumieniowo pobierają się kilka razy szybciej; aplikacja pobiera 8 kawałków filmu naraz zamiast po kolei.
+- Powiadomienia na pulpicie to natywne powiadomienia Windows, pokazywane tylko wtedy, gdy okno nie jest na wierzchu; szybkie pobieranie metadanych już ich nie wysyła.
+- **Zadania:** mniejsze karty. Zamiast wiersza przycisków są ikony „Otwórz plik” i „Pokaż w folderze” oraz menu „⋯” z „Prześlij do”, „Kopiuj ścieżkę” i „Przejdź do narzędzia”. Zakończone zadanie pokazuje, co powstało, np. „1080p · MP4 · 9:56 · 48 MB” albo „1,2 MB → 312 KB (−74%)”, także w „Historii”. Trwające zadanie pokazuje bieżący etap i ile już pobrano.
+- **Pobieranie wideo:** karta zadania ma miniaturkę filmu, a podczas pobierania widać osobno obraz i dźwięk („Pobieranie obrazu (1/2)”). Pobieranie z Instagrama pokazuje prędkość i pobrany rozmiar.
+
+### Naprawiono
+
+- **Pobieranie wideo:** strony wymagające podszywania się pod przeglądarkę (TikTok) znowu działają w zainstalowanej aplikacji; wersja 0.12.0 zawierała curl_cffi w wersji nieobsługiwanej przez yt-dlp, co po cichu wyłączało podszywanie.
+- **Pobieranie wideo:** ponowne pobranie anulowanego filmu z X w tej samej sesji nie kończy się już błędem „Unable to rename file”; pobieranie wznawia się od miejsca przerwania.
+- **Zadania:** zadanie nazwane linkiem pokazuje cały adres (ginęła część `https:`), a zakończone pobieranie pojedynczego filmu ma przycisk „Prześlij do…”.
+- **Pobieranie wideo:** pasek postępu nie cofa się już do zera po pobraniu obrazu, gdy zaczyna się pobieranie dźwięku.
+- **Zadania:** treść błędu zachowuje nazwę strony na początku (z „[twitter]” znikało „[t”), a wpis „Synchronizacja wideo” w historii ma swój plik i przycisk „Pokaż w folderze”.
+- Sprawdzanie linku (wideo lub Instagrama) i aktualizacja silnika pobierania nie odtwarzają już dźwięku zakończenia ani nie pokazują dymka czy powiadomienia na pulpicie, nie pojawiają się też jako karty w panelu Zadania ani na stronie startowej; wynik i tak widać na stronie albo w komunikacie o aktualizacji.
+
+---
+
 ## [0.12.0] - 2026-11-05
 
 ### Dodano

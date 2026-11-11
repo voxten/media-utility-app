@@ -1,7 +1,7 @@
 // In-browser stand-in for the Python backend, used when the UI runs outside pywebview
 // (e.g. `npm run dev` opened in a normal browser). Data is fake; jobs are simulated.
 
-import type { Settings } from "./types";
+import type { EngineInfo, HistoryEntry, Settings } from "./types";
 
 type Emit = (event: string, payload: unknown) => void;
 
@@ -19,8 +19,46 @@ const DEFAULT_SETTINGS: Settings = {
   completionSound: true,
   customFfmpegPath: "",
   confirmExitOnActiveJobs: true,
+  closeToTray: true,
+  clipboardWatch: false,
+  clipboardLastLink: "",
   lastSeenVersion: "",
+  engineUpdateCheck: true,
+  engineLastCheck: 0,
 };
+
+const MOCK_ENGINES: EngineInfo[] = [
+  { id: "yt-dlp", version: "2026.8.19", latest: "2026.10.26", updateAvailable: true, restartRequired: false, downloaded: false },
+  { id: "gallery-dl", version: "1.32.19", latest: "1.32.19", updateAvailable: false, restartRequired: false, downloaded: false },
+];
+
+const HOUR = 3600;
+const mockHistory = (now: number): HistoryEntry[] => [
+  {
+    id: "hist1", kind: "converter", title: "WEBP", status: "done", startedAt: now - 2 * HOUR - 40, finishedAt: now - 2 * HOUR,
+    error: null, outputs: ["C:\\Users\\demo\\Pictures\\converted\\holiday.webp"], available: true, singleFile: true,
+  },
+  {
+    id: "hist2", kind: "download", title: "Big Buck Bunny", status: "done", startedAt: now - 26 * HOUR - 95, finishedAt: now - 26 * HOUR,
+    error: null, outputs: ["C:\\Users\\demo\\Downloads\\Big Buck Bunny.mp4"], available: false,
+  },
+  {
+    id: "hist3", kind: "compressor", title: "", status: "error", startedAt: now - 50 * HOUR - 5, finishedAt: now - 50 * HOUR,
+    error: "cannot identify image file", outputs: [], available: false,
+  },
+];
+
+/** History entry for a finished mock job, using the same result shapes as the backend. */
+function historyEntry(job: { id: string; kind: string; title: string; startedAt: number }, result: unknown): HistoryEntry {
+  const r = (result ?? {}) as Record<string, unknown>;
+  const files = Array.isArray(r.files) ? r.files.filter((f): f is string => typeof f === "string") : [];
+  const single = [r.outPath, r.path].filter((p): p is string => typeof p === "string" && p !== "");
+  const outputs = single.length || files.length ? [...single, ...files] : [r.outputDir, r.outdir].filter((p): p is string => typeof p === "string");
+  return {
+    id: job.id, kind: job.kind, title: job.title, status: "done", startedAt: job.startedAt, finishedAt: Date.now() / 1000,
+    error: null, outputs, available: outputs.length > 0, singleFile: single.length + files.length === 1,
+  };
+}
 
 function loadSettings(): Settings {
   try {
@@ -58,13 +96,17 @@ export function createMockBackend(emit: Emit) {
   let settings = loadSettings();
   const running = new Map<string, number>();
   let counter = 0;
+  let engines = MOCK_ENGINES;
+  let history = mockHistory(Date.now() / 1000);
+  const NOT_RETRYABLE = ["download.probe", "instagram.probe", "pdf.inspect"];
+  const NOT_IN_HISTORY = [...NOT_RETRYABLE, "download.engines"];
 
   const simulateJob = (kind: string, title: string, result: unknown, durationMs = 2500): Promise<string> => {
     const jobId = `mock${++counter}`;
     const started = Date.now();
     emit("job:started", {
       id: jobId, kind, title, status: "running", startedAt: started / 1000,
-      finishedAt: null, error: null, percent: 0, message: null, params: {},
+      finishedAt: null, error: null, percent: 0, message: null, params: {}, retryable: !NOT_RETRYABLE.includes(kind),
     });
     const timer = window.setInterval(() => {
       const percent = Math.min(100, ((Date.now() - started) / durationMs) * 100);
@@ -73,6 +115,11 @@ export function createMockBackend(emit: Emit) {
         window.clearInterval(timer);
         running.delete(jobId);
         emit("job:done", { jobId, result });
+        if (!NOT_IN_HISTORY.includes(kind)) {
+          const entry = historyEntry({ id: jobId, kind, title, startedAt: started / 1000 }, result);
+          history = [entry, ...history];
+          emit("jobs:history", entry);
+        }
       }
     }, 150);
     running.set(jobId, timer);
@@ -86,6 +133,8 @@ export function createMockBackend(emit: Emit) {
       ready: () => ok({ name: "Media Studio", version: "dev-mock", python: "—", platform: navigator.userAgent }),
       info: () => ok({ name: "Media Studio", version: "dev-mock", python: "—", platform: navigator.userAgent }),
       set_title_bar_theme: () => ok(false),
+      notify: () => ok(false),
+      set_shell_labels: () => ok(undefined),
     },
     settings: {
       get: () => ok(settings),
@@ -137,7 +186,23 @@ export function createMockBackend(emit: Emit) {
           { id: "lama", ok: false, detail: "settings.deps.detailLamaModelOnly", usedBy: ["watermark"], required: false, installable: true, sizeEstimate: "~196 MB" },
         ]),
       install_dependency: (id: string) =>
-        simulateJob(id === "lama" ? "watermark.install" : "download.install", id, { id, ok: true }, 2500),
+        simulateJob(
+          id === "lama" ? "watermark.install" : id.startsWith("whisper_") ? "transcribe.install" : "download.install",
+          id,
+          { id, ok: true },
+          2500,
+        ),
+      engines: () => ok(engines),
+      check_engines: () => ok(engines),
+      update_engines: () => {
+        engines = engines.map((e) => (e.updateAvailable ? { ...e, updateAvailable: false, restartRequired: true, downloaded: true } : e));
+        return simulateJob("download.engines", "engines.updateTitle", { updated: ["yt-dlp"], engines }, 3000);
+      },
+      reset_engines: () => {
+        engines = engines.map((e) => ({ ...e, restartRequired: e.downloaded !== e.restartRequired, downloaded: false }));
+        return ok(engines);
+      },
+      restart: () => ok(undefined),
       storage_info: () =>
         ok({
           appDataDir: "C:\\Users\\demo\\AppData\\Roaming\\MediaStudio",
@@ -174,6 +239,7 @@ export function createMockBackend(emit: Emit) {
           osName: "Windows 11 Pro",
         }),
       open_app_data: () => ok(undefined),
+      clipboard_link: () => ok({ url: "https://www.youtube.com/watch?v=aqz-KE-bpKQ", target: "download" }),
       path_info: (path: string) => ok({ exists: true, isDir: !path.includes("."), isFile: path.includes("."), name: path.split("\\").pop(), parent: "" }),
     },
     jobs: {
@@ -186,6 +252,12 @@ export function createMockBackend(emit: Emit) {
         running.delete(id);
         emit("job:cancelled", { jobId: id });
         return ok(true);
+      },
+      retry: () => ok(null),
+      history: () => ok(history),
+      clear_history: () => {
+        history = [];
+        return ok(undefined);
       },
     },
     converter: {
@@ -615,6 +687,43 @@ export function createMockBackend(emit: Emit) {
           fit: null,
         }, 1800);
       },
+    },
+    transcribe: {
+      models: () =>
+        ok([
+          { id: "base", depId: "whisper_base", size: 147_880_741, ready: false, translate: true },
+          { id: "small", depId: "whisper_small", size: 486_212_372, ready: true, translate: true },
+          { id: "turbo", depId: "whisper_turbo", size: 1_621_665_983, ready: false, translate: false },
+        ]),
+      probe: (path: string) =>
+        ok({
+          path,
+          fileName: path.split(/[\\/]/).pop() || "talk.mp4",
+          size: 18_000_000,
+          format: "mp4",
+          duration: 95.4,
+          hasVideo: true,
+          hasAudio: true,
+          width: 1280,
+          height: 720,
+          fps: 30,
+          videoCodec: "h264",
+          audioTracks: [],
+          thumbnail: fakePhoto(5),
+        }),
+      start: (params: { path: string; outPath: string; format: string }) =>
+        simulateJob("transcribe", params.path.split(/[\\/]/).pop() || "talk.mp4", {
+          outPath: params.outPath,
+          format: params.format,
+          language: "pl",
+          duration: 95.4,
+          elapsed: 31.2,
+          segments: [
+            { start: 0, end: 2.4, text: "Dzień dobry, witam wszystkich." },
+            { start: 2.9, end: 7.8, text: "Dzisiaj pokażę, jak zrobić napisy do filmu w kilka minut." },
+            { start: 8.4, end: 12.1, text: "Zaczynamy od wybrania pliku." },
+          ],
+        }, 2500),
     },
     gif_editor: {
       load: (path: string) =>

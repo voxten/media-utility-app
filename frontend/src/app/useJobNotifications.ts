@@ -5,12 +5,10 @@ import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useNotify } from "../components/notify";
 import { on } from "../lib/bridge";
+import { translateMessage } from "../lib/jobMessage";
 import { navigate } from "../lib/router";
-import { useJobs } from "../stores/jobs";
+import { isQuietJob, useJobs } from "../stores/jobs";
 import { toolForJob } from "./tools";
-
-// Short helper jobs (link probing, page thumbnails) are part of a page interaction, not worth a toast.
-const QUIET_KINDS = new Set(["download.probe", "pdf.inspect"]);
 
 export function useJobNotifications(route: string) {
   const { t } = useTranslation();
@@ -21,12 +19,12 @@ export function useJobNotifications(route: string) {
   useEffect(() => {
     const handle = (jobId: string, ok: boolean, error?: string) => {
       const job = useJobs.getState().jobs[jobId];
-      if (!job || QUIET_KINDS.has(job.kind)) return;
+      if (!job || isQuietJob(job.kind)) return;
       const tool = toolForJob(job.kind);
       if (!tool || routeRef.current === tool.id) return;
       const name = t(`tools.${tool.id}.name`);
       const options = {
-        body: ok ? (job.title ? t(job.title) : undefined) : error,
+        body: ok ? translateMessage(t, job.title) || undefined : error,
         action: { label: t("jobs.openTool"), onClick: () => navigate(tool.id) },
       };
       if (ok) notify.success(t("jobs.toastDone", { tool: name }), options);

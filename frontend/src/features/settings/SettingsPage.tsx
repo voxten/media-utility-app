@@ -13,12 +13,20 @@ import {
 } from "@fluentui/react-components";
 import {
   AlertBadge24Regular,
+  ArrowClockwise16Regular,
   ArrowDownload16Regular,
+  ArrowDownload24Regular,
   ArrowMaximize24Regular,
+  ArrowMinimize24Regular,
+  ClipboardLink24Regular,
   ArrowReset24Regular,
   ArrowSync16Regular,
+  ArrowSync24Regular,
+  ArrowUndo16Regular,
   Bot24Regular,
   CheckmarkCircle16Filled,
+  ClosedCaption24Regular,
+  CloudArrowDown24Regular,
   Cookies24Regular,
   DarkTheme24Regular,
   Database24Regular,
@@ -55,7 +63,8 @@ import { SettingGroup, SettingRow } from "../../components/SettingRow";
 import { api, getBackendMode } from "../../lib/bridge";
 import { dialogFilter } from "../../lib/fileTypes";
 import { formatBytes } from "../../lib/format";
-import type { AppInfo, Dependency, HardwareInfo, Language, StorageInfo, ThemePreference } from "../../lib/types";
+import type { AppInfo, Dependency, EngineInfo, HardwareInfo, Language, StorageInfo, ThemePreference } from "../../lib/types";
+import { useEngines } from "../../stores/engines";
 import { playChime, showDesktopNotification, useJob } from "../../stores/jobs";
 import { useSettings } from "../../stores/settings";
 import { useUi } from "../../stores/ui";
@@ -102,6 +111,9 @@ const DEP_ICONS: Record<string, typeof Video24Regular> = {
   upscale_general: ArrowMaximize24Regular,
   upscale_anime: ArrowMaximize24Regular,
   rembg: Bot24Regular,
+  whisper_base: ClosedCaption24Regular,
+  whisper_small: ClosedCaption24Regular,
+  whisper_turbo: ClosedCaption24Regular,
 };
 
 function DependencyRowItem({ dep, onRefresh }: { dep: Dependency; onRefresh: () => void }) {
@@ -253,6 +265,134 @@ function DependenciesSection() {
             <DependencyRowItem key={dep.id} dep={dep} onRefresh={refresh} />
           ))
         )}
+      </SettingGroup>
+    </Section>
+  );
+}
+
+function EngineBadge({ engine }: { engine: EngineInfo }) {
+  const { t } = useTranslation();
+  if (engine.restartRequired) {
+    return (
+      <Badge appearance="tint" color="informative">
+        {t("settings.engines.afterRestart")}
+      </Badge>
+    );
+  }
+  if (engine.updateAvailable) {
+    return (
+      <Badge appearance="tint" color="warning" icon={<Warning16Filled />}>
+        {t("settings.engines.newVersion", { version: engine.latest })}
+      </Badge>
+    );
+  }
+  if (engine.latest) {
+    return (
+      <Badge appearance="tint" color="success" icon={<CheckmarkCircle16Filled />}>
+        {t("settings.engines.upToDate")}
+      </Badge>
+    );
+  }
+  return null;
+}
+
+function EnginesSection() {
+  const { t } = useTranslation();
+  const styles = useStyles();
+  const notify = useNotify();
+  const settings = useSettings((s) => s.settings)!;
+  const updateSettings = useSettings((s) => s.update);
+  const { engines, jobId, checking, load, check, update, reset } = useEngines();
+  const job = useJob(jobId);
+  const running = job?.status === "running";
+
+  useEffect(() => {
+    load().catch(() => useEngines.setState({ engines: [] }));
+  }, [load, job?.status]);
+
+  const run = (action: () => Promise<void>, error: string) => () => {
+    action().catch((err) => notify.error(t(error), { body: String(err) }));
+  };
+
+  const list = engines ?? [];
+  const canUpdate = !running && list.some((e) => e.updateAvailable);
+  const needsRestart = list.some((e) => e.restartRequired);
+  const canRestore = !running && list.some((e) => e.downloaded);
+
+  return (
+    <Section
+      title={t("settings.engines.title")}
+      actions={
+        <div className={styles.actionRow}>
+          {canRestore && (
+            <Button appearance="subtle" size="small" icon={<ArrowUndo16Regular />} onClick={run(reset, "engines.failed")}>
+              {t("settings.engines.restore")}
+            </Button>
+          )}
+          <Button
+            appearance="subtle"
+            size="small"
+            icon={checking ? <Spinner size="extra-tiny" /> : <ArrowSync16Regular />}
+            disabled={checking || running}
+            onClick={run(check, "settings.engines.checkFailed")}
+          >
+            {t("settings.engines.check")}
+          </Button>
+          {canUpdate && (
+            <Button appearance="primary" size="small" icon={<ArrowDownload16Regular />} onClick={run(update, "engines.failed")}>
+              {t("engines.update")}
+            </Button>
+          )}
+          {needsRestart && !running && (
+            <Button appearance="primary" size="small" icon={<ArrowClockwise16Regular />} onClick={run(api.system.restart, "engines.failed")}>
+              {t("engines.restart")}
+            </Button>
+          )}
+        </div>
+      }
+    >
+      <SettingGroup>
+        {!engines ? (
+          <Skeleton>
+            <SkeletonItem size={64} />
+          </Skeleton>
+        ) : (
+          engines.map((engine) => (
+            <SettingRow
+              key={engine.id}
+              icon={CloudArrowDown24Regular}
+              title={engine.id}
+              description={engine.version ? t("settings.version", { version: engine.version }) : undefined}
+            >
+              <EngineBadge engine={engine} />
+            </SettingRow>
+          ))
+        )}
+        {running && (
+          <SettingRow icon={ArrowDownload24Regular} title={t("engines.updateTitle")}>
+            <div className={styles.depProgress}>
+              <div className={styles.depProgressHeader}>
+                <Caption1 className={styles.progressStatus}>
+                  {job.message ? t(job.message, job.params) : t("settings.deps.installing")}
+                </Caption1>
+                <Button
+                  appearance="subtle"
+                  size="small"
+                  icon={<Dismiss16Regular />}
+                  onClick={() => api.jobs.cancel(job.id)}
+                  title={t("common.cancel")}
+                />
+              </div>
+              <ProgressBar value={job.percent != null ? job.percent / 100 : undefined} />
+            </div>
+          </SettingRow>
+        )}
+        <SettingRow icon={ArrowSync24Regular} title={t("settings.engines.autoCheck")}>
+          <Switch
+            checked={settings.engineUpdateCheck ?? true}
+            onChange={(_, d) => updateSettings({ engineUpdateCheck: d.checked })}
+          />
+        </SettingRow>
       </SettingGroup>
     </Section>
   );
@@ -471,7 +611,7 @@ function NotificationsSection() {
 
   const handleTestNotification = () => {
     if (soundOn) playChime("done");
-    if (desktopOn) showDesktopNotification(t("app.name"), t("settings.notifications.testSent"));
+    if (desktopOn) showDesktopNotification(t("app.name"), t("settings.notifications.testSent"), true);
   };
 
   return (
@@ -553,6 +693,25 @@ function AdvancedSection() {
             clearable
             onChange={(customFfmpegPath) => update({ customFfmpegPath })}
           />
+        </SettingRow>
+
+        <SettingRow
+          icon={ArrowMinimize24Regular}
+          title={t("settings.advanced.closeToTray")}
+          description={t("settings.advanced.closeToTrayDesc")}
+        >
+          <Switch
+            checked={settings.closeToTray ?? true}
+            onChange={(_, d) => update({ closeToTray: d.checked })}
+          />
+        </SettingRow>
+
+        <SettingRow
+          icon={ClipboardLink24Regular}
+          title={t("settings.advanced.clipboardWatch")}
+          description={t("settings.advanced.clipboardWatchDesc")}
+        >
+          <Switch checked={settings.clipboardWatch ?? false} onChange={(_, d) => update({ clipboardWatch: d.checked })} />
         </SettingRow>
 
         <SettingRow
@@ -668,6 +827,8 @@ export default function SettingsPage() {
       <NotificationsSection />
 
       <DependenciesSection />
+
+      <EnginesSection />
 
       <AdvancedSection />
 

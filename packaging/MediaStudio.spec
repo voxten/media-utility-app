@@ -6,7 +6,7 @@ import importlib.util
 import os
 import sys
 
-from PyInstaller.utils.hooks import collect_data_files, collect_submodules
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules, copy_metadata
 
 ROOT = os.path.abspath(os.path.join(SPECPATH, ".."))  # noqa: F821 - SPECPATH is injected by PyInstaller
 
@@ -47,6 +47,10 @@ a = Analysis(
         (os.path.join(ROOT, "assets", "app.png"), "assets"),
         # pip runs inside the app for add-ons: its CA bundle and script launchers are data files.
         *collect_data_files("pip"),
+        # Versions of the bundled download engines, compared with copies updated from Settings.
+        *copy_metadata("yt-dlp"),
+        *copy_metadata("yt-dlp-ejs"),
+        *copy_metadata("gallery-dl"),
     ],
     hiddenimports=[
         "backend.selftest",  # imported lazily by --selftest
@@ -68,6 +72,7 @@ a = Analysis(
         "backend.services.progress_image",
         "backend.services.tts",
         "backend.core.addons",
+        "pystray._win32",  # picked at runtime by platform, invisible to the import scan
         *collect_submodules("pip"),
         *stdlib_modules(),
     ],

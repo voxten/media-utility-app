@@ -6,6 +6,40 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 The app shows this file (and its Polish translation, [CHANGELOG.pl.md](CHANGELOG.pl.md)) under "What's new", so every release goes into both files.
 
+## [0.13.0] - 2026-11-09
+
+### Added
+
+- **Transcription:** a new tool that turns speech in a video or recording into SRT or VTT subtitles or a TXT transcript, on this computer and without internet. It detects the language or uses the one you choose, can translate into English, and shows the text with timestamps to copy. It uses Whisper speech recognition, downloaded once from Settings or the tool: Base (fast), Small (balanced) or Turbo (most accurate, slow).
+- **Video Downloader: subtitles** saved next to the video, from the site (in your language and English) or, when the site has none, made with Whisper. Choose it under "Output" → "Subtitles".
+- **Close to tray:** the X button hides the window to the notification area and jobs keep running; the tray icon brings the window back and its menu quits the app. Settings → Advanced → "Close to Tray" turns it off.
+- Starting the app again brings back the running window instead of opening a second copy.
+- **Download engine updates:** newer yt-dlp and gallery-dl install from Settings → "Download engines" when YouTube, TikTok, X or Instagram downloads break, without waiting for a new app release. The app looks for a new version once a day at start-up and offers to update. A new version is checked before it is used, takes effect after a restart and can be rolled back to the bundled one.
+- **Task history:** the Tasks panel has two tabs: "Now" with this session's tasks and "History" with finished tasks, including those from earlier runs. History is grouped into Today, Yesterday and older dates, with "Show in folder" for their files. "Clear history" empties the list; the files stay on disk.
+- **Download from the clipboard:** "Download link from clipboard" in the tray icon menu opens a copied YouTube, TikTok, X or Instagram link in the matching download tool and checks it right away. Settings → Advanced → "Offer Copied Links" also offers a newly copied link when you return to the window (off by default).
+- **Drop anywhere:** files dropped outside a drop area open "Open in a tool" with the tools that accept them.
+- Several copied video links go straight to the Video Downloader's "Queue" tab, from the tray item or the copied-link offer; links already queued are skipped.
+- **Tasks:** search, tool and status filters at the top of the "History" tab once it has a few entries; the search finds titles and file names.
+- **Tasks:** "Open file" next to "Show in folder" for a finished task that wrote one file, and "Retry" on a failed task to run it again with the same settings.
+
+### Changed
+
+- **Video Downloader:** X and other streamed videos download several times faster; the app fetches 8 pieces of a video at once instead of one after another.
+- Desktop notifications are native Windows notifications, shown only when the window is not in front; quick metadata lookups no longer send one.
+- **Tasks:** smaller cards. The row of buttons is replaced by "Open file" and "Show in folder" icons and a "⋯" menu with "Send to", "Copy path" and "Open tool". A finished task shows what it produced, such as "1080p · MP4 · 9:56 · 48 MB" or "1.2 MB → 312 KB (−74%)", in "History" too. A running task shows its current step and how much has been downloaded.
+- **Video Downloader:** the task card shows the video's thumbnail, and video and audio are shown as separate steps while downloading ("Downloading video (1/2)"). Instagram downloads show the speed and the downloaded size.
+
+### Fixed
+
+- **Video Downloader:** sites that need browser impersonation (TikTok) work again in the installed app; 0.12.0 shipped a curl_cffi version yt-dlp does not support, which silently turned impersonation off.
+- **Video Downloader:** downloading a cancelled X video again in the same session no longer fails at the end with "Unable to rename file"; it resumes where it stopped.
+- **Tasks:** a task named after a link shows the whole address (it lost the `https:` part), and a finished single-video download offers "Send to…".
+- **Video Downloader:** the progress bar no longer jumps back to zero when the audio starts downloading after the video.
+- **Tasks:** an error keeps the site tag at its start ("[twitter]" lost its "[t"), and a Video Sync entry in the history keeps its file and its "Show in folder" button.
+- Checking a link (video or Instagram) and updating the download engines no longer play the completion sound, show a "finished" toast or desktop notification, or appear as cards in the Tasks panel and on the Home page; the page or the engine update message already shows the result.
+
+---
+
 ## [0.12.0] - 2026-11-05
 
 ### Added

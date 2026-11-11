@@ -63,7 +63,11 @@ def test_video_to_gif_speed_and_crop(tmp_path, ctx):
 
     assert res["duration"] == pytest.approx(1.0)
     assert (res["width"], res["height"]) == (200, 100)
-    assert 9 <= res["frames"] <= 11
+    # The cropped corner repeats between some frames, which gifsicle merges into one longer frame.
+    size, durations = _durations(out)
+    assert size == (200, 100)
+    assert len(durations) == res["frames"] <= 11
+    assert sum(durations) == pytest.approx(1000, abs=100)
 
 
 def test_video_preview_estimates_full_size(tmp_path):

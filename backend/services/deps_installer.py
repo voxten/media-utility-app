@@ -1,15 +1,18 @@
-"""Downloads and installs optional dependencies from Settings: FFmpeg, AI models and their Python packages."""
+"""Downloads and installs optional dependencies from Settings: FFmpeg, AI models and their Python
+packages, and newer download engines (yt-dlp, gallery-dl)."""
 
 import hashlib
 import importlib
+import json
 import logging
 import shutil
 import subprocess
 import urllib.request
 import zipfile
 from pathlib import Path
-from typing import Any, Dict, Sequence
+from typing import Any, Dict, List, Optional, Sequence
 
+from backend.core import engines, whisper_models
 from backend.core.addons import activate_addons, pip_install_command
 from backend.core.deps import (
     LAMA_EXPECTED_MD5,
@@ -83,10 +86,10 @@ def _download_file_with_progress(
         raise
 
 
-def _run_pip(ctx: JobContext, packages: Sequence[str]) -> None:
+def _run_pip(ctx: JobContext, packages: Sequence[str], target: Optional[Path] = None, no_deps: bool = False) -> None:
     """Installs Python packages where this app can import them, streaming pip's output to the job log."""
     proc = subprocess.Popen(
-        pip_install_command(packages),
+        pip_install_command(packages, target=target, no_deps=no_deps),
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
@@ -294,6 +297,54 @@ def install_rembg(ctx: JobContext) -> Dict[str, Any]:
     return {"id": "rembg", "ok": True}
 
 
+def install_whisper(ctx: JobContext, model: whisper_models.WhisperModel) -> Dict[str, Any]:
+    """Installs faster-whisper (once) and downloads one Whisper model."""
+    dep_id = f"{whisper_models.DEP_PREFIX}{model.id}"
+    if whisper_models.is_ready(model.id):
+        ctx.progress(100, "deps.status.done")
+        return {"id": dep_id, "ok": True}
+
+    start = 5.0
+    if not whisper_models.is_engine_installed():
+        ctx.progress(start, "deps.status.installingWhisper")
+        ctx.log("deps.log.installingWhisper")
+        _run_pip(ctx, whisper_models.ENGINE_PACKAGES)
+        start = 30.0
+
+    folder = whisper_models.model_dir(model.id)
+    span = 90.0 - start
+    done_bytes = 0
+    ctx.log("deps.log.downloadingWhisper", model=model.id)
+    for name, size in model.files.items():
+        target = folder / name
+        if not target.is_file() or target.stat().st_size != size:
+            _download_file_with_progress(
+                ctx,
+                url=whisper_models.file_url(model, name),
+                target_path=target,
+                status_key="deps.status.downloadingWhisper",
+                progress_start=start + span * done_bytes / model.size,
+                progress_span=span * size / model.size,
+            )
+            if target.stat().st_size != size:
+                target.unlink(missing_ok=True)
+                raise RuntimeError(f"{name}: unexpected size")
+        done_bytes += size
+
+    ctx.progress(95, "deps.status.verifying")
+    ctx.log("deps.log.verifyingWhisper")
+    try:
+        from backend.services import transcribe
+
+        transcribe.verify_model(model.id)
+    except Exception as exc:
+        raise RuntimeError(f"Could not load the Whisper model: {exc}") from exc
+
+    ctx.progress(100, "deps.status.done")
+    ctx.log("deps.log.done")
+    return {"id": dep_id, "ok": True}
+
+
 def install_gifsicle(ctx: JobContext) -> Dict[str, Any]:
     """Downloads the portable gifsicle build on Windows and places it into %APPDATA%/MediaStudio/bin."""
     bin_dir = app_data_dir() / "bin"
@@ -337,6 +388,64 @@ def install_gifsicle(ctx: JobContext) -> Dict[str, Any]:
     return {"id": "gifsicle", "ok": True}
 
 
+def _verify_engine(engine_id: str, folder: Path) -> None:
+    """Imports the new copy in a separate process, so a broken release never reaches this one."""
+    report = cache_dir() / f"engine-check-{engine_id}.json"
+    report.unlink(missing_ok=True)
+    try:
+        proc = subprocess.run(
+            engines.check_command(engine_id, folder, report),
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=120,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+        try:
+            result = json.loads(report.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            result = {"ok": False, "error": (proc.stderr or proc.stdout or "").strip()}
+    finally:
+        report.unlink(missing_ok=True)
+    if proc.returncode != 0 or not result.get("ok"):
+        error = str(result.get("error") or f"exit code {proc.returncode}").strip()
+        logger.warning("New %s failed verification: %s", engine_id, error)
+        raise RuntimeError(f"{engine_id}: {error.splitlines()[-1] if error else 'verification failed'}")
+
+
+def update_engines(ctx: JobContext, settings: Any) -> Dict[str, Any]:
+    """Installs newer yt-dlp / gallery-dl next to the bundled ones; they take effect after a restart."""
+    latest: Dict[str, Any] = settings.get("engineLatest") or {}
+    pending = [
+        engines.get_engine(item["id"])
+        for item in engines.status(settings)
+        if item["updateAvailable"]
+    ]
+    updated: List[str] = []
+    for index, engine in enumerate(pending):
+        share = 100.0 / len(pending)
+        base = index * share
+        version = latest[engine.id]["version"]
+        staged = engines.staging_dir(engine.id)
+        shutil.rmtree(staged, ignore_errors=True)
+        try:
+            ctx.progress(base + share * 0.1, "engines.status.installing", {"name": engine.id, "version": version})
+            ctx.log("engines.log.installing", name=engine.id, version=version)
+            _run_pip(ctx, engines.install_specs(engine, latest[engine.id]), target=staged, no_deps=True)
+            ctx.check_cancelled()
+            ctx.progress(base + share * 0.7, "engines.status.verifying", {"name": engine.id})
+            ctx.log("engines.log.verifying", name=engine.id)
+            _verify_engine(engine.id, staged)
+            engines.replace_with_staged(engine.id)
+        finally:
+            shutil.rmtree(staged, ignore_errors=True)
+        updated.append(engine.id)
+        ctx.log("engines.log.installed", name=engine.id, version=version)
+    ctx.progress(100, "engines.status.done")
+    return {"updated": updated, "engines": engines.status(settings)}
+
+
 def install_dependency(ctx: JobContext, dep_id: str) -> Dict[str, Any]:
     """Entry point for installing a background dependency."""
     if dep_id == "lama":
@@ -349,4 +458,7 @@ def install_dependency(ctx: JobContext, dep_id: str) -> Dict[str, Any]:
         return install_rembg(ctx)
     if dep_id in UPSCALE_MODELS:
         return install_upscale(ctx, dep_id)
+    whisper_model = whisper_models.model_for_dep(dep_id)
+    if whisper_model is not None:
+        return install_whisper(ctx, whisper_model)
     raise ValueError(f"Unknown or unsupported dependency: {dep_id}")

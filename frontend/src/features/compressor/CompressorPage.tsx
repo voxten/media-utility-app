@@ -19,6 +19,7 @@ import { DropZone } from "../../components/DropZone";
 import { FileStrip } from "../../components/FileStrip";
 import { ImageComparison } from "../../components/ImageComparison";
 import { useNotify } from "../../components/notify";
+import { Columns } from "../../components/Columns";
 import { ToolPage } from "../../components/Page";
 import { Panel } from "../../components/Panel";
 import { ResultCard } from "../../components/ResultCard";
@@ -26,7 +27,7 @@ import { Select } from "../../components/Select";
 import { SliderField } from "../../components/SliderField";
 import { api } from "../../lib/bridge";
 import { checkerboard } from "../../lib/checkerboard";
-import { claimDrop, matchesExtensions } from "../../lib/drop";
+import { claimDrop, DROP_ZONE_ATTR, matchesExtensions } from "../../lib/drop";
 import { dialogFilter, formatList, formatName, IMAGE_EXTENSIONS, imageFormatLabel, type ImageOutputFormat } from "../../lib/fileTypes";
 import { fileName, formatBytes } from "../../lib/format";
 import { IMAGE_STAGE_HEIGHT } from "../../lib/imageStage";
@@ -73,9 +74,6 @@ const TARGET_PRESETS_KB = [200, 500, 1000, 2000];
 const PREVIEW_DELAY_MS = 200;
 
 const useStyles = makeStyles({
-  settings: { display: "flex", flexWrap: "wrap", gap: "16px 24px", alignItems: "flex-end" },
-  format: { minWidth: "240px" },
-  param: { flex: "1 1 280px", minWidth: 0 },
   targetRow: { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" },
   targetInput: { width: "130px" },
   stage: {
@@ -194,6 +192,7 @@ export default function CompressorPage() {
     return (
       <ToolPage toolId="compressor">
         <DropZone
+          fill
           icon={Image24Regular}
           title={t("compressor.dropTitle")}
           hint={t("compressor.dropHint", { formats: formatList(IMAGE_EXTENSIONS) })}
@@ -206,137 +205,136 @@ export default function CompressorPage() {
   }
 
 
+  const options = (
+    <Panel>
+      <Field label={t("compressor.mode")}>
+        <RadioGroup value={mode} onChange={(_, d) => setMode(d.value as Mode)}>
+          <Radio value="smart" label={t("compressor.modeSmart")} />
+          <Radio value="lossless" label={t("compressor.modeLossless")} />
+          <Radio value="target" label={t("compressor.modeTarget")} />
+        </RadioGroup>
+      </Field>
+      <Field label={t("common.outputFormat")}>
+        <Select searchable options={FORMATS.map((f) => ({ value: f, label: imageFormatLabel(t, f) }))} value={format} onChange={setFormat} />
+      </Field>
+      {mode === "smart" && (
+        <SliderField label={t("compressor.quality")} value={quality} min={20} max={100} format={(v) => `${v}%`} onChange={setQuality} />
+      )}
+      {mode === "target" && (
+        <Field label={t("compressor.targetKb")}>
+          <div className={styles.targetRow}>
+            <Input className={styles.targetInput} type="number" value={targetKb} contentAfter="KB" onChange={(_, d) => setTargetKb(d.value)} />
+            {TARGET_PRESETS_KB.map((kb) => (
+              <Button key={kb} size="small" appearance="subtle" onClick={() => setTargetKb(String(kb))}>
+                {kb >= 1000 ? `${kb / 1000} MB` : `${kb} KB`}
+              </Button>
+            ))}
+          </div>
+        </Field>
+      )}
+    </Panel>
+  );
+
   return (
     <ToolPage toolId="compressor">
-      <Panel>
-        <div className={styles.settings}>
-          <Field label={t("compressor.mode")}>
-            <RadioGroup layout="horizontal" value={mode} onChange={(_, d) => setMode(d.value as Mode)}>
-              <Radio value="smart" label={t("compressor.modeSmart")} />
-              <Radio value="lossless" label={t("compressor.modeLossless")} />
-              <Radio value="target" label={t("compressor.modeTarget")} />
-            </RadioGroup>
-          </Field>
-        </div>
-        <div className={styles.settings}>
-          <Field label={t("common.outputFormat")} className={styles.format}>
-            <Select searchable options={FORMATS.map((f) => ({ value: f, label: imageFormatLabel(t, f) }))} value={format} onChange={setFormat} />
-          </Field>
-          {mode === "smart" && (
-            <div className={styles.param}>
-              <SliderField label={t("compressor.quality")} value={quality} min={20} max={100} format={(v) => `${v}%`} onChange={setQuality} />
+      <Columns side={options}>
+        <Panel
+          title={current ? fileName(current) : undefined}
+          actions={
+            <>
+              <Button appearance="subtle" icon={<Add16Regular />} onClick={browse}>
+                {t("common.addFiles")}
+              </Button>
+              {!result && (
+                <Button appearance="subtle" icon={<ArrowRight16Regular />} onClick={() => useTransferStore.getState().openModal(files, "compressor")}>
+                  {t("transfer.sendTo")}
+                </Button>
+              )}
+              <Button appearance="subtle" icon={<Delete16Regular />} onClick={() => removeAt(selected)}>
+                {t("common.remove")}
+              </Button>
+            </>
+          }
+        >
+          <div
+            {...{ [DROP_ZONE_ATTR]: "" }}
+            className={styles.stage}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "copy";
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              claimDrop(e, addFiles);
+            }}
+          >
+            {preview && compressed?.dataUrl ? (
+              <ImageComparison
+                maxHeight="100%"
+                before={preview.dataUrl}
+                after={compressed.dataUrl}
+                beforeLabel={t("compressor.before")}
+                afterLabel={t("compressor.after")}
+              />
+            ) : (
+              <Spinner label={t("common.loading")} />
+            )}
+          </div>
+
+          {preview && (
+            <div className={styles.meta}>
+              <Caption1>
+                {preview.width} × {preview.height} px · {formatName(preview.format)}
+              </Caption1>
+              {compressed && (
+                <Text>
+                  {formatBytes(preview.size)} → <span className={styles.saved}>{formatBytes(compressed.compressedBytes)}</span> (−{compressed.savedPercent}%)
+                </Text>
+              )}
+              {updating && <Spinner size="extra-tiny" />}
             </div>
           )}
-          {mode === "target" && (
-            <Field label={t("compressor.targetKb")} className={styles.param}>
-              <div className={styles.targetRow}>
-                <Input className={styles.targetInput} type="number" value={targetKb} contentAfter="KB" onChange={(_, d) => setTargetKb(d.value)} />
-                {TARGET_PRESETS_KB.map((kb) => (
-                  <Button key={kb} size="small" appearance="subtle" onClick={() => setTargetKb(String(kb))}>
-                    {kb >= 1000 ? `${kb / 1000} MB` : `${kb} KB`}
-                  </Button>
-                ))}
-              </div>
-            </Field>
-          )}
-        </div>
-      </Panel>
 
-      <Panel
-        title={current ? fileName(current) : undefined}
-        actions={
-          <>
-            <Button appearance="subtle" icon={<Add16Regular />} onClick={browse}>
-              {t("common.addFiles")}
-            </Button>
-            {!result && (
-              <Button appearance="subtle" icon={<ArrowRight16Regular />} onClick={() => useTransferStore.getState().openModal(files, "compressor")}>
-                {t("transfer.sendTo")}
-              </Button>
-            )}
-            <Button appearance="subtle" icon={<Delete16Regular />} onClick={() => removeAt(selected)}>
-              {t("common.remove")}
-            </Button>
-          </>
-        }
-      >
-        <div
-          className={styles.stage}
-          onDragOver={(e) => {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = "copy";
-          }}
-          onDrop={(e) => {
-            e.preventDefault();
-            claimDrop(e, addFiles);
-          }}
-        >
-          {preview && compressed?.dataUrl ? (
-            <ImageComparison
-              maxHeight="100%"
-              before={preview.dataUrl}
-              after={compressed.dataUrl}
-              beforeLabel={t("compressor.before")}
-              afterLabel={t("compressor.after")}
+          {files.length > 1 && (
+            <FileStrip
+              files={files}
+              selected={selected}
+              onSelect={setSelected}
+              onRemove={removeAt}
+              actions={
+                <Button appearance="subtle" icon={<Delete16Regular />} onClick={clear}>
+                  {t("common.clearAll")}
+                </Button>
+              }
             />
-          ) : (
-            <Spinner label={t("common.loading")} />
           )}
-        </div>
 
-        {preview && (
-          <div className={styles.meta}>
-            <Caption1>
-              {preview.width} × {preview.height} px · {formatName(preview.format)}
-            </Caption1>
-            {compressed && (
-              <Text>
-                {formatBytes(preview.size)} → <span className={styles.saved}>{formatBytes(compressed.compressedBytes)}</span> (−{compressed.savedPercent}%)
-              </Text>
-            )}
-            {updating && <Spinner size="extra-tiny" />}
-          </div>
-        )}
+          {result?.outPath && <ResultCard title={t("compressor.toast.success")} path={result.outPath} sourceToolId="compressor" />}
+        </Panel>
 
-        {files.length > 1 && (
-          <FileStrip
-            files={files}
-            selected={selected}
-            onSelect={setSelected}
-            onRemove={removeAt}
-            actions={
-              <Button appearance="subtle" icon={<Delete16Regular />} onClick={clear}>
-                {t("common.clearAll")}
-              </Button>
-            }
+        {result && !result.outPath && result.results.length > 0 && (
+          <AfterGallery
+            title={t("transfer.compressedTitle")}
+            summary={t("compressor.summary", {
+              processed: result.processed,
+              total: result.total,
+              saved: formatBytes(result.savedBytes),
+              percent: result.savedPercent,
+            })}
+            files={result.files || result.results.map((r) => r.dest)}
+            items={result.results.map((r) => ({
+              file: r.file,
+              dest: r.dest,
+              name: fileName(r.dest),
+              originalSize: r.inBytes,
+              size: r.outBytes,
+              savedPercent: r.savedPercent,
+            }))}
+            outputDir={result.outputDir}
+            sourceToolId="compressor"
           />
         )}
-
-        {result?.outPath && <ResultCard title={t("compressor.toast.success")} path={result.outPath} sourceToolId="compressor" />}
-      </Panel>
-
-      {result && !result.outPath && result.results.length > 0 && (
-        <AfterGallery
-          title={t("transfer.compressedTitle")}
-          summary={t("compressor.summary", {
-            processed: result.processed,
-            total: result.total,
-            saved: formatBytes(result.savedBytes),
-            percent: result.savedPercent,
-          })}
-          files={result.files || result.results.map((r) => r.dest)}
-          items={result.results.map((r) => ({
-            file: r.file,
-            dest: r.dest,
-            name: fileName(r.dest),
-            originalSize: r.inBytes,
-            size: r.outBytes,
-            savedPercent: r.savedPercent,
-          }))}
-          outputDir={result.outputDir}
-          sourceToolId="compressor"
-        />
-      )}
+      </Columns>
 
       <ActionBar job={job.job?.status === "done" ? undefined : job.job} onCancel={job.cancel}>
         <Button appearance="primary" icon={<ArrowMinimize24Regular />} disabled={job.running || !compressed} onClick={start}>

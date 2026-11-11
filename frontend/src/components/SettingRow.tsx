@@ -19,7 +19,7 @@ const useStyles = makeStyles({
     minHeight: "68px",
     padding: "12px 20px",
     boxSizing: "border-box",
-    backgroundColor: tokens.colorNeutralBackground2,
+    backgroundColor: tokens.colorNeutralCardBackground,
     border: `1px solid ${tokens.colorNeutralStroke3}`,
     borderRadius: tokens.borderRadiusMedium,
     flexWrap: "wrap",

@@ -8,11 +8,15 @@ export interface TransferPayload {
   timestamp: number;
 }
 
+/** "send": a tool's result is passed on; "drop": files were dropped outside every drop zone. */
+export type TransferOrigin = "send" | "drop";
+
 interface TransferStore {
   isModalOpen: boolean;
   modalFiles: string[];
   sourceToolId?: string;
-  openModal: (files: string | string[], sourceToolId?: string) => void;
+  origin: TransferOrigin;
+  openModal: (files: string | string[], sourceToolId?: string, origin?: TransferOrigin) => void;
   closeModal: () => void;
 
   pendingTransfer: TransferPayload | null;
@@ -24,14 +28,16 @@ export const useTransferStore = create<TransferStore>((set, get) => ({
   isModalOpen: false,
   modalFiles: [],
   sourceToolId: undefined,
+  origin: "send",
 
-  openModal: (files, sourceToolId) => {
+  openModal: (files, sourceToolId, origin = "send") => {
     const list = Array.isArray(files) ? files.filter(Boolean) : files ? [files] : [];
     if (!list.length) return;
     set({
       isModalOpen: true,
       modalFiles: list,
       sourceToolId,
+      origin,
     });
   },
 

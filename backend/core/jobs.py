@@ -5,7 +5,7 @@ Qt signals. The :class:`JobManager` runs it on a thread pool and forwards everyt
 to a single ``emit(event, payload)`` callback (the UI bridge).
 
 Events: ``job:started``, ``job:progress``, ``job:log``, ``job:partial``,
-``job:done``, ``job:error``, ``job:cancelled``.
+``job:meta``, ``job:done``, ``job:error``, ``job:cancelled``; ``jobs:history`` once a finished job is saved.
 """
 
 import threading
@@ -15,6 +15,8 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
+
+from backend.core.history import JobHistory
 
 Emit = Callable[[str, Dict[str, Any]], None]
 
@@ -36,6 +38,7 @@ class JobContext:
         self.percent: Optional[float] = None
         self.message: Optional[str] = None
         self.params: Dict[str, Any] = {}
+        self.meta: Dict[str, Any] = {}
 
     @property
     def cancelled(self) -> bool:
@@ -86,6 +89,14 @@ class JobContext:
             {"message": message, "params": params, "level": level, "time": time.time()},
         )
 
+    def describe(self, **fields: Any) -> None:
+        """Describe what the job works on (thumbnail, resolution, format…); merged and kept until it finishes."""
+        fields = {k: v for k, v in fields.items() if v is not None}
+        if not fields:
+            return
+        self.meta.update(fields)
+        self._send("job:meta", {"meta": fields})
+
     def partial(self, data: Any) -> None:
         """Stream an intermediate result (e.g. one rendered PDF page) to the UI."""
         self._send("job:partial", {"data": data})
@@ -104,6 +115,8 @@ class JobInfo:
     finished_at: Optional[float] = None
     error: Optional[str] = None
     context: Optional[JobContext] = None
+    # Kept while the job can still be run again with the same settings (until it finishes without an error).
+    fn: Optional[Callable[[JobContext], Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
         ctx = self.context
@@ -118,20 +131,24 @@ class JobInfo:
             "percent": ctx.percent if ctx else None,
             "message": ctx.message if ctx else None,
             "params": ctx.params if ctx else {},
+            "meta": ctx.meta if ctx else {},
+            "retryable": self.fn is not None,
         }
 
 
 class JobManager:
-    def __init__(self, emit: Optional[Emit] = None, max_workers: int = 4) -> None:
+    def __init__(self, emit: Optional[Emit] = None, max_workers: int = 4, history: Optional[JobHistory] = None) -> None:
         self._emit = emit or (lambda event, payload: None)
+        self._history = history
         self._pool = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="job")
         self._jobs: Dict[str, JobInfo] = {}
         self._lock = threading.Lock()
 
-    def submit(self, kind: str, fn: Callable[[JobContext], Any], title: str = "") -> str:
+    def submit(self, kind: str, fn: Callable[[JobContext], Any], title: str = "", retryable: bool = True) -> str:
+        """Start ``fn`` in the background. ``retryable`` jobs that fail can be run again with :meth:`retry`."""
         job_id = uuid.uuid4().hex[:12]
         ctx = JobContext(job_id, self._emit)
-        info = JobInfo(id=job_id, kind=kind, title=title or kind, context=ctx)
+        info = JobInfo(id=job_id, kind=kind, title=title or kind, context=ctx, fn=fn if retryable else None)
         with self._lock:
             self._jobs[job_id] = info
         self._emit("job:started", info.to_dict())
@@ -141,6 +158,7 @@ class JobManager:
     def _run(self, info: JobInfo, fn: Callable[[JobContext], Any]) -> None:
         ctx = info.context
         assert ctx is not None
+        result: Any = None
         try:
             result = fn(ctx)
         except JobCancelled:
@@ -161,12 +179,35 @@ class JobManager:
             else:
                 self._finish(info, "done")
                 self._emit("job:done", {"jobId": info.id, "result": result})
+        self._record(info, result if info.status == "done" else None)
+
+    def _record(self, info: JobInfo, result: Any) -> None:
+        if self._history is None:
+            return
+        try:
+            entry = self._history.record(info.to_dict(), result)
+        except Exception:  # noqa: BLE001 - history must never break a finished job
+            traceback.print_exc()
+            return
+        if entry is not None:
+            self._emit("jobs:history", entry)
 
     def _finish(self, info: JobInfo, status: str, error: Optional[str] = None) -> None:
         with self._lock:
             info.status = status
             info.error = error
             info.finished_at = time.time()
+            if status != "error":
+                info.fn = None
+
+    def retry(self, job_id: str) -> Optional[str]:
+        """Run a failed job again with the same settings; the new job's id, or None when it cannot be retried."""
+        with self._lock:
+            info = self._jobs.get(job_id)
+            if not info or info.status != "error" or info.fn is None:
+                return None
+            fn, info.fn = info.fn, None
+        return self.submit(info.kind, fn, info.title)
 
     def cancel(self, job_id: str) -> bool:
         with self._lock:
@@ -180,6 +221,10 @@ class JobManager:
         with self._lock:
             info = self._jobs.get(job_id)
             return info.to_dict() if info else None
+
+    def active_count(self) -> int:
+        with self._lock:
+            return sum(1 for info in self._jobs.values() if info.status == "running")
 
     def list(self) -> List[Dict[str, Any]]:
         with self._lock:

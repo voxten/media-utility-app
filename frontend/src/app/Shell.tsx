@@ -1,14 +1,20 @@
 import { lazy, Suspense, useEffect, useState, type ComponentType, type LazyExoticComponent } from "react";
 import { makeStyles, mergeClasses, Spinner, tokens, Toaster } from "@fluentui/react-components";
 import { ConfirmHost } from "../components/ConfirmDialog";
+import { EngineUpdateHost } from "../components/EngineUpdateHost";
+import { DropOverlay } from "../components/DropOverlay";
+import { useClipboardLinks } from "../lib/clipboardLink";
 import { TransferModal } from "../components/TransferModal";
 import { WhatsNewHost } from "../components/WhatsNewDialog";
 import { TOASTER_ID } from "../components/notify";
 import { useRoute } from "../lib/router";
+import { useRecentTools } from "../stores/recentTools";
 import { useUi } from "../stores/ui";
 import { CommandPalette } from "./CommandPalette";
 import { JobsPopup } from "./JobsPopup";
 import { Navigation } from "./Navigation";
+import { appTokens } from "./theme";
+import { toolById } from "./tools";
 import { useJobNotifications } from "./useJobNotifications";
 
 const HomePage = lazy(() => import("../features/home/HomePage"));
@@ -27,6 +33,7 @@ const TOOL_PAGES: Record<string, LazyExoticComponent<ComponentType>> = {
   pdf_extract: lazy(() => import("../features/pdf/PdfExtractPage")),
   duplicates: lazy(() => import("../features/duplicates/DuplicatesPage")),
   tts: lazy(() => import("../features/tts/TtsPage")),
+  transcribe: lazy(() => import("../features/transcribe/TranscribePage")),
   download: lazy(() => import("../features/download/DownloadPage")),
   instagram: lazy(() => import("../features/instagram/InstagramPage")),
   video_sync: lazy(() => import("../features/video_sync/VideoSyncPage")),
@@ -57,7 +64,7 @@ const useStyles = makeStyles({
     flexGrow: 1,
     minWidth: 0,
     marginTop: "8px",
-    backgroundColor: tokens.colorNeutralBackground1,
+    backgroundColor: appTokens.colorAppLayer,
     borderTopLeftRadius: tokens.borderRadiusXLarge,
     borderTop: `1px solid ${tokens.colorNeutralStroke3}`,
     borderLeft: `1px solid ${tokens.colorNeutralStroke3}`,
@@ -106,6 +113,11 @@ export function Shell() {
   }, [collapsed]);
 
   useJobNotifications(route);
+  useClipboardLinks();
+
+  useEffect(() => {
+    if (toolById(route)) useRecentTools.getState().remember(route);
+  }, [route]);
 
   // Ctrl+K anywhere opens the command palette.
   useEffect(() => {
@@ -138,7 +150,9 @@ export function Shell() {
       <Toaster toasterId={TOASTER_ID} position="top-end" offset={{ vertical: 16 }} pauseOnHover />
       <ConfirmHost />
       <TransferModal />
+      <DropOverlay />
       <WhatsNewHost />
+      <EngineUpdateHost />
       <JobsPopup collapsed={collapsed} />
       <CommandPalette />
     </div>

@@ -183,6 +183,7 @@ export default function PdfConvertPage() {
         <>
           <DropZone
             compact={imageFiles.length > 0}
+            fill={imageFiles.length === 0}
             icon={ImageArrowForward24Regular}
             title={imageFiles.length ? t("pdf.dropMore") : t("pdf.dropImagesTitle")}
             hint={t("pdf.dropImagesHint", { formats: formatList(ALL_IMAGE_EXTENSIONS) })}

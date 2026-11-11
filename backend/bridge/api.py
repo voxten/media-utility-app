@@ -11,6 +11,7 @@ import logging
 import mimetypes
 import platform
 import sys
+import threading
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -18,7 +19,9 @@ logger = logging.getLogger(__name__)
 
 from backend import APP_NAME, APP_VERSION
 from backend.bridge.events import EventBus
-from backend.core import deps, ffmpeg, paths, system, win_theme
+from backend.core import clipboard, deps, engines, ffmpeg, paths, system, win_theme
+from backend.core.app_shell import AppShell
+from backend.core.history import JobHistory
 from backend.core.jobs import JobManager
 from backend.core.settings import Settings
 from backend.services import (
@@ -35,6 +38,7 @@ from backend.services import (
     progress_image,
     rembg_service,
     system_info,
+    transcribe,
     tts,
     upscale,
     video_sync,
@@ -49,9 +53,12 @@ class _Context:
     def __init__(self, bus: EventBus, settings: Settings) -> None:
         self.bus = bus
         self.settings = settings
-        self.jobs = JobManager(bus.emit)
+        self.history = JobHistory(temp_dir=paths.cache_dir())
+        self.jobs = JobManager(bus.emit, history=self.history)
+        self.shell = AppShell(APP_NAME, settings, self.jobs.active_count, bus.emit)
         self.window: Any = None
         self.mica = False  # set by main.py once the backdrop is active
+        self.engine_check_started = False
 
 
 class _Namespace:
@@ -63,7 +70,23 @@ class AppApi(_Namespace):
     def ready(self) -> Dict[str, Any]:
         """Frontend finished booting; start delivering events."""
         self._ctx.bus.mark_ready()
+        if not self._ctx.engine_check_started:
+            self._ctx.engine_check_started = True
+            threading.Thread(target=self._check_engines, name="engine-check", daemon=True).start()
         return self.info()
+
+    def _check_engines(self) -> None:
+        settings = self._ctx.settings
+        if not engines.auto_check_due(settings):
+            return
+        try:
+            result = engines.check_updates(settings)
+        except Exception as exc:  # noqa: BLE001 - offline start-ups simply try again next time
+            logger.info("Download engine update check failed: %s", exc)
+            return
+        available = [item for item in result if item["updateAvailable"]]
+        if available:
+            self._ctx.bus.emit("engines:update", {"engines": available})
 
     def info(self) -> Dict[str, Any]:
         return {
@@ -77,6 +100,14 @@ class AppApi(_Namespace):
 
     def set_title_bar_theme(self, dark: bool) -> bool:
         return win_theme.set_dark_title_bar(self._ctx.window, bool(dark))
+
+    def notify(self, title: str, body: str = "", force: bool = False) -> bool:
+        """System notification; skipped while the window is in front unless ``force``."""
+        return self._ctx.shell.notify(str(title or APP_NAME), str(body or ""), bool(force))
+
+    def set_shell_labels(self, labels: Dict[str, str]) -> None:
+        """Translated texts for the tray menu and native prompts (the backend has no i18n)."""
+        self._ctx.shell.set_labels(labels)
 
 
 class SettingsApi(_Namespace):
@@ -167,6 +198,8 @@ class SystemApi(_Namespace):
             tool_prefix = "rembg"
         elif dep_id == "gifsicle":
             tool_prefix = "gif_editor"
+        elif dep_id.startswith("whisper_"):
+            tool_prefix = "transcribe"
         else:
             tool_prefix = "download"
         return self._ctx.jobs.submit(
@@ -174,6 +207,30 @@ class SystemApi(_Namespace):
             lambda ctx: deps_installer.install_dependency(ctx, dep_id),
             title=f"deps.installTitle.{dep_id}",
         )
+
+    def engines(self) -> List[Dict[str, Any]]:
+        return engines.status(self._ctx.settings)
+
+    def check_engines(self) -> List[Dict[str, Any]]:
+        return engines.check_updates(self._ctx.settings)
+
+    def update_engines(self) -> str:
+        return self._ctx.jobs.submit(
+            "download.engines",
+            lambda ctx: deps_installer.update_engines(ctx, self._ctx.settings),
+            title="engines.updateTitle",
+        )
+
+    def reset_engines(self) -> List[Dict[str, Any]]:
+        engines.reset()
+        return engines.status(self._ctx.settings)
+
+    def restart(self) -> None:
+        self._ctx.shell.restart()
+
+    def clipboard_link(self) -> Optional[Dict[str, Any]]:
+        """A copied YouTube/TikTok/X/Instagram link as ``{url, target, urls?}``, or None (see clipboard.find_link)."""
+        return clipboard.find_link(clipboard.read_text())
 
     def path_info(self, path: str) -> Dict[str, Any]:
         p = Path(path)
@@ -189,6 +246,15 @@ class JobsApi(_Namespace):
 
     def cancel(self, job_id: str) -> bool:
         return self._ctx.jobs.cancel(job_id)
+
+    def retry(self, job_id: str) -> Optional[str]:
+        return self._ctx.jobs.retry(job_id)
+
+    def history(self) -> List[Dict[str, Any]]:
+        return self._ctx.history.entries()
+
+    def clear_history(self) -> None:
+        self._ctx.history.clear()
 
 
 class ConverterApi(_Namespace):
@@ -208,7 +274,7 @@ class ConverterApi(_Namespace):
 class PdfApi(_Namespace):
     def inspect(self, paths: List[str]) -> str:
         files = [p for p in paths if p.lower().endswith(".pdf")]
-        return self._ctx.jobs.submit("pdf.inspect", lambda ctx: pdf.inspect(ctx, files))
+        return self._ctx.jobs.submit("pdf.inspect", lambda ctx: pdf.inspect(ctx, files), retryable=False)
 
     def render_page(self, path: str, page: int) -> str:
         return pdf.render_page(path, int(page))
@@ -300,7 +366,9 @@ class TtsApi(_Namespace):
 class DownloadApi(_Namespace):
     def probe(self, url: str) -> str:
         cookies = self._ctx.settings.cookie_files()
-        return self._ctx.jobs.submit("download.probe", lambda ctx: download.probe(ctx, url, cookies), title=url)
+        return self._ctx.jobs.submit(
+            "download.probe", lambda ctx: download.probe(ctx, url, cookies), title=url, retryable=False
+        )
 
     def start(self, params: Dict[str, Any]) -> str:
         cookies = self._ctx.settings.cookie_files()
@@ -315,6 +383,7 @@ class DownloadApi(_Namespace):
                 params.get("mode", "video"),
                 params.get("audioCodec", "mp3"),
                 cookies,
+                params.get("subtitles"),
             ),
             title=params.get("title") or params["url"],
         )
@@ -325,7 +394,12 @@ class DownloadApi(_Namespace):
         return self._ctx.jobs.submit(
             "download.batch",
             lambda ctx: download.download_batch(
-                ctx, urls, params["outdir"], params.get("template") or download.DEFAULT_TEMPLATE, cookies
+                ctx,
+                urls,
+                params["outdir"],
+                params.get("template") or download.DEFAULT_TEMPLATE,
+                cookies,
+                params.get("subtitles"),
             ),
             title=f"{len(urls)} URL",
         )
@@ -340,7 +414,9 @@ class DownloadApi(_Namespace):
 class InstagramApi(_Namespace):
     def probe(self, url: str) -> str:
         cookies = self._ctx.settings.cookie_files()
-        return self._ctx.jobs.submit("instagram.probe", lambda ctx: instagram.probe(ctx, url, cookies), title=url)
+        return self._ctx.jobs.submit(
+            "instagram.probe", lambda ctx: instagram.probe(ctx, url, cookies), title=url, retryable=False
+        )
 
     def stop(self, job_id: str) -> bool:
         instagram.stop_listing(job_id)
@@ -550,6 +626,21 @@ class VideoToGifApi(_Namespace):
         )
 
 
+class TranscribeApi(_Namespace):
+    def models(self) -> List[Dict[str, Any]]:
+        return transcribe.models()
+
+    def probe(self, path: str) -> Dict[str, Any]:
+        return transcribe.probe(path)
+
+    def start(self, params: Dict[str, Any]) -> str:
+        return self._ctx.jobs.submit(
+            "transcribe",
+            lambda ctx: transcribe.run(ctx, params),
+            title=Path(params["path"]).name,
+        )
+
+
 class GifEditorApi(_Namespace):
     def load(self, path: str) -> Dict[str, Any]:
         return {**gif_editor.load(path), "gifsicle": gif_render.gifsicle_available()}
@@ -594,18 +685,31 @@ class Api:
         self.video_sync = VideoSyncApi(self._ctx)
         self.video_to_gif = VideoToGifApi(self._ctx)
         self.gif_editor = GifEditorApi(self._ctx)
+        self.transcribe = TranscribeApi(self._ctx)
 
     def _attach_window(self, window: Any) -> None:
         self._ctx.window = window
         self._ctx.bus.attach(window)
+        self._ctx.shell.attach(window)
+        self._ctx.shell.start()
+
+    def _restart_requested(self) -> bool:
+        return self._ctx.shell.restart_requested
+
+    def _show_window(self) -> None:
+        self._ctx.shell.show()
 
     def _set_mica(self, active: bool) -> None:
         self._ctx.mica = active
 
-    def _detach_window(self) -> None:
+    def _on_closing(self) -> Optional[bool]:
+        if self._ctx.shell.on_closing() is False:
+            return False  # hidden to the tray (or the user chose to stay)
         self._ctx.bus.detach()
+        return None
 
     def _shutdown(self) -> None:
+        self._ctx.shell.stop()
         self._ctx.bus.detach()
         self._ctx.jobs.shutdown()
         self._ctx.bus.close()

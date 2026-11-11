@@ -13,6 +13,8 @@ interface DownloadForm {
   batchText: string;
   outdir: string;
   template: string;
+  /** Check the link as soon as the page shows it (set when a copied link is opened). */
+  autoProbe: boolean;
   set: (patch: Partial<Omit<DownloadForm, "set">>) => void;
 }
 
@@ -26,5 +28,6 @@ export const useDownloadForm = create<DownloadForm>((set) => ({
   batchText: "",
   outdir: "",
   template: "{title}.{ext}",
+  autoProbe: false,
   set: (patch) => set(patch),
 }));

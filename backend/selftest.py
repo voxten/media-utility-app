@@ -28,6 +28,7 @@ MODULES = [
     "pymediainfo",
     "yt_dlp",
     "curl_cffi",  # browser impersonation, TikTok rejects plain requests
+    "yt_dlp.networking._curlcffi",  # fails when yt-dlp does not support the bundled curl_cffi version
     "requests",
     "edge_tts",
     "pyttsx3",
@@ -129,6 +130,15 @@ def _check_icon(_: Path) -> Any:
     return True
 
 
+def _check_tray(_: Path) -> Any:
+    """Close-to-tray and job notifications need pystray's Win32 backend in the bundle."""
+    import pystray
+
+    assert pystray.Icon.__module__ == "pystray._win32", pystray.Icon.__module__
+    assert pystray.Icon.HAS_NOTIFICATION
+    return True
+
+
 def _check_compressor(tmp: Path) -> Any:
     from PIL import Image
 
@@ -186,7 +196,7 @@ ADDON_STDLIB = [
 ]
 
 
-ADDON_PACKAGES = ["torch", "rembg", "onnxruntime"]
+ADDON_PACKAGES = ["torch", "rembg", "onnxruntime", "ctranslate2", "faster_whisper"]
 
 
 def _check_addon_support(_: Path) -> Any:
@@ -204,6 +214,23 @@ def _check_addon_support(_: Path) -> Any:
         if (folder / name).is_dir():
             installed[name] = getattr(importlib.import_module(name), "__version__", "ok")
     return {"folder": str(folder), "installed": installed}
+
+
+def _check_engines(_: Path) -> Any:
+    """Bundled engine metadata is what downloaded updates are compared with."""
+    from backend.core import engines
+
+    versions = {}
+    for engine in engines.ENGINES:
+        bundled = engines.bundled_version(engine.id)
+        assert bundled, f"no bundled metadata for {engine.id}"
+        module = importlib.import_module(engine.module)
+        versions[engine.id] = {
+            "bundled": bundled,
+            "downloaded": engines.downloaded_version(engine.id),
+            "loadedFrom": str(Path(module.__file__ or "").parent),
+        }
+    return versions
 
 
 def _check_video_sync(tmp: Path) -> Any:
@@ -252,6 +279,7 @@ CHECKS: Dict[str, Callable[[Path], Any]] = {
     "streams": _check_streams,
     "frontend": _check_frontend,
     "icon": _check_icon,
+    "tray": _check_tray,
     "mediainfo": _check_mediainfo,
     "converter": _check_converter,
     "pdf": _check_pdf,
@@ -263,6 +291,7 @@ CHECKS: Dict[str, Callable[[Path], Any]] = {
     "video_sync": _check_video_sync,
     "gif": _check_gif,
     "addons": _check_addon_support,
+    "engines": _check_engines,
 }
 
 

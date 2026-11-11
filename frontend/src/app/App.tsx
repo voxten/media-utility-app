@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { FluentProvider, makeStyles, Spinner, tokens } from "@fluentui/react-components";
 import i18n from "../i18n";
 import { api, on, ready } from "../lib/bridge";
-import { initJobEvents } from "../stores/jobs";
+import { initJobEvents, useJobs } from "../stores/jobs";
 import { useSettings } from "../stores/settings";
 import { useUi } from "../stores/ui";
 import { Shell } from "./Shell";
@@ -16,6 +16,7 @@ async function boot(load: () => Promise<unknown>) {
   const mode = await ready;
   initJobEvents(); // subscribe before the backend starts delivering events
   on("app:mica", ({ active }) => useUi.setState({ mica: active }));
+  useJobs.getState().loadHistory().catch(() => undefined);
   await load();
   if (mode === "native") {
     const info = await api.app.ready();
@@ -40,6 +41,18 @@ export function App() {
     if (!settings) return;
     i18n.changeLanguage(settings.language);
     document.documentElement.lang = settings.language;
+    api.app
+      .setShellLabels({
+        open: i18n.t("shell.open"),
+        quit: i18n.t("shell.quit"),
+        backgroundTitle: i18n.t("shell.backgroundTitle"),
+        backgroundBody: i18n.t("shell.backgroundBody"),
+        quitConfirmTitle: i18n.t("shell.quitConfirmTitle"),
+        quitConfirmBody: i18n.t("shell.quitConfirmBody"),
+        clipboard: i18n.t("shell.clipboard"),
+        clipboardEmpty: i18n.t("shell.clipboardEmpty"),
+      })
+      .catch(() => undefined);
   }, [settings?.language]);
 
   useEffect(() => {

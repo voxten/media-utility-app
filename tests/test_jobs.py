@@ -55,6 +55,47 @@ def test_job_error_is_reported():
     manager.shutdown()
 
 
+def test_failed_job_can_be_retried_with_the_same_settings():
+    sink = Collector()
+    manager = JobManager(sink)
+    calls = []
+
+    def work(ctx):
+        calls.append(ctx.job_id)
+        if len(calls) == 1:
+            raise ValueError("boom")
+        return {"ok": True}
+
+    job_id = manager.submit("test", work, title="clip.mp4")
+    assert sink.finished.wait(5)
+    assert manager.get(job_id)["retryable"] is True
+    sink.finished.clear()
+    new_id = manager.retry(job_id)
+    assert new_id and new_id != job_id
+    assert sink.finished.wait(5)
+    assert calls == [job_id, new_id]
+    assert manager.get(new_id)["title"] == "clip.mp4"
+    assert manager.get(new_id)["status"] == "done"
+    assert manager.retry(job_id) is None
+    assert manager.retry(new_id) is None
+    manager.shutdown()
+
+
+def test_only_retryable_failed_jobs_run_again():
+    sink = Collector()
+    manager = JobManager(sink)
+
+    def fail(ctx):
+        raise ValueError("boom")
+
+    job_id = manager.submit("probe", fail, retryable=False)
+    assert sink.finished.wait(5)
+    assert manager.get(job_id)["retryable"] is False
+    assert manager.retry(job_id) is None
+    assert manager.retry("missing") is None
+    manager.shutdown()
+
+
 def test_job_can_be_cancelled():
     sink = Collector()
     manager = JobManager(sink)
@@ -103,3 +144,51 @@ def test_param_only_changes_are_throttled():
     for i in range(200):
         ctx.progress(i / 2, "converting", {"file": f"f{i}.png"})
     assert len(events) < 10
+
+
+def test_finished_jobs_are_saved_to_history(tmp_path):
+    from backend.core.history import JobHistory
+
+    saved = threading.Event()
+    events = []
+
+    def sink(event, payload):
+        events.append((event, payload))
+        if event == "jobs:history" and len([e for e, _ in events if e == "jobs:history"]) == 2:
+            saved.set()
+
+    history = JobHistory(tmp_path / "history.json")
+    manager = JobManager(sink, history=history)
+    converted = manager.submit("converter", lambda ctx: {"outPath": "C:/out/a.webp"}, title="WEBP")
+
+    def fail(ctx):
+        raise ValueError("boom")
+
+    manager.submit("compressor", fail)
+    manager.submit("download.probe", lambda ctx: {"title": "x"})
+    assert saved.wait(5)
+    manager.shutdown(wait=True)
+
+    order = [(e, p.get("jobId") or p.get("id")) for e, p in events]
+    assert order.index(("jobs:history", converted)) > order.index(("job:done", converted))
+    by_kind = {e["kind"]: e for e in history.entries()}
+    assert set(by_kind) == {"converter", "compressor"}
+    assert by_kind["converter"]["outputs"] == ["C:/out/a.webp"]
+    assert by_kind["compressor"]["status"] == "error" and by_kind["compressor"]["error"] == "boom"
+
+
+def test_describe_sends_meta_and_keeps_it_in_the_job_info():
+    sink = Collector()
+    manager = JobManager(sink)
+
+    def work(ctx):
+        ctx.describe(height=1080, ext="mp4", uploader=None)
+        ctx.describe(thumb="data:")
+        return {}
+
+    job_id = manager.submit("test", work)
+    assert sink.finished.wait(5)
+    metas = [p for e, p in sink.events if e == "job:meta"]
+    assert metas == [{"jobId": job_id, "meta": {"height": 1080, "ext": "mp4"}}, {"jobId": job_id, "meta": {"thumb": "data:"}}]
+    assert manager.get(job_id)["meta"] == {"height": 1080, "ext": "mp4", "thumb": "data:"}
+    manager.shutdown()

@@ -31,6 +31,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from build import check_environment  # noqa: E402 - scripts/build.py, next to this file
+
 FRONTEND = ROOT / "frontend"
 DIST = ROOT / "dist"
 BUNDLE_DIR = DIST / "MediaStudio"
@@ -295,6 +297,7 @@ def main() -> None:
         build_frontend()
 
     if do_bundle:
+        check_environment(get_python_exe())
         build_pyinstaller()
 
     if do_selftest:

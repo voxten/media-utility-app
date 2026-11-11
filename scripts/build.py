@@ -52,6 +52,28 @@ def run(cmd: list, cwd: Path = ROOT) -> None:
     subprocess.run(cmd, cwd=cwd, check=True, shell=sys.platform == "win32" and cmd[0] == "npm")
 
 
+def check_environment(python: str = sys.executable) -> None:
+    """Refuse to bundle a missing package or versions that contradict each other's requirements.
+
+    Both reached builds silently: a curl_cffi newer than yt-dlp supports (yt-dlp turned off
+    browser impersonation and TikTok downloads broke) and a missing pystray (no tray icon).
+    """
+    step("Dependencies")
+    checks = [
+        [python, str(ROOT / "scripts" / "check_requirements.py"), str(ROOT / "requirements.txt")],
+        [python, "-m", "pip", "check"],
+    ]
+    failed = False
+    for cmd in checks:
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        output = (result.stdout + result.stderr).strip()
+        if output:
+            print(output)
+        failed = failed or result.returncode != 0
+    if failed:
+        sys.exit("Fix the problems above (pip install -r requirements.txt) before building.")
+
+
 def build_frontend(clean_install: bool) -> None:
     step("Frontend")
     if clean_install or not (FRONTEND / "node_modules").is_dir():
@@ -143,6 +165,7 @@ def main() -> None:
         build_frontend(args.clean_install)
     if not (FRONTEND / "dist" / "index.html").is_file():
         sys.exit("frontend/dist/index.html missing")
+    check_environment()
     build_bundle()
     print(f"\nBuilt {EXE} ({bundle_size()})")
     if not args.no_selftest and not selftest():

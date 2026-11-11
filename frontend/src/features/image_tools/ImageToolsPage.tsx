@@ -294,6 +294,7 @@ export default function ImageToolsPage() {
     return (
       <ToolPage toolId="image_tools">
         <DropZone
+          fill
           icon={Image24Regular}
           title={t("imageTools.dropTitle")}
           hint={t("imageTools.dropHint", { formats: formatList(IMAGE_EXTENSIONS) })}

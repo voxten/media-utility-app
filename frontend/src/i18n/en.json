@@ -2,6 +2,16 @@
   "app": {
     "name": "Media Studio"
   },
+  "shell": {
+    "open": "Open Media Studio",
+    "quit": "Quit",
+    "backgroundTitle": "Media Studio is running in the background",
+    "backgroundBody": "Jobs keep running. Click the tray icon to bring the window back.",
+    "quitConfirmTitle": "Quit Media Studio?",
+    "quitConfirmBody": "Jobs are still running and will be stopped. Quit anyway?",
+    "clipboard": "Download link from clipboard",
+    "clipboardEmpty": "The clipboard has no YouTube, TikTok, X or Instagram link."
+  },
   "nav": {
     "home": "Home",
     "settings": "Settings",
@@ -68,6 +78,10 @@
       "name": "Text to speech",
       "description": "Turn text into natural-sounding speech in many languages."
     },
+    "transcribe": {
+      "name": "Transcription",
+      "description": "Turn speech in videos and recordings into subtitles or text."
+    },
     "pdf": {
       "name": "PDF Merger",
       "description": "Arrange pages from several PDFs and merge them into one."
@@ -100,7 +114,10 @@
   "home": {
     "greeting": "Welcome to Media Studio",
     "subtitle": "Pick a tool to get started. Tasks run in the background, so you can switch between tools freely.",
-    "allTools": "All tools",
+    "recentTools": "Recently used",
+    "quickStartPlaceholder": "Paste a video link or drop files",
+    "quickStartOpen": "Open",
+    "quickStartBrowse": "Choose files",
     "recentJobs": "Recent tasks",
     "noJobs": "No tasks have been run yet."
   },
@@ -142,6 +159,9 @@
       "rembg": "BiRefNet background removal model",
       "upscale_general": "Real-ESRGAN General AI model",
       "upscale_anime": "Real-ESRGAN Anime AI model",
+      "whisper_base": "Whisper Base speech recognition",
+      "whisper_small": "Whisper Small speech recognition",
+      "whisper_turbo": "Whisper Turbo speech recognition",
       "install": "Download & install",
       "installing": "Installing…",
       "installed": "Dependency installed successfully",
@@ -152,7 +172,9 @@
       "detailFfmpegMissing": "FFmpeg executable not found in PATH",
       "detailGifsicleMissing": "gifsicle not found",
       "detailUpscaleGenMissing": "Requires downloading realesr-general-x4v3.pth weights (~4.8 MB)",
-      "detailUpscaleAnimeMissing": "Requires downloading RealESRGAN_x4plus_anime_6B.pth weights (~17.9 MB)"
+      "detailUpscaleAnimeMissing": "Requires downloading RealESRGAN_x4plus_anime_6B.pth weights (~17.9 MB)",
+      "detailWhisperModelOnly": "Requires downloading the model",
+      "detailWhisperFull": "Requires installing faster-whisper and the model"
     },
     "depOk": "Available",
     "depMissing": "Missing",
@@ -167,6 +189,16 @@
     "micaDescription": "Windows 11 translucent window background tinted by your wallpaper.",
     "micaRestart": "The change takes effect after restarting the app.",
     "micaUnsupported": "Requires Windows 11 (22H2 or later).",
+    "engines": {
+      "title": "Download engines",
+      "check": "Check",
+      "checkFailed": "Could not check for updates",
+      "upToDate": "Up to date",
+      "newVersion": "{{version}} available",
+      "afterRestart": "After restart",
+      "restore": "Restore bundled",
+      "autoCheck": "Check for updates at start-up"
+    },
     "storage": {
       "title": "Storage & Cache",
       "cacheTitle": "Cache",
@@ -213,6 +245,10 @@
       "title": "Advanced & System Tools",
       "customFfmpeg": "Custom FFmpeg Executable",
       "customFfmpegDesc": "Optionally specify your own ffmpeg.exe binary instead of the bundled version.",
+      "closeToTray": "Close to Tray",
+      "closeToTrayDesc": "The X button hides the window to the notification area and jobs keep running. Quit from the tray icon menu.",
+      "clipboardWatch": "Offer Copied Links",
+      "clipboardWatchDesc": "When you return to the app with a new YouTube, TikTok, X or Instagram link in the clipboard, offer to download it.",
       "confirmExit": "Confirm Exit on Active Jobs",
       "confirmExitDesc": "Ask for confirmation before closing the application if background jobs are still running.",
       "resetSettings": "Restore Default Settings",
@@ -576,18 +612,64 @@
       "error": "Speech generation failed"
     }
   },
+  "transcribe": {
+    "dropTitle": "Drop a video or recording here",
+    "dropHint": "Supported: {{formats}}",
+    "changeFile": "Change file",
+    "model": "Model",
+    "models": {
+      "base": "Base — fast",
+      "small": "Small — balanced",
+      "turbo": "Turbo — most accurate, slow"
+    },
+    "language": "Spoken language",
+    "autoLanguage": "Detect automatically",
+    "translate": "Translate to English",
+    "start": "Transcribe",
+    "done": "Transcript saved",
+    "doneDetail": "{{language}} · took {{elapsed}}",
+    "transcript": "Transcript",
+    "copied": "Text copied",
+    "noSpeech": "No speech found.",
+    "modelPromo": {
+      "title": "This Whisper model is not downloaded",
+      "desc": "Downloaded once, then works on this computer without internet.",
+      "installBtn": "Download ({{size}})",
+      "ready": "The model is ready"
+    },
+    "errors": {
+      "load": "Could not open the file",
+      "noAudio": "The file has no audio track.",
+      "run": "Transcription failed"
+    },
+    "status": {
+      "decoding": "Reading audio…",
+      "loadingModel": "Loading the model…",
+      "transcribing": "Transcribing ({{percent}}%)…",
+      "done": "Done"
+    }
+  },
   "download": {
     "status": {
       "probing": "Fetching media info…",
       "thumbnail": "Fetching thumbnail…",
       "starting": "Starting download…",
       "downloading": "Downloading…",
+      "downloadingVideo": "Downloading video ({{stream}}/{{streams}})…",
+      "downloadingAudio": "Downloading audio ({{stream}}/{{streams}})…",
       "postprocessing": "Post-processing…",
       "done": "Download finished.",
-      "batchDone": "Queue finished."
+      "batchDone": "Queue finished.",
+      "subtitles": "Fetching subtitles…"
     },
     "log": {
-      "itemFailed": "Failed to download {{url}}: {{error}}"
+      "itemFailed": "Failed to download {{url}}: {{error}}",
+      "subtitlesFailed": "Could not fetch subtitles from the site: {{error}}",
+      "subtitlesSaved": "Subtitles saved: {{files}}",
+      "noSubtitles": "The site has no subtitles in the chosen languages.",
+      "whisperMissing": "The Whisper {{model}} model is not downloaded, so no subtitles were made.",
+      "whisperStarted": "No subtitles on the site, transcribing with Whisper {{model}}…",
+      "whisperFailed": "Whisper failed: {{error}}"
     },
     "error": {
       "xLoginRequired": "X shares videos only with signed-in users. Add an X cookie file in Settings → Cookie files and try again."
@@ -628,6 +710,13 @@
     "output": "Save",
     "outdir": "Output folder",
     "template": "File name template",
+    "subtitles": {
+      "label": "Subtitles",
+      "off": "None",
+      "site": "From the site",
+      "auto": "From the site, else Whisper",
+      "modelHint": "Whisper {{model}} makes subtitles when the site has none. Change the model in Transcription."
+    },
     "download": "Download",
     "downloadAll": "Download all",
     "addToBatch": "Add to queue",
@@ -781,22 +870,63 @@
   },
   "jobs": {
     "title": "Tasks",
-    "popupTitle": "Running Tasks",
     "pending": "Queued",
     "activeCount": "{{count}} in progress",
-    "completedCount": "{{count}} completed",
-    "errorCount": "{{count}} failed",
-    "cancelledCount": "{{count}} cancelled",
-    "noActiveJobs": "No active tasks",
-    "noActiveJobsBody": "All operations have completed or none are running.",
-    "openTool": "Open",
+    "openTool": "Open tool",
     "clearFinished": "Clear finished",
+    "clearHistory": "Clear history",
+    "clearHistoryTitle": "Clear task history?",
+    "clearHistoryBody": "Finished tasks from earlier sessions will be removed from the list. Files stay on disk.",
+    "outputMissing": "The file was moved or deleted",
     "collapseDetails": "Collapse details",
     "expandDetails": "Expand details",
     "toastDone": "{{tool}}: finished",
     "toastError": "{{tool}}: failed",
     "notifyDone": "Task completed",
-    "notifyError": "Task failed"
+    "notifyError": "Task failed",
+    "retry": "Retry",
+    "openFile": "Open file",
+    "searchHistory": "Search",
+    "filterTool": "Tool",
+    "filterStatus": "Status",
+    "anyTool": "All tools",
+    "anyStatus": "Any status",
+    "noHistoryMatches": "No tasks match.",
+    "filter": "Filter",
+    "removeFilter": "Remove filter",
+    "clearFilters": "Clear filters",
+    "historyCount": "{{shown}} of {{total}}",
+    "copyPath": "Copy path",
+    "copyError": "Copy error",
+    "copied": "Copied",
+    "progressBytes": "{{done}} of {{total}}",
+    "summary": {
+      "itemsOf": "{{done}} of {{total}}",
+      "failed_one": "{{count}} failed",
+      "failed_other": "{{count}} failed",
+      "files_one": "{{count}} file",
+      "files_other": "{{count}} files",
+      "pages_one": "{{count}} page",
+      "pages_other": "{{count}} pages",
+      "rotatedPages_one": "{{count}} page rotated",
+      "rotatedPages_other": "{{count}} pages rotated",
+      "chars_one": "{{count}} character",
+      "chars_other": "{{count}} characters",
+      "frames_one": "{{count}} frame",
+      "frames_other": "{{count}} frames",
+      "groups_one": "{{count}} group",
+      "groups_other": "{{count}} groups",
+      "scanned_one": "{{count}} file scanned",
+      "scanned_other": "{{count}} files scanned",
+      "offset": "offset {{value}} s"
+    },
+    "tabNow": "Now",
+    "tabHistory": "History",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "noSessionJobs": "No tasks in this session",
+    "showHistory": "Show history",
+    "historyEmpty": "History is empty"
   },
   "palette": {
     "title": "Search",
@@ -856,6 +986,24 @@
       "needModel": "Install the AI model above to begin."
     }
   },
+  "engines": {
+    "updateTitle": "Download engine update",
+    "available": "New download engine available",
+    "update": "Update",
+    "updated": "Download engine updated",
+    "restart": "Restart",
+    "failed": "Download engine update failed",
+    "status": {
+      "installing": "Installing {{name}} {{version}}…",
+      "verifying": "Checking {{name}}…",
+      "done": "Done. Restart to use the new version."
+    },
+    "log": {
+      "installing": "Installing {{name}} {{version}}",
+      "verifying": "Checking that {{name}} loads",
+      "installed": "{{name}} {{version}} installed"
+    }
+  },
   "deps": {
     "status": {
       "installingTorch": "Installing PyTorch…",
@@ -867,7 +1015,9 @@
       "downloadingFfmpeg": "Downloading FFmpeg ({{percent}}%)…",
       "extractingFfmpeg": "Extracting FFmpeg…",
       "downloadingGifsicle": "Downloading gifsicle ({{percent}}%)…",
-      "done": "Installation complete."
+      "done": "Installation complete.",
+      "installingWhisper": "Installing faster-whisper…",
+      "downloadingWhisper": "Downloading the Whisper model ({{percent}}%)…"
     },
     "log": {
       "installingTorch": "Installing PyTorch via pip…",
@@ -882,7 +1032,10 @@
       "verifying": "Verifying model loading in PyTorch…",
       "done": "Installation completed successfully.",
       "downloadingGifsicle": "Downloading gifsicle…",
-      "gifsicleInstalled": "gifsicle is ready to use."
+      "gifsicleInstalled": "gifsicle is ready to use.",
+      "installingWhisper": "Installing faster-whisper via pip…",
+      "downloadingWhisper": "Downloading the Whisper {{model}} model…",
+      "verifyingWhisper": "Checking that the model loads…"
     },
     "installTitle": {
       "lama": "LaMa AI Model",
@@ -890,7 +1043,10 @@
       "gifsicle": "gifsicle",
       "rembg": "BiRefNet background removal model",
       "upscale_general": "Real-ESRGAN General AI Model",
-      "upscale_anime": "Real-ESRGAN Anime AI Model"
+      "upscale_anime": "Real-ESRGAN Anime AI Model",
+      "whisper_base": "Whisper Base model",
+      "whisper_small": "Whisper Small model",
+      "whisper_turbo": "Whisper Turbo model"
     }
   },
   "imageTools": {
@@ -952,10 +1108,18 @@
     "dropTitle": "Drop images to edit",
     "dropHint": "One or more files: {{formats}}"
   },
+  "clipboard": {
+    "found": "Copied link",
+    "foundMany_one": "{{count}} link for the download queue",
+    "foundMany_other": "{{count}} links for the download queue",
+    "download": "Download"
+  },
   "transfer": {
     "sendTo": "Send to…",
     "sendAllTo": "Send all to…",
     "modalTitle": "Send file to another tool",
+    "dropTitle": "Open in a tool",
+    "dropHint": "Drop to choose a tool",
     "modalDesc": "Choose a tool to continue working with this file.",
     "sourceFiles": "Selected files ({{count}})",
     "compatibleTools": "Compatible tools",

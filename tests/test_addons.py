@@ -31,6 +31,20 @@ def test_packaged_install_goes_through_the_app_into_the_addons_folder(frozen):
     assert frozen.is_dir()
 
 
+def test_install_into_a_chosen_folder_without_dependencies(frozen, tmp_path, monkeypatch):
+    target = tmp_path / "engines" / "yt-dlp.new"
+    cmd = addons.pip_install_command(["yt-dlp==2099.1.1"], target=target, no_deps=True)
+    assert cmd[cmd.index("--target") + 1] == str(target)
+    assert "--no-deps" in cmd
+    assert target.is_dir()
+
+    monkeypatch.delattr(sys, "frozen", raising=False)
+    cmd = addons.pip_install_command(["yt-dlp==2099.1.1"], target=target, no_deps=True)
+    assert cmd[:4] == [sys.executable, "-m", "pip", "install"]
+    assert cmd[cmd.index("--target") + 1] == str(target)
+    assert "--no-deps" in cmd
+
+
 def test_addons_folder_is_tied_to_the_python_version(monkeypatch):
     monkeypatch.delenv(addons.ADDONS_DIR_ENV, raising=False)
     assert addons.addons_dir().name == f"cp{sys.version_info.major}{sys.version_info.minor}"

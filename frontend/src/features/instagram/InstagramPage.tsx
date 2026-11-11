@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button, Checkbox, Field, Input, makeStyles, mergeClasses, Spinner, tokens, Tooltip } from "@fluentui/react-components";
 import {
   ArrowDownload16Filled,
@@ -125,6 +125,12 @@ export default function InstagramPage() {
     form.set({ post: null, selected: [], result: null });
     probe.start(() => api.instagram.probe(url)).catch((err) => notify.error(String(err)));
   };
+
+  useEffect(() => {
+    if (!useInstagramForm.getState().autoProbe) return; // fresh state: a repeated effect must not probe twice
+    form.set({ autoProbe: false });
+    runProbe();
+  }, [form.autoProbe]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const paste = async () => {
     try {

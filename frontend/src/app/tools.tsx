@@ -10,10 +10,13 @@ import {
   bundleIcon,
   Camera24Filled,
   Camera24Regular,
+  ClosedCaption24Filled,
+  ClosedCaption24Regular,
   Crop24Filled,
   Crop24Regular,
   DataBarHorizontal24Filled,
   DataBarHorizontal24Regular,
+  DocumentPdf24Regular,
   DocumentMultiple24Filled,
   DocumentMultiple24Regular,
   FilmstripImage24Filled,
@@ -22,6 +25,7 @@ import {
   FolderSearch24Regular,
   Gif24Filled,
   Gif24Regular,
+  Image24Regular,
   ImageArrowForward24Filled,
   ImageArrowForward24Regular,
   ImageEdit24Filled,
@@ -29,9 +33,12 @@ import {
   PersonVoice24Filled,
   PersonVoice24Regular,
   Timeline24Filled,
+  TextT24Regular,
   Timeline24Regular,
+  Video24Regular,
   Wand24Filled,
   Wand24Regular,
+  Wrench24Regular,
   type FluentIcon,
 } from "@fluentui/react-icons";
 import {
@@ -66,6 +73,17 @@ export const CATEGORY_ACCENTS: Record<CategoryId, string> = {
   generators: "#0e9aa7",
 };
 
+/** Shown next to the category name on the Home page. */
+export const CATEGORY_ICONS: Record<CategoryId, FluentIcon> = {
+  video: Video24Regular,
+  gif: Gif24Regular,
+  image: Image24Regular,
+  text: TextT24Regular,
+  pdf: DocumentPdf24Regular,
+  system: Wrench24Regular,
+  generators: DataBarHorizontal24Regular,
+};
+
 export const SETTINGS_ACCENT = "#5b6b7f";
 
 export const TOOLS: ToolDefinition[] = [
@@ -81,6 +99,7 @@ export const TOOLS: ToolDefinition[] = [
   { id: "upscale", category: "image", icon: bundleIcon(ArrowMaximize24Filled, ArrowMaximize24Regular), accent: CATEGORY_ACCENTS.image, accepts: { image: true } },
   { id: "watermark", category: "image", icon: bundleIcon(ImageEdit24Filled, ImageEdit24Regular), accent: CATEGORY_ACCENTS.image, accepts: { image: true } },
   { id: "tts", category: "text", icon: bundleIcon(PersonVoice24Filled, PersonVoice24Regular), accent: CATEGORY_ACCENTS.text },
+  { id: "transcribe", category: "text", icon: bundleIcon(ClosedCaption24Filled, ClosedCaption24Regular), accent: CATEGORY_ACCENTS.text, accepts: { video: true } },
   { id: "pdf", category: "pdf", icon: bundleIcon(DocumentMultiple24Filled, DocumentMultiple24Regular), accent: CATEGORY_ACCENTS.pdf, accepts: { pdf: true } },
   { id: "pdf_compress", category: "pdf", icon: DocumentCompress24, accent: CATEGORY_ACCENTS.pdf, accepts: { pdf: true } },
   { id: "pdf_split", category: "pdf", icon: DocumentSplit24, accent: CATEGORY_ACCENTS.pdf, accepts: { pdf: true } },

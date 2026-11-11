@@ -16,10 +16,24 @@ export interface Settings {
   completionSound: boolean;
   customFfmpegPath: string;
   confirmExitOnActiveJobs: boolean;
+  /** X hides the window to the notification area; jobs keep running. */
+  closeToTray: boolean;
+  /** Offer a newly copied video link when the window is activated. */
+  clipboardWatch: boolean;
+  /** The last link offered, so the same one is not offered twice. */
+  clipboardLastLink: string;
   /** App version whose release notes the user was last pointed to; empty on a fresh install. */
   lastSeenVersion: string;
+  /** Look for newer download engines at start-up, at most once a day. */
+  engineUpdateCheck: boolean;
+  /** Unix time (seconds) of the last look. */
+  engineLastCheck: number;
   /** Last output settings used by the GIF tools. */
   gifOutput?: GifOutputOptions;
+  /** Last options used by the Transcription tool. */
+  transcribe?: TranscribeOptions;
+  /** Subtitles saved next to downloads. */
+  downloadSubtitles?: SubtitleMode;
 }
 
 export interface StorageInfo {
@@ -66,6 +80,26 @@ export interface AppInfo {
   micaSupported?: boolean;
 }
 
+/** Translated texts for the tray menu and native prompts, which the backend cannot translate. */
+export interface ShellLabels {
+  open: string;
+  quit: string;
+  backgroundTitle: string;
+  backgroundBody: string;
+  quitConfirmTitle: string;
+  quitConfirmBody: string;
+  clipboard: string;
+  clipboardEmpty: string;
+}
+
+/** A copied link and the download tool that handles it (backend/core/clipboard.py). */
+export interface ClipboardLink {
+  url: string;
+  target: "download" | "instagram";
+  /** Every copied video link when there are several; they go to the download queue together. */
+  urls?: string[];
+}
+
 export interface Dependency {
   id: "ffmpeg" | "mediainfo" | "lama" | string;
   ok: boolean;
@@ -74,6 +108,20 @@ export interface Dependency {
   required: boolean;
   installable?: boolean;
   sizeEstimate?: string;
+}
+
+/** A download engine (yt-dlp, gallery-dl) that can be updated without a new app release. */
+export interface EngineInfo {
+  id: string;
+  /** Version this app instance runs. */
+  version: string | null;
+  /** Newest version on PyPI at the last check. */
+  latest: string | null;
+  updateAvailable: boolean;
+  /** An update or restore takes effect after a restart. */
+  restartRequired: boolean;
+  /** The next start uses a downloaded copy instead of the bundled one. */
+  downloaded: boolean;
 }
 
 export type JobStatus = "running" | "done" | "error" | "cancelled";
@@ -89,6 +137,41 @@ export interface JobInfo {
   percent: number | null;
   message: string | null;
   params: Record<string, unknown>;
+  /** What the job works on, sent once known (ctx.describe): thumb, height, ext, length, uploader, site. */
+  meta?: JobMeta;
+  /** A failed job can be run again with the same settings (api.jobs.retry). */
+  retryable?: boolean;
+}
+
+export interface JobMeta {
+  /** Small data-URL thumbnail shown instead of the tool icon. */
+  thumb?: string;
+  height?: number;
+  ext?: string;
+  /** Media length in seconds. */
+  length?: number;
+  uploader?: string;
+  site?: string;
+}
+
+/** A finished job kept across restarts (backend/core/history.py). */
+export interface HistoryEntry {
+  id: string;
+  kind: string;
+  title: string;
+  status: Exclude<JobStatus, "running">;
+  startedAt: number;
+  finishedAt: number | null;
+  error: string | null;
+  /** Files the job wrote, or its output folder. */
+  outputs: string[];
+  /** Whether the first output still exists. */
+  available: boolean;
+  /** Whether the job wrote one file (not a folder) that still exists. */
+  singleFile?: boolean;
+  /** Numbers from the result the job card summarises (backend/core/history.py STAT_KEYS). */
+  stats?: Record<string, unknown>;
+  meta?: JobMeta;
 }
 
 export interface LogEntry {
@@ -112,11 +195,15 @@ export interface BridgeEvents {
   "job:progress": JobProgressEvent;
   "job:log": LogEntry & { jobId: string };
   "job:partial": { jobId: string; data: unknown };
+  "job:meta": { jobId: string; meta: JobMeta };
   "job:done": { jobId: string; result: unknown };
   "job:error": { jobId: string; error: string };
   "job:cancelled": { jobId: string };
+  "jobs:history": HistoryEntry;
+  "clipboard:link": ClipboardLink;
   "files:dropped": { paths: string[] };
   "app:mica": { active: boolean };
+  "engines:update": { engines: EngineInfo[] };
 }
 
 export type BridgeEventName = keyof BridgeEvents;
@@ -283,6 +370,59 @@ export interface VideoToGifResult {
   frames: number;
   duration: number;
   fit: GifFit | null;
+}
+
+export type WhisperModelId = "base" | "small" | "turbo";
+export type TranscriptFormat = "srt" | "vtt" | "txt";
+
+export interface WhisperModelInfo {
+  id: WhisperModelId;
+  /** Dependency id passed to `system.install_dependency`. */
+  depId: string;
+  size: number;
+  ready: boolean;
+  /** Whether the model can translate speech into English. */
+  translate: boolean;
+}
+
+/** off, the site's own subtitles, or the site's with Whisper when it has none. */
+export type SubtitleMode = "off" | "site" | "auto";
+
+export interface DownloadSubtitles {
+  mode: SubtitleMode;
+  /** Languages asked from the site, in order of preference. */
+  languages: string[];
+  model: WhisperModelId;
+  /** Spoken language for Whisper; empty detects it. */
+  language: string;
+}
+
+export interface TranscribeOptions {
+  model: WhisperModelId;
+  /** ISO 639-1 code; empty detects the language. */
+  language: string;
+  format: TranscriptFormat;
+  translate: boolean;
+}
+
+export interface TranscribeParams extends TranscribeOptions {
+  path: string;
+  outPath: string;
+}
+
+export interface TranscriptSegment {
+  start: number;
+  end: number;
+  text: string;
+}
+
+export interface TranscribeResult {
+  outPath: string;
+  format: TranscriptFormat;
+  language: string;
+  duration: number;
+  elapsed: number;
+  segments: TranscriptSegment[];
 }
 
 export interface AnimationInfo {

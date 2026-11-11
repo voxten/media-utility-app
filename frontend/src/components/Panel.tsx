@@ -10,7 +10,7 @@ const useStyles = makeStyles({
     gap: "16px",
     padding: "20px",
     borderRadius: tokens.borderRadiusXLarge,
-    backgroundColor: tokens.colorNeutralBackground2,
+    backgroundColor: tokens.colorNeutralCardBackground,
     border: `1px solid ${tokens.colorNeutralStroke3}`,
     minWidth: 0,
     boxSizing: "border-box",

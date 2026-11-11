@@ -11,7 +11,7 @@ import importlib
 import os
 import sys
 from pathlib import Path
-from typing import List, Sequence
+from typing import List, Optional, Sequence
 
 from backend.core.paths import app_data_dir
 
@@ -45,12 +45,19 @@ def activate_addons() -> None:
     importlib.invalidate_caches()
 
 
-def pip_install_command(packages: Sequence[str]) -> List[str]:
-    """Command line that installs ``packages`` where the running app can import them."""
+def pip_install_command(packages: Sequence[str], target: Optional[Path] = None, no_deps: bool = False) -> List[str]:
+    """Command line that installs ``packages`` where the running app can import them.
+
+    ``target`` installs into that folder instead (also from source); ``no_deps`` leaves out
+    dependencies the app already ships.
+    """
     common = ["--disable-pip-version-check", "--no-warn-script-location"]
+    if no_deps:
+        common.append("--no-deps")
     if not is_frozen():
-        return [sys.executable, "-m", "pip", "install", *common, *packages]
-    folder = addons_dir()
+        location = ["--target", str(target)] if target is not None else []
+        return [sys.executable, "-m", "pip", "install", *common, *location, *packages]
+    folder = target if target is not None else addons_dir()
     folder.mkdir(parents=True, exist_ok=True)
     return [
         sys.executable,

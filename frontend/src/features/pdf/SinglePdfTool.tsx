@@ -6,6 +6,7 @@ import { Button, Caption1, makeStyles, tokens } from "@fluentui/react-components
 import { ArrowRight16Regular, Delete16Regular, DocumentPdf24Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { ActionBar } from "../../components/ActionBar";
+import { Columns } from "../../components/Columns";
 import { DropZone } from "../../components/DropZone";
 import { Panel } from "../../components/Panel";
 import { api } from "../../lib/bridge";
@@ -65,57 +66,65 @@ export function SinglePdfTool({ toolId, file, onFileChange, job, onCancel, actio
     if (picked) onFileChange(picked);
   };
 
+  const dropZone = (
+    <DropZone
+      compact={!!file}
+      fill={!file}
+      icon={DocumentPdf24Regular}
+      title={file ? t("pdf.dropChange") : t("pdf.dropSingleTitle")}
+      hint={t("pdf.dropSingleHint")}
+      accept={PDF_EXTENSIONS}
+      onFiles={(files) => files[0] && onFileChange(files[0])}
+      onBrowse={browse}
+    />
+  );
+
+  const filePanel = file && (
+    <Panel
+      title={fileName(file)}
+      actions={
+        <>
+          {!result && (
+            <Button
+              appearance="subtle"
+              icon={<ArrowRight16Regular />}
+              onClick={() => useTransferStore.getState().openModal([file], toolId)}
+            >
+              {t("transfer.sendTo")}
+            </Button>
+          )}
+          <Button appearance="subtle" icon={<Delete16Regular />} onClick={() => onFileChange(null)}>
+            {t("common.remove")}
+          </Button>
+        </>
+      }
+    >
+      <Caption1 className={styles.muted}>
+        {pages.length && !loading ? `${dirName(file)} · ${t("pdf.pageCount", { count: pages.length })}` : dirName(file)}
+      </Caption1>
+      {children}
+      {result}
+    </Panel>
+  );
+
   return (
     <>
-      <DropZone
-        compact={!!file}
-        icon={DocumentPdf24Regular}
-        title={file ? t("pdf.dropChange") : t("pdf.dropSingleTitle")}
-        hint={t("pdf.dropSingleHint")}
-        accept={PDF_EXTENSIONS}
-        onFiles={(files) => files[0] && onFileChange(files[0])}
-        onBrowse={browse}
-      />
-
-      {file && (
-        <Panel
-          title={fileName(file)}
-          actions={
-            <>
-              {!result && (
-                <Button
-                  appearance="subtle"
-                  icon={<ArrowRight16Regular />}
-                  onClick={() => useTransferStore.getState().openModal([file], toolId)}
-                >
-                  {t("transfer.sendTo")}
-                </Button>
-              )}
-              <Button appearance="subtle" icon={<Delete16Regular />} onClick={() => onFileChange(null)}>
-                {t("common.remove")}
-              </Button>
-            </>
-          }
-        >
-          <Caption1 className={styles.muted}>
-            {pages.length && !loading ? `${dirName(file)} · ${t("pdf.pageCount", { count: pages.length })}` : dirName(file)}
-          </Caption1>
-          {children}
-          {result}
-        </Panel>
-      )}
-
-      {file && (
-        <Panel title={t("pdf.pagesTitle")} actions={pageMarks?.toolbar}>
-          <PdfPageGrid
-            pages={pages}
-            loading={loading}
-            selected={pageRange ? selected : undefined}
-            marks={pageMarks?.marks}
-            onToggle={pageMarks?.onToggle ?? (pageRange ? togglePage : undefined)}
-            onPreview={preview.show}
-          />
-        </Panel>
+      {file ? (
+        <Columns side={filePanel}>
+          {dropZone}
+          <Panel title={t("pdf.pagesTitle")} actions={pageMarks?.toolbar}>
+            <PdfPageGrid
+              pages={pages}
+              loading={loading}
+              selected={pageRange ? selected : undefined}
+              marks={pageMarks?.marks}
+              onToggle={pageMarks?.onToggle ?? (pageRange ? togglePage : undefined)}
+              onPreview={preview.show}
+            />
+          </Panel>
+        </Columns>
+      ) : (
+        dropZone
       )}
       {preview.dialog}
 

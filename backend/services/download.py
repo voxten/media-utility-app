@@ -1,25 +1,32 @@
 """YouTube / X (Twitter) / generic video downloads via yt-dlp."""
 
+import glob
 import math
 from pathlib import Path
 import re
 import threading
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import yt_dlp
 from yt_dlp.extractor.tiktok import TikTokIE, TikTokUserIE
 from yt_dlp.networking import Request
+from yt_dlp.postprocessor import PostProcessor
 from yt_dlp.utils import ExtractorError, mimetype2ext, traverse_obj, url_or_none
 
-from backend.core import thumbs
+from backend.core import thumbs, whisper_models
 from backend.core.jobs import JobCancelled, JobContext
+from backend.services import transcribe
 
 AUTO_FORMAT = "bestvideo+bestaudio/best"
 AUTO_FORMAT_YOUTUBE = AUTO_FORMAT
 AUTO_FORMAT_GENERIC = AUTO_FORMAT
 AUDIO_CODECS = ("mp3", "wav", "m4a", "flac", "aac", "opus")
 DEFAULT_TEMPLATE = "{title}.{ext}"
+SUBTITLE_MODES = ("site", "auto")
+# Share of a download's progress bar left for subtitles (fetching them or transcribing with Whisper).
+SUBTITLE_SHARE = 0.3
+NO_SUBTITLE_EXTS = (".jpg", ".jpeg", ".png", ".webp", ".gif")
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*[a-zA-Z]")
 
 
@@ -32,6 +39,9 @@ def clean_error_message(msg: str) -> str:
 # streams fail with HTTP 403 part-way through, so allow every runtime yt-dlp can use.
 JS_RUNTIMES = ("deno", "node", "bun", "quickjs")
 TIKTOK_PAGE_ATTEMPTS = 4
+# HLS/DASH streams (X, many generic sites) arrive as thousands of few-second fragments; fetched one
+# at a time, a download is bound by per-request latency instead of bandwidth.
+FRAGMENT_WORKERS = 8
 
 
 class TikTokProfileIE(TikTokUserIE):
@@ -153,7 +163,10 @@ def _base_opts(url: str, cookies: Dict[str, Optional[str]]) -> Dict[str, Any]:
         "retries": 5,
         "fragment_retries": 10,
         "sleep_interval_requests": 0.5,
-        "retry_sleep_functions": {"http": lambda n: min(3.0 * (n + 1), 30.0)},
+        "retry_sleep_functions": {
+            "http": lambda n: min(3.0 * (n + 1), 30.0),
+            "fragment": lambda n: min(1.0 * (n + 1), 10.0),
+        },
         "js_runtimes": {name: {} for name in JS_RUNTIMES},
     }
     cookie = cookie_file_for(url, cookies)
@@ -239,7 +252,7 @@ def classify_formats(url: str, raw_formats: List[Dict[str, Any]]) -> Dict[str, L
     return {"video": [auto, *by_size(video)], "audio": by_size(audio), "muxed": [auto, *by_size(muxed)]}
 
 
-def _fetch_thumbnail(url: Optional[str]) -> Optional[str]:
+def _fetch_thumbnail(url: Optional[str], size: Tuple[int, int] = (480, 270)) -> Optional[str]:
     if not url:
         return None
     try:
@@ -247,7 +260,7 @@ def _fetch_thumbnail(url: Optional[str]) -> Optional[str]:
 
         resp = requests.get(url, timeout=5)
         if resp.status_code == 200 and resp.content:
-            return thumbs.to_data_url(resp.content, (480, 270))
+            return thumbs.to_data_url(resp.content, size)
     except Exception:  # noqa: BLE001 - a missing thumbnail is not an error
         pass
     return None
@@ -328,16 +341,84 @@ def probe(ctx: JobContext, url: str, cookies: Dict[str, Optional[str]]) -> Dict[
     }
 
 
+# Thumbnail size on the job card; small enough to keep in the job history.
+CARD_THUMB_SIZE = (128, 72)
+
+
+def media_summary(info: Dict[str, Any]) -> Dict[str, Any]:
+    """What the job card shows about a downloaded video: resolution, container, length, author, site."""
+    height = info.get("height")
+    if not height:
+        heights = [f.get("height") for f in info.get("requested_formats") or [] if f.get("height")]
+        height = max(heights) if heights else None
+    return {
+        "height": height,
+        "ext": info.get("ext"),
+        "length": info.get("duration"),
+        "uploader": info.get("uploader") or info.get("channel"),
+        "site": info.get("extractor_key"),
+    }
+
+
+def _stream_size(fmt: Dict[str, Any]) -> float:
+    return float(fmt.get("filesize") or fmt.get("filesize_approx") or 0)
+
+
+def _is_audio_only(fmt: Dict[str, Any]) -> bool:
+    return fmt.get("vcodec") == "none" and fmt.get("acodec") not in (None, "none")
+
+
+class _InfoPP(PostProcessor):
+    """Runs once the formats are chosen, before anything is downloaded."""
+
+    def __init__(self, hook: "_ProgressHook") -> None:
+        super().__init__()
+        self.hook = hook
+
+    def run(self, info: Dict[str, Any]):  # type: ignore[override]
+        self.hook.set_info(info)
+        return [], info
+
+
 class _ProgressHook:
-    """yt-dlp progress hook forwarding to a JobContext; raising here aborts the download."""
+    """yt-dlp progress hook forwarding to a JobContext; raising here aborts the download.
+
+    A video downloaded as separate video and audio streams reports each stream from 0 to 100%;
+    the hook weighs them by size so the job's percent keeps rising across both.
+    """
 
     def __init__(self, ctx: JobContext, scale: float = 1.0, offset: float = 0.0, item: Optional[int] = None):
         self.ctx = ctx
         self.scale = scale
         self.offset = offset
         self.item = item
+        self.tmpfiles: Set[str] = set()
+        self.streams: List[Dict[str, Any]] = []
+
+    def set_info(self, info: Dict[str, Any]) -> None:
+        self.streams = list(info.get("requested_formats") or [])
+        if self.item is not None:
+            return
+        self.ctx.describe(**media_summary(info))
+        thumb_url = info.get("thumbnail")
+        if thumb_url:
+            threading.Thread(target=self._send_thumb, args=(thumb_url,), daemon=True).start()
+
+    def _send_thumb(self, url: str) -> None:
+        thumb = _fetch_thumbnail(url, CARD_THUMB_SIZE)
+        if thumb and not self.ctx.cancelled:
+            self.ctx.describe(thumb=thumb)
+
+    def _stream_index(self, d: Dict[str, Any]) -> Optional[int]:
+        format_id = (d.get("info_dict") or {}).get("format_id")
+        for index, fmt in enumerate(self.streams):
+            if fmt.get("format_id") == format_id:
+                return index
+        return None
 
     def __call__(self, d: Dict[str, Any]) -> None:
+        if d.get("tmpfilename"):
+            self.tmpfiles.add(d["tmpfilename"])
         if self.ctx.cancelled:
             raise JobCancelled()
         status = d.get("status")
@@ -345,17 +426,37 @@ class _ProgressHook:
             downloaded = d.get("downloaded_bytes") or 0
             total = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
             item_percent = downloaded * 100 / total if total else 0
-            stats = {
+            stats: Dict[str, Any] = {
                 "downloaded": downloaded,
                 "total": total,
                 "speed": d.get("speed"),
                 "eta": d.get("eta"),
                 "itemPercent": item_percent,
             }
+            message = "download.status.downloading"
+            params: Dict[str, Any] = {}
+            stream = self._stream_index(d) if len(self.streams) > 1 else None
+            if stream is not None:
+                sizes = [_stream_size(f) for f in self.streams]
+                sizes[stream] = float(total) or sizes[stream]
+                if all(sizes):
+                    before = sum(sizes[:stream])
+                    stats["downloaded"] = before + downloaded
+                    stats["total"] = sum(sizes)
+                    item_percent = (before + sizes[stream] * item_percent / 100) * 100 / sum(sizes)
+                else:
+                    item_percent = (stream + item_percent / 100) * 100 / len(self.streams)
+                stats["itemPercent"] = item_percent
+                audio = _is_audio_only(self.streams[stream])
+                message = "download.status.downloadingAudio" if audio else "download.status.downloadingVideo"
+                params = {"stream": stream + 1, "streams": len(self.streams)}
             if self.item is not None:
                 stats["item"] = self.item
-            self.ctx.progress(self.offset + item_percent * self.scale, "download.status.downloading", **stats)
+            self.ctx.progress(self.offset + item_percent * self.scale, message, params, **stats)
         elif status == "finished":
+            stream = self._stream_index(d) if len(self.streams) > 1 else None
+            if stream is not None and stream < len(self.streams) - 1:
+                return
             self.ctx.progress(None if self.item is None else self.offset + 100 * self.scale, "download.status.postprocessing")
 
 
@@ -369,7 +470,12 @@ def _download_opts(
     hook: _ProgressHook,
 ) -> Dict[str, Any]:
     opts = _base_opts(url, cookies)
-    opts.update({"format": format_id, "outtmpl": out_template, "progress_hooks": [hook]})
+    opts.update({
+        "format": format_id,
+        "outtmpl": out_template,
+        "progress_hooks": [hook],
+        "concurrent_fragment_downloads": FRAGMENT_WORKERS,
+    })
     if mode == "audio":
         opts["postprocessors"] = [
             {"key": "FFmpegExtractAudio", "preferredcodec": audio_codec, "preferredquality": "192"}
@@ -464,16 +570,45 @@ def _download_photos(ydl: yt_dlp.YoutubeDL, info: Dict[str, Any], hook: "_Progre
     return {"title": info.get("title") or "", "path": str(paths[0]), "size": total}
 
 
+def _remove_fragment_leftovers(hook: _ProgressHook) -> None:
+    """Delete the ``<name>.part-FragN`` files a cancelled parallel fragment download leaves behind.
+
+    The ``.part`` and ``.ytdl`` files stay so that downloading the same URL again resumes.
+    """
+    for tmpfile in hook.tmpfiles:
+        path = Path(tmpfile)
+        for leftover in path.parent.glob(f"{glob.escape(path.name)}-Frag*"):
+            leftover.unlink(missing_ok=True)
+
+
+def _close_fragment_streams(exc: BaseException) -> None:
+    """Close the ``.part`` file an interrupted yt-dlp fragment download leaves open.
+
+    yt-dlp's fragment downloader closes its output stream only on success, so the open handle lives
+    on in the traceback; on Windows it blocks renaming the ``.part`` when the same URL is downloaded
+    again in this session. Its per-download state is a dict holding ``dest_stream``.
+    """
+    tb = exc.__traceback__
+    while tb is not None:
+        for value in list(tb.tb_frame.f_locals.values()):
+            stream = value.get("dest_stream") if isinstance(value, dict) else None
+            if stream is not None and hasattr(stream, "close"):
+                stream.close()
+        tb = tb.tb_next
+
+
 def _run_ydl(
     ctx: JobContext, url: str, opts: Dict[str, Any], target_ext: Optional[str] = None, photos: bool = False
 ) -> Dict[str, Any]:
     """Download ``url``; with ``photos``, a TikTok photo post saves its images instead of its soundtrack."""
+    hook = opts["progress_hooks"][0]
     try:
         with UniqueYoutubeDL(opts, target_ext=target_ext) as ydl:
+            ydl.add_post_processor(_InfoPP(hook), when="video")
             if TikTokPostIE.suitable(url):
                 info = _extract(ydl, url, download=False, process=False)
                 if photos and info.get(TIKTOK_PHOTOS_KEY):
-                    return _download_photos(ydl, info, opts["progress_hooks"][0])
+                    return _download_photos(ydl, info, hook)
                 info = ydl.process_ie_result(info, download=True)
             else:
                 info = ydl.extract_info(url, download=True)
@@ -485,13 +620,112 @@ def _run_ydl(
                     p = cand
                     path = str(cand)
             file_size = p.stat().st_size if p.is_file() else (info.get("filesize") or info.get("filesize_approx"))
-            return {"title": info.get("title") or "", "path": path, "size": file_size}
-    except JobCancelled:
+            summary = media_summary(info)
+            if p.suffix:
+                summary["ext"] = p.suffix.lstrip(".").lower()
+            return {
+                "title": info.get("title") or "",
+                "path": path,
+                "size": file_size,
+                "height": summary["height"],
+                "ext": summary["ext"],
+                "length": summary["length"],
+            }
+    except JobCancelled as exc:
+        _close_fragment_streams(exc)
+        _remove_fragment_leftovers(hook)
         raise
     except Exception as exc:
+        _close_fragment_streams(exc)
         if ctx.cancelled:
+            _remove_fragment_leftovers(hook)
             raise JobCancelled()
         raise RuntimeError(explain_error(url, opts, exc)) from exc
+
+
+def _wants_subtitles(subtitles: Optional[Dict[str, Any]]) -> bool:
+    return bool(subtitles) and subtitles.get("mode") in SUBTITLE_MODES
+
+
+def _fetch_site_subtitles(
+    url: str, media_path: Path, languages: List[str], cookies: Dict[str, Optional[str]]
+) -> List[str]:
+    """Saves the site's own subtitles (made by people, else automatic) as ``<name>.<lang>.srt``."""
+    stem = str(media_path.with_suffix("")).replace("%", "%%")
+    opts = _base_opts(url, cookies)
+    opts.update({
+        "skip_download": True,
+        "noprogress": True,
+        "writesubtitles": True,
+        "writeautomaticsub": True,
+        "subtitleslangs": languages,
+        "subtitlesformat": "srt/vtt/best",
+        "outtmpl": {"default": f"{stem}.%(ext)s"},
+        "postprocessors": [{"key": "FFmpegSubtitlesConvertor", "format": "srt"}],
+    })
+    pattern = f"{glob.escape(str(media_path.with_suffix('')))}.*.srt"
+    before = set(glob.glob(pattern))
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        _extract(ydl, url, download=True)
+    return sorted(set(glob.glob(pattern)) - before)
+
+
+def add_subtitles(
+    ctx: JobContext,
+    url: str,
+    media_path: str,
+    subtitles: Dict[str, Any],
+    cookies: Dict[str, Optional[str]],
+    progress_start: float,
+    progress_span: float,
+) -> List[str]:
+    """Subtitles for a downloaded file: from the site, else (mode ``auto``) transcribed with Whisper.
+
+    Failures are logged as warnings; the download itself has already succeeded.
+    """
+    path = Path(media_path)
+    if not _wants_subtitles(subtitles) or not path.is_file() or path.suffix.lower() in NO_SUBTITLE_EXTS:
+        return []
+    ctx.progress(progress_start, "download.status.subtitles")
+    languages = [lang for lang in subtitles.get("languages") or [] if lang] or ["en"]
+    try:
+        files = _fetch_site_subtitles(url, path, languages, cookies)
+    except JobCancelled:
+        raise
+    except Exception as exc:  # noqa: BLE001 - subtitles are optional
+        ctx.check_cancelled()
+        files = []
+        ctx.log("download.log.subtitlesFailed", "warning", error=clean_error_message(str(exc)))
+    if files:
+        ctx.log("download.log.subtitlesSaved", files=", ".join(Path(f).name for f in files))
+        return files
+    if subtitles.get("mode") != "auto":
+        ctx.log("download.log.noSubtitles")
+        return []
+
+    model = subtitles.get("model") or "small"
+    if not whisper_models.is_ready(model):
+        ctx.log("download.log.whisperMissing", "warning", model=model)
+        return []
+    ctx.log("download.log.whisperStarted", model=model)
+    try:
+        result = transcribe.transcribe_file(
+            ctx,
+            str(path),
+            model,
+            language=subtitles.get("language") or None,
+            progress_start=progress_start,
+            progress_span=progress_span,
+        )
+    except JobCancelled:
+        raise
+    except Exception as exc:  # noqa: BLE001 - keep the downloaded file
+        ctx.log("download.log.whisperFailed", "warning", error=str(exc))
+        return []
+    target = path.with_suffix(f".{result['language']}.srt")
+    transcribe.write_output("srt", str(target), result["segments"], result["words"])
+    ctx.log("download.log.subtitlesSaved", files=target.name)
+    return [str(target)]
 
 
 def download(
@@ -503,12 +737,17 @@ def download(
     mode: str = "video",
     audio_codec: str = "mp3",
     cookies: Optional[Dict[str, Optional[str]]] = None,
+    subtitles: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """Download one URL. ``mode`` is ``video`` | ``audio`` | ``muxed``."""
+    """Download one URL. ``mode`` is ``video`` | ``audio`` | ``muxed``.
+
+    ``subtitles`` is ``{mode: off | site | auto, languages, model, language}`` (see add_subtitles).
+    """
     t0 = time.monotonic()
     url = sanitize_x_url(url)
     Path(outdir).expanduser().mkdir(parents=True, exist_ok=True)
     target_codec = audio_codec if audio_codec in AUDIO_CODECS else "mp3"
+    share = SUBTITLE_SHARE if _wants_subtitles(subtitles) else 0.0
     opts = _download_opts(
         url,
         resolve_format(url, format_id, mode),
@@ -516,14 +755,19 @@ def download(
         mode,
         target_codec,
         cookies or {},
-        _ProgressHook(ctx),
+        _ProgressHook(ctx, scale=1.0 - share),
     )
     target_ext = target_codec if mode == "audio" else "mp4"
     ctx.progress(0, "download.status.starting")
     result = _run_ydl(ctx, url, opts, target_ext=target_ext, photos=mode != "audio")
+    subtitle_files: List[str] = []
+    if share:
+        subtitle_files = add_subtitles(
+            ctx, url, result["path"], subtitles or {}, cookies or {}, 100 * (1 - share), 100 * share
+        )
     duration = round(time.monotonic() - t0, 1)
     ctx.progress(100, "download.status.done")
-    return {**result, "duration": duration, "outdir": str(Path(outdir).expanduser())}
+    return {**result, "subtitles": subtitle_files, "duration": duration, "outdir": str(Path(outdir).expanduser())}
 
 
 def expand_batch_urls(
@@ -628,6 +872,7 @@ def download_batch(
     outdir: str,
     filename_template: str = DEFAULT_TEMPLATE,
     cookies: Optional[Dict[str, Optional[str]]] = None,
+    subtitles: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Download several URLs with best quality; per-item state is streamed via ``ctx.partial``."""
     ctx.progress(None, "download.status.probing")
@@ -653,13 +898,20 @@ def download_batch(
 
             url = current_item["url"]
             ctx.partial({"index": index, "url": url, "title": current_item["title"], "status": "running"})
-            hook = _ProgressHook(ctx, scale=1 / max(1, total), offset=index * 100 / max(1, total), item=index)
+            slot = 100 / max(1, total)
+            share = SUBTITLE_SHARE if _wants_subtitles(subtitles) else 0.0
+            hook = _ProgressHook(ctx, scale=(1 - share) / max(1, total), offset=index * slot, item=index)
             fmt = AUTO_FORMAT
             opts = _download_opts(url, fmt, template, "video", "mp3", cookies or {}, hook)
 
             t0 = time.monotonic()
             try:
                 info = _run_ydl(ctx, url, opts, target_ext="mp4", photos=True)
+                if share:
+                    info["subtitles"] = add_subtitles(
+                        ctx, url, info["path"], subtitles or {}, cookies or {},
+                        index * slot + slot * (1 - share), slot * share,
+                    )
                 duration = round(time.monotonic() - t0, 1)
                 entry = {
                     "index": index,
