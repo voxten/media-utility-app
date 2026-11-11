@@ -144,7 +144,8 @@ def load_upscale_model(model_id: str, weights_path: str) -> Tuple[nn.Module, str
     else:
         raise ValueError(f"Unknown upscale model ID: {model_id}")
 
-    ckpt = torch.load(weights_path, map_location="cpu", weights_only=False)
+    # weights_only refuses pickled code, so a tampered .pth cannot run anything while loading.
+    ckpt = torch.load(weights_path, map_location="cpu", weights_only=True)
     if isinstance(ckpt, dict):
         if "params_ema" in ckpt:
             state_dict = ckpt["params_ema"]

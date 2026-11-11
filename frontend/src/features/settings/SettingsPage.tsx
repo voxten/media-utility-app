@@ -679,7 +679,9 @@ function AdvancedSection() {
             value={settings.customFfmpegPath || ""}
             placeholder={t("common.notSet")}
             clearable
-            onChange={(customFfmpegPath) => update({ customFfmpegPath })}
+            onChange={(customFfmpegPath) =>
+              update({ customFfmpegPath }).catch(() => notify.error(t("settings.advanced.customFfmpegInvalid")))
+            }
           />
         </SettingRow>
 

@@ -27,7 +27,7 @@ from backend.core.paths import app_data_dir
 # Lets tests and manual checks point the app at a scratch folder.
 ENGINES_DIR_ENV = "MEDIASTUDIO_ENGINES_DIR"
 CHECK_FLAG = "--check-engines"
-PYPI_URL = "https://pypi.org/pypi/{}/json"
+PYPI_URL = "https://pypi.org/pypi/{}/json"  # "<name>" for the newest release, "<name>/<version>" for one
 CHECK_INTERVAL_S = 24 * 3600
 
 
@@ -179,19 +179,49 @@ def _pins(requires_dist: Sequence[str], names: Sequence[str]) -> Dict[str, str]:
     return pins
 
 
-def check_updates(settings: Any, fetch: Callable[[str], Dict[str, Any]] = _fetch_pypi) -> List[Dict[str, Any]]:
+def _sha256s(release: Dict[str, Any]) -> List[str]:
+    """SHA-256 of every file PyPI lists for a release (wheel and source archive)."""
+    return sorted(
+        {
+            item["digests"]["sha256"]
+            for item in release.get("urls") or []
+            if not item.get("yanked") and (item.get("digests") or {}).get("sha256")
+        }
+    )
+
+
+def _latest_release(engine: Engine, fetch: Callable[[str], Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """Newest version of an engine with its companions pinned and the SHA-256 of every file pip may fetch."""
+    release = fetch(engine.id)
+    info = release.get("info") or {}
+    version = info.get("version")
+    if not version:
+        return None
+    pins = _pins(info.get("requires_dist") or [], engine.companions)
+    hashes = {engine.id: _sha256s(release)}
+    for name in engine.companions:
+        if name in pins:
+            companion = fetch(f"{name}/{pins[name]}")
+        else:
+            companion = fetch(name)
+            pins[name] = (companion.get("info") or {}).get("version") or ""
+        hashes[name] = _sha256s(companion)
+    return {"version": version, "pins": pins, "hashes": hashes}
+
+
+def check_updates(settings: Any, fetch: Optional[Callable[[str], Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
     """Ask PyPI for the newest version of each engine and remember the answer."""
+    fetch = fetch or _fetch_pypi
     latest: Dict[str, Any] = dict(settings.get("engineLatest") or {})
     errors = []
     for engine in ENGINES:
         try:
-            info = fetch(engine.id).get("info") or {}
+            release = _latest_release(engine, fetch)
         except Exception as exc:  # noqa: BLE001 - one unreachable package must not hide the other
             errors.append(exc)
             continue
-        version = info.get("version")
-        if version:
-            latest[engine.id] = {"version": version, "pins": _pins(info.get("requires_dist") or [], engine.companions)}
+        if release:
+            latest[engine.id] = release
     if len(errors) == len(ENGINES):
         raise errors[0]
     settings.update({"engineLatest": latest, "engineLastCheck": time.time()})
@@ -206,11 +236,27 @@ def auto_check_due(settings: Any, now: Optional[float] = None) -> bool:
 
 
 def install_specs(engine: Engine, latest: Dict[str, Any]) -> List[str]:
-    """pip requirement strings for an update: the engine and its companions at their pinned versions."""
+    """Requirement lines for ``pip install --require-hashes``: the engine and its companions at their
+    pinned versions, each tied to the SHA-256 PyPI reported, so pip refuses any other file."""
     pins = latest.get("pins") or {}
-    specs = [f"{engine.id}=={latest['version']}"]
-    specs += [f"{name}=={pins[name]}" if name in pins else name for name in engine.companions]
-    return specs
+    hashes = latest.get("hashes") or {}
+    versions = {engine.id: latest.get("version"), **{name: pins.get(name) for name in engine.companions}}
+    lines = []
+    for name, version in versions.items():
+        digests = hashes.get(name) or []
+        if not version or not digests:
+            raise ValueError(f"{name}: no pinned version with SHA-256 from PyPI")
+        lines.append(" ".join([f"{name}=={version}", *(f"--hash=sha256:{d}" for d in digests)]))
+    return lines
+
+
+def has_install_specs(engine: Engine, latest: Dict[str, Any]) -> bool:
+    """False for update info saved before hashes were recorded; it needs a fresh check."""
+    try:
+        install_specs(engine, latest)
+    except ValueError:
+        return False
+    return True
 
 
 def check_command(engine_id: str, folder: Path, report: Path) -> List[str]:

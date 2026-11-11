@@ -79,3 +79,63 @@ def test_install_rembg_when_already_ready(monkeypatch):
     ctx = JobContext()
     res = deps_installer.install_dependency(ctx, "rembg")
     assert res == {"id": "rembg", "ok": True}
+
+
+class _FakeResponse:
+    def __init__(self, data: bytes) -> None:
+        self._data = data
+        self.headers = {"Content-Length": str(len(data))}
+
+    def read(self, size: int) -> bytes:
+        chunk, self._data = self._data[:size], self._data[size:]
+        return chunk
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+
+def _serve(monkeypatch, data: bytes) -> None:
+    monkeypatch.setattr(deps_installer.urllib.request, "urlopen", lambda req, timeout=0: _FakeResponse(data))
+
+
+def test_download_keeps_a_file_whose_sha256_matches(monkeypatch, tmp_path, ctx):
+    import hashlib
+
+    _serve(monkeypatch, b"model weights")
+    target = tmp_path / "models" / "model.pth"
+    expected = hashlib.sha256(b"model weights").hexdigest()
+
+    deps_installer._download_file_with_progress(ctx, "https://example.com/m", target, expected_sha256=expected.upper())
+
+    assert target.read_bytes() == b"model weights"
+
+
+def test_download_throws_away_a_file_whose_sha256_differs(monkeypatch, tmp_path, ctx):
+    _serve(monkeypatch, b"tampered")
+    target = tmp_path / "model.pth"
+
+    with pytest.raises(ValueError, match="SHA-256 mismatch"):
+        deps_installer._download_file_with_progress(ctx, "https://example.com/m", target, expected_sha256="0" * 64)
+
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_download_without_a_known_sha256_is_refused(monkeypatch, tmp_path, ctx):
+    _serve(monkeypatch, b"anything")
+    with pytest.raises(ValueError, match="No SHA-256"):
+        deps_installer._download_file_with_progress(ctx, "https://example.com/m", tmp_path / "f", expected_sha256="")
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_every_download_has_a_pinned_sha256():
+    from backend.core import whisper_models
+
+    pinned = [deps.LAMA_EXPECTED_SHA256, deps_installer.FFMPEG_WINDOWS_SHA256, deps_installer.GIFSICLE_WINDOWS_SHA256]
+    pinned += [cfg["sha256"] for cfg in deps_installer.UPSCALE_MODELS.values()]
+    for model in whisper_models.MODELS.values():
+        assert set(model.sha256) == set(model.files), model.id
+        pinned += model.sha256.values()
+    assert all(len(h) == 64 and int(h, 16) >= 0 for h in pinned)

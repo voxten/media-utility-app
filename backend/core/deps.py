@@ -10,7 +10,7 @@ from backend.core import whisper_models
 from backend.core.paths import app_data_dir, project_root
 
 LAMA_EXPECTED_SIZE = 205669692
-LAMA_EXPECTED_MD5 = "e3aa4aaa15225a33ec84f9f4bc47e500"
+LAMA_EXPECTED_SHA256 = "344c77bbcb158f17dd143070d1e789f38a66c04202311ae3a258ef66667a9ea9"
 
 
 def _has_module(name: str) -> bool:

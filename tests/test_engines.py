@@ -31,12 +31,22 @@ def settings(tmp_path):
     return Settings(tmp_path / "settings.json")
 
 
+def _digest(name):
+    return name.replace("/", "-").ljust(64, "0")[:64]
+
+
 def _pypi(versions):
+    """Fake PyPI: ``versions`` maps "<name>" or "<name>/<version>" to (version, requires_dist)."""
+
     def fetch(name):
         if isinstance(versions[name], Exception):
             raise versions[name]
         version, requires = versions[name]
-        return {"info": {"version": version, "requires_dist": requires}}
+        urls = [
+            {"digests": {"sha256": _digest(name)}, "yanked": False},
+            {"digests": {"sha256": "f" * 64}, "yanked": True},
+        ]
+        return {"info": {"version": version, "requires_dist": requires}, "urls": urls}
 
     return fetch
 
@@ -85,6 +95,7 @@ def test_an_install_during_this_run_needs_a_restart(engines_root, settings):
 def test_check_updates_remembers_latest_versions_and_pins(engines_root, settings):
     fetch = _pypi({
         "yt-dlp": ("2099.1.1", ["yt-dlp-ejs==0.9.1; extra == 'default'", "yt-dlp-ejs==0.9.1; extra == 'pin'", "certifi"]),
+        "yt-dlp-ejs/0.9.1": ("0.9.1", []),
         "gallery-dl": ("0.0.1", ["requests>=2.11.0"]),
     })
 
@@ -95,11 +106,30 @@ def test_check_updates_remembers_latest_versions_and_pins(engines_root, settings
     latest = settings.get("engineLatest")
     assert latest["yt-dlp"]["pins"] == {"yt-dlp-ejs": "0.9.1"}
     assert settings.get("engineLastCheck") > 0
-    assert engines.install_specs(engines.get_engine("yt-dlp"), latest["yt-dlp"]) == ["yt-dlp==2099.1.1", "yt-dlp-ejs==0.9.1"]
+    assert latest["yt-dlp"]["hashes"] == {"yt-dlp": [_digest("yt-dlp")], "yt-dlp-ejs": [_digest("yt-dlp-ejs/0.9.1")]}
+    assert engines.install_specs(engines.get_engine("yt-dlp"), latest["yt-dlp"]) == [
+        f"yt-dlp==2099.1.1 --hash=sha256:{_digest('yt-dlp')}",
+        f"yt-dlp-ejs==0.9.1 --hash=sha256:{_digest('yt-dlp-ejs/0.9.1')}",
+    ]
+
+
+def test_a_companion_without_a_pin_is_pinned_to_its_newest_release(engines_root, settings):
+    fetch = _pypi({"yt-dlp": ("2099.1.1", []), "yt-dlp-ejs": ("0.9.5", []), "gallery-dl": ("0.0.1", [])})
+    engines.check_updates(settings, fetch)
+    latest = settings.get("engineLatest")["yt-dlp"]
+    assert latest["pins"] == {"yt-dlp-ejs": "0.9.5"}
+    assert engines.has_install_specs(engines.get_engine("yt-dlp"), latest)
+
+
+def test_install_specs_refuse_update_info_without_hashes():
+    old = {"version": "2099.1.1", "pins": {"yt-dlp-ejs": "0.9.1"}}
+    assert not engines.has_install_specs(engines.get_engine("yt-dlp"), old)
+    with pytest.raises(ValueError, match="SHA-256"):
+        engines.install_specs(engines.get_engine("yt-dlp"), old)
 
 
 def test_check_updates_tolerates_one_unreachable_package(engines_root, settings):
-    fetch = _pypi({"yt-dlp": ("2099.1.1", []), "gallery-dl": OSError("offline")})
+    fetch = _pypi({"yt-dlp": ("2099.1.1", []), "yt-dlp-ejs": ("0.9.1", []), "gallery-dl": OSError("offline")})
     result = {e["id"]: e for e in engines.check_updates(settings, fetch)}
     assert result["yt-dlp"]["updateAvailable"]
     assert result["gallery-dl"]["latest"] is None
@@ -121,7 +151,8 @@ def test_auto_check_runs_at_most_daily_and_can_be_turned_off(settings):
 
 
 def _update_ready(settings, version="2099.1.1"):
-    settings.update({"engineLatest": {"yt-dlp": {"version": version, "pins": {"yt-dlp-ejs": "0.9.1"}}}})
+    hashes = {"yt-dlp": ["a" * 64], "yt-dlp-ejs": ["b" * 64]}
+    settings.update({"engineLatest": {"yt-dlp": {"version": version, "pins": {"yt-dlp-ejs": "0.9.1"}, "hashes": hashes}}})
 
 
 def test_update_installs_into_staging_and_swaps_it_in(engines_root, settings, ctx, monkeypatch):
@@ -130,7 +161,8 @@ def test_update_installs_into_staging_and_swaps_it_in(engines_root, settings, ct
     calls = []
 
     def fake_pip(_ctx, packages, target=None, no_deps=False):
-        calls.append((packages, target, no_deps))
+        requirements = Path(packages[-1]).read_text(encoding="utf-8").splitlines()
+        calls.append((packages[:-1], requirements, target, no_deps))
         _fake_dist(target, "yt-dlp", "2099.1.1")
 
     monkeypatch.setattr(deps_installer, "_run_pip", fake_pip)
@@ -139,9 +171,30 @@ def test_update_installs_into_staging_and_swaps_it_in(engines_root, settings, ct
     result = deps_installer.update_engines(ctx, settings)
 
     assert result["updated"] == ["yt-dlp"]
-    assert calls == [(["yt-dlp==2099.1.1", "yt-dlp-ejs==0.9.1"], engines.staging_dir("yt-dlp"), True)]
+    requirements = ["yt-dlp==2099.1.1 --hash=sha256:" + "a" * 64, "yt-dlp-ejs==0.9.1 --hash=sha256:" + "b" * 64]
+    assert calls == [(["--require-hashes", "-r"], requirements, engines.staging_dir("yt-dlp"), True)]
     assert engines.downloaded_version("yt-dlp") == "2099.1.1"
     assert sorted(p.name for p in engines_root.iterdir()) == ["yt-dlp"]
+
+
+def test_update_info_without_hashes_is_checked_again_first(engines_root, settings, ctx, monkeypatch):
+    settings.update({"engineLatest": {"yt-dlp": {"version": "2099.1.1", "pins": {"yt-dlp-ejs": "0.9.1"}}}})
+    monkeypatch.setattr(engines, "_fetch_pypi", _pypi({
+        "yt-dlp": ("2099.1.1", ["yt-dlp-ejs==0.9.1"]),
+        "yt-dlp-ejs/0.9.1": ("0.9.1", []),
+        "gallery-dl": ("0.0.1", []),
+    }))
+    installed = []
+
+    def fake_pip(_ctx, packages, target=None, no_deps=False):
+        installed.append(Path(packages[-1]).read_text(encoding="utf-8"))
+        _fake_dist(target, "yt-dlp", "2099.1.1")
+
+    monkeypatch.setattr(deps_installer, "_run_pip", fake_pip)
+    monkeypatch.setattr(deps_installer, "_verify_engine", lambda engine_id, folder: None)
+
+    assert deps_installer.update_engines(ctx, settings)["updated"] == ["yt-dlp"]
+    assert f"--hash=sha256:{_digest('yt-dlp')}" in installed[0]
 
 
 def test_a_copy_that_fails_verification_is_thrown_away(engines_root, settings, ctx, monkeypatch):

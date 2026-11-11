@@ -23,7 +23,7 @@ from backend.core import clipboard, deps, engines, ffmpeg, paths, system, win_th
 from backend.core.app_shell import AppShell
 from backend.core.history import JobHistory
 from backend.core.jobs import JobManager
-from backend.core.settings import Settings
+from backend.core.settings import Settings, validate_patch
 from backend.services import (
     compressor,
     converter,
@@ -115,7 +115,7 @@ class SettingsApi(_Namespace):
         return self._ctx.settings.all()
 
     def update(self, patch: Dict[str, Any]) -> Dict[str, Any]:
-        updated = self._ctx.settings.update(patch or {})
+        updated = self._ctx.settings.update(validate_patch(patch or {}))
         self._ctx.jobs.set_limit(updated.get("maxConcurrency"))
         return updated
 

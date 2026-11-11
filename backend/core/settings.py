@@ -3,6 +3,7 @@
 import copy
 import json
 import os
+import sys
 import threading
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -57,6 +58,62 @@ def default_settings() -> Dict[str, Any]:
         "engineLastCheck": 0,  # time.time() of the last look
         "engineLatest": {},  # {"yt-dlp": {"version": …, "pins": {"yt-dlp-ejs": …}}, …}
     }
+
+
+# Written by the app itself; the window may read them but never change them. engineLatest decides
+# which engine version pip installs, so a forged one could install an old or vulnerable release.
+INTERNAL_KEYS = frozenset({"recentFolders", "trayHintShown", "engineLastCheck", "engineLatest"})
+# Options the tools remember between runs; they have no default and only the window reads them.
+TOOL_OPTION_TYPES: Dict[str, type] = {"gifOutput": dict, "transcribe": dict, "downloadSubtitles": str}
+CHOICES: Dict[str, frozenset] = {
+    "theme": frozenset({"system", "light", "dark"}),
+    "language": frozenset({"pl", "en"}),
+    "downloadSubtitles": frozenset({"off", "site", "auto"}),
+}
+MAX_CONCURRENCY = 16
+
+
+def _check_type(key: str, value: Any, expected: type) -> None:
+    # bool is an int in Python, so True must not pass for a number (or the other way round).
+    if isinstance(value, bool) != (expected is bool) or not isinstance(value, expected):
+        raise ValueError(f"Setting {key} must be {expected.__name__}")
+
+
+def _ffmpeg_folder_ok(path: str) -> bool:
+    """The custom FFmpeg path only puts its folder first on PATH, so that folder must hold FFmpeg."""
+    if not path:
+        return True
+    target = Path(path)
+    folder = target if target.is_dir() else target.parent
+    name = "ffmpeg.exe" if sys.platform == "win32" else "ffmpeg"
+    return (folder / name).is_file() and (target.is_dir() or target.name.lower() == name)
+
+
+def validate_patch(patch: Any) -> Dict[str, Any]:
+    """Check a settings change sent by the window: known keys, matching types, allowed values.
+
+    Raises ValueError naming the first offending key; nothing is applied in that case.
+    """
+    if not isinstance(patch, dict):
+        raise ValueError("Settings patch must be an object")
+    defaults = default_settings()
+    for key, value in patch.items():
+        if key in INTERNAL_KEYS or (key not in defaults and key not in TOOL_OPTION_TYPES):
+            raise ValueError(f"Setting {key} cannot be changed")
+        default = defaults.get(key)
+        _check_type(key, value, TOOL_OPTION_TYPES.get(key) or type(default))
+        if key in CHOICES and value not in CHOICES[key]:
+            raise ValueError(f"Setting {key} has an unknown value")
+        if isinstance(default, dict):
+            for name, item in value.items():
+                if name not in default:
+                    raise ValueError(f"Setting {key}.{name} cannot be changed")
+                _check_type(f"{key}.{name}", item, type(default[name]))
+    if "maxConcurrency" in patch and not 1 <= patch["maxConcurrency"] <= MAX_CONCURRENCY:
+        raise ValueError("Setting maxConcurrency is out of range")
+    if not _ffmpeg_folder_ok(patch.get("customFfmpegPath", "")):
+        raise ValueError("Setting customFfmpegPath must point to ffmpeg")
+    return patch
 
 
 def _merge(defaults: Dict[str, Any], stored: Dict[str, Any]) -> Dict[str, Any]:

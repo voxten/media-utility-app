@@ -244,6 +244,7 @@
       "title": "Advanced & System Tools",
       "customFfmpeg": "Custom FFmpeg Executable",
       "customFfmpegDesc": "Optionally specify your own ffmpeg.exe binary instead of the bundled version.",
+      "customFfmpegInvalid": "Choose ffmpeg.exe or the folder that contains it.",
       "closeToTray": "Close to Tray",
       "closeToTrayDesc": "The X button hides the window to the notification area and jobs keep running. Quit from the tray icon menu.",
       "clipboardWatch": "Offer Copied Links",

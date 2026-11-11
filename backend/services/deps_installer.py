@@ -15,7 +15,7 @@ from typing import Any, Dict, List, Optional, Sequence
 from backend.core import engines, whisper_models
 from backend.core.addons import activate_addons, pip_install_command
 from backend.core.deps import (
-    LAMA_EXPECTED_MD5,
+    LAMA_EXPECTED_SHA256,
     _has_module,
     ensure_app_paths,
     is_lama_ready,
@@ -28,20 +28,30 @@ from backend.core.paths import app_data_dir, cache_dir
 logger = logging.getLogger(__name__)
 
 LAMA_MODEL_URL = "https://github.com/Sanster/models/releases/download/add_big_lama/big-lama.pt"
-FFMPEG_WINDOWS_URL = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
+# Pinned releases: a fixed URL is what lets the download be checked against a fixed SHA-256.
+FFMPEG_WINDOWS_URL = "https://github.com/GyanD/codexffmpeg/releases/download/9.0.2/ffmpeg-9.0.2-essentials_build.zip"
+FFMPEG_WINDOWS_SHA256 = "60f467265b1e312373dbcd92200c2618a74850f98d3d078e94296bb3fa2047ba"
 GIFSICLE_WINDOWS_URL = "https://eternallybored.org/misc/gifsicle/releases/gifsicle-1.97-win64.zip"
+GIFSICLE_WINDOWS_SHA256 = "bb3ad4e1521a3953152f406eaafabda153fb5986938405860a7e7f12a3d13227"
 
 
 def _download_file_with_progress(
     ctx: JobContext,
     url: str,
     target_path: Path,
-    expected_md5: str = "",
+    *,
+    expected_sha256: str,
     status_key: str = "deps.status.downloading",
     progress_start: float = 0.0,
     progress_span: float = 100.0,
 ) -> Path:
-    """Streams a file download reporting progress to JobContext and verifying MD5."""
+    """Streams a file download reporting progress to JobContext.
+
+    The file only reaches ``target_path`` when its SHA-256 matches, so a tampered or truncated
+    download is never left where the app would load or run it.
+    """
+    if not expected_sha256:
+        raise ValueError(f"No SHA-256 known for {url}")
     target_path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = target_path.with_suffix(f"{target_path.suffix}.tmp")
 
@@ -51,7 +61,7 @@ def _download_file_with_progress(
             total_str = resp.headers.get("Content-Length")
             total = int(total_str) if total_str and total_str.isdigit() else 0
             downloaded = 0
-            hasher = hashlib.md5()
+            hasher = hashlib.sha256()
             chunk_size = 256 * 1024
 
             while True:
@@ -61,8 +71,7 @@ def _download_file_with_progress(
                     break
                 f.write(chunk)
                 downloaded += len(chunk)
-                if expected_md5:
-                    hasher.update(chunk)
+                hasher.update(chunk)
 
                 if total > 0:
                     pct = downloaded * 100.0 / total
@@ -73,11 +82,9 @@ def _download_file_with_progress(
                         {"percent": round(pct), "downloaded": downloaded, "total": total},
                     )
 
-        if expected_md5:
-            actual_md5 = hasher.hexdigest()
-            if actual_md5.lower() != expected_md5.lower():
-                tmp_path.unlink(missing_ok=True)
-                raise ValueError(f"MD5 checksum mismatch (got {actual_md5}, expected {expected_md5})")
+        actual = hasher.hexdigest()
+        if actual != expected_sha256.lower():
+            raise ValueError(f"SHA-256 mismatch for {target_path.name} (got {actual}, expected {expected_sha256})")
 
         tmp_path.replace(target_path)
         return target_path
@@ -148,7 +155,7 @@ def install_lama(ctx: JobContext) -> Dict[str, Any]:
             ctx,
             url=LAMA_MODEL_URL,
             target_path=model_dest,
-            expected_md5=LAMA_EXPECTED_MD5,
+            expected_sha256=LAMA_EXPECTED_SHA256,
             status_key="deps.status.downloadingModel",
             progress_start=40 if not has_torch else 5,
             progress_span=50 if not has_torch else 85,
@@ -190,6 +197,7 @@ def install_ffmpeg(ctx: JobContext) -> Dict[str, Any]:
         ctx,
         url=FFMPEG_WINDOWS_URL,
         target_path=zip_path,
+        expected_sha256=FFMPEG_WINDOWS_SHA256,
         status_key="deps.status.downloadingFfmpeg",
         progress_start=5,
         progress_span=75,
@@ -223,12 +231,14 @@ UPSCALE_MODELS = {
     "upscale_general": {
         "url": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-general-x4v3.pth",
         "filename": "realesr-general-x4v3.pth",
+        "sha256": "8dc7edb9ac80ccdc30c3a5dca6616509367f05fbc184ad95b731f05bece96292",
         "min_size": 4_000_000,
         "arch": "general",
     },
     "upscale_anime": {
         "url": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth",
         "filename": "RealESRGAN_x4plus_anime_6B.pth",
+        "sha256": "f872d837d3c90ed2e05227bed711af5671a6fd1c9f7d7e91c911a61f155e99da",
         "min_size": 16_000_000,
         "arch": "anime",
     },
@@ -255,6 +265,7 @@ def install_upscale(ctx: JobContext, dep_id: str) -> Dict[str, Any]:
             ctx,
             url=cfg["url"],
             target_path=dest,
+            expected_sha256=cfg["sha256"],
             status_key="deps.status.downloadingModel",
             progress_start=start_pct,
             progress_span=span_pct,
@@ -322,6 +333,7 @@ def install_whisper(ctx: JobContext, model: whisper_models.WhisperModel) -> Dict
                 ctx,
                 url=whisper_models.file_url(model, name),
                 target_path=target,
+                expected_sha256=model.sha256.get(name, ""),
                 status_key="deps.status.downloadingWhisper",
                 progress_start=start + span * done_bytes / model.size,
                 progress_span=span * size / model.size,
@@ -364,6 +376,7 @@ def install_gifsicle(ctx: JobContext) -> Dict[str, Any]:
         ctx,
         url=GIFSICLE_WINDOWS_URL,
         target_path=zip_path,
+        expected_sha256=GIFSICLE_WINDOWS_SHA256,
         status_key="deps.status.downloadingGifsicle",
         progress_start=5,
         progress_span=85,
@@ -416,12 +429,15 @@ def _verify_engine(engine_id: str, folder: Path) -> None:
 
 def update_engines(ctx: JobContext, settings: Any) -> Dict[str, Any]:
     """Installs newer yt-dlp / gallery-dl next to the bundled ones; they take effect after a restart."""
+    def pending_engines() -> List[engines.Engine]:
+        return [engines.get_engine(item["id"]) for item in engines.status(settings) if item["updateAvailable"]]
+
     latest: Dict[str, Any] = settings.get("engineLatest") or {}
-    pending = [
-        engines.get_engine(item["id"])
-        for item in engines.status(settings)
-        if item["updateAvailable"]
-    ]
+    pending = pending_engines()
+    if any(not engines.has_install_specs(engine, latest.get(engine.id) or {}) for engine in pending):
+        engines.check_updates(settings)
+        latest = settings.get("engineLatest") or {}
+        pending = pending_engines()
     updated: List[str] = []
     for index, engine in enumerate(pending):
         share = 100.0 / len(pending)
@@ -429,10 +445,13 @@ def update_engines(ctx: JobContext, settings: Any) -> Dict[str, Any]:
         version = latest[engine.id]["version"]
         staged = engines.staging_dir(engine.id)
         shutil.rmtree(staged, ignore_errors=True)
+        requirements = engines.engines_dir() / f"{engine.id}-requirements.txt"
+        requirements.parent.mkdir(parents=True, exist_ok=True)
         try:
             ctx.progress(base + share * 0.1, "engines.status.installing", {"name": engine.id, "version": version})
             ctx.log("engines.log.installing", name=engine.id, version=version)
-            _run_pip(ctx, engines.install_specs(engine, latest[engine.id]), target=staged, no_deps=True)
+            requirements.write_text("\n".join(engines.install_specs(engine, latest[engine.id])) + "\n", encoding="utf-8")
+            _run_pip(ctx, ["--require-hashes", "-r", str(requirements)], target=staged, no_deps=True)
             ctx.check_cancelled()
             ctx.progress(base + share * 0.7, "engines.status.verifying", {"name": engine.id})
             ctx.log("engines.log.verifying", name=engine.id)
@@ -440,6 +459,7 @@ def update_engines(ctx: JobContext, settings: Any) -> Dict[str, Any]:
             engines.replace_with_staged(engine.id)
         finally:
             shutil.rmtree(staged, ignore_errors=True)
+            requirements.unlink(missing_ok=True)
         updated.append(engine.id)
         ctx.log("engines.log.installed", name=engine.id, version=version)
     ctx.progress(100, "engines.status.done")

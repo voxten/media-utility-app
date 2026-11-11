@@ -1,11 +1,11 @@
 """Whisper speech-to-text models (faster-whisper / CTranslate2) the app can download.
 
 Each model is a Hugging Face repository pinned to a commit, so a renamed or updated repository
-never changes what gets installed. Files are checked by their exact size.
+never changes what gets installed. Downloads are checked by SHA-256, installed files by size.
 """
 
 import importlib.util
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -25,6 +25,7 @@ class WhisperModel:
     repo: str
     revision: str
     files: Dict[str, int]
+    sha256: Dict[str, str] = field(default_factory=dict)
 
     @property
     def size(self) -> int:
@@ -42,6 +43,12 @@ MODELS: Dict[str, WhisperModel] = {
             "vocabulary.txt": 459861,
             "model.bin": 145217532,
         },
+        sha256={
+            "config.json": "56a6d8110d311f19c8f0471e562832c7527f146b567275bfca59fcf7c184da9a",
+            "tokenizer.json": "fb7b63191e9bb045082c79fd742a3106a12c99513ab30df4a0d47fa6cb6fd0ab",
+            "vocabulary.txt": "34ce3fe1c5041027b3f8d42912270993f986dbc4bb34cf27f951e34a1e453913",
+            "model.bin": "d01c3014881c9c6f3133c182f3d2887eb6ca1c789a7538c5c007196857a0a6a9",
+        },
     ),
     "small": WhisperModel(
         id="small",
@@ -52,6 +59,12 @@ MODELS: Dict[str, WhisperModel] = {
             "tokenizer.json": 2203239,
             "vocabulary.txt": 459861,
             "model.bin": 483546902,
+        },
+        sha256={
+            "config.json": "b55496ac7940a7ae47d2c01eab40edfd8701feec1229d9cce3b40014383fb828",
+            "tokenizer.json": "fb7b63191e9bb045082c79fd742a3106a12c99513ab30df4a0d47fa6cb6fd0ab",
+            "vocabulary.txt": "34ce3fe1c5041027b3f8d42912270993f986dbc4bb34cf27f951e34a1e453913",
+            "model.bin": "3e305921506d8872816023e4c273e75d2419fb89b24da97b4fe7bce14170d671",
         },
     ),
     "turbo": WhisperModel(
@@ -64,6 +77,13 @@ MODELS: Dict[str, WhisperModel] = {
             "tokenizer.json": 2710337,
             "vocabulary.json": 1068114,
             "model.bin": 1617884929,
+        },
+        sha256={
+            "config.json": "b0253ea6c0d3bea6b1e19e91a02acfd3b53f4467362efcb5a3e6b16c9b3a9b7e",
+            "preprocessor_config.json": "7ccc62c6f2765af1f3b46c00c9b5894426835a05021c8b9c01eecb6dfb542711",
+            "tokenizer.json": "297b13372ac43916285644fb9687add3cc62ee2a1adb60da3dc25cc94c1871fd",
+            "vocabulary.json": "c69260f2ab26d659b7c398f9a2b2b48ed0df16c3b47d7326782fd9cba71690c1",
+            "model.bin": "e76620f83d5f5b69efd3d87e3dc180c1bd21df9fbebacfd4335e5e1efcc018da",
         },
     ),
 }

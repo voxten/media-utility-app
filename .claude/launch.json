@@ -36,6 +36,21 @@
         "storybook"
       ],
       "port": 6006
+    },
+    {
+      "name": "frontend-build",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "frontend",
+        "run",
+        "preview",
+        "--",
+        "--port",
+        "4173",
+        "--strictPort"
+      ],
+      "port": 4173
     }
   ]
 }
