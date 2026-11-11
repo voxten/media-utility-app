@@ -13,13 +13,16 @@ import { ResultCard } from "../../components/ResultCard";
 import { Select } from "../../components/Select";
 import { api } from "../../lib/bridge";
 import { allFilesFilter, AUDIO_EXTENSIONS, dialogFilter, formatList, formatName, VIDEO_EXTENSIONS } from "../../lib/fileTypes";
-import { formatBytes, formatDuration } from "../../lib/format";
-import type { TranscribeOptions, TranscribeResult, TranscriptFormat, VideoInfo, WhisperModelInfo } from "../../lib/types";
+import { formatBytes, formatDuration, joinPath } from "../../lib/format";
+import type { TranscribeOptions, TranscribeResult, TranscriptFormat, WhisperModelInfo } from "../../lib/types";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useSettings } from "../../stores/settings";
 import { languageOptions } from "./languages";
 import { errorMessage } from "../../lib/errors";
+import { OutputFolderField, useOutputDir } from "../../components/OutputFolderField";
+import { useToolShortcuts } from "../../lib/useToolShortcuts";
+import { useTranscribeForm } from "./store";
 
 const MEDIA_EXTENSIONS = [...VIDEO_EXTENSIONS, ...AUDIO_EXTENSIONS];
 const FORMATS: TranscriptFormat[] = ["srt", "vtt", "txt"];
@@ -47,9 +50,11 @@ export default function TranscribePage() {
   const stored = useSettings((s) => s.settings?.transcribe);
   const updateSettings = useSettings((s) => s.update);
 
-  const [media, setMedia] = useState<VideoInfo | null>(null);
+  const form = useTranscribeForm();
+  const { media } = form;
+  const options = useMemo<TranscribeOptions>(() => form.options ?? { ...DEFAULTS, ...stored }, [form.options, stored]);
+  const outputDir = useOutputDir(form.outputDir);
   const [models, setModels] = useState<WhisperModelInfo[]>([]);
-  const [options, setOptions] = useState<TranscribeOptions>(() => ({ ...DEFAULTS, ...stored }));
 
   const job = useJobRunner<TranscribeResult>("transcribe", {
     onError: (err) => notify.error(t("transcribe.errors.run"), { body: err }),
@@ -64,14 +69,14 @@ export default function TranscribePage() {
   const model = models.find((m) => m.id === options.model);
   const canTranslate = model?.translate ?? false;
 
-  const setOption = (patch: Partial<TranscribeOptions>) => setOptions((prev) => ({ ...prev, ...patch }));
+  const setOption = (patch: Partial<TranscribeOptions>) => form.set({ options: { ...options, ...patch } });
 
   const load = async (path: string) => {
     try {
       const info = await api.transcribe.probe(path);
       if (!info.hasAudio) throw new Error(t("transcribe.errors.noAudio"));
       job.reset();
-      setMedia(info);
+      form.set({ media: info });
     } catch (err) {
       notify.error(t("transcribe.errors.load"), { body: errorMessage(t, err) });
     }
@@ -92,16 +97,17 @@ export default function TranscribePage() {
   const languages = useMemo(() => languageOptions(i18n.language, t("transcribe.autoLanguage")), [i18n.language, t]);
   const modelOptions = useMemo(() => models.map((m) => ({ value: m.id, label: t(`transcribe.models.${m.id}`) })), [models, t]);
 
-  const start = async () => {
+  const canStart = !!media && !!model?.ready && !job.running && !!outputDir;
+  const start = () => {
     if (!media || !model?.ready) return;
-    const name = `${media.fileName.replace(/\.[^.]+$/, "")}.${options.format}`;
-    const outPath = await api.dialogs.saveFile(name, [`${formatName(options.format)} (*.${options.format})`]);
-    if (!outPath) return;
+    const outPath = joinPath(outputDir, `${media.fileName.replace(/\.[^.]+$/, "")}.${options.format}`);
     updateSettings({ transcribe: options }).catch(() => undefined);
-    job.start(() =>
-      api.transcribe.start({ ...options, translate: options.translate && canTranslate, path: media.path, outPath }),
-    );
+    job
+      .start(() => api.transcribe.start({ ...options, translate: options.translate && canTranslate, path: media.path, outPath }))
+      .catch((err) => notify.error(t("transcribe.errors.run"), { body: errorMessage(t, err) }));
   };
+
+  useToolShortcuts({ run: canStart && start, open: browse });
 
   const copyText = (result: TranscribeResult) => {
     navigator.clipboard
@@ -155,6 +161,7 @@ export default function TranscribePage() {
           label={t("transcribe.translate")}
           onChange={(_, d) => setOption({ translate: d.checked })}
         />
+        <OutputFolderField value={form.outputDir} onChange={(dir) => form.set({ outputDir: dir })} />
       </Panel>
       {model && !model.ready && (
         <ModelBanner
@@ -227,7 +234,7 @@ export default function TranscribePage() {
         <Button
           appearance="primary"
           icon={<ClosedCaption24Regular />}
-          disabled={job.running || !model?.ready}
+          disabled={!canStart}
           onClick={start}
         >
           {t("transcribe.start")}

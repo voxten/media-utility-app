@@ -32,7 +32,6 @@ import {
   Delete16Regular,
   DocumentPdf24Regular,
   Eye16Regular,
-  FolderOpen16Regular,
   Merge16Filled,
   ReOrderDotsVertical16Regular,
   ArrowRight16Regular,
@@ -47,7 +46,7 @@ import { ToolPage } from "../../components/Page";
 import { Panel } from "../../components/Panel";
 import { api } from "../../lib/bridge";
 import { dialogFilter, PDF_EXTENSIONS } from "../../lib/fileTypes";
-import { fileName } from "../../lib/format";
+import { fileName, joinPath } from "../../lib/format";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { ON_IMAGE } from "../../lib/onImage";
@@ -56,6 +55,9 @@ import { groupColor } from "./groupColors";
 import { usePdfPagePreview } from "./PdfPagePreview";
 import type { PdfPageInfo } from "./usePdfPages";
 import { errorMessage } from "../../lib/errors";
+import { OutputFolderField, useOutputDir } from "../../components/OutputFolderField";
+import { ResultCard } from "../../components/ResultCard";
+import { useToolShortcuts } from "../../lib/useToolShortcuts";
 
 interface PdfPageItem extends PdfPageInfo {
   key: string;
@@ -76,9 +78,16 @@ interface MergeResult {
 let keySeq = 0;
 const withKey = (p: PdfPageInfo): PdfPageItem => ({ ...p, key: `p${++keySeq}` });
 
-const useForm = create<{ pages: PdfPageItem[]; setPages: (pages: PdfPageItem[]) => void }>((set) => ({
+const useForm = create<{
+  pages: PdfPageItem[];
+  outputDir: string;
+  setPages: (pages: PdfPageItem[]) => void;
+  setOutputDir: (outputDir: string) => void;
+}>((set) => ({
   pages: [],
+  outputDir: "",
   setPages: (pages) => set({ pages }),
+  setOutputDir: (outputDir) => set({ outputDir }),
 }));
 
 const useStyles = makeStyles({
@@ -251,7 +260,8 @@ export default function PdfPage() {
   const styles = useStyles();
   const notify = useNotify();
 
-  const { pages, setPages } = useForm();
+  const { pages, setPages, setOutputDir, outputDir: pickedDir } = useForm();
+  const outputDir = useOutputDir(pickedDir);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const preview = usePdfPagePreview();
 
@@ -265,11 +275,6 @@ export default function PdfPage() {
   });
 
   const merge = useJobRunner<MergeResult>("pdf.merge", {
-    onDone: (result) =>
-      notify.success(t("pdf.toast.merged", { count: result.pageCount }), {
-        body: result.outPath,
-        action: { label: t("common.showInFolder"), onClick: () => api.system.reveal(result.outPath).catch(() => undefined) },
-      }),
     onError: (error) => notify.error(t("pdf.toast.mergeError"), { body: error }),
   });
 
@@ -305,10 +310,8 @@ export default function PdfPage() {
     setPages(pages.map((p) => (p.key === key ? { ...p, rotation: ((p.rotation ?? 0) + 90) % 360 } : p)));
   };
 
-  const startMerge = async () => {
-    const outPath = await api.dialogs.saveFile(t("pdf.defaultName"), [dialogFilter(t, "pdf")]);
-    if (!outPath) return;
-    const target = outPath.toLowerCase().endsWith(".pdf") ? outPath : `${outPath}.pdf`;
+  const startMerge = () => {
+    const target = joinPath(outputDir, t("pdf.defaultName"));
     merge
       .start(() =>
         api.pdf.merge(
@@ -324,6 +327,8 @@ export default function PdfPage() {
 
   const activeItem = pages.find((p) => p.key === activeKey);
   const busy = inspect.running || merge.running;
+  const canMerge = pages.length > 0 && !busy && !!outputDir;
+  useToolShortcuts({ run: canMerge && startMerge, open: browseMerge });
 
   return (
     <ToolPage toolId="pdf">
@@ -412,6 +417,19 @@ export default function PdfPage() {
         </Panel>
       )}
 
+      {pages.length > 0 && (
+        <Panel>
+          <OutputFolderField value={pickedDir} onChange={setOutputDir} />
+          {merge.result && (
+            <ResultCard
+              title={t("pdf.toast.merged", { count: merge.result.pageCount })}
+              path={merge.result.outPath}
+              sourceToolId="pdf"
+            />
+          )}
+        </Panel>
+      )}
+
       {merge.job && merge.job.logs.length > 0 && <LogPanel logs={merge.job.logs} />}
 
       <ActionBar
@@ -419,24 +437,7 @@ export default function PdfPage() {
         idleText={pages.length ? t("pdf.idle.ready", { count: pages.length }) : t("pdf.idle.empty")}
         onCancel={merge.running ? merge.cancel : inspect.cancel}
       >
-        {merge.result && (
-          <>
-            <Button
-              icon={<FolderOpen16Regular />}
-              onClick={() => api.system.reveal(merge.result!.outPath).catch(() => undefined)}
-            >
-              {t("common.showInFolder")}
-            </Button>
-            <Button
-              appearance="subtle"
-              icon={<ArrowRight16Regular />}
-              onClick={() => useTransferStore.getState().openModal([merge.result!.outPath], "pdf")}
-            >
-              {t("transfer.sendTo")}
-            </Button>
-          </>
-        )}
-        <Button appearance="primary" icon={<Merge16Filled />} disabled={!pages.length || busy} onClick={startMerge}>
+        <Button appearance="primary" icon={<Merge16Filled />} disabled={!canMerge} onClick={startMerge}>
           {t("pdf.merge")}
         </Button>
       </ActionBar>

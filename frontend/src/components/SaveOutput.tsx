@@ -1,13 +1,13 @@
 // Output folder + file name for tools that produce one result file, with the "Save" / "Save as…" logic.
 
-import { useState } from "react";
 import { Field, Input, makeStyles } from "@fluentui/react-components";
 import { useTranslation } from "react-i18next";
+import { create } from "zustand";
 import { api } from "../lib/bridge";
-import { dirName, fileName, joinPath } from "../lib/format";
-import { useSettings } from "../stores/settings";
+import { fileName, joinPath } from "../lib/format";
+import { confirm } from "./ConfirmDialog";
 import { useNotify } from "./notify";
-import { PathPicker } from "./PathPicker";
+import { OutputFolderField, useOutputDir } from "./OutputFolderField";
 import { errorMessage } from "../lib/errors";
 
 const useStyles = makeStyles({
@@ -16,28 +16,35 @@ const useStyles = makeStyles({
   name: { width: "240px" },
 });
 
+/** Folder ("" = the default output folder) and file name per tool, kept across page switches. */
+const useSaveTargets = create<Record<string, { dir: string; name: string }>>(() => ({}));
+
 export interface SaveOutput {
-  dir: string;
+  /** Folder picked in the tool; "" means the default output folder. */
+  pickedDir: string;
   name: string;
   setDir: (dir: string) => void;
   setName: (name: string) => void;
   canSave: boolean;
-  /** Points the fields at the source file's folder (or the default output folder) with a suggested name. */
-  reset: (sourcePath: string, defaultName: string) => void;
+  /** Suggests a file name for a new result; the folder stays as picked. */
+  reset: (defaultName: string) => void;
   saveHere: (resultPath: string) => Promise<void>;
   saveAs: (resultPath: string, fileTypes: string[]) => Promise<void>;
 }
 
-export function useSaveOutput(save: (resultPath: string, target: string) => Promise<string>): SaveOutput {
+export function useSaveOutput(toolId: string, save: (resultPath: string, target: string) => Promise<string>): SaveOutput {
   const { t } = useTranslation();
   const notify = useNotify();
-  const defaultDir = useSettings((s) => s.settings?.outputDir);
-  const [dir, setDir] = useState("");
-  const [name, setName] = useState("");
+  const target = useSaveTargets((s) => s[toolId]);
+  const pickedDir = target?.dir ?? "";
+  const name = target?.name ?? "";
+  const dir = useOutputDir(pickedDir);
+  const update = (patch: Partial<{ dir: string; name: string }>) =>
+    useSaveTargets.setState((s) => ({ [toolId]: { ...(s[toolId] ?? { dir: "", name: "" }), ...patch } }));
 
-  const write = async (resultPath: string, target: string) => {
+  const write = async (resultPath: string, path: string) => {
     try {
-      const saved = await save(resultPath, target);
+      const saved = await save(resultPath, path);
       notify.success(t("common.savedSuccess"), {
         action: { label: t("common.showInFolder"), onClick: () => api.system.reveal(saved).catch(() => undefined) },
       });
@@ -47,22 +54,27 @@ export function useSaveOutput(save: (resultPath: string, target: string) => Prom
   };
 
   return {
-    dir,
+    pickedDir,
     name,
-    setDir,
-    setName,
+    setDir: (next) => update({ dir: next }),
+    setName: (next) => update({ name: next }),
     canSave: !!dir.trim() && !!name.trim(),
-    reset: (sourcePath, defaultName) => {
-      setDir(dirName(sourcePath) || defaultDir || "");
-      setName(defaultName);
+    reset: (defaultName) => update({ name: defaultName }),
+    saveHere: async (resultPath) => {
+      const path = joinPath(dir.trim(), name.trim());
+      const existing = await api.system.pathInfo(path).catch(() => null);
+      if (existing?.exists) {
+        const ok = await confirm({ title: t("common.replaceTitle"), body: t("common.replaceBody", { name: fileName(path) }), confirmLabel: t("common.replace") });
+        if (!ok) return;
+      }
+      await write(resultPath, path);
     },
-    saveHere: (resultPath) => write(resultPath, joinPath(dir.trim(), name.trim())),
     saveAs: async (resultPath, fileTypes) => {
-      const target = await api.dialogs.saveFile(name, fileTypes, dir);
-      if (!target) return;
+      const picked = await api.dialogs.saveFile(name, fileTypes, dir);
+      if (!picked) return;
       // The dialog may drop the extension; keep the one from the suggested name.
       const ext = name.match(/\.[a-z0-9]+$/i)?.[0] ?? "";
-      await write(resultPath, /\.[a-z0-9]+$/i.test(fileName(target)) ? target : `${target}${ext}`);
+      await write(resultPath, /\.[a-z0-9]+$/i.test(fileName(picked)) ? picked : `${picked}${ext}`);
     },
   };
 }
@@ -72,9 +84,7 @@ export function SaveOutputFields({ output }: { output: SaveOutput }) {
   const { t } = useTranslation();
   return (
     <div className={styles.row}>
-      <Field label={t("common.outputFolder")} className={styles.dir}>
-        <PathPicker value={output.dir} onChange={output.setDir} mode="folder" openable />
-      </Field>
+      <OutputFolderField className={styles.dir} value={output.pickedDir} onChange={output.setDir} />
       <Field label={t("common.fileName")} className={styles.name}>
         <Input value={output.name} onChange={(_, d) => output.setName(d.value)} />
       </Field>

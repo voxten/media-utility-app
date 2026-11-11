@@ -18,6 +18,7 @@ FALLBACK_EDGE_VOICES = [
 ]
 DEFAULT_RATE = {"edge": 0, "pyttsx3": 200}
 AUDIO_FORMATS = ("mp3", "wav", "ogg", "flac")
+TEXT_FILE_LIMIT = 1024 * 1024
 
 
 def _com_init() -> None:
@@ -69,6 +70,20 @@ def list_pyttsx3_voices() -> List[Dict[str, Any]]:
         ]
     except Exception:  # noqa: BLE001
         return []
+
+
+def read_text_file(path: str) -> str:
+    """Text of a dropped .txt file: UTF-8 (with or without BOM), else Windows-1250 as Notepad saves Polish text."""
+    src = Path(path)
+    if src.suffix.lower() != ".txt" or not src.is_file():
+        raise ValueError("tts.errors.notText")
+    if src.stat().st_size > TEXT_FILE_LIMIT:
+        raise ValueError("tts.errors.textTooLarge")
+    data = src.read_bytes()
+    try:
+        return data.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return data.decode("cp1250", errors="replace")
 
 
 def list_voices(engine: str) -> List[Dict[str, Any]]:

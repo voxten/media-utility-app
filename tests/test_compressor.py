@@ -78,3 +78,15 @@ def test_compress_keeps_earlier_results(tmp_path, ctx):
     first = compressor.compress(ctx, params)["files"][0]
     second = compressor.compress(ctx, params)["files"][0]
     assert first != second and second.endswith("a_compressed (1).png")
+
+
+def test_single_file_into_folder_reports_its_path(tmp_path, ctx):
+    src = _create_test_image(tmp_path / "photo.png")
+    out_dir = tmp_path / "out"
+    out_dir.mkdir()
+    (out_dir / "photo_compressed.webp").write_bytes(b"old")
+
+    res = compressor.compress(ctx, {"files": [str(src)], "outputDir": str(out_dir), "format": "webp", "mode": "smart"})
+
+    assert res["outPath"] == str(out_dir / "photo_compressed (1).webp")
+    assert (out_dir / "photo_compressed.webp").read_bytes() == b"old"

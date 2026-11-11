@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   Button,
   Caption1,
@@ -25,12 +24,16 @@ import { ResultCard } from "../../components/ResultCard";
 import { Select } from "../../components/Select";
 import { api } from "../../lib/bridge";
 import { ALL_IMAGE_EXTENSIONS, dialogFilter, formatList, formatOptions } from "../../lib/fileTypes";
-import { fileName } from "../../lib/format";
+import { fileName, joinPath } from "../../lib/format";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { useTransferStore } from "../../stores/transfer";
 import { SinglePdfTool } from "./SinglePdfTool";
 import { errorMessage } from "../../lib/errors";
+import { OutputFolderField, useOutputDir } from "../../components/OutputFolderField";
+import { addUnique } from "../../lib/fileList";
+import { useToolShortcuts } from "../../lib/useToolShortcuts";
+import { PDF_IMAGE_FORMATS, usePdfConvertForm } from "./store";
 
 const VISIBLE_IMAGES = 10;
 
@@ -45,9 +48,6 @@ interface ImagesToPdfResult {
   pageCount: number;
   bytes: number;
 }
-
-const IMAGE_FORMATS = ["png", "jpeg", "webp"] as const;
-type ImageFormat = (typeof IMAGE_FORMATS)[number];
 
 const useStyles = makeStyles({
   settingsRow: {
@@ -68,12 +68,11 @@ export default function PdfConvertPage() {
   const styles = useStyles();
   const notify = useNotify();
 
-  const [subTab, setSubTab] = useState<"pdfToImages" | "imagesToPdf">("pdfToImages");
-  const [pdfFile, setPdfFile] = useState<string | null>(null);
-  const [format, setFormat] = useState<ImageFormat>("png");
-  const [dpi, setDpi] = useState<number>(150);
-  const [pageRange, setPageRange] = useState("");
-  const [imageFiles, setImageFiles] = useState<string[]>([]);
+  const form = usePdfConvertForm();
+  const { subTab, pdfFile, format, dpi, pageRange, imageFiles } = form;
+  const outputDir = useOutputDir(form.outputDir);
+  const setPageRange = (next: string) => form.set({ pageRange: next });
+  const setOutputDir = (dir: string) => form.set({ outputDir: dir });
 
   const toImages = useJobRunner<ConvertImagesResult>("pdf.to_images", {
     onError: (error) => notify.error(t("pdf.toast.toImagesError"), { body: error }),
@@ -84,42 +83,44 @@ export default function PdfConvertPage() {
   });
 
   const changePdf = (next: string | null) => {
-    setPdfFile(next);
-    setPageRange("");
+    form.set({ pdfFile: next, pageRange: "" });
     toImages.reset();
   };
 
   const changeImages = (next: string[]) => {
-    setImageFiles(next);
+    form.set({ imageFiles: next });
     fromImages.reset();
   };
 
+  const addImages = (files: string[]) => changeImages(addUnique(usePdfConvertForm.getState().imageFiles, files));
+  const browseImages = async () => addImages(await api.dialogs.openFiles([dialogFilter(t, "images", ALL_IMAGE_EXTENSIONS)]));
+
   useIncomingTransfer("pdf_convert", (files, incomingTab) => {
     if (incomingTab === "imagesToPdf" || files.some((f) => /\.(png|jpe?g|webp|bmp|gif|tif|tiff)$/i.test(f))) {
-      setSubTab("imagesToPdf");
-      changeImages(Array.from(new Set([...imageFiles, ...files])));
+      form.set({ subTab: "imagesToPdf" });
+      addImages(files);
     } else if (incomingTab === "pdfToImages" || files.some((f) => /\.pdf$/i.test(f))) {
-      setSubTab("pdfToImages");
+      form.set({ subTab: "pdfToImages" });
       if (files[0]) changePdf(files[0]);
     }
   });
 
-  const startToImages = async () => {
+  const isBusy = toImages.running || fromImages.running;
+  const canToImages = !!pdfFile && !isBusy && !!outputDir;
+  const canFromImages = imageFiles.length > 0 && !isBusy && !!outputDir;
+
+  const startToImages = () => {
     if (!pdfFile) return;
-    const outDir = await api.dialogs.openFolder();
-    if (!outDir) return;
-    toImages.start(() => api.pdf.toImages(pdfFile, outDir, format, dpi, pageRange)).catch((err) => notify.error(errorMessage(t, err)));
+    toImages.start(() => api.pdf.toImages(pdfFile, outputDir, format, dpi, pageRange)).catch((err) => notify.error(errorMessage(t, err)));
   };
 
-  const startFromImages = async () => {
+  const startFromImages = () => {
     if (!imageFiles.length) return;
-    const outPath = await api.dialogs.saveFile(t("pdf.convert.defaultPdfName"), [dialogFilter(t, "pdf")]);
-    if (!outPath) return;
-    const target = outPath.toLowerCase().endsWith(".pdf") ? outPath : `${outPath}.pdf`;
+    const target = joinPath(outputDir, t("pdf.convert.defaultPdfName"));
     fromImages.start(() => api.pdf.fromImages(imageFiles, target)).catch((err) => notify.error(errorMessage(t, err)));
   };
 
-  const isBusy = toImages.running || fromImages.running;
+  useToolShortcuts(subTab === "imagesToPdf" ? { run: canFromImages && startFromImages, open: browseImages } : {});
 
   const dpiOptions = [
     { value: 96, label: t("pdf.convert.dpiScreen") },
@@ -129,7 +130,7 @@ export default function PdfConvertPage() {
 
   return (
     <ToolPage toolId="pdf_convert">
-      <TabList selectedValue={subTab} onTabSelect={(_, d) => setSubTab(d.value as "pdfToImages" | "imagesToPdf")}>
+      <TabList selectedValue={subTab} onTabSelect={(_, d) => form.set({ subTab: d.value as "pdfToImages" | "imagesToPdf" })}>
         <Tab value="pdfToImages" icon={<DocumentPdf24Regular />}>
           {t("pdf.convert.pdfToImages")}
         </Tab>
@@ -145,8 +146,11 @@ export default function PdfConvertPage() {
           onFileChange={changePdf}
           job={toImages.job}
           onCancel={toImages.cancel}
+          onRun={canToImages && startToImages}
+          outputDir={form.outputDir}
+          onOutputDirChange={setOutputDir}
           action={
-            <Button appearance="primary" icon={<ImageArrowForward24Regular />} disabled={!pdfFile || isBusy} onClick={startToImages}>
+            <Button appearance="primary" icon={<ImageArrowForward24Regular />} disabled={!canToImages} onClick={startToImages}>
               {t("pdf.convert.actionToImages")}
             </Button>
           }
@@ -166,13 +170,13 @@ export default function PdfConvertPage() {
         >
           <div className={styles.settingsRow}>
             <Field label={t("pdf.convert.format")}>
-              <Select searchable options={formatOptions(IMAGE_FORMATS)} value={format} onChange={setFormat} />
+              <Select searchable options={formatOptions(PDF_IMAGE_FORMATS)} value={format} onChange={(next) => form.set({ format: next })} />
             </Field>
             <Field label={t("pdf.convert.dpi")}>
               <Select
                 options={dpiOptions.map((o) => ({ value: String(o.value), label: o.label }))}
                 value={String(dpi)}
-                onChange={(v) => setDpi(Number(v))}
+                onChange={(v) => form.set({ dpi: Number(v) })}
               />
             </Field>
           </div>
@@ -189,11 +193,8 @@ export default function PdfConvertPage() {
             title={imageFiles.length ? t("pdf.dropMore") : t("pdf.dropImagesTitle")}
             hint={t("pdf.dropImagesHint", { formats: formatList(ALL_IMAGE_EXTENSIONS) })}
             accept={ALL_IMAGE_EXTENSIONS}
-            onFiles={(files) => changeImages([...imageFiles, ...files])}
-            onBrowse={async () => {
-              const files = await api.dialogs.openFiles([dialogFilter(t, "images", ALL_IMAGE_EXTENSIONS)]);
-              if (files.length) changeImages([...imageFiles, ...files]);
-            }}
+            onFiles={addImages}
+            onBrowse={browseImages}
           />
 
           {imageFiles.length > 0 && (
@@ -234,6 +235,8 @@ export default function PdfConvertPage() {
                 )}
               </div>
 
+              <OutputFolderField value={form.outputDir} onChange={setOutputDir} />
+
               {fromImages.result && (
                 <ResultCard
                   title={t("pdf.toast.fromImagesSuccess", { count: fromImages.result.pageCount })}
@@ -249,7 +252,7 @@ export default function PdfConvertPage() {
             idleText={imageFiles.length ? undefined : t("converter.idle.pickFiles")}
             onCancel={fromImages.cancel}
           >
-            <Button appearance="primary" icon={<DocumentPdf24Regular />} disabled={!imageFiles.length || isBusy} onClick={startFromImages}>
+            <Button appearance="primary" icon={<DocumentPdf24Regular />} disabled={!canFromImages} onClick={startFromImages}>
               {t("pdf.convert.actionFromImages")}
             </Button>
           </ActionBar>

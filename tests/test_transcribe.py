@@ -206,3 +206,16 @@ def test_missing_model_is_reported(monkeypatch, tmp_path, ctx):
     monkeypatch.setattr(whisper_models, "is_ready", lambda model_id: False)
     with pytest.raises(RuntimeError, match="not installed"):
         transcribe.run(ctx, {"path": str(tmp_path / "x.wav"), "model": "small", "outPath": str(tmp_path / "x.srt")})
+
+
+def test_run_keeps_an_existing_file(monkeypatch, tmp_path, ctx):
+    audio = _speech_like_audio(tmp_path / "talk.wav")
+    monkeypatch.setattr(whisper_models, "is_ready", lambda model_id: True)
+    monkeypatch.setattr(transcribe, "load_model", lambda model_id: _FakeModel([_segment(0.0, 1.0, "Hej.")]))
+    existing = tmp_path / "talk.txt"
+    existing.write_text("old", encoding="utf-8")
+
+    result = transcribe.run(ctx, {"path": str(audio), "model": "small", "format": "txt", "outPath": str(existing)})
+
+    assert Path(result["outPath"]).name == "talk (1).txt"
+    assert existing.read_text(encoding="utf-8") == "old"

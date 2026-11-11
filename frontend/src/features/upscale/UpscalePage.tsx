@@ -96,7 +96,7 @@ export default function UpscalePage() {
   const styles = useStyles();
   const notify = useNotify();
   const form = useForm();
-  const output = useSaveOutput(api.upscale.save);
+  const output = useSaveOutput("upscale", api.upscale.save);
 
   const [modelsReady, setModelsReady] = useState<{ general: boolean; anime: boolean }>({
     general: false,
@@ -130,7 +130,7 @@ export default function UpscalePage() {
       const image = await api.upscale.load(path);
       form.set({ image, result: null, ...(keepSource ? {} : { sourcePath: path }) });
       const currentSrc = keepSource ? form.sourcePath || path : path;
-      output.reset(currentSrc, getDefaultOutFileName(currentSrc, form.scale));
+      output.reset(getDefaultOutFileName(currentSrc, form.scale));
     } catch (err) {
       notify.error(t("upscale.toast.loadError"), { body: errorMessage(t, err) });
     }
@@ -247,6 +247,7 @@ export default function UpscalePage() {
       job={runner.job}
       idleText={form.result ? t("upscale.idle.done") : currentModelReady ? t("upscale.idle.ready") : t("upscale.idle.needModel")}
       onCancel={runner.cancel}
+      onRun={currentModelReady && !runner.running && run}
       runAction={
         <Button appearance="primary" icon={<ArrowMaximize16Filled />} disabled={!currentModelReady || runner.running} onClick={run}>
           {t("upscale.runBtn")}

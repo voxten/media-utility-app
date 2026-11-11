@@ -5,6 +5,7 @@ import {
   Field,
   Input,
   makeStyles,
+  mergeClasses,
   Spinner,
   Tab,
   TabList,
@@ -24,11 +25,15 @@ import { PathPicker } from "../../components/PathPicker";
 import { Select } from "../../components/Select";
 import { SliderField } from "../../components/SliderField";
 import { api } from "../../lib/bridge";
-import { formatOptions } from "../../lib/fileTypes";
+import { dialogFilter, formatOptions } from "../../lib/fileTypes";
 import { joinPath } from "../../lib/format";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useSettings } from "../../stores/settings";
 import { errorMessage } from "../../lib/errors";
+import { claimDrop, DROP_ZONE_ATTR, matchesExtensions } from "../../lib/drop";
+import { useToolShortcuts } from "../../lib/useToolShortcuts";
+
+const TEXT_EXTENSIONS = [".txt"];
 
 type Engine = "edge" | "pyttsx3";
 interface Voice {
@@ -100,6 +105,7 @@ const useStyles = makeStyles({
   },
   narrowDropdown: { minWidth: "0", width: "100%" },
   muted: { color: tokens.colorNeutralForeground3 },
+  dropOver: { "& textarea": { backgroundColor: tokens.colorBrandBackground2 } },
   engineHint: { color: tokens.colorNeutralForeground3 },
   player: { display: "flex", flexDirection: "column", gap: "10px" },
   playerActions: { display: "flex", gap: "8px" },
@@ -112,13 +118,10 @@ export default function TtsPage() {
   const form = useForm();
   const outputDir = useSettings((s) => s.settings?.outputDir ?? "");
   const [voices, setVoices] = useState<Voice[] | null>(voiceCache[form.engine] ?? null);
+  const [dropOver, setDropOver] = useState(false);
 
   const runner = useJobRunner<{ outPath: string; bytes: number }>("tts", {
     onDone: async (result) => {
-      notify.success(t("tts.toast.done"), {
-        body: result.outPath,
-        action: { label: t("common.showInFolder"), onClick: () => api.system.reveal(result.outPath).catch(() => undefined) },
-      });
       try {
         form.set({ audioSrc: await api.tts.audioDataUrl(result.outPath), lastOutput: result.outPath });
       } catch {
@@ -201,12 +204,36 @@ export default function TtsPage() {
 
   const setFormat = (format: (typeof FORMATS)[number]) => form.set({ format });
 
+  const canStart = !!form.text.trim() && !!form.voice && !runner.running;
   const start = () =>
     runner
       .start(() =>
         api.tts.synthesize({ text: form.text, engine: form.engine, voice: form.voice, rate: form.rate[form.engine], outPath }),
       )
       .catch((err) => notify.error(t("tts.toast.error"), { body: errorMessage(t, err) }));
+
+  /** A text file's content replaces an empty text or goes after the text already there. */
+  const loadTextFile = async (path: string | undefined) => {
+    if (!path) return;
+    if (!matchesExtensions(path, TEXT_EXTENSIONS)) {
+      notify.warning(t("tts.errors.notText"));
+      return;
+    }
+    try {
+      const text = (await api.tts.readText(path)).trim();
+      const current = useForm.getState().text.trimEnd();
+      form.set({ text: current ? `${current}\n\n${text}` : text });
+    } catch (err) {
+      notify.error(t("tts.errors.readText"), { body: errorMessage(t, err) });
+    }
+  };
+
+  const openTextFile = async () => {
+    const [path] = await api.dialogs.openFiles([dialogFilter(t, "text", TEXT_EXTENSIONS)], false);
+    await loadTextFile(path);
+  };
+
+  useToolShortcuts({ run: canStart && start, open: openTextFile });
 
   const voicePanel = (
     <Panel title={t("tts.voice")}>
@@ -285,7 +312,19 @@ export default function TtsPage() {
       <Columns side={voicePanel}>
         <Panel title={t("tts.text")}>
           <Textarea
-            className={styles.textarea}
+            {...{ [DROP_ZONE_ATTR]: "" }}
+            className={mergeClasses(styles.textarea, dropOver && styles.dropOver)}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "copy";
+              setDropOver(true);
+            }}
+            onDragLeave={() => setDropOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDropOver(false);
+              claimDrop(e, (paths) => loadTextFile(paths[0]));
+            }}
             resize="vertical"
             value={form.text}
             placeholder={t("tts.placeholder")}
@@ -301,16 +340,14 @@ export default function TtsPage() {
           </div>
         </Panel>
 
-        {form.audioSrc && (
+        {form.lastOutput && (
           <Panel
             title={t("tts.preview")}
             actions={
               <>
-                {form.lastOutput && (
-                  <Button appearance="subtle" icon={<FolderOpen16Regular />} onClick={() => api.system.reveal(form.lastOutput!).catch(() => undefined)}>
-                    {t("common.showInFolder")}
-                  </Button>
-                )}
+                <Button appearance="subtle" icon={<FolderOpen16Regular />} onClick={() => api.system.reveal(form.lastOutput!).catch(() => undefined)}>
+                  {t("common.showInFolder")}
+                </Button>
                 <Button
                   appearance="subtle"
                   size="small"
@@ -321,7 +358,7 @@ export default function TtsPage() {
               </>
             }
           >
-            <AudioPlayer src={form.audioSrc} autoPlay />
+            {form.audioSrc ? <AudioPlayer src={form.audioSrc} autoPlay /> : <Caption1 className={styles.muted}>{form.lastOutput}</Caption1>}
           </Panel>
         )}
       </Columns>
@@ -331,7 +368,7 @@ export default function TtsPage() {
         idleText={form.text.trim() ? t("tts.idle.ready", { voice: voices?.find((v) => v.id === form.voice)?.name ?? "—" }) : t("tts.idle.empty")}
         onCancel={runner.cancel}
       >
-        <Button appearance="primary" icon={<Speaker216Filled />} disabled={!form.text.trim() || !form.voice || runner.running} onClick={start}>
+        <Button appearance="primary" icon={<Speaker216Filled />} disabled={!canStart} onClick={start}>
           {t("tts.generate")}
         </Button>
       </ActionBar>

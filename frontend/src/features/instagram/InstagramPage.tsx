@@ -28,6 +28,7 @@ import { useJobRunner } from "../../lib/useJobRunner";
 import { useSettings } from "../../stores/settings";
 import { useInstagramForm } from "./store";
 import { errorMessage } from "../../lib/errors";
+import { useToolShortcuts } from "../../lib/useToolShortcuts";
 
 // Above this many saved files the result shows the folder instead of a thumbnail per file.
 const GALLERY_LIMIT = 40;
@@ -101,11 +102,7 @@ export default function InstagramPage() {
   const download = useJobRunner<InstagramResult>("instagram", {
     onDone: (result) => {
       form.set({ result });
-      const notifyFn = result.failed ? notify.warning : notify.success;
-      notifyFn(t("instagram.toast.done", { count: result.files.length }), {
-        body: result.failed ? t("instagram.toast.failed", { count: result.failed }) : undefined,
-        action: { label: t("common.openFolder"), onClick: () => api.system.openPath(result.outdir) },
-      });
+      if (!result.files.length) notify.warning(t("instagram.toast.failed", { count: result.failed }));
     },
     onError: (error) => notify.error(t("instagram.toast.error"), { body: translateMessage(t, error) }),
   });
@@ -157,6 +154,13 @@ export default function InstagramPage() {
       .start(() => api.instagram.start({ url: post.url, outdir, indices: selected, title }))
       .catch((err) => notify.error(errorMessage(t, err)));
   };
+
+  const canDownload = !running && !!post && selected.length > 0 && !!outdir;
+  useToolShortcuts({ run: canDownload && startDownload });
+
+  const resultDetail = form.result
+    ? [formatBytes(form.result.size), form.result.failed > 0 && t("instagram.toast.failed", { count: form.result.failed })].filter(Boolean).join(" · ")
+    : "";
 
   const tileLabel = (item: InstagramItem) => {
     const key = { image: "instagram.photoN", video: "instagram.videoN", carousel: "instagram.carouselN" }[item.kind];
@@ -275,7 +279,7 @@ export default function InstagramPage() {
           path={form.result.outdir}
           folder
           sourceToolId="instagram"
-          detail={formatBytes(form.result.size)}
+          detail={resultDetail}
         />
       )}
 
@@ -285,7 +289,7 @@ export default function InstagramPage() {
           items={savedItems}
           outputDir={form.result.outdir}
           sourceToolId="instagram"
-          summary={formatBytes(form.result.size)}
+          summary={resultDetail}
         />
       )}
 
@@ -304,7 +308,7 @@ export default function InstagramPage() {
         <Button
           appearance="primary"
           icon={<ArrowDownload16Filled />}
-          disabled={running || !post || selected.length === 0 || !outdir}
+          disabled={!canDownload}
           onClick={startDownload}
         >
           {fileCount > 0 ? t("instagram.downloadCount", { count: fileCount }) : t("download.download")}

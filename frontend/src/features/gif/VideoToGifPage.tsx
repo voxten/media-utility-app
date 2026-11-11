@@ -18,7 +18,7 @@ import { api } from "../../lib/bridge";
 import { allFilesFilter, dialogFilter, formatList, formatName, VIDEO_EXTENSIONS } from "../../lib/fileTypes";
 import { formatBytes, formatDuration } from "../../lib/format";
 import { IMAGE_STAGE_HEIGHT } from "../../lib/imageStage";
-import type { GifFormat, VideoInfo, VideoToGifPreview, VideoToGifResult } from "../../lib/types";
+import type { GifFormat, VideoToGifPreview, VideoToGifResult } from "../../lib/types";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { GifOutputPanel } from "./GifOutputPanel";
@@ -26,6 +26,10 @@ import { useCropKeys } from "./useCropKeys";
 import { useFrameLoader } from "./useFrameLoader";
 import { useGifOutput } from "./useGifOutput";
 import { errorMessage, reportError } from "../../lib/errors";
+import { useOutputDir } from "../../components/OutputFolderField";
+import { joinPath } from "../../lib/format";
+import { useToolShortcuts } from "../../lib/useToolShortcuts";
+import { useVideoToGifForm } from "./store";
 
 const FORMATS: GifFormat[] = ["gif", "webp", "apng"];
 const WIDTHS = [0, 240, 320, 480, 640, 800];
@@ -33,8 +37,6 @@ const DEFAULT_WIDTH = 480;
 const DEFAULT_CLIP_SEC = 5;
 const FRAME_DELAY_MS = 200;
 const STILL_HEIGHT = 720;
-
-type ProbedVideo = VideoInfo & { gifsicle: boolean };
 
 const useStyles = makeStyles({
   stage: { height: IMAGE_STAGE_HEIGHT, minHeight: "280px" },
@@ -51,19 +53,16 @@ export default function VideoToGifPage() {
   const styles = useStyles();
   const notify = useNotify();
 
-  const [video, setVideo] = useState<ProbedVideo | null>(null);
-  const [range, setRange] = useState({ start: 0, end: 0 });
-  const [fps, setFps] = useState(12);
-  const [width, setWidth] = useState(DEFAULT_WIDTH);
-  const [speed, setSpeed] = useState(1);
-  const [reverse, setReverse] = useState(false);
-  const [crop, setCrop] = useState<CropRect | null>(null);
+  const form = useVideoToGifForm();
+  const { video, range, fps, width, speed, reverse, crop } = form;
+  const outputDir = useOutputDir(form.outputDir);
+  const setRange = (next: { start: number; end: number }) => form.set({ range: next });
   const [draftCrop, setDraftCrop] = useState<CropRect | null>(null);
   const [still, setStill] = useState<string | null>(null);
   const [preview, setPreview] = useState<VideoToGifPreview | null>(null);
   const [previewing, setPreviewing] = useState(false);
 
-  const output = useGifOutput(FORMATS, video?.gifsicle ?? false);
+  const output = useGifOutput("video_to_gif", FORMATS, video?.gifsicle ?? false);
   const job = useJobRunner<VideoToGifResult>("video_to_gif", {
     onError: (err) => notify.error(t("video_to_gif.errors.render"), { body: err }),
   });
@@ -74,10 +73,12 @@ export default function VideoToGifPage() {
       const info = await api.video_to_gif.probe(path);
       if (!info.hasVideo) throw new Error(t("video_to_gif.errors.noVideo"));
       job.reset();
-      setVideo(info);
-      setRange({ start: 0, end: Math.min(info.duration, DEFAULT_CLIP_SEC) });
-      setWidth(info.width > DEFAULT_WIDTH ? DEFAULT_WIDTH : 0);
-      setCrop(null);
+      form.set({
+        video: info,
+        range: { start: 0, end: Math.min(info.duration, DEFAULT_CLIP_SEC) },
+        width: info.width > DEFAULT_WIDTH ? DEFAULT_WIDTH : 0,
+        crop: null,
+      });
       setDraftCrop(null);
     } catch (err) {
       notify.error(t("video_to_gif.errors.load"), { body: errorMessage(t, err) });
@@ -139,22 +140,24 @@ export default function VideoToGifPage() {
     }
   };
 
-  const create = async () => {
+  const canCreate = !!params && !job.running && draftCrop === null && !!outputDir;
+  const create = () => {
     if (!params || !video) return;
-    const name = `${video.fileName.replace(/\.[^.]+$/, "")}${output.extension}`;
-    const outPath = await api.dialogs.saveFile(name, [`${formatName(output.output.format)} (*${output.extension})`]);
-    if (!outPath) return;
+    const outPath = joinPath(outputDir, `${video.fileName.replace(/\.[^.]+$/, "")}${output.extension}`);
     output.remember();
-    job.start(() => api.video_to_gif.start({ ...params, outPath }));
+    job
+      .start(() => api.video_to_gif.start({ ...params, outPath }))
+      .catch((err) => notify.error(t("video_to_gif.errors.render"), { body: errorMessage(t, err) }));
   };
 
   const applyCrop = () => {
     const full = draftCrop && video && draftCrop.w >= video.width && draftCrop.h >= video.height;
-    setCrop(full ? null : draftCrop);
+    form.set({ crop: full ? null : draftCrop });
     setDraftCrop(null);
   };
 
   useCropKeys(draftCrop !== null, applyCrop, () => setDraftCrop(null));
+  useToolShortcuts({ run: canCreate && create, open: browse });
 
   if (!video) {
     return (
@@ -185,20 +188,25 @@ export default function VideoToGifPage() {
     <>
       <Panel title={t("video_to_gif.frames")}>
         <div className={styles.grid}>
-          <SliderField label={t("video_to_gif.fps")} value={fps} min={5} max={30} onChange={setFps} />
+          <SliderField label={t("video_to_gif.fps")} value={fps} min={5} max={30} onChange={(next) => form.set({ fps: next })} />
           <Field label={t("video_to_gif.width")}>
             <Select
               options={WIDTHS.map((w) => ({ value: String(w), label: w ? `${w} px` : t("common.formatOriginal") }))}
               value={String(width)}
-              onChange={(w) => setWidth(Number(w))}
+              onChange={(w) => form.set({ width: Number(w) })}
             />
           </Field>
-          <SliderField label={t("gif.speed")} value={speed} min={0.25} max={4} step={0.25} format={(v) => `${v}×`} onChange={setSpeed} />
-          <Switch checked={reverse} label={t("gif.reverse")} onChange={(_, d) => setReverse(d.checked)} />
+          <SliderField label={t("gif.speed")} value={speed} min={0.25} max={4} step={0.25} format={(v) => `${v}×`} onChange={(next) => form.set({ speed: next })} />
+          <Switch checked={reverse} label={t("gif.reverse")} onChange={(_, d) => form.set({ reverse: d.checked })} />
         </div>
       </Panel>
 
-      <GifOutputPanel output={output} onGifsicleInstalled={() => setVideo((v) => v && { ...v, gifsicle: true })} />
+      <GifOutputPanel
+        output={output}
+        onGifsicleInstalled={() => video && form.set({ video: { ...video, gifsicle: true } })}
+        outputDir={form.outputDir}
+        onOutputDirChange={(dir) => form.set({ outputDir: dir })}
+      />
     </>
   );
 
@@ -259,7 +267,7 @@ export default function VideoToGifPage() {
                 value={String(round(range.start))}
                 onChange={(_, d) => {
                   const start = Math.max(0, Math.min(range.end - 0.1, Number(d.value) || 0));
-                  setRange((r) => ({ ...r, start }));
+                  setRange({ ...range, start });
                 }}
               />
             </Field>
@@ -272,7 +280,7 @@ export default function VideoToGifPage() {
                 value={String(round(range.end))}
                 onChange={(_, d) => {
                   const end = Math.min(video.duration, Math.max(range.start + 0.1, Number(d.value) || 0));
-                  setRange((r) => ({ ...r, end }));
+                  setRange({ ...range, end });
                 }}
               />
             </Field>
@@ -294,7 +302,7 @@ export default function VideoToGifPage() {
         <Button icon={<Eye16Regular />} disabled={previewing || job.running || cropping} onClick={runPreview}>
           {previewing ? t("common.loading") : t("gif.preview")}
         </Button>
-        <Button appearance="primary" icon={<FilmstripImage24Regular />} disabled={job.running || cropping} onClick={create}>
+        <Button appearance="primary" icon={<FilmstripImage24Regular />} disabled={!canCreate} onClick={create}>
           {t("video_to_gif.create", { format: formatName(output.output.format) })}
         </Button>
       </ActionBar>

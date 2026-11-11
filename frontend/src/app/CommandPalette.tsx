@@ -13,6 +13,7 @@ import {
   type FluentIcon,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
+import { ToolIconTile } from "../components/ToolIconTile";
 import { showWhatsNew } from "../components/WhatsNewDialog";
 import { navigate } from "../lib/router";
 import { useSettings } from "../stores/settings";
@@ -43,17 +44,6 @@ const useStyles = makeStyles({
     cursor: "pointer",
   },
   active: { backgroundColor: tokens.colorSubtleBackgroundHover },
-  tile: {
-    width: "32px",
-    height: "32px",
-    borderRadius: tokens.borderRadiusMedium,
-    display: "grid",
-    placeItems: "center",
-    color: tokens.colorNeutralForegroundStaticInverted,
-    flexShrink: 0,
-    "& svg": { width: "18px", height: "18px" },
-  },
-  plainTile: { color: tokens.colorNeutralForeground2, backgroundColor: tokens.colorNeutralBackground3 },
   texts: { display: "flex", flexDirection: "column", minWidth: 0 },
   muted: { color: tokens.colorNeutralForeground3 },
   empty: { padding: "20px", textAlign: "center", color: tokens.colorNeutralForeground3 },
@@ -177,12 +167,7 @@ export function CommandPalette() {
               onMouseEnter={() => setActive(i)}
               onClick={() => run(c)}
             >
-              <span
-                className={mergeClasses(styles.tile, !c.accent && styles.plainTile)}
-                style={c.accent ? { background: `linear-gradient(135deg, ${c.accent}, ${c.accent}bb)` } : undefined}
-              >
-                <c.icon />
-              </span>
+              <ToolIconTile icon={c.icon} accent={c.accent} />
               <div className={styles.texts}>
                 <Text weight="semibold">{c.title}</Text>
                 {c.subtitle && <Caption1 className={styles.muted}>{c.subtitle}</Caption1>}

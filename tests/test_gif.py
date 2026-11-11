@@ -184,3 +184,13 @@ def test_run_ffmpeg_cancel_removes_output(tmp_path, ctx):
         ffmpeg.run_ffmpeg(ctx, ["-f", "lavfi", "-i", "testsrc=duration=60:size=640x480", "-c:v", "libx264", str(out)],
                           60, out_path=out)
     assert not out.exists()
+
+
+def test_video_to_gif_keeps_an_existing_file(tmp_path, ctx):
+    vid = _sample_video(tmp_path / "clip.mp4", duration=1)
+    existing = tmp_path / "clip.gif"
+    existing.write_bytes(b"old")
+    res = video_to_gif.render(ctx, {"path": str(vid), "outPath": str(existing), "start": 0, "end": 0.4, "fps": 5,
+                                    "width": 80, "output": {"format": "gif"}})
+    assert Path(res["outPath"]).name == "clip (1).gif"
+    assert existing.read_bytes() == b"old"

@@ -96,7 +96,7 @@ export default function WatermarkPage() {
   const canvasRef = useRef<MaskCanvasHandle>(null);
   const [history, setHistory] = useState({ canUndo: false, canRedo: false, hasMask: false });
   const [lama, setLama] = useState(false);
-  const output = useSaveOutput(api.watermark.save);
+  const output = useSaveOutput("watermark", api.watermark.save);
 
   useEffect(() => {
     api.watermark.lamaAvailable().then(setLama).catch(() => setLama(false));
@@ -121,7 +121,7 @@ export default function WatermarkPage() {
       const image = await api.watermark.load(path);
       form.set({ image, result: null, ...(keepSource ? {} : { sourcePath: path }) });
       const currentSrc = keepSource ? form.sourcePath || path : path;
-      output.reset(currentSrc, getDefaultOutFileName(currentSrc));
+      output.reset(getDefaultOutFileName(currentSrc));
     } catch (err) {
       notify.error(t("watermark.toast.loadError"), { body: errorMessage(t, err) });
     }
@@ -229,6 +229,7 @@ export default function WatermarkPage() {
       job={runner.job}
       idleText={form.result ? t("watermark.idle.done") : history.hasMask ? t("watermark.idle.ready") : t("watermark.idle.paint")}
       onCancel={runner.cancel}
+      onRun={history.hasMask && !runner.running && run}
       runAction={
         <Button appearance="primary" icon={<Eraser20Regular />} disabled={!history.hasMask || runner.running} onClick={run}>
           {t("watermark.remove")}

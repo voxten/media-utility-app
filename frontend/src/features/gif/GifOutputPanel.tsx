@@ -1,6 +1,7 @@
 import { Field, Input, makeStyles, Switch } from "@fluentui/react-components";
 import { useTranslation } from "react-i18next";
 import { ModelBanner } from "../../components/ModelBanner";
+import { OutputFolderField } from "../../components/OutputFolderField";
 import { Panel } from "../../components/Panel";
 import { Select } from "../../components/Select";
 import { SliderField } from "../../components/SliderField";
@@ -16,14 +17,17 @@ const useStyles = makeStyles({
   grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "16px 24px", alignItems: "end" },
   sizeRow: { display: "flex", gap: "8px" },
   sizeInput: { width: "110px" },
+  wide: { gridColumn: "1 / -1" },
 });
 
 interface GifOutputPanelProps {
   output: GifOutput;
   onGifsicleInstalled: () => void;
+  outputDir: string;
+  onOutputDirChange: (dir: string) => void;
 }
 
-export function GifOutputPanel({ output, onGifsicleInstalled }: GifOutputPanelProps) {
+export function GifOutputPanel({ output, onGifsicleInstalled, outputDir, onOutputDirChange }: GifOutputPanelProps) {
   const { t } = useTranslation();
   const styles = useStyles();
   const { output: value, update, canLimitSize, gifsicle, formats } = output;
@@ -101,6 +105,7 @@ export function GifOutputPanel({ output, onGifsicleInstalled }: GifOutputPanelPr
             )}
           </div>
         </Field>
+        <OutputFolderField className={styles.wide} value={outputDir} onChange={onOutputDirChange} />
       </div>
     </Panel>
   );

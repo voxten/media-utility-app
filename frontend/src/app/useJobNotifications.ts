@@ -8,7 +8,14 @@ import { on } from "../lib/bridge";
 import { translateMessage } from "../lib/jobMessage";
 import { navigate } from "../lib/router";
 import { isQuietJob, useJobs } from "../stores/jobs";
-import { toolForJob } from "./tools";
+import { toolForJob, type ToolDefinition } from "./tools";
+
+/** The tool to name in a toast for a finished job; none while its page is open, since the page shows the result itself. */
+export function jobToastTool(kind: string | undefined, route: string): ToolDefinition | null {
+  if (!kind || isQuietJob(kind)) return null;
+  const tool = toolForJob(kind);
+  return tool && tool.id !== route ? tool : null;
+}
 
 export function useJobNotifications(route: string) {
   const { t } = useTranslation();
@@ -19,9 +26,8 @@ export function useJobNotifications(route: string) {
   useEffect(() => {
     const handle = (jobId: string, ok: boolean, error?: string) => {
       const job = useJobs.getState().jobs[jobId];
-      if (!job || isQuietJob(job.kind)) return;
-      const tool = toolForJob(job.kind);
-      if (!tool || routeRef.current === tool.id) return;
+      const tool = job ? jobToastTool(job.kind, routeRef.current) : null;
+      if (!job || !tool) return;
       const name = t(`tools.${tool.id}.name`);
       const options = {
         body: ok ? translateMessage(t, job.title) || undefined : error,

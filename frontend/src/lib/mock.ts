@@ -166,6 +166,8 @@ export function createMockBackend(emit: Emit) {
             ? ["C:\\Users\\demo\\Documents\\raport.pdf", "C:\\Users\\demo\\Documents\\umowa.pdf"]
             : types.some((t) => t.includes("*.mp4"))
               ? ["C:\\Users\\demo\\Videos\\clip.mp4"]
+            : types.some((t) => t.includes("*.txt"))
+              ? ["C:\\Users\\demo\\Documents\\notes.txt"]
             : types.some((t) => t.includes("*.apng"))
               ? ["C:\\Users\\demo\\Pictures\\cat.gif", "C:\\Users\\demo\\Pictures\\dance.gif"].slice(0, multiple ? 2 : 1)
             : multiple
@@ -323,6 +325,7 @@ export function createMockBackend(emit: Emit) {
         ]),
       synthesize: () => simulateJob("tts", "speech.mp3", { outPath: "C:\\speech.mp3", bytes: 1000 }),
       audio_data_url: () => ok(""),
+      read_text: (path: string) => ok(`Text from ${path}`),
     },
     download: {
       probe: (url: string) => {

@@ -8,10 +8,12 @@ import { useTranslation } from "react-i18next";
 import { ActionBar } from "../../components/ActionBar";
 import { Columns } from "../../components/Columns";
 import { DropZone } from "../../components/DropZone";
+import { OutputFolderField } from "../../components/OutputFolderField";
 import { Panel } from "../../components/Panel";
 import { api } from "../../lib/bridge";
 import { dialogFilter, PDF_EXTENSIONS } from "../../lib/fileTypes";
 import { dirName, fileName } from "../../lib/format";
+import { useToolShortcuts } from "../../lib/useToolShortcuts";
 import type { JobState } from "../../stores/jobs";
 import { useTransferStore } from "../../stores/transfer";
 import { formatPageRange, parsePageRange } from "./pageRange";
@@ -31,6 +33,11 @@ interface SinglePdfToolProps {
   onCancel: () => void;
   /** Primary action button(s) for the action bar. */
   action: ReactNode;
+  /** What Ctrl+Enter does; falsy while the action is disabled. */
+  onRun?: (() => void) | false;
+  /** Folder picked in the tool ("" = the default output folder). */
+  outputDir: string;
+  onOutputDirChange: (dir: string) => void;
   /** Result of the last run; while shown it carries "Send to" for the output instead of the input. */
   result?: ReactNode;
   /** Tool options shown under the selected file. */
@@ -45,7 +52,21 @@ interface SinglePdfToolProps {
   };
 }
 
-export function SinglePdfTool({ toolId, file, onFileChange, job, onCancel, action, result, children, pageRange, pageMarks }: SinglePdfToolProps) {
+export function SinglePdfTool({
+  toolId,
+  file,
+  onFileChange,
+  job,
+  onCancel,
+  action,
+  onRun,
+  outputDir,
+  onOutputDirChange,
+  result,
+  children,
+  pageRange,
+  pageMarks,
+}: SinglePdfToolProps) {
   const styles = useStyles();
   const { t } = useTranslation();
   const { pages, loading } = usePdfPages(file);
@@ -65,6 +86,8 @@ export function SinglePdfTool({ toolId, file, onFileChange, job, onCancel, actio
     const [picked] = await api.dialogs.openFiles([dialogFilter(t, "pdf")], false);
     if (picked) onFileChange(picked);
   };
+
+  useToolShortcuts({ run: onRun, open: browse });
 
   const dropZone = (
     <DropZone
@@ -103,6 +126,7 @@ export function SinglePdfTool({ toolId, file, onFileChange, job, onCancel, actio
         {pages.length && !loading ? `${dirName(file)} · ${t("pdf.pageCount", { count: pages.length })}` : dirName(file)}
       </Caption1>
       {children}
+      <OutputFolderField value={outputDir} onChange={onOutputDirChange} />
       {result}
     </Panel>
   );

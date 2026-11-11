@@ -40,22 +40,12 @@ import { useCropKeys } from "./useCropKeys";
 import { useFrameLoader } from "./useFrameLoader";
 import { useGifOutput } from "./useGifOutput";
 import { errorMessage } from "../../lib/errors";
+import { useOutputDir } from "../../components/OutputFolderField";
+import { addUnique, removeFileAt } from "../../lib/fileList";
+import { useToolShortcuts } from "../../lib/useToolShortcuts";
+import { NO_EDITS, useGifEditorForm, type Edits } from "./store";
 
 const FORMATS: GifFormat[] = ["gif", "webp", "apng", "mp4"];
-
-interface Edits {
-  trim: { start: number; end: number } | null;
-  crop: CropRect | null;
-  rotate: number;
-  flipH: boolean;
-  flipV: boolean;
-  scale: number;
-  speed: number;
-  reverse: boolean;
-  boomerang: boolean;
-}
-
-const NO_EDITS: Edits = { trim: null, crop: null, rotate: 0, flipH: false, flipV: false, scale: 100, speed: 1, reverse: false, boomerang: false };
 
 function toOperations(edits: Edits): GifOperations {
   const ops: GifOperations = {};
@@ -86,20 +76,17 @@ export default function GifEditorPage() {
   const styles = useStyles();
   const notify = useNotify();
 
-  const [files, setFiles] = useState<string[]>([]);
-  const [selected, setSelected] = useState(0);
+  const form = useGifEditorForm();
+  const { files, selected, editsByFile } = form;
+  const outputDir = useOutputDir(form.outputDir);
   const [info, setInfo] = useState<AnimationInfo | null>(null);
   const [gifsicle, setGifsicle] = useState(false);
-  const [editsByFile, setEditsByFile] = useState<Record<string, Edits>>({});
   const [draftCrop, setDraftCrop] = useState<CropRect | null>(null);
   const [preview, setPreview] = useState<GifEditorPreview | null>(null);
   const [previewing, setPreviewing] = useState(false);
 
-  const output = useGifOutput(FORMATS, gifsicle);
+  const output = useGifOutput("gif_editor", FORMATS, gifsicle);
   const job = useJobRunner<GifEditorResult>("gif_editor", {
-    onDone: (res) => {
-      if (res.failed > 0) notify.warning(t("common.errorsCount", { count: res.failed }));
-    },
     onError: (err) => notify.error(t("gif_editor.errors.render"), { body: err }),
   });
 
@@ -112,7 +99,7 @@ export default function GifEditorPage() {
     const accepted = paths.filter((p) => matchesExtensions(p, ANIMATION_EXTENSIONS));
     if (!accepted.length) return;
     job.reset();
-    setFiles((prev) => Array.from(new Set([...prev, ...accepted])));
+    form.set({ files: addUnique(useGifEditorForm.getState().files, accepted) });
   };
 
   const browse = async () => addFiles(await api.dialogs.openFiles([dialogFilter(t, "animations")]));
@@ -121,24 +108,22 @@ export default function GifEditorPage() {
 
   const removeAt = (index: number) => {
     job.reset();
-    setFiles((prev) => prev.filter((_, i) => i !== index));
-    setSelected((s) => Math.max(0, s > index ? s - 1 : Math.min(s, files.length - 2)));
+    form.set(removeFileAt(files, selected, index));
   };
 
   const clear = () => {
     job.reset();
-    setFiles([]);
-    setSelected(0);
-    setEditsByFile({});
+    form.set({ files: [], selected: 0, editsByFile: {} });
   };
 
   const setEdits = (patch: Partial<Edits>) => {
     if (!current) return;
     job.reset();
-    setEditsByFile((prev) => ({ ...prev, [current]: { ...(prev[current] ?? NO_EDITS), ...patch } }));
+    const prev = useGifEditorForm.getState().editsByFile;
+    form.set({ editsByFile: { ...prev, [current]: { ...(prev[current] ?? NO_EDITS), ...patch } } });
   };
 
-  const applyToAll = () => setEditsByFile(Object.fromEntries(files.map((f) => [f, edits])));
+  const applyToAll = () => form.set({ editsByFile: Object.fromEntries(files.map((f) => [f, edits])) });
 
   useEffect(() => {
     setInfo(null);
@@ -172,20 +157,13 @@ export default function GifEditorPage() {
     }
   };
 
-  const start = async () => {
-    if (files.length === 1) {
-      const name = `${fileName(files[0]).replace(/\.[^.]+$/, "")}_edited${output.extension}`;
-      const outPath = await api.dialogs.saveFile(name, [`${formatName(output.output.format)} (*${output.extension})`]);
-      if (!outPath) return;
-      output.remember();
-      job.start(() => api.gif_editor.start({ path: files[0], outPath, operations, output: output.params }));
-      return;
-    }
-    const outputDir = await api.dialogs.openFolder();
-    if (!outputDir) return;
+  const canStart = !!info && !job.running && draftCrop === null && !!outputDir;
+  const start = () => {
     output.remember();
     const perFile = Object.fromEntries(files.map((f) => [f, toOperations(editsByFile[f] ?? NO_EDITS)]));
-    job.start(() => api.gif_editor.start({ files, outputDir, operations: perFile, output: output.params }));
+    job
+      .start(() => api.gif_editor.start({ files, outputDir, operations: perFile, output: output.params }))
+      .catch((err) => notify.error(t("gif_editor.errors.render"), { body: errorMessage(t, err) }));
   };
 
   const applyCrop = () => {
@@ -196,6 +174,7 @@ export default function GifEditorPage() {
   };
 
   useCropKeys(draftCrop !== null, applyCrop, () => setDraftCrop(null));
+  useToolShortcuts({ run: canStart && start, open: browse });
 
   if (!files.length) {
     return (
@@ -264,7 +243,12 @@ export default function GifEditorPage() {
         </div>
       </Panel>
 
-      <GifOutputPanel output={output} onGifsicleInstalled={() => setGifsicle(true)} />
+      <GifOutputPanel
+        output={output}
+        onGifsicleInstalled={() => setGifsicle(true)}
+        outputDir={form.outputDir}
+        onOutputDirChange={(dir) => form.set({ outputDir: dir })}
+      />
     </>
   );
 
@@ -341,7 +325,7 @@ export default function GifEditorPage() {
             <FileStrip
               files={files}
               selected={selected}
-              onSelect={setSelected}
+              onSelect={(index) => form.set({ selected: index })}
               onRemove={removeAt}
               edited={edited}
               actions={
@@ -369,7 +353,12 @@ export default function GifEditorPage() {
         {result && !single && result.results.length > 0 && (
           <AfterGallery
             title={t("transfer.processedTitle")}
-            summary={t("gif_editor.summary", { processed: result.processed, total: result.total, percent: result.savedPercent })}
+            summary={[
+              t("gif_editor.summary", { processed: result.processed, total: result.total, percent: result.savedPercent }),
+              result.failed > 0 && t("common.errorsCount", { count: result.failed }),
+            ]
+              .filter(Boolean)
+              .join(" · ")}
             files={result.files}
             items={result.results.map((r) => ({
               file: r.file,
@@ -391,7 +380,7 @@ export default function GifEditorPage() {
         <Button icon={<Eye16Regular />} disabled={!info || previewing || job.running || cropping} onClick={runPreview}>
           {previewing ? t("common.loading") : t("gif.preview")}
         </Button>
-        <Button appearance="primary" icon={<Gif24Regular />} disabled={!info || job.running || cropping} onClick={start}>
+        <Button appearance="primary" icon={<Gif24Regular />} disabled={!canStart} onClick={start}>
           {files.length > 1 ? t("gif_editor.saveAll", { count: files.length }) : t("gif_editor.save", { format: formatName(output.output.format) })}
         </Button>
       </ActionBar>

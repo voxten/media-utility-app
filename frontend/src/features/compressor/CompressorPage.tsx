@@ -35,8 +35,10 @@ import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useTransferStore } from "../../stores/transfer";
 import { errorMessage } from "../../lib/errors";
-
-type Mode = "smart" | "lossless" | "target";
+import { OutputFolderField, useOutputDir } from "../../components/OutputFolderField";
+import { addUnique, removeFileAt } from "../../lib/fileList";
+import { useToolShortcuts } from "../../lib/useToolShortcuts";
+import { useCompressorForm, type CompressMode } from "./store";
 const FORMATS: ImageOutputFormat[] = ["original", "webp", "jpeg", "png"];
 
 interface PreviewData {
@@ -95,20 +97,16 @@ export default function CompressorPage() {
   const styles = useStyles();
   const notify = useNotify();
 
-  const [files, setFiles] = useState<string[]>([]);
-  const [selected, setSelected] = useState(0);
+  const form = useCompressorForm();
+  const { files, selected, mode, format, quality, targetKb } = form;
+  const outputDir = useOutputDir(form.outputDir);
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [compressed, setCompressed] = useState<CompressedPreview | null>(null);
   const [updating, setUpdating] = useState(false);
 
-  const [mode, setMode] = useState<Mode>("smart");
-  const [format, setFormat] = useState<ImageOutputFormat>("original");
-  const [quality, setQuality] = useState(80);
-  const [targetKb, setTargetKb] = useState("500");
-
   const job = useJobRunner<CompressResult>("compressor", {
     onDone: (res) => {
-      if (res.failed > 0) notify.warning(t("common.errorsCount", { count: res.failed }));
+      if (!res.processed) notify.warning(t("common.errorsCount", { count: res.failed }));
     },
     onError: (err) => notify.error(t("compressor.toast.error"), { body: err }),
   });
@@ -120,21 +118,19 @@ export default function CompressorPage() {
     const accepted = paths.filter((p) => matchesExtensions(p, IMAGE_EXTENSIONS));
     if (!accepted.length) return;
     job.reset();
-    setFiles((prev) => Array.from(new Set([...prev, ...accepted])));
+    form.set({ files: addUnique(useCompressorForm.getState().files, accepted) });
   };
 
   const browse = async () => addFiles(await api.dialogs.openFiles([dialogFilter(t, "images")]));
 
   const removeAt = (index: number) => {
     job.reset();
-    setFiles((prev) => prev.filter((_, i) => i !== index));
-    setSelected((s) => Math.max(0, s > index ? s - 1 : Math.min(s, files.length - 2)));
+    form.set(removeFileAt(files, selected, index));
   };
 
   const clear = () => {
     job.reset();
-    setFiles([]);
-    setSelected(0);
+    form.set({ files: [], selected: 0 });
   };
 
   useIncomingTransfer("compressor", addFiles);
@@ -174,18 +170,11 @@ export default function CompressorPage() {
     // `params` is rebuilt every render from the values listed here.
   }, [preview, format, mode, quality, targetKb]);
 
-  const start = async () => {
-    if (files.length === 1) {
-      const ext = format === "original" ? fileName(files[0]).split(".").pop() || "png" : format;
-      const outPath = await api.dialogs.saveFile(`${fileName(files[0]).replace(/\.[^.]+$/, "")}_compressed.${ext}`, [
-        dialogFilter(t, "images", [`.${ext}`]),
-      ]);
-      if (outPath) job.start(() => api.compressor.start({ path: files[0], outPath, ...params }));
-      return;
-    }
-    const outputDir = await api.dialogs.openFolder();
-    if (outputDir) job.start(() => api.compressor.start({ files, outputDir, ...params }));
-  };
+  const canStart = !job.running && !!compressed && !!outputDir;
+  const start = () =>
+    job.start(() => api.compressor.start({ files, outputDir, ...params })).catch((err) => notify.error(t("compressor.toast.error"), { body: errorMessage(t, err) }));
+
+  useToolShortcuts({ run: canStart && start, open: browse });
 
   const result = job.result;
 
@@ -209,30 +198,31 @@ export default function CompressorPage() {
   const options = (
     <Panel>
       <Field label={t("compressor.mode")}>
-        <RadioGroup value={mode} onChange={(_, d) => setMode(d.value as Mode)}>
+        <RadioGroup value={mode} onChange={(_, d) => form.set({ mode: d.value as CompressMode })}>
           <Radio value="smart" label={t("compressor.modeSmart")} />
           <Radio value="lossless" label={t("compressor.modeLossless")} />
           <Radio value="target" label={t("compressor.modeTarget")} />
         </RadioGroup>
       </Field>
       <Field label={t("common.outputFormat")}>
-        <Select searchable options={FORMATS.map((f) => ({ value: f, label: imageFormatLabel(t, f) }))} value={format} onChange={setFormat} />
+        <Select searchable options={FORMATS.map((f) => ({ value: f, label: imageFormatLabel(t, f) }))} value={format} onChange={(next) => form.set({ format: next })} />
       </Field>
       {mode === "smart" && (
-        <SliderField label={t("compressor.quality")} value={quality} min={20} max={100} format={(v) => `${v}%`} onChange={setQuality} />
+        <SliderField label={t("compressor.quality")} value={quality} min={20} max={100} format={(v) => `${v}%`} onChange={(next) => form.set({ quality: next })} />
       )}
       {mode === "target" && (
         <Field label={t("compressor.targetKb")}>
           <div className={styles.targetRow}>
-            <Input className={styles.targetInput} type="number" value={targetKb} contentAfter="KB" onChange={(_, d) => setTargetKb(d.value)} />
+            <Input className={styles.targetInput} type="number" value={targetKb} contentAfter="KB" onChange={(_, d) => form.set({ targetKb: d.value })} />
             {TARGET_PRESETS_KB.map((kb) => (
-              <Button key={kb} size="small" appearance="subtle" onClick={() => setTargetKb(String(kb))}>
+              <Button key={kb} size="small" appearance="subtle" onClick={() => form.set({ targetKb: String(kb) })}>
                 {kb >= 1000 ? `${kb / 1000} MB` : `${kb} KB`}
               </Button>
             ))}
           </div>
         </Field>
       )}
+      <OutputFolderField value={form.outputDir} onChange={(dir) => form.set({ outputDir: dir })} />
     </Panel>
   );
 
@@ -300,7 +290,7 @@ export default function CompressorPage() {
             <FileStrip
               files={files}
               selected={selected}
-              onSelect={setSelected}
+              onSelect={(index) => form.set({ selected: index })}
               onRemove={removeAt}
               actions={
                 <Button appearance="subtle" icon={<Delete16Regular />} onClick={clear}>
@@ -316,12 +306,17 @@ export default function CompressorPage() {
         {result && !result.outPath && result.results.length > 0 && (
           <AfterGallery
             title={t("transfer.compressedTitle")}
-            summary={t("compressor.summary", {
-              processed: result.processed,
-              total: result.total,
-              saved: formatBytes(result.savedBytes),
-              percent: result.savedPercent,
-            })}
+            summary={[
+              t("compressor.summary", {
+                processed: result.processed,
+                total: result.total,
+                saved: formatBytes(result.savedBytes),
+                percent: result.savedPercent,
+              }),
+              result.failed > 0 && t("common.errorsCount", { count: result.failed }),
+            ]
+              .filter(Boolean)
+              .join(" · ")}
             files={result.files || result.results.map((r) => r.dest)}
             items={result.results.map((r) => ({
               file: r.file,
@@ -338,7 +333,7 @@ export default function CompressorPage() {
       </Columns>
 
       <ActionBar job={job.job?.status === "done" ? undefined : job.job} onCancel={job.cancel}>
-        <Button appearance="primary" icon={<ArrowMinimize24Regular />} disabled={job.running || !compressed} onClick={start}>
+        <Button appearance="primary" icon={<ArrowMinimize24Regular />} disabled={!canStart} onClick={start}>
           {files.length > 1 ? t("compressor.compressAll", { count: files.length }) : t("compressor.compressAction")}
         </Button>
       </ActionBar>

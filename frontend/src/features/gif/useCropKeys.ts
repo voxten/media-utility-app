@@ -7,10 +7,12 @@ export function useCropKeys(cropping: boolean, apply: () => void, cancel: () => 
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
       if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+      if (e.key !== "Enter" && e.key !== "Escape") return;
+      e.preventDefault();
       if (e.key === "Enter") apply();
-      else if (e.key === "Escape") cancel();
+      else cancel();
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
   }, [cropping, apply, cancel]);
 }

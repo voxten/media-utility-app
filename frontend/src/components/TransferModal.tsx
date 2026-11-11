@@ -28,6 +28,7 @@ import { navigate } from "../lib/router";
 import { useThumbnail } from "../lib/useThumbnail";
 import { useTransferStore } from "../stores/transfer";
 import { FileThumbnail } from "./FileThumbnail";
+import { ToolIconTile } from "./ToolIconTile";
 
 interface TargetToolItem {
   id: string;
@@ -45,30 +46,26 @@ const useStyles = makeStyles({
   },
   closeButton: {
     position: "absolute",
-    top: "16px",
-    right: "16px",
+    top: tokens.spacingVerticalL,
+    right: tokens.spacingHorizontalL,
     zIndex: 10,
   },
   header: {
     display: "flex",
     flexDirection: "column",
-    gap: "2px",
-    marginBottom: "12px",
-    paddingRight: "36px",
-  },
-  titleText: {
-    fontWeight: tokens.fontWeightSemibold,
-    fontSize: "18px",
+    gap: tokens.spacingVerticalXXS,
+    marginBottom: tokens.spacingVerticalM,
+    paddingRight: tokens.spacingHorizontalXXXL,
   },
   sourceCard: {
     display: "flex",
     alignItems: "center",
-    gap: "12px",
-    padding: "10px 14px",
+    gap: tokens.spacingHorizontalM,
+    padding: `${tokens.spacingVerticalMNudge} ${tokens.spacingHorizontalM}`,
     borderRadius: tokens.borderRadiusMedium,
     backgroundColor: tokens.colorNeutralBackground3,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    marginBottom: "16px",
+    border: `${tokens.strokeWidthThin} solid ${tokens.colorNeutralStroke2}`,
+    marginBottom: tokens.spacingVerticalL,
   },
   sourceThumbBox: {
     width: "48px",
@@ -89,7 +86,7 @@ const useStyles = makeStyles({
   sourceMeta: {
     display: "flex",
     flexDirection: "column",
-    gap: "2px",
+    gap: tokens.spacingVerticalXXS,
     minWidth: 0,
     flexGrow: 1,
   },
@@ -100,60 +97,46 @@ const useStyles = makeStyles({
     whiteSpace: "nowrap",
   },
   sectionTitle: {
-    marginBottom: "10px",
+    marginBottom: tokens.spacingVerticalMNudge,
     color: tokens.colorNeutralForeground3,
-    fontSize: "12px",
+    fontSize: tokens.fontSizeBase200,
+    lineHeight: tokens.lineHeightBase200,
     textTransform: "uppercase",
-    letterSpacing: "0.5px",
     fontWeight: tokens.fontWeightSemibold,
   },
   toolsGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-    gap: "10px",
+    gap: tokens.spacingHorizontalMNudge,
     maxHeight: "360px",
     overflowY: "auto",
-    padding: "2px",
+    padding: tokens.spacingHorizontalXXS,
   },
   toolCard: {
     display: "flex",
     alignItems: "center",
-    gap: "12px",
-    padding: "10px 12px",
+    gap: tokens.spacingHorizontalM,
+    padding: `${tokens.spacingVerticalMNudge} ${tokens.spacingHorizontalM}`,
     borderRadius: tokens.borderRadiusMedium,
     backgroundColor: tokens.colorNeutralBackground2,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    border: `${tokens.strokeWidthThin} solid ${tokens.colorNeutralStroke2}`,
     cursor: "pointer",
-    transition: "all 0.15s ease",
+    transitionProperty: "background-color, box-shadow",
+    transitionDuration: tokens.durationFast,
     ":hover": {
       backgroundColor: tokens.colorNeutralBackground2Hover,
-      transform: "translateY(-1px)",
       boxShadow: tokens.shadow4,
     },
-  },
-  toolIconBox: {
-    width: "36px",
-    height: "36px",
-    minWidth: "36px",
-    borderRadius: tokens.borderRadiusSmall,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: tokens.colorNeutralForegroundStaticInverted,
   },
   toolInfo: {
     display: "flex",
     flexDirection: "column",
-    gap: "2px",
+    gap: tokens.spacingVerticalXXS,
     minWidth: 0,
     flexGrow: 1,
   },
-  toolTitle: {
-    fontWeight: tokens.fontWeightSemibold,
-    fontSize: "13px",
-  },
+  toolTitle: { fontWeight: tokens.fontWeightSemibold },
   toolDesc: {
-    fontSize: "11px",
     color: tokens.colorNeutralForeground3,
     overflow: "hidden",
     textOverflow: "ellipsis",
@@ -169,12 +152,12 @@ const useStyles = makeStyles({
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    padding: "24px",
+    padding: tokens.spacingVerticalXXL,
     color: tokens.colorNeutralForeground3,
-    gap: "8px",
+    gap: tokens.spacingVerticalS,
   },
   muted: { color: tokens.colorNeutralForeground3 },
-  inlineRow: { display: "flex", alignItems: "center", gap: "6px" },
+  inlineRow: { display: "flex", alignItems: "center", gap: tokens.spacingHorizontalSNudge },
 });
 
 export function TransferModal() {
@@ -222,7 +205,7 @@ export function TransferModal() {
           </Tooltip>
 
           <div className={styles.header}>
-            <DialogTitle className={styles.titleText}>{t(origin === "drop" ? "transfer.dropTitle" : "transfer.modalTitle")}</DialogTitle>
+            <DialogTitle>{t(origin === "drop" ? "transfer.dropTitle" : "transfer.modalTitle")}</DialogTitle>
             <Caption1 className={styles.muted}>{t("transfer.modalDesc")}</Caption1>
           </div>
 
@@ -262,7 +245,6 @@ export function TransferModal() {
                 {targetTools.map((target) => {
                   const def = toolById(target.id);
                   const Icon = def?.icon ?? Document24Regular;
-                  const accent = def?.accent ?? tokens.colorCompoundBrandBackground;
                   const description = t(target.noteKey ?? `tools.${target.id}.description`);
 
                   return (
@@ -279,9 +261,7 @@ export function TransferModal() {
                         }
                       }}
                     >
-                      <div className={styles.toolIconBox} style={{ backgroundColor: accent }}>
-                        <Icon fontSize={20} />
-                      </div>
+                      <ToolIconTile icon={Icon} accent={def?.accent ?? tokens.colorCompoundBrandBackground} />
 
                       <div className={styles.toolInfo}>
                         <Text className={styles.toolTitle}>{t(`tools.${target.id}.name`)}</Text>

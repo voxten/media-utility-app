@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Button, Caption1, makeStyles, Spinner, tokens, useEventCallback } from "@fluentui/react-components";
+import { Button, Caption1, Field, makeStyles, Spinner, tokens, useEventCallback } from "@fluentui/react-components";
 import {
   Add16Regular,
   ArrowRight16Regular,
@@ -23,8 +23,8 @@ import { Panel } from "../../components/Panel";
 import { ResultCard } from "../../components/ResultCard";
 import { Select } from "../../components/Select";
 import { api } from "../../lib/bridge";
-import { allFilesFilter, dialogFilter, formatList, formatName, IMAGE_EXTENSIONS, imageFormatLabel, type ImageOutputFormat } from "../../lib/fileTypes";
-import { fileName, formatBytes } from "../../lib/format";
+import { dialogFilter, formatList, formatName, IMAGE_EXTENSIONS, imageFormatLabel, type ImageOutputFormat } from "../../lib/fileTypes";
+import { fileName, formatBytes, joinPath } from "../../lib/format";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useTransferStore } from "../../stores/transfer";
@@ -39,6 +39,10 @@ import {
   createDefaultOperations,
 } from "./types";
 import { errorMessage } from "../../lib/errors";
+import { OutputFolderField, useOutputDir } from "../../components/OutputFolderField";
+import { addUnique, removeFileAt } from "../../lib/fileList";
+import { useToolShortcuts } from "../../lib/useToolShortcuts";
+import { useImageToolsForm } from "./store";
 
 const PREVIEW_DELAY_MS = 150;
 const OUTPUT_FORMATS: ImageOutputFormat[] = ["original", "png", "jpeg", "webp"];
@@ -51,6 +55,8 @@ const useStyles = makeStyles({
   canvas: { flexGrow: 1, minHeight: 0, display: "flex", overflow: "hidden" },
   meta: { color: tokens.colorNeutralForeground3 },
   format: { minWidth: "160px" },
+  output: { display: "flex", gap: "16px", alignItems: "flex-end", flexWrap: "wrap" },
+  folder: { flex: "1 1 320px", minWidth: 0 },
 });
 
 /** Converts editor state into the backend's operation dict for an image of the given natural size. */
@@ -88,21 +94,20 @@ export default function ImageToolsPage() {
   const styles = useStyles();
   const notify = useNotify();
 
-  const [files, setFiles] = useState<string[]>([]);
-  const [selected, setSelected] = useState(0);
+  const form = useImageToolsForm();
+  const { files, selected, opsByFile, sizes, activeTool, outputFormat, saved } = form;
+  const outputDir = useOutputDir(form.outputDir);
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [transformed, setTransformed] = useState<TransformResult | null>(null);
   const [updating, setUpdating] = useState(false);
-  const [opsByFile, setOpsByFile] = useState<Record<string, ImageOperations>>({});
-  const [sizes, setSizes] = useState<Record<string, { width: number; height: number }>>({});
-  const [activeTool, setActiveTool] = useState<ActiveTool>("crop");
   const [crop, setCrop] = useState<CropRect>({ x: 0, y: 0, w: 0, h: 0 });
-  const [outputFormat, setOutputFormat] = useState<ImageOutputFormat>("original");
-  const [saved, setSaved] = useState<{ outPath: string; width: number; height: number; bytes: number } | null>(null);
+  const setActiveTool = (tool: ActiveTool) => form.set({ activeTool: tool });
+  const setOpsByFile = (update: (prev: Record<string, ImageOperations>) => Record<string, ImageOperations>) =>
+    form.set({ opsByFile: update(useImageToolsForm.getState().opsByFile) });
 
   const job = useJobRunner<BatchResult>("image_editor", {
     onDone: (res) => {
-      if (res.failed > 0) notify.warning(t("common.errorsCount", { count: res.failed }));
+      if (!res.processed) notify.warning(t("common.errorsCount", { count: res.failed }));
     },
     onError: (err) => notify.error(t("imageTools.toast.error"), { body: err }),
   });
@@ -115,28 +120,25 @@ export default function ImageToolsPage() {
 
   const resetResults = () => {
     job.reset();
-    setSaved(null);
+    form.set({ saved: null });
   };
 
   const addFiles = (paths: string[]) => {
     if (!paths.length) return;
     resetResults();
-    setFiles((prev) => Array.from(new Set([...prev, ...paths])));
+    form.set({ files: addUnique(useImageToolsForm.getState().files, paths) });
   };
 
   const browse = async () => addFiles(await api.dialogs.openFiles([dialogFilter(t, "images")]));
 
   const removeAt = (index: number) => {
     resetResults();
-    setFiles((prev) => prev.filter((_, i) => i !== index));
-    setSelected((s) => Math.max(0, s > index ? s - 1 : Math.min(s, files.length - 2)));
+    form.set(removeFileAt(files, selected, index));
   };
 
   const clear = () => {
     resetResults();
-    setFiles([]);
-    setOpsByFile({});
-    setSelected(0);
+    form.set({ files: [], opsByFile: {}, sizes: {}, selected: 0 });
   };
 
   useIncomingTransfer("image_tools", addFiles);
@@ -151,7 +153,8 @@ export default function ImageToolsPage() {
       .then((data) => {
         if (!live) return;
         setPreview(data);
-        setSizes((prev) => ({ ...prev, [current]: { width: data.width, height: data.height } }));
+        const state = useImageToolsForm.getState();
+        state.set({ sizes: { ...state.sizes, [current]: { width: data.width, height: data.height } } });
         setOpsByFile((prev) => (prev[current] ? prev : { ...prev, [current]: createDefaultOperations(data.width, data.height) }));
       })
       .catch((err) => notify.error(errorMessage(t, err)));
@@ -231,7 +234,7 @@ export default function ImageToolsPage() {
   const applyToAll = () => {
     if (!ops) return;
     resetResults();
-    setOpsByFile(Object.fromEntries(files.map((f) => [f, { ...ops }])));
+    form.set({ opsByFile: Object.fromEntries(files.map((f) => [f, { ...ops }])) });
     notify.success(t("imageTools.appliedToAll"));
   };
 
@@ -246,24 +249,19 @@ export default function ImageToolsPage() {
     }
   };
 
+  const canSave = !!preview && !job.running && !!outputDir;
   const save = async () => {
-    if (!current || !preview || !ops) return;
+    if (!current || !preview || !ops || !outputDir) return;
     if (files.length === 1) {
       const ext = preview.format.toLowerCase() === "jpeg" ? "jpg" : preview.format.toLowerCase();
-      const outPath = await api.dialogs.saveFile(`${fileName(current).replace(/\.[^.]+$/, "")}_edited.${ext}`, [
-        dialogFilter(t, "images", [`.${ext}`]),
-        allFilesFilter(t),
-      ]);
-      if (!outPath) return;
+      const outPath = joinPath(outputDir, `${fileName(current).replace(/\.[^.]+$/, "")}_edited.${ext}`);
       try {
-        setSaved(await api.image_editor.saveTransformed(current, outPath, compileOps(ops, preview.width, preview.height)));
+        form.set({ saved: await api.image_editor.saveTransformed(current, outPath, compileOps(ops, preview.width, preview.height)) });
       } catch (err) {
         notify.error(t("imageTools.toast.error"), { body: errorMessage(t, err) });
       }
       return;
     }
-    const outDir = await api.dialogs.openFolder();
-    if (!outDir) return;
     const perFile = Object.fromEntries(
       files.map((f) => {
         const size = sizes[f];
@@ -272,7 +270,7 @@ export default function ImageToolsPage() {
       }),
     );
     job
-      .start(() => api.image_editor.startBatch(files, outDir, perFile, outputFormat === "original" ? undefined : outputFormat))
+      .start(() => api.image_editor.startBatch(files, outputDir, perFile, outputFormat === "original" ? undefined : outputFormat))
       .catch((err) => notify.error(errorMessage(t, err)));
   };
 
@@ -283,14 +281,19 @@ export default function ImageToolsPage() {
     else if (key === "r") setActiveTool("resize");
     else if (key === "t") setActiveTool("transform");
     else if (key === "v") setActiveTool("select");
-    else if (e.key === "Enter" && activeTool === "crop") applyCrop();
-    else if (e.key === "Escape" && activeTool === "crop") cancelCrop();
+    else if ((e.key === "Enter" || e.key === "Escape") && activeTool === "crop") {
+      e.preventDefault();
+      if (e.key === "Enter") applyCrop();
+      else cancelCrop();
+    }
   });
 
   useEffect(() => {
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
   }, [onKey]);
+
+  useToolShortcuts({ run: canSave && save, open: browse });
 
   if (!files.length) {
     return (
@@ -379,7 +382,7 @@ export default function ImageToolsPage() {
         <FileStrip
           files={files}
           selected={selected}
-          onSelect={setSelected}
+          onSelect={(index) => form.set({ selected: index })}
           onRemove={removeAt}
           edited={edited}
           actions={
@@ -395,6 +398,23 @@ export default function ImageToolsPage() {
         />
       )}
 
+      <Panel>
+        <div className={styles.output}>
+          <OutputFolderField className={styles.folder} value={form.outputDir} onChange={(dir) => form.set({ outputDir: dir })} />
+          {files.length > 1 && (
+            <Field label={t("common.outputFormat")}>
+              <Select
+                searchable
+                className={styles.format}
+                options={OUTPUT_FORMATS.map((f) => ({ value: f, label: imageFormatLabel(t, f) }))}
+                value={outputFormat}
+                onChange={(next) => form.set({ outputFormat: next })}
+              />
+            </Field>
+          )}
+        </div>
+      </Panel>
+
       {saved && (
         <ResultCard
           title={t("imageTools.toast.saveSuccess")}
@@ -407,7 +427,12 @@ export default function ImageToolsPage() {
       {result && result.results.length > 0 && (
         <AfterGallery
           title={t("transfer.processedTitle")}
-          summary={t("imageTools.toast.batchSuccess", { count: result.processed })}
+          summary={[
+            t("imageTools.toast.batchSuccess", { count: result.processed }),
+            result.failed > 0 && t("common.errorsCount", { count: result.failed }),
+          ]
+            .filter(Boolean)
+            .join(" · ")}
           files={result.files || result.results.map((r) => r.dest)}
           items={result.results.map((r) => ({ file: r.file, dest: r.dest, name: fileName(r.dest), size: r.bytes, width: r.width, height: r.height }))}
           outputDir={result.outputDir}
@@ -419,17 +444,7 @@ export default function ImageToolsPage() {
         <Button icon={<Copy16Regular />} disabled={!transformed} onClick={copyToClipboard}>
           {t("imageTools.copyClipboard")}
         </Button>
-        {files.length > 1 && (
-          <Select
-            searchable
-            className={styles.format}
-            aria-label={t("common.outputFormat")}
-            options={OUTPUT_FORMATS.map((f) => ({ value: f, label: imageFormatLabel(t, f) }))}
-            value={outputFormat}
-            onChange={setOutputFormat}
-          />
-        )}
-        <Button appearance="primary" icon={<Save16Regular />} disabled={!preview || job.running} onClick={save}>
+        <Button appearance="primary" icon={<Save16Regular />} disabled={!canSave} onClick={save}>
           {files.length > 1 ? t("imageTools.processBatch", { count: files.length }) : t("imageTools.saveAction")}
         </Button>
       </ActionBar>

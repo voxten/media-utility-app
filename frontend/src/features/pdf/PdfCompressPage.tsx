@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Button, Field, makeStyles } from "@fluentui/react-components";
 import { DocumentCompress24Regular } from "../../app/customIcons";
 import { useTranslation } from "react-i18next";
@@ -7,12 +6,13 @@ import { ToolPage } from "../../components/Page";
 import { ResultCard } from "../../components/ResultCard";
 import { Select } from "../../components/Select";
 import { api } from "../../lib/bridge";
-import { dialogFilter } from "../../lib/fileTypes";
-import { fileName, formatBytes } from "../../lib/format";
+import { fileName, formatBytes, joinPath } from "../../lib/format";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { SinglePdfTool } from "./SinglePdfTool";
 import { errorMessage } from "../../lib/errors";
+import { useOutputDir } from "../../components/OutputFolderField";
+import { usePdfCompressForm, type CompressPreset } from "./store";
 
 interface CompressResult {
   inPath: string;
@@ -23,8 +23,6 @@ interface CompressResult {
   savedPercent: number;
 }
 
-type Preset = "low" | "balanced" | "high";
-
 const useStyles = makeStyles({
   field: { minWidth: "260px", maxWidth: "400px" },
 });
@@ -34,15 +32,16 @@ export default function PdfCompressPage() {
   const styles = useStyles();
   const notify = useNotify();
 
-  const [file, setFile] = useState<string | null>(null);
-  const [preset, setPreset] = useState<Preset>("balanced");
+  const form = usePdfCompressForm();
+  const { file, preset } = form;
+  const outputDir = useOutputDir(form.outputDir);
 
   const compress = useJobRunner<CompressResult>("pdf.compress", {
     onError: (error) => notify.error(t("pdf.toast.compressError"), { body: error }),
   });
 
   const changeFile = (next: string | null) => {
-    setFile(next);
+    form.set({ file: next });
     compress.reset();
   };
 
@@ -50,16 +49,14 @@ export default function PdfCompressPage() {
     if (files[0]) changeFile(files[0]);
   });
 
-  const start = async () => {
+  const canStart = !!file && !compress.running && !!outputDir;
+  const start = () => {
     if (!file) return;
-    const defaultName = `${fileName(file).replace(/\.pdf$/i, "")}_compressed.pdf`;
-    const outPath = await api.dialogs.saveFile(defaultName, [dialogFilter(t, "pdf")]);
-    if (!outPath) return;
-    const target = outPath.toLowerCase().endsWith(".pdf") ? outPath : `${outPath}.pdf`;
+    const target = joinPath(outputDir, `${fileName(file).replace(/\.pdf$/i, "")}_compressed.pdf`);
     compress.start(() => api.pdf.compress(file, target, preset)).catch((err) => notify.error(errorMessage(t, err)));
   };
 
-  const presetLabel: Record<Preset, string> = {
+  const presetLabel: Record<CompressPreset, string> = {
     balanced: t("pdf.compress.presetBalanced"),
     high: t("pdf.compress.presetHigh"),
     low: t("pdf.compress.presetLow"),
@@ -73,8 +70,11 @@ export default function PdfCompressPage() {
         onFileChange={changeFile}
         job={compress.job}
         onCancel={compress.cancel}
+        onRun={canStart && start}
+        outputDir={form.outputDir}
+        onOutputDirChange={(dir) => form.set({ outputDir: dir })}
         action={
-          <Button appearance="primary" icon={<DocumentCompress24Regular />} disabled={!file || compress.running} onClick={start}>
+          <Button appearance="primary" icon={<DocumentCompress24Regular />} disabled={!canStart} onClick={start}>
             {t("pdf.compress.action")}
           </Button>
         }
@@ -97,7 +97,7 @@ export default function PdfCompressPage() {
           <Select
             options={(["balanced", "high", "low"] as const).map((p) => ({ value: p, label: presetLabel[p] }))}
             value={preset}
-            onChange={setPreset}
+            onChange={(next) => form.set({ preset: next })}
           />
         </Field>
       </SinglePdfTool>

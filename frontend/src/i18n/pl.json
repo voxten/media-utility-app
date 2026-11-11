@@ -330,7 +330,10 @@
     "cropApply": "Zatwierdź kadr",
     "cropCancel": "Anuluj kadr",
     "cropReset": "Pełny obraz",
-    "outputIsInput": "Wynik nie może zastąpić pliku źródłowego. Wybierz inną nazwę lub folder."
+    "outputIsInput": "Wynik nie może zastąpić pliku źródłowego. Wybierz inną nazwę lub folder.",
+    "replaceTitle": "Zastąpić plik?",
+    "replaceBody": "Plik {{name}} już jest w tym folderze.",
+    "replace": "Zastąp"
   },
   "fileTypes": {
     "images": "Obrazy",
@@ -397,14 +400,6 @@
       "saved": "Oszczędność"
     },
     "toast": {
-      "done_one": "Przekonwertowano {{count}} plik",
-      "done_few": "Przekonwertowano {{count}} pliki",
-      "done_many": "Przekonwertowano {{count}} plików",
-      "done_other": "Przekonwertowano {{count}} pliku",
-      "failed_one": "{{count}} plik nie został przekonwertowany.",
-      "failed_few": "{{count}} pliki nie zostały przekonwertowane.",
-      "failed_many": "{{count}} plików nie zostało przekonwertowanych.",
-      "failed_other": "{{count}} pliku nie przekonwertowano.",
       "error": "Konwersja nie powiodła się"
     }
   },
@@ -605,11 +600,6 @@
       "selected_other": "Zaznaczono {{count}} pliku ({{size}})"
     },
     "toast": {
-      "found_one": "Znaleziono {{count}} grupę duplikatów",
-      "found_few": "Znaleziono {{count}} grupy duplikatów",
-      "found_many": "Znaleziono {{count}} grup duplikatów",
-      "found_other": "Znaleziono {{count}} grupy duplikatów",
-      "none": "Nie znaleziono duplikatów",
       "error": "Skanowanie nie powiodło się",
       "exported": "Raport CSV zapisany",
       "trashed_one": "Przeniesiono {{count}} plik do Kosza",
@@ -663,8 +653,12 @@
       "ready": "Gotowe · głos: {{voice}}"
     },
     "toast": {
-      "done": "Nagranie gotowe",
       "error": "Nie udało się wygenerować mowy"
+    },
+    "errors": {
+      "notText": "Do tekstu można wczytać tylko plik .txt.",
+      "textTooLarge": "Plik tekstowy ma ponad 1 MB.",
+      "readText": "Nie udało się odczytać pliku tekstowego"
     }
   },
   "transcribe": {
@@ -934,6 +928,16 @@
       "saved": "Grafika zapisana",
       "error": "Nie udało się wyeksportować grafiki",
       "bannerError": "Nie można wczytać banera"
+    },
+    "colors": {
+      "purple": "Fiolet",
+      "blue": "Niebieski",
+      "cyan": "Turkusowy",
+      "red": "Czerwony",
+      "green": "Zielony",
+      "orange": "Pomarańczowy",
+      "pink": "Różowy",
+      "gray": "Szary"
     }
   },
   "jobs": {

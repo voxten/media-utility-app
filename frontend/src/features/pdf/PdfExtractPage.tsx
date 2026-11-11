@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Button } from "@fluentui/react-components";
 import { DocumentExtract24Regular } from "../../app/customIcons";
 import { useTranslation } from "react-i18next";
@@ -6,12 +5,13 @@ import { useNotify } from "../../components/notify";
 import { ToolPage } from "../../components/Page";
 import { ResultCard } from "../../components/ResultCard";
 import { api } from "../../lib/bridge";
-import { dialogFilter } from "../../lib/fileTypes";
-import { fileName, formatBytes } from "../../lib/format";
+import { fileName, formatBytes, joinPath } from "../../lib/format";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { SinglePdfTool } from "./SinglePdfTool";
 import { errorMessage } from "../../lib/errors";
+import { useOutputDir } from "../../components/OutputFolderField";
+import { usePdfExtractForm } from "./store";
 
 interface ExtractTextResult {
   outPath: string;
@@ -23,14 +23,16 @@ export default function PdfExtractPage() {
   const { t } = useTranslation();
   const notify = useNotify();
 
-  const [file, setFile] = useState<string | null>(null);
+  const form = usePdfExtractForm();
+  const { file } = form;
+  const outputDir = useOutputDir(form.outputDir);
 
   const extract = useJobRunner<ExtractTextResult>("pdf.extract_text", {
     onError: (error) => notify.error(t("pdf.toast.extractError"), { body: error }),
   });
 
   const changeFile = (next: string | null) => {
-    setFile(next);
+    form.set({ file: next });
     extract.reset();
   };
 
@@ -38,12 +40,10 @@ export default function PdfExtractPage() {
     if (files[0]) changeFile(files[0]);
   });
 
-  const start = async () => {
+  const canStart = !!file && !extract.running && !!outputDir;
+  const start = () => {
     if (!file) return;
-    const defaultName = `${fileName(file).replace(/\.pdf$/i, "")}.txt`;
-    const outPath = await api.dialogs.saveFile(defaultName, [dialogFilter(t, "text")]);
-    if (!outPath) return;
-    const target = outPath.toLowerCase().endsWith(".txt") ? outPath : `${outPath}.txt`;
+    const target = joinPath(outputDir, `${fileName(file).replace(/\.pdf$/i, "")}.txt`);
     extract.start(() => api.pdf.extractText(file, target)).catch((err) => notify.error(errorMessage(t, err)));
   };
 
@@ -55,8 +55,11 @@ export default function PdfExtractPage() {
         onFileChange={changeFile}
         job={extract.job}
         onCancel={extract.cancel}
+        onRun={canStart && start}
+        outputDir={form.outputDir}
+        onOutputDirChange={(dir) => form.set({ outputDir: dir })}
         action={
-          <Button appearance="primary" icon={<DocumentExtract24Regular />} disabled={!file || extract.running} onClick={start}>
+          <Button appearance="primary" icon={<DocumentExtract24Regular />} disabled={!canStart} onClick={start}>
             {t("pdf.extract.action")}
           </Button>
         }

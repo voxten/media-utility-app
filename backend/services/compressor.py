@@ -263,7 +263,7 @@ def compress(ctx: JobContext, params: Dict[str, Any]) -> Dict[str, Any]:
         "savedBytes": saved_total,
         "savedPercent": saved_pct,
         "outputDir": str(out_dir_path),
-        "outPath": str(single_out_path) if single_out_path and total == 1 else None,
+        "outPath": results[0]["dest"] if total == 1 and results else None,
         "files": [r["dest"] for r in results],
         "results": results,
     }

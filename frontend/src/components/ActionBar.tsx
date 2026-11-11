@@ -8,6 +8,7 @@ import { Dismiss16Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import type { JobState } from "../stores/jobs";
 import { jobMessage } from "../lib/jobMessage";
+import { useToolShortcuts } from "../lib/useToolShortcuts";
 import { PAGE_GUTTER, PAGE_MAX_WIDTH, usePageFooter } from "./pageFooter";
 
 const useStyles = makeStyles({
@@ -55,6 +56,7 @@ export function ActionBar({ job, idleText, detail, onCancel, children }: ActionB
   const { t } = useTranslation();
   const running = job?.status === "running";
   const footer = usePageFooter();
+  useToolShortcuts({ cancel: running && onCancel });
 
   const bar = (
     <div className={mergeClasses(styles.bar, footer ? styles.docked : styles.standalone)}>

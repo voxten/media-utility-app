@@ -44,21 +44,22 @@ import { dialogFilter } from "../../lib/fileTypes";
 import { fileName } from "../../lib/format";
 import { ProgressCard, rowPercent, type CardOptions, type ProgressRow, type ValueMode } from "./ProgressCard";
 import { errorMessage } from "../../lib/errors";
+import { useToolShortcuts } from "../../lib/useToolShortcuts";
 
 // Gradients from the original style.css plus a few extras.
-const PRESETS: { from: string; to: string }[] = [
-  { from: "#7d2cff", to: "#d33bff" },
-  { from: "#3b82f6", to: "#06b6d4" },
-  { from: "#00a6ff", to: "#00ffd9" },
-  { from: "#ff6b6b", to: "#ff4d4d" },
-  { from: "#22c55e", to: "#16a34a" },
-  { from: "#f59e0b", to: "#f97316" },
-  { from: "#ec4899", to: "#f43f5e" },
-  { from: "#64748b", to: "#94a3b8" },
+const PRESETS: { name: string; colors: { from: string; to: string } }[] = [
+  { name: "purple", colors: { from: "#7d2cff", to: "#d33bff" } },
+  { name: "blue", colors: { from: "#3b82f6", to: "#06b6d4" } },
+  { name: "cyan", colors: { from: "#00a6ff", to: "#00ffd9" } },
+  { name: "red", colors: { from: "#ff6b6b", to: "#ff4d4d" } },
+  { name: "green", colors: { from: "#22c55e", to: "#16a34a" } },
+  { name: "orange", colors: { from: "#f59e0b", to: "#f97316" } },
+  { name: "pink", colors: { from: "#ec4899", to: "#f43f5e" } },
+  { name: "gray", colors: { from: "#64748b", to: "#94a3b8" } },
 ];
 
 let idSeq = 0;
-const row = (name: string, value: number, preset: number): ProgressRow => ({ id: `r${++idSeq}`, name, value, total: 100, ...PRESETS[preset] });
+const row = (name: string, value: number, preset: number): ProgressRow => ({ id: `r${++idSeq}`, name, value, total: 100, ...PRESETS[preset].colors });
 
 const MAX_TOTAL = 100_000;
 
@@ -163,8 +164,15 @@ function ColorButton({ row: r, onChange }: { row: ProgressRow; onChange: (c: { f
       </PopoverTrigger>
       <PopoverSurface>
         <div className={styles.palette}>
-          {PRESETS.map((p) => (
-            <button key={p.from} className={styles.paletteItem} style={{ background: `linear-gradient(135deg, ${p.from}, ${p.to})` }} onClick={() => onChange(p)} aria-label={p.from} />
+          {PRESETS.map(({ name, colors }) => (
+            <button
+              key={name}
+              className={styles.paletteItem}
+              style={{ background: `linear-gradient(135deg, ${colors.from}, ${colors.to})` }}
+              onClick={() => onChange(colors)}
+              aria-label={t(`progress.colors.${name}`)}
+              title={t(`progress.colors.${name}`)}
+            />
           ))}
         </div>
         <div className={styles.custom}>
@@ -321,6 +329,8 @@ export default function ProgressPage() {
       setExporting(false);
     }
   };
+
+  useToolShortcuts({ run: form.rows.length > 0 && !exporting && exportPng });
 
   const average = form.rows.length
     ? Math.round(form.rows.reduce((sum, r) => sum + rowPercent(r, form.options.valueMode), 0) / form.rows.length)

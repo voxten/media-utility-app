@@ -89,14 +89,15 @@ def merge(ctx: JobContext, pages: List[Dict[str, Any]], out_path: str) -> Dict[s
                     output.insert_pdf(sources[path], from_page=item["page"], to_page=item["page"])
                 ctx.progress((idx + 1) / len(pages) * 95, "pdf.status.merging", {"current": idx + 1, "total": len(pages)})
             ctx.progress(97, "pdf.status.saving")
-            Path(out_path).parent.mkdir(parents=True, exist_ok=True)
-            output.save(out_path, garbage=3, deflate=True)
+            target = unique_path(Path(out_path))
+            target.parent.mkdir(parents=True, exist_ok=True)
+            output.save(str(target), garbage=3, deflate=True)
     finally:
         for doc in sources.values():
             doc.close()
 
     ctx.progress(100, "pdf.status.done")
-    return {"outPath": out_path, "pageCount": len(pages), "bytes": Path(out_path).stat().st_size}
+    return {"outPath": str(target), "pageCount": len(pages), "bytes": target.stat().st_size}
 
 
 def parse_page_range(spec: str, max_pages: int) -> List[int]:
@@ -164,7 +165,7 @@ def compress(ctx: JobContext, path: str, out_path: str, quality_preset: str = "b
     }
     cfg = presets.get(quality_preset, presets["balanced"])
 
-    target = Path(out_path)
+    target = unique_path(Path(out_path))
     target.parent.mkdir(parents=True, exist_ok=True)
 
     with fitz.open(str(src)) as doc:
@@ -313,7 +314,7 @@ def images_to_pdf(ctx: JobContext, image_paths: List[str], out_path: str) -> Dic
     if not image_paths:
         raise ValueError("No images provided")
 
-    target = Path(out_path)
+    target = unique_path(Path(out_path))
     target.parent.mkdir(parents=True, exist_ok=True)
 
     with fitz.open() as doc:
@@ -377,7 +378,7 @@ def extract_text(ctx: JobContext, path: str, out_path: str) -> Dict[str, Any]:
     if not src.is_file():
         raise FileNotFoundError(f"File not found: {path}")
 
-    target = Path(out_path)
+    target = unique_path(Path(out_path))
     target.parent.mkdir(parents=True, exist_ok=True)
 
     lines: List[str] = []

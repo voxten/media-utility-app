@@ -202,3 +202,12 @@ def test_preview_and_save_use_the_exif_orientation(tmp_path: Path):
     assert (thumb["width"], thumb["height"]) == (20, 40)
     res = image_editor.save_transformed(str(src), str(tmp_path / "out.png"), {"crop": {"x": 0, "y": 0, "width": 20, "height": 30}})
     assert (res["width"], res["height"]) == (20, 30)
+
+
+def test_save_transformed_keeps_an_existing_file(tmp_path: Path):
+    src = _create_test_image(tmp_path / "pic.png")
+    existing = tmp_path / "pic_edited.png"
+    existing.write_bytes(b"old")
+    res = image_editor.save_transformed(str(src), str(existing), {})
+    assert Path(res["outPath"]).name == "pic_edited (1).png"
+    assert existing.read_bytes() == b"old"

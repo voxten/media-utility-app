@@ -6,6 +6,7 @@ import { useShallow } from "zustand/react/shallow";
 import { CATEGORIES, CATEGORY_ACCENTS, CATEGORY_ICONS, TOOLS, toolById, type ToolDefinition } from "../../app/tools";
 import { HistoryJobCard, JobCard } from "../../components/JobCard";
 import { Page, Section } from "../../components/Page";
+import { ToolIconTile } from "../../components/ToolIconTile";
 import { api } from "../../lib/bridge";
 import { linkFromText, openClipboardLink } from "../../lib/clipboardLink";
 import { claimDrop, DROP_ZONE_ATTR } from "../../lib/drop";
@@ -93,15 +94,6 @@ const useStyles = makeStyles({
     WebkitBoxOrient: "vertical",
     overflow: "hidden",
   },
-  tile: {
-    width: "32px",
-    height: "32px",
-    borderRadius: tokens.borderRadiusMedium,
-    display: "grid",
-    placeItems: "center",
-    color: tokens.colorNeutralForegroundStaticInverted,
-    "& svg": { width: "18px", height: "18px" },
-  },
   recent: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "12px" },
   recentCard: {
     display: "flex",
@@ -123,7 +115,6 @@ const useStyles = makeStyles({
     ":active": { backgroundColor: tokens.colorNeutralCardBackgroundPressed },
     ":focus-visible": { outline: `2px solid ${tokens.colorStrokeFocus2}` },
   },
-  recentTile: { width: "40px", height: "40px", borderRadius: tokens.borderRadiusLarge, "& svg": { width: "22px", height: "22px" } },
   jobs: { display: "flex", flexDirection: "column", gap: "8px" },
   empty: {
     display: "flex",
@@ -136,13 +127,8 @@ const useStyles = makeStyles({
   },
 });
 
-function ToolTile({ tool, className }: { tool: ToolDefinition; className?: string }) {
-  const styles = useStyles();
-  return (
-    <span className={mergeClasses(styles.tile, className)} style={{ background: `linear-gradient(135deg, ${tool.accent}, ${tool.accent}bb)` }}>
-      <tool.icon />
-    </span>
-  );
+function ToolTile({ tool, large }: { tool: ToolDefinition; large?: boolean }) {
+  return <ToolIconTile icon={tool.icon} accent={tool.accent} size={large ? "large" : "small"} />;
 }
 
 function CategoryIcon({ category }: { category: keyof typeof CATEGORY_ICONS }) {
@@ -218,7 +204,7 @@ function RecentTools() {
       <div className={styles.recent}>
         {tools.map((tool) => (
           <button key={tool.id} type="button" className={styles.recentCard} onClick={() => navigate(tool.id)}>
-            <ToolTile tool={tool} className={styles.recentTile} />
+            <ToolTile tool={tool} large />
             <Body1Strong>{t(`tools.${tool.id}.name`)}</Body1Strong>
           </button>
         ))}

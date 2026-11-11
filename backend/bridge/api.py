@@ -366,6 +366,9 @@ class TtsApi(_Namespace):
             title=Path(params["outPath"]).name,
         )
 
+    def read_text(self, path: str) -> str:
+        return tts.read_text_file(path)
+
     def audio_data_url(self, path: str) -> str:
         """Generated audio for the in-app player (the WebView cannot read arbitrary local files)."""
         p = Path(path)

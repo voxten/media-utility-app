@@ -18,7 +18,7 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 from backend.core import whisper_models
 from backend.core.ffmpeg import probe_media, run_ffmpeg
 from backend.core.jobs import JobContext
-from backend.core.paths import cache_dir
+from backend.core.paths import cache_dir, unique_path
 
 logger = logging.getLogger(__name__)
 
@@ -312,7 +312,7 @@ def run(ctx: JobContext, params: Dict[str, Any]) -> Dict[str, Any]:
         language=params.get("language") or None,
         translate=bool(params.get("translate")),
     )
-    target = write_output(fmt, params["outPath"], result["segments"], result["words"])
+    target = write_output(fmt, str(unique_path(Path(params["outPath"]))), result["segments"], result["words"])
     ctx.progress(100, "transcribe.status.done")
     return {
         "outPath": str(target),

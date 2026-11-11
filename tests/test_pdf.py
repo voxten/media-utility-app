@@ -164,11 +164,13 @@ def test_pdf_to_images_does_not_overwrite(tmp_path, ctx):
     assert len(list(out.iterdir())) == 2
 
 
-def test_compress_and_rotate_can_replace_the_source(tmp_path, ctx):
+def test_compress_keeps_the_source_and_rotate_can_replace_it(tmp_path, ctx):
     src = tmp_path / "doc.pdf"
     _make_pdf(src, ["P1", "P2"])
-    pdf.compress(ctx, str(src), str(src))
-    assert _page_texts(src) == ["P1", "P2"]
+    res = pdf.compress(ctx, str(src), str(src))
+    assert Path(res["outPath"]).name == "doc (1).pdf"
+    assert _page_texts(res["outPath"]) == ["P1", "P2"]
+    Path(res["outPath"]).unlink()
 
     res = pdf.rotate_pages(ctx, str(src), [0, 7], 90, str(src))
     assert res["rotatedCount"] == 1
@@ -190,3 +192,23 @@ def test_extract_text_page_markers_are_language_neutral(tmp_path, ctx):
     out = tmp_path / "doc.txt"
     pdf.extract_text(ctx, str(src), str(out))
     assert out.read_text(encoding="utf-8").startswith("--- 1 ---")
+
+
+def test_single_file_outputs_never_overwrite(tmp_path, ctx):
+    from PIL import Image
+    src = tmp_path / "doc.pdf"
+    _make_pdf(src, ["One"])
+    img = tmp_path / "img.png"
+    Image.new("RGB", (50, 50), "red").save(img)
+
+    for target in ("merged.pdf", "small.pdf", "pics.pdf", "text.txt"):
+        (tmp_path / target).write_text("keep", encoding="utf-8")
+    merged = pdf.merge(ctx, [{"file": str(src), "page": 0}], str(tmp_path / "merged.pdf"))
+    small = pdf.compress(ctx, str(src), str(tmp_path / "small.pdf"))
+    pics = pdf.images_to_pdf(ctx, [str(img)], str(tmp_path / "pics.pdf"))
+    text = pdf.extract_text(ctx, str(src), str(tmp_path / "text.txt"))
+
+    assert [Path(r["outPath"]).name for r in (merged, small, pics, text)] == [
+        "merged (1).pdf", "small (1).pdf", "pics (1).pdf", "text (1).txt"]
+    for target in ("merged.pdf", "small.pdf", "pics.pdf", "text.txt"):
+        assert (tmp_path / target).read_text(encoding="utf-8") == "keep"

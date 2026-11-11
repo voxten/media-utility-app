@@ -19,6 +19,7 @@ import { ImageComparison } from "./ImageComparison";
 import { ToolPage } from "./Page";
 import { Panel } from "./Panel";
 import { type SaveOutput, SaveOutputFields } from "./SaveOutput";
+import { useToolShortcuts } from "../lib/useToolShortcuts";
 
 const useStyles = makeStyles({
   fileRow: { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", color: tokens.colorNeutralForeground3 },
@@ -79,6 +80,8 @@ interface SingleImageToolProps {
   onCancel: () => void;
   /** Primary action while no result is shown. */
   runAction: ReactNode;
+  /** What Ctrl+Enter does while no result is shown; falsy while the action is disabled. */
+  onRun: (() => void) | false;
   /** Leading buttons while the result is shown (e.g. back to options, run again). */
   resultActions?: ReactNode;
   /** Load the result as the new input. */
@@ -106,6 +109,7 @@ export function SingleImageTool({
   idleText,
   onCancel,
   runAction,
+  onRun,
   resultActions,
   onContinue,
 }: SingleImageToolProps) {
@@ -120,6 +124,8 @@ export function SingleImageTool({
     const [path] = await api.dialogs.openFiles([dialogFilter(t, "images")], false);
     if (path) onLoad(path);
   };
+
+  useToolShortcuts({ run: result ? output.canSave && (() => output.saveHere(result.resultPath)) : onRun, open: browse });
 
   if (!image) {
     return (

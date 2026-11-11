@@ -44,6 +44,8 @@ import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { useTransferStore } from "../../stores/transfer";
 import { AfterGallery } from "../../components/AfterGallery";
 import { errorMessage } from "../../lib/errors";
+import { addUnique } from "../../lib/fileList";
+import { useToolShortcuts } from "../../lib/useToolShortcuts";
 
 const FORMATS = ["PNG", "WEBP", "JPEG", "GIF", "TIFF", "BMP", "PDF"] as const;
 type ImageFormat = (typeof FORMATS)[number];
@@ -199,11 +201,6 @@ export default function ConverterPage() {
   const outputDir = form.outputDir || defaultOutput;
 
   const runner = useJobRunner<ConvertResult>("converter", {
-    onDone: (result) =>
-      notify.success(t("converter.toast.done", { count: result.converted }), {
-        body: result.failed ? t("converter.toast.failed", { count: result.failed }) : undefined,
-        action: { label: t("common.openFolder"), onClick: () => api.system.openPath(result.outputDir) },
-      }),
     onError: (error) => notify.error(t("converter.toast.error"), { body: error }),
   });
 
@@ -232,11 +229,22 @@ export default function ConverterPage() {
     return t("converter.idle.ready", { count: fileCount });
   }, [form.source, form.file, form.inputDir, form.files.length, fileCount, t]);
 
-  const addFiles = (paths: string[]) => form.set({ files: Array.from(new Set([...form.files, ...paths])) });
+  const addFiles = (paths: string[]) => form.set({ files: addUnique(useForm.getState().files, paths) });
+  const browseFiles = async () => addFiles(await api.dialogs.openFiles([dialogFilter(t, "images", ALL_IMAGE_EXTENSIONS)]));
+  const browse = async () => {
+    if (form.source === "files") return browseFiles();
+    if (form.source === "file") {
+      const [file] = await api.dialogs.openFiles([dialogFilter(t, "images", ALL_IMAGE_EXTENSIONS)], false);
+      if (file) form.set({ file });
+      return;
+    }
+    const inputDir = await api.dialogs.openFolder(form.inputDir);
+    if (inputDir) form.set({ inputDir });
+  };
 
   useIncomingTransfer("converter", (files) => {
     if (files.length === 1) form.set({ source: "file", file: files[0] });
-    else if (files.length > 1) form.set({ source: "files", files: Array.from(new Set([...form.files, ...files])) });
+    else if (files.length > 1) form.set({ source: "files", files: addUnique(useForm.getState().files, files) });
   });
 
   const start = () =>
@@ -253,6 +261,8 @@ export default function ConverterPage() {
         }),
       )
       .catch((err) => notify.error(t("converter.toast.error"), { body: errorMessage(t, err) }));
+
+  useToolShortcuts({ run: canStart && start, open: browse });
 
   const outputPanel = (
     <Panel title={t("converter.output")}>
@@ -345,9 +355,7 @@ export default function ConverterPage() {
                 hint={t("converter.dropHint", { formats: formatList(ALL_IMAGE_EXTENSIONS) })}
                 accept={ALL_IMAGE_EXTENSIONS}
                 onFiles={addFiles}
-                onBrowse={async () =>
-                  addFiles(await api.dialogs.openFiles([dialogFilter(t, "images", ALL_IMAGE_EXTENSIONS)]))
-                }
+                onBrowse={browseFiles}
               />
               {form.files.length > 0 && (
                 <>

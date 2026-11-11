@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Button, Caption1, Field, makeStyles, Radio, RadioGroup, tokens, ToggleButton, Tooltip } from "@fluentui/react-components";
 import { Add16Regular, Delete16Regular } from "@fluentui/react-icons";
 import { DocumentSplit24Regular } from "../../app/customIcons";
@@ -13,22 +13,14 @@ import { GROUP_COLORS, groupColor } from "./groupColors";
 import type { PageMark } from "./PdfPageGrid";
 import { SinglePdfTool } from "./SinglePdfTool";
 import { errorMessage } from "../../lib/errors";
+import { useOutputDir } from "../../components/OutputFolderField";
+import { FIRST_GROUP, usePdfSplitForm, type SplitGroup, type SplitMode } from "./store";
 
 interface SplitResult {
   files: string[];
   count: number;
   outDir: string;
 }
-
-type SplitMode = "all" | "groups";
-
-/** One output file: its colour slot (kept when other groups are removed) and 0-based pages in order. */
-interface SplitGroup {
-  color: number;
-  pages: number[];
-}
-
-const FIRST_GROUP: SplitGroup[] = [{ color: 0, pages: [] }];
 
 const useStyles = makeStyles({
   muted: { color: tokens.colorNeutralForeground3 },
@@ -40,21 +32,19 @@ export default function PdfSplitPage() {
   const styles = useStyles();
   const notify = useNotify();
 
-  const [file, setFile] = useState<string | null>(null);
-  const [mode, setMode] = useState<SplitMode>("all");
-  const [groups, setGroups] = useState<SplitGroup[]>(FIRST_GROUP);
-  const [active, setActive] = useState(0);
-  const [lastPage, setLastPage] = useState<number | null>(null);
+  const form = usePdfSplitForm();
+  const { file, mode, groups, active, lastPage } = form;
+  const outputDir = useOutputDir(form.outputDir);
+  const setGroups = (next: SplitGroup[]) => form.set({ groups: next });
+  const setActive = (next: number) => form.set({ active: next });
+  const setMode = (next: SplitMode) => form.set({ mode: next });
 
   const split = useJobRunner<SplitResult>("pdf.split", {
     onError: (error) => notify.error(t("pdf.toast.splitError"), { body: error }),
   });
 
   const changeFile = (next: string | null) => {
-    setFile(next);
-    setGroups(FIRST_GROUP);
-    setActive(0);
-    setLastPage(null);
+    form.set({ file: next, groups: FIRST_GROUP, active: 0, lastPage: null });
     split.reset();
   };
 
@@ -85,8 +75,7 @@ export default function PdfSplitPage() {
         return { ...group, pages: [...rest, ...targets].sort((a, b) => a - b) };
       }),
     );
-    setMode("groups");
-    setLastPage(page);
+    form.set({ mode: "groups", lastPage: page });
   };
 
   const addGroup = () => {
@@ -107,11 +96,10 @@ export default function PdfSplitPage() {
 
   const outputGroups = groups.map((g) => g.pages).filter((pages) => pages.length);
 
-  const start = async () => {
+  const canStart = !!file && !split.running && (mode !== "groups" || outputGroups.length > 0) && !!outputDir;
+  const start = () => {
     if (!file) return;
-    const outDir = await api.dialogs.openFolder();
-    if (!outDir) return;
-    split.start(() => api.pdf.split(file, outDir, mode, outputGroups)).catch((err) => notify.error(errorMessage(t, err)));
+    split.start(() => api.pdf.split(file, outputDir, mode, outputGroups)).catch((err) => notify.error(errorMessage(t, err)));
   };
 
   const toolbar = mode === "groups" && (
@@ -151,13 +139,11 @@ export default function PdfSplitPage() {
         onFileChange={changeFile}
         job={split.job}
         onCancel={split.cancel}
+        onRun={canStart && start}
+        outputDir={form.outputDir}
+        onOutputDirChange={(dir) => form.set({ outputDir: dir })}
         action={
-          <Button
-            appearance="primary"
-            icon={<DocumentSplit24Regular />}
-            disabled={!file || split.running || (mode === "groups" && !outputGroups.length)}
-            onClick={start}
-          >
+          <Button appearance="primary" icon={<DocumentSplit24Regular />} disabled={!canStart} onClick={start}>
             {t("pdf.split.action")}
           </Button>
         }

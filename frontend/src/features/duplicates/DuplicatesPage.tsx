@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   Badge,
   Button,
@@ -47,6 +47,8 @@ import { dialogFilter } from "../../lib/fileTypes";
 import { dirName, formatBytes, formatDuration } from "../../lib/format";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { errorMessage } from "../../lib/errors";
+import { claimDrop, DROP_ZONE_ATTR } from "../../lib/drop";
+import { useToolShortcuts } from "../../lib/useToolShortcuts";
 
 type Mode = "image" | "video";
 
@@ -93,6 +95,11 @@ function keeper(group: MediaItem[]): MediaItem {
 }
 
 const useStyles = makeStyles({
+  dropOver: {
+    outline: `2px dashed ${tokens.colorBrandStroke1}`,
+    outlineOffset: "6px",
+    borderRadius: tokens.borderRadiusMedium,
+  },
   setup: {
     display: "grid",
     gridTemplateColumns: "minmax(0, 2fr) minmax(220px, 1fr)",
@@ -200,12 +207,10 @@ export default function DuplicatesPage() {
   const notify = useNotify();
   const form = useForm();
 
+  const [dropOver, setDropOver] = useState(false);
+
   const runner = useJobRunner<ScanResult>("duplicates", {
-    onDone: (result) => {
-      form.set({ groups: result.groups, scanned: result.scanned, selected: new Set() });
-      if (result.groups.length) notify.success(t("duplicates.toast.found", { count: result.groups.length }));
-      else notify.info(t("duplicates.toast.none"));
-    },
+    onDone: (result) => form.set({ groups: result.groups, scanned: result.scanned, selected: new Set() }),
     onError: (error) => notify.error(t("duplicates.toast.error"), { body: error }),
   });
 
@@ -277,8 +282,24 @@ export default function DuplicatesPage() {
     }
   };
 
+  const canStart = !!form.folder && !runner.running;
   const start = () =>
     runner.start(() => api.duplicates.scan(form.folder, form.mode, form.threshold)).catch((err) => notify.error(t("duplicates.toast.error"), { body: errorMessage(t, err) }));
+
+  const pickFolder = async () => {
+    const folder = await api.dialogs.openFolder(form.folder);
+    if (folder) form.set({ folder });
+  };
+
+  // A dropped file stands for the folder it is in.
+  const dropFolder = async ([path]: string[]) => {
+    if (!path) return;
+    const info = await api.system.pathInfo(path).catch(() => null);
+    const folder = info && !info.isDir && info.parent ? info.parent : path;
+    form.set({ folder, groups: null, selected: new Set() });
+  };
+
+  useToolShortcuts({ run: canStart && start, open: pickFolder });
 
   return (
     <ToolPage toolId="duplicates">
@@ -295,7 +316,23 @@ export default function DuplicatesPage() {
           </TabList>
         }
       >
-        <div className={styles.setup}>
+        <div
+          {...{ [DROP_ZONE_ATTR]: "" }}
+          className={mergeClasses(styles.setup, dropOver && styles.dropOver)}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "copy";
+            setDropOver(true);
+          }}
+          onDragLeave={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDropOver(false);
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDropOver(false);
+            claimDrop(e, dropFolder);
+          }}
+        >
           <Field label={t("duplicates.folder")}>
             <PathPicker value={form.folder} onChange={(folder) => form.set({ folder })} />
           </Field>
@@ -393,7 +430,7 @@ export default function DuplicatesPage() {
             </Button>
           </Tooltip>
         )}
-        <Button appearance="primary" icon={<Search16Filled />} disabled={!form.folder || runner.running} onClick={start}>
+        <Button appearance="primary" icon={<Search16Filled />} disabled={!canStart} onClick={start}>
           {t("duplicates.scan")}
         </Button>
       </ActionBar>

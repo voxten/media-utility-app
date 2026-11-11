@@ -20,18 +20,17 @@ import { SliderField } from "../../components/SliderField";
 import { api } from "../../lib/bridge";
 import { allFilesFilter, dialogFilter, formatList, formatName, VIDEO_EXTENSIONS } from "../../lib/fileTypes";
 import { fileName } from "../../lib/format";
-import type { VideoInfo, WaveformData } from "../../lib/types";
+
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { OFFSET_LIMIT_SEC, WaveformTimeline } from "./WaveformTimeline";
 import { errorMessage } from "../../lib/errors";
+import { useToolShortcuts } from "../../lib/useToolShortcuts";
+import { useVideoSyncForm, type ExportMode } from "./store";
 
 const WAVEFORM_POINTS = 4000;
 const PREVIEW_LENGTHS = [10, 15, 30, 60];
 
-type ExportMode = "fast_copy" | "reencode";
-/** Index of an embedded audio track, or the external audio file. */
-type AudioSource = number | "external";
 
 interface ExportResult {
   outputPath: string;
@@ -66,20 +65,13 @@ export default function VideoSyncPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const framesErrorFor = useRef<string | null>(null);
 
-  const [video, setVideo] = useState<VideoInfo | null>(null);
-  const [trackWave, setTrackWave] = useState<WaveformData | null>(null);
-  const [externalAudio, setExternalAudio] = useState<VideoInfo | null>(null);
-  const [externalWave, setExternalWave] = useState<WaveformData | null>(null);
-  const [source, setSource] = useState<AudioSource>(0);
-  const [trackIndex, setTrackIndex] = useState(0);
-  const [offsetSec, setOffsetSec] = useState(0);
-  const [previewStartSec, setPreviewStartSec] = useState(0);
-  const [previewDuration, setPreviewDuration] = useState(30);
-  const [previewClip, setPreviewClip] = useState<{ url: string; startSec: number } | null>(null);
+  const form = useVideoSyncForm();
+  const { video, trackWave, externalAudio, externalWave, source, trackIndex, offsetSec, previewStartSec, previewDuration, previewClip, outputPath, exportMode } =
+    form;
+  const setOffsetSec = (next: number) => form.set({ offsetSec: next });
+  const setPreviewStartSec = (next: number) => form.set({ previewStartSec: next });
   const [previewing, setPreviewing] = useState(false);
   const [playheadSec, setPlayheadSec] = useState<number | null>(null);
-  const [outputPath, setOutputPath] = useState("");
-  const [exportMode, setExportMode] = useState<ExportMode>("fast_copy");
 
   const runner = useJobRunner<ExportResult>("video_sync", {
     onError: (err) => notify.error(t("video_sync.export.error"), { body: err }),
@@ -88,17 +80,22 @@ export default function VideoSyncPage() {
   const external = source === "external" ? externalAudio : null;
   const trackStreamIndex = video?.audioTracks[trackIndex]?.streamIndex;
 
+  // The waveform is kept in the store, so returning to the page does not compute it again.
   useEffect(() => {
-    setTrackWave(null);
-    if (!video?.hasAudio) return;
-    let current = true;
+    const key = video?.hasAudio ? `${video.path}#${trackStreamIndex ?? ""}` : "";
+    const state = useVideoSyncForm.getState();
+    if (state.trackWaveKey === key) return;
+    state.set({ trackWave: null, trackWaveKey: key });
+    if (!video || !key) return;
     api.video_sync
       .waveform(video.path, WAVEFORM_POINTS, 0, undefined, trackStreamIndex)
-      .then((wave) => current && setTrackWave(wave))
-      .catch((err) => notify.error(t("video_sync.errors.loadVideo"), { body: errorMessage(t, err) }));
-    return () => {
-      current = false;
-    };
+      .then((wave) => {
+        if (useVideoSyncForm.getState().trackWaveKey === key) useVideoSyncForm.getState().set({ trackWave: wave });
+      })
+      .catch((err) => {
+        if (useVideoSyncForm.getState().trackWaveKey === key) useVideoSyncForm.getState().set({ trackWaveKey: "" });
+        notify.error(t("video_sync.errors.loadVideo"), { body: errorMessage(t, err) });
+      });
   }, [video, trackStreamIndex, notify, t]);
 
   useEffect(() => {
@@ -108,14 +105,16 @@ export default function VideoSyncPage() {
   const loadVideo = async (path: string) => {
     try {
       const meta = await api.video_sync.probe(path);
-      setVideo(meta);
-      setSource(0);
-      setTrackIndex(0);
-      setOffsetSec(0);
-      setPreviewStartSec(0);
-      setPreviewClip(null);
+      form.set({
+        video: meta,
+        source: 0,
+        trackIndex: 0,
+        offsetSec: 0,
+        previewStartSec: 0,
+        previewClip: null,
+        outputPath: `${path.replace(/\.[^.\\/]+$/, "")}_synced.mp4`,
+      });
       setPlayheadSec(null);
-      setOutputPath(`${path.replace(/\.[^.\\/]+$/, "")}_synced.mp4`);
       runner.reset();
     } catch (err) {
       notify.error(t("video_sync.errors.loadVideo"), { body: errorMessage(t, err) });
@@ -135,10 +134,8 @@ export default function VideoSyncPage() {
     const [path] = await api.dialogs.openFiles([dialogFilter(t, "audio"), allFilesFilter(t)], false);
     if (!path) return;
     try {
-      setExternalAudio(await api.video_sync.probe(path));
-      setExternalWave(null);
-      setSource("external");
-      setExternalWave(await api.video_sync.waveform(path, WAVEFORM_POINTS));
+      form.set({ externalAudio: await api.video_sync.probe(path), externalWave: null, source: "external" });
+      form.set({ externalWave: await api.video_sync.waveform(path, WAVEFORM_POINTS) });
     } catch (err) {
       notify.error(t("video_sync.errors.loadAudio"), { body: errorMessage(t, err) });
     }
@@ -159,7 +156,7 @@ export default function VideoSyncPage() {
         duration: previewDuration,
         ...audioParams(),
       });
-      setPreviewClip({ url: res.previewUrl, startSec: previewStartSec });
+      form.set({ previewClip: { url: res.previewUrl, startSec: previewStartSec } });
     } catch (err) {
       notify.error(t("video_sync.errors.preview"), { body: errorMessage(t, err) });
     } finally {
@@ -167,12 +164,15 @@ export default function VideoSyncPage() {
     }
   };
 
+  const canExport = !!video && !!outputPath && !runner.running;
   const startExport = () => {
     if (!video || !outputPath) return;
-    runner.start(() =>
-      api.video_sync.start({ videoPath: video.path, offsetSec, outputPath, mode: exportMode, ...audioParams() }),
-    );
+    runner
+      .start(() => api.video_sync.start({ videoPath: video.path, offsetSec, outputPath, mode: exportMode, ...audioParams() }))
+      .catch((err) => notify.error(t("video_sync.export.error"), { body: errorMessage(t, err) }));
   };
+
+  useToolShortcuts({ run: canExport && startExport, open: browseVideo });
 
   // The timeline refetches frames on every scroll/zoom, so report a failure once per video.
   const loadFrames = useCallback(
@@ -276,11 +276,8 @@ export default function VideoSyncPage() {
               value={String(source)}
               onChange={(v) => {
                 if (v === "pick") browseAudio();
-                else if (v === "external") setSource("external");
-                else {
-                  setSource(Number(v));
-                  setTrackIndex(Number(v));
-                }
+                else if (v === "external") form.set({ source: "external" });
+                else form.set({ source: Number(v), trackIndex: Number(v) });
               }}
             />
           </Field>
@@ -289,7 +286,7 @@ export default function VideoSyncPage() {
             <Select
               options={PREVIEW_LENGTHS.map((len) => ({ value: String(len), label: `${len} s` }))}
               value={String(previewDuration)}
-              onChange={(v) => setPreviewDuration(Number(v))}
+              onChange={(v) => form.set({ previewDuration: Number(v) })}
             />
           </Field>
 
@@ -303,7 +300,7 @@ export default function VideoSyncPage() {
             <PathPicker
               mode="save"
               value={outputPath}
-              onChange={setOutputPath}
+              onChange={(next) => form.set({ outputPath: next })}
               defaultFileName={fileName(outputPath)}
               fileTypes={[dialogFilter(t, "videos", [".mp4"])]}
             />
@@ -312,7 +309,7 @@ export default function VideoSyncPage() {
             <Select
               options={(["fast_copy", "reencode"] as const).map((m) => ({ value: m, label: modeLabel[m] }))}
               value={exportMode}
-              onChange={setExportMode}
+              onChange={(next: ExportMode) => form.set({ exportMode: next })}
             />
           </Field>
         </div>
@@ -323,7 +320,7 @@ export default function VideoSyncPage() {
       </Panel>
 
       <ActionBar job={runner.job?.status === "done" ? undefined : runner.job} onCancel={runner.cancel}>
-        <Button appearance="primary" icon={<Save16Regular />} disabled={!outputPath || runner.running} onClick={startExport}>
+        <Button appearance="primary" icon={<Save16Regular />} disabled={!canExport} onClick={startExport}>
           {t("video_sync.export.action")}
         </Button>
       </ActionBar>

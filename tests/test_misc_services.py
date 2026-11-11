@@ -55,6 +55,27 @@ def test_pyttsx3_rate_fallback():
     assert tts.pyttsx3_rate("150") == 150
 
 
+def test_read_text_file_encodings(tmp_path):
+    utf8 = tmp_path / "a.txt"
+    utf8.write_bytes("﻿Zażółć gęślą".encode("utf-8"))
+    ansi = tmp_path / "b.TXT"
+    ansi.write_bytes("Zażółć gęślą".encode("cp1250"))
+    assert tts.read_text_file(str(utf8)) == "Zażółć gęślą"
+    assert tts.read_text_file(str(ansi)) == "Zażółć gęślą"
+
+
+def test_read_text_file_rejects_other_and_large_files(tmp_path, monkeypatch):
+    other = tmp_path / "a.md"
+    other.write_text("x", encoding="utf-8")
+    with pytest.raises(ValueError, match="tts.errors.notText"):
+        tts.read_text_file(str(other))
+    big = tmp_path / "big.txt"
+    big.write_text("x" * 20, encoding="utf-8")
+    monkeypatch.setattr(tts, "TEXT_FILE_LIMIT", 10)
+    with pytest.raises(ValueError, match="tts.errors.textTooLarge"):
+        tts.read_text_file(str(big))
+
+
 def test_tts_rejects_empty_text(ctx):
     with pytest.raises(ValueError):
         tts.synthesize(ctx, "   ", "edge", "en-US-GuyNeural", 0, "out.mp3")

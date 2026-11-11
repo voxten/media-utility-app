@@ -322,7 +322,10 @@
     "cropApply": "Apply crop",
     "cropCancel": "Cancel crop",
     "cropReset": "Full image",
-    "outputIsInput": "The result cannot replace the source file. Choose another name or folder."
+    "outputIsInput": "The result cannot replace the source file. Choose another name or folder.",
+    "replaceTitle": "Replace the file?",
+    "replaceBody": "{{name}} already exists in this folder.",
+    "replace": "Replace"
   },
   "fileTypes": {
     "images": "Images",
@@ -383,10 +386,6 @@
       "saved": "Saved"
     },
     "toast": {
-      "done_one": "Converted {{count}} file",
-      "done_other": "Converted {{count}} files",
-      "failed_one": "{{count}} file could not be converted.",
-      "failed_other": "{{count}} files could not be converted.",
       "error": "Conversion failed"
     }
   },
@@ -563,9 +562,6 @@
       "selected_other": "{{count}} files selected ({{size}})"
     },
     "toast": {
-      "found_one": "Found {{count}} duplicate group",
-      "found_other": "Found {{count}} duplicate groups",
-      "none": "No duplicates found",
       "error": "Scan failed",
       "exported": "CSV report saved",
       "trashed_one": "Moved {{count}} file to the Recycle Bin",
@@ -611,8 +607,12 @@
       "ready": "Ready · voice: {{voice}}"
     },
     "toast": {
-      "done": "Audio ready",
       "error": "Speech generation failed"
+    },
+    "errors": {
+      "notText": "Only .txt files can be read into the text.",
+      "textTooLarge": "The text file is larger than 1 MB.",
+      "readText": "Could not read the text file"
     }
   },
   "transcribe": {
@@ -870,6 +870,16 @@
       "saved": "Image saved",
       "error": "Could not export the image",
       "bannerError": "Cannot load the banner"
+    },
+    "colors": {
+      "purple": "Purple",
+      "blue": "Blue",
+      "cyan": "Turquoise",
+      "red": "Red",
+      "green": "Green",
+      "orange": "Orange",
+      "pink": "Pink",
+      "gray": "Grey"
     }
   },
   "jobs": {

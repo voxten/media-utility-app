@@ -29,6 +29,8 @@ import { SubtitlesField, useDownloadSubtitles } from "./SubtitlesField";
 import { useDownloadForm } from "./store";
 import type { BatchItem, ProbeResult } from "./types";
 import { errorMessage } from "../../lib/errors";
+import { ResultCard } from "../../components/ResultCard";
+import { useToolShortcuts } from "../../lib/useToolShortcuts";
 
 const TEMPLATE_TOKENS = ["{title}", "{id}", "{ext}"];
 
@@ -75,23 +77,12 @@ export default function DownloadPage() {
     onError: (error) => notify.error(t("download.toast.probeError"), { body: error }),
   });
 
-  const download = useJobRunner<{ title: string; outdir: string }>("download", {
-    onDone: (result) =>
-      notify.success(t("download.toast.done"), {
-        body: result.title,
-        action: { label: t("common.openFolder"), onClick: () => api.system.openPath(result.outdir) },
-      }),
+  const download = useJobRunner<{ title: string; path: string; size: number; outdir: string }>("download", {
     onError: (error) => notify.error(t("download.toast.error"), { body: error }),
   });
 
   const batch = useJobRunner<BatchResult>("download.batch", {
-    onDone: (result) => {
-      setLastBatch(result.items);
-      const notifyFn = result.failed ? notify.warning : notify.success;
-      notifyFn(t("download.toast.batchDone", { ok: result.succeeded, failed: result.failed }), {
-        action: { label: t("common.openFolder"), onClick: () => api.system.openPath(result.outdir) },
-      });
-    },
+    onDone: (result) => setLastBatch(result.items),
     onError: (error) => notify.error(t("download.toast.error"), { body: error }),
   });
 
@@ -139,6 +130,7 @@ export default function DownloadPage() {
   const runProbe = () => {
     if (!form.url.trim()) return;
     form.set({ probe: null, formatId: "" });
+    download.reset();
     probe.start(() => api.download.probe(form.url.trim())).catch((err) => notify.error(errorMessage(t, err)));
   };
 
@@ -215,6 +207,8 @@ export default function DownloadPage() {
       ? urls.length > 0 && !!outdir
       : !running && !!outdir && !!form.probe && (form.probe.isPlaylist || !!form.formatId);
 
+  useToolShortcuts({ run: canDownload && startDownload });
+
   const outputPanel = (
     <Panel title={t("download.output")}>
       <Field label={t("download.outdir")}>
@@ -276,6 +270,14 @@ export default function DownloadPage() {
               </div>
             </Panel>
 
+            {download.result && (
+              <ResultCard
+                title={t("download.toast.done")}
+                detail={[download.result.title, download.result.size ? formatBytes(download.result.size) : ""].filter(Boolean).join(" · ")}
+                path={download.result.path}
+                sourceToolId="download"
+              />
+            )}
             {form.probe ? (
               <ProbeResultPanel probe={form.probe} />
             ) : (
@@ -289,14 +291,24 @@ export default function DownloadPage() {
             )}
           </>
         ) : (
-          <BatchQueue
+          <>
+            {batch.result && !batch.running && (
+              <ResultCard
+                title={t("download.toast.batchDone", { ok: batch.result.succeeded, failed: batch.result.failed })}
+                path={batch.result.outdir}
+                folder
+                sourceToolId="download"
+              />
+            )}
+            <BatchQueue
             queue={queue}
             running={batch.running}
             speed={speed}
             eta={eta}
             totalSize={batchTotal(batchResult?.totalSize, queue, "size")}
             totalDuration={batchTotal(batchResult?.totalDuration, queue, "duration")}
-          />
+            />
+          </>
         )}
 
         {activeJob && activeJob.logs.length > 0 && <LogPanel logs={activeJob.logs} />}

@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { appTokens } from "../app/theme";
 import { toolById } from "../app/tools";
 import { PAGE_GUTTER, PAGE_MAX_WIDTH, PageFooterContext } from "./pageFooter";
+import { ToolIconTile } from "./ToolIconTile";
 
 const useStyles = makeStyles({
   root: { height: "100%", display: "flex", flexDirection: "column", minHeight: 0 },
@@ -35,16 +36,6 @@ const useStyles = makeStyles({
     display: "flex",
     alignItems: "center",
     gap: "14px",
-  },
-  iconTile: {
-    width: "40px",
-    height: "40px",
-    flexShrink: 0,
-    borderRadius: tokens.borderRadiusLarge,
-    display: "grid",
-    placeItems: "center",
-    color: tokens.colorNeutralForegroundStaticInverted,
-    "& svg": { width: "22px", height: "22px" },
   },
   titles: { display: "flex", flexDirection: "column", minWidth: 0, flexGrow: 1 },
   title: { fontFamily: appTokens.fontFamilyDisplay, lineHeight: tokens.lineHeightBase500 },
@@ -81,14 +72,7 @@ export function Page({ title, description, icon: Icon, accent, actions, children
         <div className={styles.scroll}>
           <div className={mergeClasses(styles.inner, className)}>
             <header className={styles.header}>
-              {Icon && (
-                <div
-                  className={styles.iconTile}
-                  style={{ background: `linear-gradient(135deg, ${accent ?? tokens.colorBrandBackground}, ${accent ?? tokens.colorBrandBackground}cc)` }}
-                >
-                  <Icon />
-                </div>
-              )}
+              {Icon && <ToolIconTile icon={Icon} accent={accent ?? tokens.colorBrandBackground} size="large" />}
               <div className={styles.titles}>
                 <Title3 as="h1" className={styles.title}>
                   {title}

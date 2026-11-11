@@ -8,6 +8,7 @@ from PIL import Image
 
 from backend.core.ffmpeg import probe_media, run_ffmpeg
 from backend.core.jobs import JobContext
+from backend.core.paths import unique_path
 from backend.services import gif_render
 from backend.services.gif_render import OutputOptions
 
@@ -163,7 +164,7 @@ def render(ctx: JobContext, params: Dict[str, Any]) -> Dict[str, Any]:
     path = params["path"]
     if not Path(path).is_file():
         raise FileNotFoundError(f"File not found: {path}")
-    out_path = Path(params["outPath"])
+    out_path = unique_path(Path(params["outPath"]))
     opts = OutputOptions.from_dict(params.get("output"))
     if opts.format not in VIDEO_FORMATS:
         raise ValueError(f"Unsupported output format: {opts.format}")

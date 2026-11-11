@@ -207,6 +207,7 @@ export const api = {
     synthesize: (params: { text: string; engine: string; voice: string; rate: string | number; outPath: string }) =>
       call<JobId>("tts", "synthesize", params),
     audioDataUrl: (path: string) => call<string>("tts", "audio_data_url", path),
+    readText: (path: string) => call<string>("tts", "read_text", path),
   },
   download: {
     probe: (url: string) => call<JobId>("download", "probe", url),

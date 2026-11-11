@@ -167,7 +167,7 @@ def save_transformed(
     if not src.is_file():
         raise FileNotFoundError(f"File not found: {src_path}")
 
-    target = Path(target_path)
+    target = unique_path(Path(target_path))
     target.parent.mkdir(parents=True, exist_ok=True)
 
     with imaging.open_image(src) as img:

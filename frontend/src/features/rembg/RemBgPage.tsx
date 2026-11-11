@@ -150,7 +150,7 @@ export default function RemBgPage() {
   const notify = useNotify();
   const form = useForm();
   const [modelAvailable, setModelAvailable] = useState<boolean | null>(null);
-  const output = useSaveOutput(api.rembg.save);
+  const output = useSaveOutput("rembg", api.rembg.save);
 
   const checkAvailability = async () => {
     try {
@@ -176,7 +176,7 @@ export default function RemBgPage() {
     try {
       const preview = await api.rembg.load(path);
       form.set({ image: preview, sourcePath: path, result: null });
-      output.reset(path, `${fileName(path).replace(/\.[^.]+$/, "")}_nobg.png`);
+      output.reset(`${fileName(path).replace(/\.[^.]+$/, "")}_nobg.png`);
     } catch (err) {
       notify.error(t("common.jobStatus.error"), { body: errorMessage(t, err) });
     }
@@ -320,6 +320,7 @@ export default function RemBgPage() {
             : t("rembg.idle.ready")
       }
       onCancel={runner.cancel}
+      onRun={!runner.running && run}
       runAction={
         <Button appearance="primary" icon={<Wand16Filled />} disabled={runner.running} onClick={run}>
           {t("rembg.actions.remove")}
