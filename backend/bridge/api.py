@@ -54,7 +54,7 @@ class _Context:
         self.bus = bus
         self.settings = settings
         self.history = JobHistory(temp_dir=paths.cache_dir())
-        self.jobs = JobManager(bus.emit, history=self.history)
+        self.jobs = JobManager(bus.emit, max_workers=settings.get("maxConcurrency", 4), history=self.history)
         self.shell = AppShell(APP_NAME, settings, self.jobs.active_count, bus.emit)
         self.window: Any = None
         self.mica = False  # set by main.py once the backdrop is active
@@ -115,7 +115,9 @@ class SettingsApi(_Namespace):
         return self._ctx.settings.all()
 
     def update(self, patch: Dict[str, Any]) -> Dict[str, Any]:
-        return self._ctx.settings.update(patch or {})
+        updated = self._ctx.settings.update(patch or {})
+        self._ctx.jobs.set_limit(updated.get("maxConcurrency"))
+        return updated
 
     def add_recent_folder(self, folder: str) -> None:
         if folder:
@@ -125,7 +127,9 @@ class SettingsApi(_Namespace):
         return self._ctx.settings.clear_recent_folders()
 
     def reset(self) -> Dict[str, Any]:
-        return self._ctx.settings.reset()
+        updated = self._ctx.settings.reset()
+        self._ctx.jobs.set_limit(updated.get("maxConcurrency"))
+        return updated
 
 
 class DialogsApi(_Namespace):
@@ -219,6 +223,7 @@ class SystemApi(_Namespace):
             "download.engines",
             lambda ctx: deps_installer.update_engines(ctx, self._ctx.settings),
             title="engines.updateTitle",
+            limited=False,
         )
 
     def reset_engines(self) -> List[Dict[str, Any]]:
@@ -274,7 +279,9 @@ class ConverterApi(_Namespace):
 class PdfApi(_Namespace):
     def inspect(self, paths: List[str]) -> str:
         files = [p for p in paths if p.lower().endswith(".pdf")]
-        return self._ctx.jobs.submit("pdf.inspect", lambda ctx: pdf.inspect(ctx, files), retryable=False)
+        return self._ctx.jobs.submit(
+            "pdf.inspect", lambda ctx: pdf.inspect(ctx, files), retryable=False, limited=False
+        )
 
     def render_page(self, path: str, page: int) -> str:
         return pdf.render_page(path, int(page))
@@ -367,7 +374,7 @@ class DownloadApi(_Namespace):
     def probe(self, url: str) -> str:
         cookies = self._ctx.settings.cookie_files()
         return self._ctx.jobs.submit(
-            "download.probe", lambda ctx: download.probe(ctx, url, cookies), title=url, retryable=False
+            "download.probe", lambda ctx: download.probe(ctx, url, cookies), title=url, retryable=False, limited=False
         )
 
     def start(self, params: Dict[str, Any]) -> str:
@@ -415,7 +422,7 @@ class InstagramApi(_Namespace):
     def probe(self, url: str) -> str:
         cookies = self._ctx.settings.cookie_files()
         return self._ctx.jobs.submit(
-            "instagram.probe", lambda ctx: instagram.probe(ctx, url, cookies), title=url, retryable=False
+            "instagram.probe", lambda ctx: instagram.probe(ctx, url, cookies), title=url, retryable=False, limited=False
         )
 
     def stop(self, job_id: str) -> bool:

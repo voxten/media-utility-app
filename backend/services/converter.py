@@ -4,14 +4,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from PIL import Image
-
+from backend.core import imaging
 from backend.core.jobs import JobContext
+from backend.core.paths import unique_path
 
 SUPPORTED_FORMATS = ["PNG", "WEBP", "JPEG", "GIF", "TIFF", "BMP", "PDF"]
-ALPHA_FORMATS = {"png", "webp", "gif", "tiff"}
 EXTENSION_ALIASES = {"jpeg": {".jpeg", ".jpg"}, "tiff": {".tiff", ".tif"}}
-OUTPUT_EXTENSION = {"jpeg": "jpg"}
 
 
 @dataclass
@@ -49,26 +47,19 @@ def find_source_files(input_dir: str, in_fmt: str) -> List[Path]:
     )
 
 
-def _has_alpha(img: Image.Image) -> bool:
-    return img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info)
-
-
 def convert_image(src: Path, output_dir: Path, out_fmt: str, quality: int = 80, method: int = 6) -> Path:
-    out_fmt = out_fmt.lower()
-    target = output_dir / f"{src.stem}.{OUTPUT_EXTENSION.get(out_fmt, out_fmt)}"
+    """Convert one file; an existing file of the same name is kept and the result gets a `` (1)`` suffix."""
+    out_fmt = imaging.normalize_format(out_fmt)
+    target = unique_path(output_dir / f"{src.stem}.{imaging.extension(out_fmt)}")
 
-    with Image.open(src) as img:
-        if out_fmt in ALPHA_FORMATS and _has_alpha(img):
-            img = img.convert("RGBA")
-        elif img.mode != "RGB":
-            img = img.convert("RGB")
-
+    with imaging.open_image(src) as img:
+        work = imaging.prepare_for_format(img, out_fmt)
         save_kwargs: Dict[str, Any] = {}
         if out_fmt in ("webp", "jpeg"):
             save_kwargs["quality"] = quality
         if out_fmt == "webp":
             save_kwargs["method"] = method
-        img.save(target, out_fmt.upper(), **save_kwargs)
+        work.save(target, imaging.pil_format(out_fmt), **save_kwargs)
     return target
 
 

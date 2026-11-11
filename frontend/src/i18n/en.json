@@ -226,11 +226,10 @@
       "cudaInactive": "CUDA unavailable, running on CPU",
       "ram": "RAM",
       "ramDetails": "{{avail}} free of {{total}} total memory",
-      "concurrency": "Max Worker Concurrency",
-      "concurrencyDesc": "Number of background jobs and worker threads running in parallel.",
-      "concurrencyThreads": "{{count}} threads",
-      "acceleration": "GPU acceleration",
-      "accelerationDesc": "Use graphics processor to accelerate AI inference and video processing."
+      "concurrency": "Tasks at Once",
+      "concurrencyDesc": "Tasks beyond this number wait in the queue. Checking links and reading PDFs never waits.",
+      "concurrencyTasks_one": "{{count}} task",
+      "concurrencyTasks_other": "{{count}} tasks"
     },
     "notifications": {
       "title": "Notifications & Feedback",
@@ -319,7 +318,8 @@
     "zoomOut": "Zoom out",
     "cropApply": "Apply crop",
     "cropCancel": "Cancel crop",
-    "cropReset": "Full image"
+    "cropReset": "Full image",
+    "outputIsInput": "The result cannot replace the source file. Choose another name or folder."
   },
   "fileTypes": {
     "images": "Images",
@@ -672,7 +672,8 @@
       "whisperFailed": "Whisper failed: {{error}}"
     },
     "error": {
-      "xLoginRequired": "X shares videos only with signed-in users. Add an X cookie file in Settings → Cookie files and try again."
+      "xLoginRequired": "X shares videos only with signed-in users. Add an X cookie file in Settings → Cookie files and try again.",
+      "noMedia": "Nothing to download was found at this link."
     },
     "single": "Single link",
     "batch": "Queue",
@@ -1098,6 +1099,10 @@
       "starting": "Starting processing…",
       "processing": "Processing image {{index}}/{{total}}…",
       "done": "Processing completed."
+    },
+    "log": {
+      "missing": "File not found: {{file}}",
+      "failed": "Could not process {{file}}: {{error}}"
     },
     "toast": {
       "saveSuccess": "Modified image saved",

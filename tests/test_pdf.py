@@ -138,3 +138,55 @@ def test_extract_text(tmp_path, ctx):
     content = out_txt.read_text(encoding="utf-8")
     assert "Hello World" in content
     assert "Second Page Text" in content
+
+
+def test_split_names_files_by_page_and_keeps_existing_ones(tmp_path, ctx):
+    src = tmp_path / "doc.pdf"
+    _make_pdf(src, ["P1", "P2", "P3", "P4", "P5"])
+    out = tmp_path / "out"
+    res = pdf.split(ctx, str(src), str(out), mode="groups", groups=[[0, 1, 2, 4], [3]])
+    assert [Path(f).name for f in res["files"]] == ["doc_1-3,5.pdf", "doc_4.pdf"]
+
+    again = pdf.split(ctx, str(src), str(out), mode="all")
+    assert Path(again["files"][0]).name == "doc_001.pdf"
+    third = pdf.split(ctx, str(src), str(out), mode="all")
+    assert Path(third["files"][0]).name == "doc_001 (1).pdf"
+    assert _page_texts(out / "doc_001.pdf") == ["P1"]
+
+
+def test_pdf_to_images_does_not_overwrite(tmp_path, ctx):
+    src = tmp_path / "doc.pdf"
+    _make_pdf(src, ["P1"])
+    out = tmp_path / "img"
+    first = pdf.pdf_to_images(ctx, str(src), str(out), fmt="png", dpi=30)
+    second = pdf.pdf_to_images(ctx, str(src), str(out), fmt="png", dpi=30)
+    assert first["files"] != second["files"]
+    assert len(list(out.iterdir())) == 2
+
+
+def test_compress_and_rotate_can_replace_the_source(tmp_path, ctx):
+    src = tmp_path / "doc.pdf"
+    _make_pdf(src, ["P1", "P2"])
+    pdf.compress(ctx, str(src), str(src))
+    assert _page_texts(src) == ["P1", "P2"]
+
+    res = pdf.rotate_pages(ctx, str(src), [0, 7], 90, str(src))
+    assert res["rotatedCount"] == 1
+    with fitz.open(str(src)) as doc:
+        assert [page.rotation for page in doc] == [90, 0]
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["doc.pdf"]
+
+
+def test_rotate_rejects_angles_that_are_not_right_angles(tmp_path, ctx):
+    src = tmp_path / "doc.pdf"
+    _make_pdf(src, ["P1"])
+    with pytest.raises(ValueError):
+        pdf.rotate_pages(ctx, str(src), [0], 45, str(tmp_path / "out.pdf"))
+
+
+def test_extract_text_page_markers_are_language_neutral(tmp_path, ctx):
+    src = tmp_path / "doc.pdf"
+    _make_pdf(src, ["Hello"])
+    out = tmp_path / "doc.txt"
+    pdf.extract_text(ctx, str(src), str(out))
+    assert out.read_text(encoding="utf-8").startswith("--- 1 ---")

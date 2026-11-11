@@ -13,11 +13,11 @@ from yt_dlp.utils import mimetype2ext, sanitize_filename, traverse_obj, url_or_n
 
 from backend.core import thumbs
 from backend.core.jobs import JobCancelled, JobContext
+from backend.core.paths import unique_path
 from backend.services.download import (
     AUTO_FORMAT,
     UniqueYoutubeDL,
     _base_opts,
-    _unique_path,
     clean_error_message,
     cookie_file_for,
 )
@@ -321,7 +321,7 @@ def _save(ctx: JobContext, ydl: yt_dlp.YoutubeDL, slide: Dict[str, Any], base: P
     with ydl.urlopen(Request(slide["url"], headers=REFERER)) as resp:
         default_ext = "mp4" if slide["kind"] == "video" else "jpg"
         ext = mimetype2ext(resp.headers.get("Content-Type")) or default_ext
-        path = _unique_path(base.with_name(f"{base.name}.{ext}"))
+        path = unique_path(base.with_name(f"{base.name}.{ext}"))
         total = int(resp.headers.get("Content-Length") or 0)
         part = path.with_name(path.name + ".part")
         done = 0

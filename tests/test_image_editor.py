@@ -3,7 +3,7 @@
 from pathlib import Path
 from PIL import Image
 
-from backend.core.jobs import JobContext
+from backend.core.jobs import JobCancelled, JobContext
 from backend.services import image_editor
 
 
@@ -158,3 +158,47 @@ def test_batch_process_per_file_ops(tmp_path: Path):
     assert result["results"][0]["height"] == 200
     assert result["results"][1]["width"] == 50
     assert result["results"][1]["height"] == 50
+
+
+def test_batch_process_can_be_cancelled(tmp_path: Path):
+    files = []
+    for i in range(3):
+        p = tmp_path / f"img{i}.png"
+        Image.new("RGB", (20, 20)).save(p)
+        files.append(str(p))
+    ctx = JobContext()
+    ctx.cancel()
+    try:
+        image_editor.batch_process(ctx, files, str(tmp_path / "out"), {})
+    except JobCancelled:
+        pass
+    else:
+        raise AssertionError("batch_process ignored the cancellation")
+    assert not any((tmp_path / "out").iterdir())
+
+
+def test_batch_process_logs_translatable_messages_and_keeps_files(tmp_path: Path):
+    src = tmp_path / "a.png"
+    Image.new("RGB", (20, 20)).save(src)
+    out = tmp_path / "out"
+    out.mkdir()
+    (out / "a_edited.png").write_bytes(b"keep me")
+    logs = []
+    ctx = JobContext(emit=lambda event, payload: logs.append(payload) if event == "job:log" else None)
+    result = image_editor.batch_process(ctx, [str(src), str(tmp_path / "missing.png")], str(out), {})
+    assert (out / "a_edited.png").read_bytes() == b"keep me"
+    assert Path(result["files"][0]).name == "a_edited (1).png"
+    assert [entry["message"] for entry in logs] == ["imageTools.log.missing"]
+
+
+def test_preview_and_save_use_the_exif_orientation(tmp_path: Path):
+    src = tmp_path / "phone.jpg"
+    exif = Image.Exif()
+    exif[0x0112] = 6
+    Image.new("RGB", (40, 20)).save(src, exif=exif)
+    preview = image_editor.load_preview(str(src))
+    assert (preview["width"], preview["height"]) == (20, 40)
+    thumb = image_editor.thumbnail(str(src))
+    assert (thumb["width"], thumb["height"]) == (20, 40)
+    res = image_editor.save_transformed(str(src), str(tmp_path / "out.png"), {"crop": {"x": 0, "y": 0, "width": 20, "height": 30}})
+    assert (res["width"], res["height"]) == (20, 30)

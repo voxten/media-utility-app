@@ -42,7 +42,6 @@ import {
   LocalLanguage24Regular,
   Server24Regular,
   Settings24Filled,
-  Flash24Regular,
   Color24Regular,
   Speaker216Regular,
   Speaker224Regular,
@@ -580,20 +579,9 @@ function HardwareSection() {
         >
           <Select
             className={styles.dropdown}
-            options={concurrencyOptions.map((n) => ({ value: String(n), label: t("settings.hardware.concurrencyThreads", { count: n }) }))}
+            options={concurrencyOptions.map((n) => ({ value: String(n), label: t("settings.hardware.concurrencyTasks", { count: n }) }))}
             value={String(settings.maxConcurrency ?? 4)}
             onChange={(v) => update({ maxConcurrency: Number(v) })}
-          />
-        </SettingRow>
-
-        <SettingRow
-          icon={Flash24Regular}
-          title={t("settings.hardware.acceleration")}
-          description={t("settings.hardware.accelerationDesc")}
-        >
-          <Switch
-            checked={settings.hardwareAcceleration ?? true}
-            onChange={(_, d) => update({ hardwareAcceleration: d.checked })}
           />
         </SettingRow>
       </SettingGroup>

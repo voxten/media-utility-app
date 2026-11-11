@@ -69,7 +69,12 @@ def extract_waveform(
             stderr=subprocess.DEVNULL,
             creationflags=NO_WINDOW,
         )
-        raw_bytes, _ = proc.communicate(timeout=60)
+        try:
+            raw_bytes, _ = proc.communicate(timeout=60)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.communicate()
+            raise
     except Exception as e:
         logger.error("FFmpeg waveform extraction failed: %s", e)
         raise RuntimeError(f"Could not extract audio waveform: {e}") from e

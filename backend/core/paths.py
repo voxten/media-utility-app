@@ -3,6 +3,7 @@
 import os
 import sys
 from pathlib import Path
+from typing import Optional, Set
 
 APP_NAME = "MediaStudio"
 
@@ -39,3 +40,17 @@ def cache_dir() -> Path:
 
 def default_output_dir() -> Path:
     return Path.home() / "Downloads"
+
+
+def unique_path(path: Path, taken: Optional[Set[Path]] = None) -> Path:
+    """``path``, or ``name (1).ext``, ``name (2).ext``… when that file exists or another output of the batch took it.
+
+    Pass the same ``taken`` set for every output of one batch whose files are all named before any is written.
+    """
+    candidate, counter = path, 1
+    while candidate.exists() or (taken is not None and candidate in taken):
+        candidate = path.with_name(f"{path.stem} ({counter}){path.suffix}")
+        counter += 1
+    if taken is not None:
+        taken.add(candidate)
+    return candidate

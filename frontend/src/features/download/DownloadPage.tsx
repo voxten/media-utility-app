@@ -156,23 +156,31 @@ export default function DownloadPage() {
     }
   };
 
+  const startBatch = (batchUrls: string[]) => {
+    setLastBatch(null);
+    batch
+      .start(() => api.download.batch({ urls: batchUrls, outdir, template: form.template, subtitles: subtitles.params }))
+      .then(() => form.set({ batchText: "" }))
+      .catch((err) => notify.error(String(err)));
+  };
+
   const startDownload = () => {
     if (form.tab === "batch") {
       if (batch.running && batch.jobId) {
         api.download
           .addToBatch({ jobId: batch.jobId, urls })
-          .then(() => {
+          .then(({ success }) => {
+            if (!success) {
+              startBatch(urls);
+              return;
+            }
             form.set({ batchText: "" });
             notify.success(t("download.toast.addedToBatch", { count: urls.length }));
           })
           .catch((err) => notify.error(String(err)));
         return;
       }
-      setLastBatch(null);
-      batch
-        .start(() => api.download.batch({ urls, outdir, template: form.template, subtitles: subtitles.params }))
-        .then(() => form.set({ batchText: "" }))
-        .catch((err) => notify.error(String(err)));
+      startBatch(urls);
       return;
     }
     if (!form.probe) return;

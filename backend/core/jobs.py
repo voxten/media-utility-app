@@ -21,6 +21,9 @@ from backend.core.history import JobHistory
 Emit = Callable[[str, Dict[str, Any]], None]
 
 PROGRESS_INTERVAL_S = 0.1
+# Upper bound of the thread pool; the user-facing limit (``maxConcurrency``) is enforced by JobManager.
+POOL_SIZE = 16
+QUEUE_POLL_S = 0.2
 
 
 class JobCancelled(Exception):
@@ -117,6 +120,8 @@ class JobInfo:
     context: Optional[JobContext] = None
     # Kept while the job can still be run again with the same settings (until it finishes without an error).
     fn: Optional[Callable[[JobContext], Any]] = None
+    # Limited jobs wait for a free slot; quick lookups (probes, PDF inspection) skip the queue.
+    limited: bool = True
 
     def to_dict(self) -> Dict[str, Any]:
         ctx = self.context
@@ -140,26 +145,80 @@ class JobManager:
     def __init__(self, emit: Optional[Emit] = None, max_workers: int = 4, history: Optional[JobHistory] = None) -> None:
         self._emit = emit or (lambda event, payload: None)
         self._history = history
-        self._pool = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="job")
+        self._pool = ThreadPoolExecutor(max_workers=POOL_SIZE, thread_name_prefix="job")
         self._jobs: Dict[str, JobInfo] = {}
         self._lock = threading.Lock()
+        self._slots = threading.Condition()
+        self._limit = 1
+        self._busy = 0
+        self.set_limit(max_workers)
 
-    def submit(self, kind: str, fn: Callable[[JobContext], Any], title: str = "", retryable: bool = True) -> str:
-        """Start ``fn`` in the background. ``retryable`` jobs that fail can be run again with :meth:`retry`."""
+    @property
+    def limit(self) -> int:
+        return self._limit
+
+    def set_limit(self, limit: Any) -> None:
+        """How many limited jobs run at once; queued jobs start as soon as a slot frees up."""
+        try:
+            value = int(limit)
+        except (TypeError, ValueError):
+            return
+        with self._slots:
+            self._limit = max(1, min(POOL_SIZE, value))
+            self._slots.notify_all()
+
+    def submit(
+        self,
+        kind: str,
+        fn: Callable[[JobContext], Any],
+        title: str = "",
+        retryable: bool = True,
+        limited: bool = True,
+    ) -> str:
+        """Start ``fn`` in the background. ``retryable`` jobs that fail can be run again with :meth:`retry`.
+
+        ``limited`` jobs share the ``maxConcurrency`` slots; pass False for quick lookups the UI waits on.
+        """
         job_id = uuid.uuid4().hex[:12]
         ctx = JobContext(job_id, self._emit)
-        info = JobInfo(id=job_id, kind=kind, title=title or kind, context=ctx, fn=fn if retryable else None)
+        info = JobInfo(
+            id=job_id, kind=kind, title=title or kind, context=ctx, fn=fn if retryable else None, limited=limited
+        )
         with self._lock:
             self._jobs[job_id] = info
         self._emit("job:started", info.to_dict())
         self._pool.submit(self._run, info, fn)
         return job_id
 
+    def _acquire(self, ctx: JobContext) -> None:
+        """Wait for a free slot; raises JobCancelled if the job is cancelled while queued."""
+        with self._slots:
+            queued = self._busy >= self._limit
+            if queued:
+                ctx.progress(None, "jobs.pending")
+            while self._busy >= self._limit:
+                ctx.check_cancelled()
+                self._slots.wait(QUEUE_POLL_S)
+            ctx.check_cancelled()
+            self._busy += 1
+        if queued:
+            ctx.message, ctx.params = None, {}
+            ctx._send("job:progress", {"percent": None, "message": None, "params": {}})
+
+    def _release(self) -> None:
+        with self._slots:
+            self._busy -= 1
+            self._slots.notify()
+
     def _run(self, info: JobInfo, fn: Callable[[JobContext], Any]) -> None:
         ctx = info.context
         assert ctx is not None
         result: Any = None
+        acquired = False
         try:
+            if info.limited:
+                self._acquire(ctx)
+                acquired = True
             result = fn(ctx)
         except JobCancelled:
             self._finish(info, "cancelled")
@@ -179,6 +238,9 @@ class JobManager:
             else:
                 self._finish(info, "done")
                 self._emit("job:done", {"jobId": info.id, "result": result})
+        finally:
+            if acquired:
+                self._release()
         self._record(info, result if info.status == "done" else None)
 
     def _record(self, info: JobInfo, result: Any) -> None:
@@ -207,7 +269,7 @@ class JobManager:
             if not info or info.status != "error" or info.fn is None:
                 return None
             fn, info.fn = info.fn, None
-        return self.submit(info.kind, fn, info.title)
+        return self.submit(info.kind, fn, info.title, limited=info.limited)
 
     def cancel(self, job_id: str) -> bool:
         with self._lock:

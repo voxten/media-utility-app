@@ -230,11 +230,12 @@
       "cudaInactive": "CUDA niedostępna, praca na CPU",
       "ram": "Pamięć RAM",
       "ramDetails": "{{avail}} wolne z {{total}} całkowitej pamięci",
-      "concurrency": "Maksymalna współbieżność zadań",
-      "concurrencyDesc": "Liczba zadań w tle i wątków roboczych wykonywanych równolegle.",
-      "concurrencyThreads": "{{count}} wątków",
-      "acceleration": "Akceleracja GPU",
-      "accelerationDesc": "Używaj procesora graficznego do akceleracji obliczeń AI i wideo."
+      "concurrency": "Zadania naraz",
+      "concurrencyDesc": "Kolejne zadania czekają w kolejce. Sprawdzanie linków i odczyt PDF nigdy nie czekają.",
+      "concurrencyTasks_one": "{{count}} zadanie",
+      "concurrencyTasks_few": "{{count}} zadania",
+      "concurrencyTasks_many": "{{count}} zadań",
+      "concurrencyTasks_other": "{{count}} zadania"
     },
     "notifications": {
       "title": "Powiadomienia i dźwięki",
@@ -325,7 +326,8 @@
     "zoomOut": "Pomniejsz",
     "cropApply": "Zatwierdź kadr",
     "cropCancel": "Anuluj kadr",
-    "cropReset": "Pełny obraz"
+    "cropReset": "Pełny obraz",
+    "outputIsInput": "Wynik nie może zastąpić pliku źródłowego. Wybierz inną nazwę lub folder."
   },
   "fileTypes": {
     "images": "Obrazy",
@@ -722,7 +724,8 @@
       "whisperFailed": "Whisper nie zadziałał: {{error}}"
     },
     "error": {
-      "xLoginRequired": "X udostępnia filmy tylko zalogowanym. Dodaj plik cookies X w Ustawieniach → Pliki cookies i spróbuj ponownie."
+      "xLoginRequired": "X udostępnia filmy tylko zalogowanym. Dodaj plik cookies X w Ustawieniach → Pliki cookies i spróbuj ponownie.",
+      "noMedia": "Pod tym linkiem nie znaleziono nic do pobrania."
     },
     "single": "Pojedynczy link",
     "batch": "Kolejka",
@@ -1176,6 +1179,10 @@
       "starting": "Rozpoczynanie przetwarzania…",
       "processing": "Przetwarzanie obrazu {{index}}/{{total}}…",
       "done": "Przetwarzanie zakończone."
+    },
+    "log": {
+      "missing": "Nie znaleziono pliku: {{file}}",
+      "failed": "Nie udało się przetworzyć {{file}}: {{error}}"
     },
     "toast": {
       "saveSuccess": "Zapisano zmodyfikowany obraz",

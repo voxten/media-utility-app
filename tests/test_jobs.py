@@ -192,3 +192,85 @@ def test_describe_sends_meta_and_keeps_it_in_the_job_info():
     assert metas == [{"jobId": job_id, "meta": {"height": 1080, "ext": "mp4"}}, {"jobId": job_id, "meta": {"thumb": "data:"}}]
     assert manager.get(job_id)["meta"] == {"height": 1080, "ext": "mp4", "thumb": "data:"}
     manager.shutdown()
+
+
+def _wait_until(predicate, timeout=5.0):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if predicate():
+            return True
+        time.sleep(0.01)
+    return False
+
+
+def test_limited_jobs_wait_for_a_free_slot():
+    manager = JobManager(max_workers=1)
+    release = threading.Event()
+    running = []
+
+    def work(ctx):
+        running.append(ctx.job_id)
+        release.wait(5)
+
+    first = manager.submit("test", work)
+    second = manager.submit("test", work)
+    assert _wait_until(lambda: running == [first])
+    time.sleep(0.1)
+    assert running == [first]
+    assert manager.get(second)["message"] == "jobs.pending"
+
+    release.set()
+    assert _wait_until(lambda: manager.get(second)["status"] == "done")
+    assert running == [first, second]
+    manager.shutdown()
+
+
+def test_unlimited_jobs_skip_the_queue():
+    manager = JobManager(max_workers=1)
+    release = threading.Event()
+    manager.submit("test", lambda ctx: release.wait(5))
+    quick = manager.submit("download.probe", lambda ctx: "ok", limited=False)
+    assert _wait_until(lambda: manager.get(quick)["status"] == "done")
+    release.set()
+    manager.shutdown()
+
+
+def test_raising_the_limit_starts_queued_jobs():
+    manager = JobManager(max_workers=1)
+    release = threading.Event()
+    started = threading.Event()
+    manager.submit("test", lambda ctx: release.wait(5))
+    queued = manager.submit("test", lambda ctx: started.set())
+    time.sleep(0.1)
+    assert not started.is_set()
+    manager.set_limit(2)
+    assert started.wait(2)
+    assert _wait_until(lambda: manager.get(queued)["status"] == "done")
+    release.set()
+    manager.shutdown()
+
+
+def test_queued_job_can_be_cancelled():
+    manager = JobManager(max_workers=1)
+    release = threading.Event()
+    ran = []
+    manager.submit("test", lambda ctx: release.wait(5))
+    queued = manager.submit("test", lambda ctx: ran.append(1))
+    time.sleep(0.05)
+    assert manager.cancel(queued)
+    assert _wait_until(lambda: manager.get(queued)["status"] == "cancelled")
+    release.set()
+    time.sleep(0.1)
+    assert ran == []
+    manager.shutdown()
+
+
+def test_limit_is_clamped_and_ignores_garbage():
+    manager = JobManager(max_workers=4)
+    manager.set_limit(0)
+    assert manager.limit == 1
+    manager.set_limit(999)
+    assert manager.limit == 16
+    manager.set_limit("abc")
+    assert manager.limit == 16
+    manager.shutdown()

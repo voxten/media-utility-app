@@ -11,15 +11,11 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from PIL import Image
 
-from backend.core import thumbs
+from backend.core import imaging, thumbs
 from backend.core.jobs import JobContext
+from backend.core.paths import unique_path
 
 SUPPORTED_INPUT_FORMATS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff", ".tif"}
-ALPHA_FORMATS = {"png", "webp"}
-
-
-def _has_alpha(img: Image.Image) -> bool:
-    return img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info)
 
 
 def load_preview(path: str) -> Dict[str, Any]:
@@ -28,8 +24,8 @@ def load_preview(path: str) -> Dict[str, Any]:
     if not p.is_file():
         raise FileNotFoundError(f"File not found: {path}")
 
-    with Image.open(p) as img:
-        has_alpha = _has_alpha(img)
+    with imaging.open_image(p) as img:
+        has_alpha = imaging.has_alpha(img)
         w, h = img.width, img.height
         raw_format = (img.format or p.suffix.lstrip(".")).upper()
         # Preview thumbnail
@@ -52,32 +48,10 @@ def _compress_to_buffer(
     fmt: str,
     mode: str = "smart",
     quality: int = 80,
-    strip_metadata: bool = True,
 ) -> Tuple[bytes, str]:
-    """Compresses a PIL Image in memory and returns (bytes, mime_type)."""
-    fmt = fmt.lower()
-    if fmt == "jpg":
-        fmt = "jpeg"
-
-    # Handle Alpha channel
-    if fmt == "jpeg":
-        if _has_alpha(img):
-            # Create a clean white background for JPEG
-            bg = Image.new("RGB", img.size, (255, 255, 255))
-            if img.mode != "RGBA":
-                img = img.convert("RGBA")
-            bg.paste(img, mask=img.split()[3])
-            work_img = bg
-        elif img.mode != "RGB":
-            work_img = img.convert("RGB")
-        else:
-            work_img = img
-    elif fmt in ALPHA_FORMATS and _has_alpha(img):
-        work_img = img.convert("RGBA") if img.mode != "RGBA" else img
-    elif img.mode != "RGB":
-        work_img = img.convert("RGB")
-    else:
-        work_img = img
+    """Compresses a PIL Image in memory and returns (bytes, mime_type). Metadata is not carried over."""
+    fmt = imaging.normalize_format(fmt)
+    work_img = imaging.prepare_for_format(img, fmt)
 
     buf = io.BytesIO()
 
@@ -103,7 +77,7 @@ def _compress_to_buffer(
         mime = "jpeg"
 
     elif fmt == "png":
-        if mode == "smart" and not _has_alpha(work_img):
+        if mode == "smart" and not imaging.has_alpha(work_img):
             # Quantize 24-bit to 8-bit palette with Floyd-Steinberg dithering for massive savings
             quantized = work_img.quantize(colors=256, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.FLOYDSTEINBERG)
             quantized.save(buf, "PNG", optimize=True, compress_level=9)
@@ -112,7 +86,7 @@ def _compress_to_buffer(
         mime = "png"
 
     else:
-        work_img.save(buf, fmt.upper())
+        work_img.save(buf, imaging.pil_format(fmt))
         mime = fmt
 
     return buf.getvalue(), mime
@@ -165,16 +139,13 @@ def preview_compress(path: str, params: Dict[str, Any]) -> Dict[str, Any]:
 
     in_bytes = p.stat().st_size
     out_fmt = params.get("format", "original").lower()
-    if out_fmt == "original":
-        out_fmt = p.suffix.lstrip(".").lower()
-    if out_fmt == "jpg":
-        out_fmt = "jpeg"
+    out_fmt = imaging.normalize_format(p.suffix if out_fmt == "original" else out_fmt)
 
     mode = params.get("mode", "smart")  # smart | lossless | target
     quality = int(params.get("quality", 80))
     target_kb = params.get("targetKb")
 
-    with Image.open(p) as img:
+    with imaging.open_image(p) as img:
         if mode == "target" and target_kb:
             target_bytes = int(target_kb) * 1024
             data, mime = _find_target_quality(img, out_fmt, target_bytes)
@@ -242,22 +213,17 @@ def compress(ctx: JobContext, params: Dict[str, Any]) -> Dict[str, Any]:
         total_in += in_size
         ctx.progress(idx / total * 100, "compressor.status.processing", {"file": src.name, "index": idx + 1, "total": total})
 
-        # Determine output format and extension
-        if out_fmt_choice == "original":
-            out_fmt = src.suffix.lstrip(".").lower()
-        else:
-            out_fmt = out_fmt_choice
-        if out_fmt == "jpg":
-            out_fmt = "jpeg"
-        ext = "jpg" if out_fmt == "jpeg" else out_fmt
+        keep_format = out_fmt_choice == "original"
+        out_fmt = imaging.normalize_format(src.suffix if keep_format else out_fmt_choice)
+        ext = src.suffix.lstrip(".").lower() if keep_format else imaging.extension(out_fmt)
 
         if single_out_path and total == 1:
             dest = Path(single_out_path)
         else:
-            dest = out_dir_path / f"{src.stem}_compressed.{ext}"
+            dest = unique_path(out_dir_path / f"{src.stem}_compressed.{ext}")
 
         try:
-            with Image.open(src) as img:
+            with imaging.open_image(src) as img:
                 if mode == "target" and target_bytes:
                     data, _ = _find_target_quality(img, out_fmt, target_bytes)
                 else:

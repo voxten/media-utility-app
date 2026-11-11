@@ -61,3 +61,20 @@ def test_compress_job_batch(tmp_path, ctx):
     assert res["savedBytes"] >= 0
     out_files = list(out_dir.glob("*.webp"))
     assert len(out_files) == 2
+
+
+def test_compress_tif_with_original_format(tmp_path, ctx):
+    src = tmp_path / "scan.tif"
+    Image.new("RGB", (40, 30), (10, 20, 30)).save(src)
+    result = compressor.compress(ctx, {"files": [str(src)], "format": "original", "outputDir": str(tmp_path / "out")})
+    assert result["processed"] == 1 and result["failed"] == 0
+    assert result["files"][0].endswith("scan_compressed.tif")
+
+
+def test_compress_keeps_earlier_results(tmp_path, ctx):
+    src = tmp_path / "a.png"
+    Image.new("RGB", (40, 30), (10, 20, 30)).save(src)
+    params = {"files": [str(src)], "format": "png", "outputDir": str(tmp_path / "out")}
+    first = compressor.compress(ctx, params)["files"][0]
+    second = compressor.compress(ctx, params)["files"][0]
+    assert first != second and second.endswith("a_compressed (1).png")

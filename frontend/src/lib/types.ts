@@ -10,7 +10,6 @@ export interface Settings {
   outputDir: string;
   cookies: { youtube: string; x: string; instagram: string };
   recentFolders: string[];
-  hardwareAcceleration: boolean;
   maxConcurrency: number;
   desktopNotifications: boolean;
   completionSound: boolean;

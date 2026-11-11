@@ -9,6 +9,7 @@ from PIL import Image, ImageSequence
 
 from backend.core import thumbs
 from backend.core.jobs import JobContext
+from backend.core.paths import unique_path
 from backend.services import gif_render
 from backend.services.gif_render import OutputOptions
 from backend.services.image_editor import apply_operations
@@ -181,7 +182,8 @@ def render(ctx: JobContext, params: Dict[str, Any]) -> Dict[str, Any]:
     else:
         out_dir = Path(params["outputDir"])
         per_file = params.get("operations") or {}
-        jobs = [(f, _unique(out_dir / (Path(f).stem + ext)), per_file.get(f, {})) for f in params["files"]]
+        taken: set = set()
+        jobs = [(f, unique_path(out_dir / (Path(f).stem + ext), taken), per_file.get(f, {})) for f in params["files"]]
 
     results: List[Dict[str, Any]] = []
     failed = 0
@@ -221,11 +223,3 @@ def render(ctx: JobContext, params: Dict[str, Any]) -> Dict[str, Any]:
         "files": [r["dest"] for r in results],
         "results": results,
     }
-
-
-def _unique(path: Path) -> Path:
-    candidate, n = path, 1
-    while candidate.exists():
-        candidate = path.with_name(f"{path.stem} ({n}){path.suffix}")
-        n += 1
-    return candidate

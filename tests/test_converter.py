@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from PIL import Image
 
 from backend.services.converter import ConvertOptions, convert, find_source_files
@@ -54,3 +56,34 @@ def test_broken_file_is_logged_and_skipped(tmp_path, ctx):
 def test_empty_folder_returns_zero(tmp_path, ctx):
     result = convert(ctx, ConvertOptions(input_dir=str(tmp_path), in_fmt="PNG", output_dir=str(tmp_path / "o"), out_fmt="WEBP"))
     assert result["total"] == 0 and result["converted"] == 0
+
+
+def test_convert_transparency_to_jpeg_goes_onto_white(tmp_path, ctx):
+    src = tmp_path / "clear.png"
+    Image.new("RGBA", (10, 10), (0, 0, 0, 0)).save(src)
+    out = tmp_path / "out"
+    result = convert(ctx, ConvertOptions(files=[str(src)], output_dir=str(out), out_fmt="JPEG"))
+    with Image.open(result["files"][0]) as img:
+        assert img.getpixel((5, 5)) == (255, 255, 255)
+
+
+def test_convert_keeps_existing_files(tmp_path, ctx):
+    src = tmp_path / "a.png"
+    Image.new("RGB", (10, 10), (255, 0, 0)).save(src)
+    out = tmp_path / "out"
+    out.mkdir()
+    existing = out / "a.webp"
+    existing.write_bytes(b"keep me")
+    result = convert(ctx, ConvertOptions(files=[str(src)], output_dir=str(out), out_fmt="WEBP"))
+    assert existing.read_bytes() == b"keep me"
+    assert Path(result["files"][0]).name == "a (1).webp"
+
+
+def test_convert_applies_exif_orientation(tmp_path, ctx):
+    src = tmp_path / "phone.jpg"
+    exif = Image.Exif()
+    exif[0x0112] = 6  # rotated 90° clockwise
+    Image.new("RGB", (40, 20), (0, 128, 0)).save(src, exif=exif)
+    result = convert(ctx, ConvertOptions(files=[str(src)], output_dir=str(tmp_path / "out"), out_fmt="PNG"))
+    with Image.open(result["files"][0]) as img:
+        assert img.size == (20, 40)

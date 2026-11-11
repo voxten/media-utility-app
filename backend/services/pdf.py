@@ -6,7 +6,9 @@ from typing import Any, Dict, List, Sequence
 
 import fitz  # PyMuPDF
 
+from backend.core.ffmpeg import same_file
 from backend.core.jobs import JobContext
+from backend.core.paths import unique_path
 
 THUMB_ZOOM = 0.3
 PREVIEW_ZOOM = 1.5
@@ -126,6 +128,25 @@ def parse_page_range(spec: str, max_pages: int) -> List[int]:
     return pages
 
 
+def _write_path(src: Path, target: Path) -> Path:
+    """Where to save ``target``: PyMuPDF cannot overwrite the open source, so that goes through a temp file."""
+    return target.with_name(f"{target.stem}.tmp{target.suffix}") if same_file(src, target) else target
+
+
+def _pages_label(pages: Sequence[int]) -> str:
+    """1-based page list for a file name: [0, 1, 2, 4] → "1-3,5"."""
+    parts: List[str] = []
+    start = prev = pages[0]
+    for page in [*pages[1:], None]:
+        if page is not None and page == prev + 1:
+            prev = page
+            continue
+        parts.append(f"{start + 1}" if start == prev else f"{start + 1}-{prev + 1}")
+        if page is not None:
+            start = prev = page
+    return ",".join(parts)
+
+
 def compress(ctx: JobContext, path: str, out_path: str, quality_preset: str = "balanced") -> Dict[str, Any]:
     """Compress a PDF file by downsampling embedded images and deflating streams."""
     src = Path(path)
@@ -160,7 +181,10 @@ def compress(ctx: JobContext, path: str, out_path: str, quality_preset: str = "b
 
         ctx.check_cancelled()
         ctx.progress(70, "pdf.status.saving")
-        doc.save(str(target), garbage=4, clean=True, deflate=True, deflate_images=True, deflate_fonts=True)
+        write_path = _write_path(src, target)
+        doc.save(str(write_path), garbage=4, clean=True, deflate=True, deflate_images=True, deflate_fonts=True)
+    if write_path != target:
+        write_path.replace(target)
 
     out_bytes = target.stat().st_size
     saved_bytes = max(0, in_bytes - out_bytes)
@@ -210,7 +234,7 @@ def split(
 
             for idx, group in enumerate(valid):
                 ctx.check_cancelled()
-                out_file = out_dir_path / f"{stem}_czesc_{idx + 1:02d}.pdf"
+                out_file = unique_path(out_dir_path / f"{stem}_{_pages_label(group)}.pdf")
                 with fitz.open() as sub_doc:
                     for page_num in group:
                         sub_doc.insert_pdf(doc, from_page=page_num, to_page=page_num)
@@ -220,7 +244,7 @@ def split(
         else:
             for i in range(total):
                 ctx.check_cancelled()
-                out_file = out_dir_path / f"{stem}_strona_{i + 1:03d}.pdf"
+                out_file = unique_path(out_dir_path / f"{stem}_{i + 1:03d}.pdf")
                 with fitz.open() as sub_doc:
                     sub_doc.insert_pdf(doc, from_page=i, to_page=i)
                     sub_doc.save(str(out_file), garbage=3, deflate=True)
@@ -266,7 +290,7 @@ def pdf_to_images(
             page = doc[i]
             pix = page.get_pixmap(dpi=dpi)
             ext = "jpg" if fmt == "jpeg" else fmt
-            out_file = out_dir_path / f"{stem}_{i + 1:03d}.{ext}"
+            out_file = unique_path(out_dir_path / f"{stem}_{i + 1:03d}.{ext}")
             if fmt == "webp":
                 pix.pil_save(str(out_file), format="WEBP", quality=85)
             elif fmt in ("png", "jpeg"):
@@ -319,6 +343,8 @@ def images_to_pdf(ctx: JobContext, image_paths: List[str], out_path: str) -> Dic
 
 def rotate_pages(ctx: JobContext, path: str, pages: List[int], angle: int, out_path: str) -> Dict[str, Any]:
     """Rotate specified pages (0-indexed) by angle (e.g. 90, 180, 270) and save to out_path."""
+    if angle % 90:
+        raise ValueError(f"Rotation must be a multiple of 90 degrees, got {angle}")
     src = Path(path)
     if not src.is_file():
         raise FileNotFoundError(f"File not found: {path}")
@@ -328,11 +354,14 @@ def rotate_pages(ctx: JobContext, path: str, pages: List[int], angle: int, out_p
 
     with fitz.open(str(src)) as doc:
         total = len(doc)
-        pages_to_rotate = set(pages) if pages else set(range(total))
+        requested = set(pages) if pages else set(range(total))
+        pages_to_rotate = {p for p in requested if 0 <= p < total}
         for p in pages_to_rotate:
-            if 0 <= p < total:
-                doc[p].set_rotation((doc[p].rotation + angle) % 360)
-        doc.save(str(target), garbage=3, deflate=True)
+            doc[p].set_rotation((doc[p].rotation + angle) % 360)
+        write_path = _write_path(src, target)
+        doc.save(str(write_path), garbage=3, deflate=True)
+    if write_path != target:
+        write_path.replace(target)
 
     ctx.progress(100, "pdf.status.done")
     return {
@@ -356,7 +385,7 @@ def extract_text(ctx: JobContext, path: str, out_path: str) -> Dict[str, Any]:
         total = len(doc)
         for i in range(total):
             ctx.check_cancelled()
-            lines.append(f"--- Strona {i + 1} ---")
+            lines.append(f"--- {i + 1} ---")
             lines.append(doc[i].get_text("text"))
             lines.append("")
             ctx.progress((i + 1) / total * 90, "pdf.status.extractingText")

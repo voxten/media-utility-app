@@ -43,7 +43,6 @@ def default_settings() -> Dict[str, Any]:
         "outputDir": str(default_output_dir()),
         "cookies": {"youtube": "", "x": "", "instagram": ""},
         "recentFolders": [],
-        "hardwareAcceleration": True,
         "maxConcurrency": min(4, os.cpu_count() or 4),
         "desktopNotifications": True,
         "completionSound": True,

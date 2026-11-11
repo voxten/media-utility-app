@@ -172,6 +172,13 @@ def _process_tiles(
     return output
 
 
+def _fit(img: np.ndarray, width: int, height: int) -> np.ndarray:
+    """Bring the model's native 4x output to the requested size."""
+    if img.shape[1] == width and img.shape[0] == height:
+        return img
+    return cv2.resize(img, (width, height), interpolation=cv2.INTER_AREA)
+
+
 def upscale_array(
     img: np.ndarray,
     model_id: str = "general",
@@ -217,11 +224,7 @@ def upscale_array(
     # Native model upscales 4x
     out_bgr_4x = _process_tiles(model, device, bgr_processed, scale=4, ctx=ctx)
 
-    # Scale adjustment if user requested 2x instead of native 4x
-    if scale == 2:
-        out_bgr = cv2.resize(out_bgr_4x, (out_w, out_h), interpolation=cv2.INTER_AREA)
-    else:
-        out_bgr = out_bgr_4x
+    out_bgr = _fit(out_bgr_4x, out_w, out_h)
 
     # Process Alpha channel
     if alpha is not None:
@@ -231,11 +234,7 @@ def upscale_array(
             # Run alpha as 3-channel grayscale through neural model for sharp anime/vector mask
             alpha_3ch = cv2.cvtColor(alpha, cv2.COLOR_GRAY2BGR)
             alpha_4x = _process_tiles(model, device, alpha_3ch, scale=4, ctx=ctx)
-            alpha_out_gray = cv2.cvtColor(alpha_4x, cv2.COLOR_BGR2GRAY)
-            if scale == 2:
-                alpha_final = cv2.resize(alpha_out_gray, (out_w, out_h), interpolation=cv2.INTER_AREA)
-            else:
-                alpha_final = alpha_out_gray
+            alpha_final = _fit(cv2.cvtColor(alpha_4x, cv2.COLOR_BGR2GRAY), out_w, out_h)
         else:
             # Smooth Lanczos-4 interpolation preserves anti-aliased gradients
             alpha_final = cv2.resize(alpha, (out_w, out_h), interpolation=cv2.INTER_LANCZOS4)

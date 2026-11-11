@@ -16,7 +16,6 @@ def test_default_settings_keys():
         "outputDir",
         "cookies",
         "recentFolders",
-        "hardwareAcceleration",
         "maxConcurrency",
         "desktopNotifications",
         "completionSound",
@@ -25,7 +24,6 @@ def test_default_settings_keys():
         "closeToTray",
     }
     assert expected_keys.issubset(defaults.keys())
-    assert defaults["hardwareAcceleration"] is True
     assert defaults["desktopNotifications"] is True
     assert defaults["completionSound"] is True
     assert defaults["customFfmpegPath"] == ""

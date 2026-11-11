@@ -16,6 +16,7 @@ from yt_dlp.utils import ExtractorError, mimetype2ext, traverse_obj, url_or_none
 
 from backend.core import thumbs, whisper_models
 from backend.core.jobs import JobCancelled, JobContext
+from backend.core.paths import unique_path
 from backend.services import transcribe
 
 AUTO_FORMAT = "bestvideo+bestaudio/best"
@@ -275,6 +276,8 @@ def probe(ctx: JobContext, url: str, cookies: Dict[str, Optional[str]]) -> Dict[
         info = _extract_listing(url, opts)
     except yt_dlp.utils.DownloadError as exc:
         raise RuntimeError(explain_error(url, opts, exc)) from exc
+    if not info:
+        raise RuntimeError("download.error.noMedia")
 
     ctx.check_cancelled()
     ctx.progress(90, "download.status.thumbnail")
@@ -533,15 +536,6 @@ class UniqueYoutubeDL(yt_dlp.YoutubeDL):
         return str(p.parent / f"{unique_stem}{p.suffix}")
 
 
-def _unique_path(path: Path) -> Path:
-    counter = 1
-    candidate = path
-    while candidate.exists():
-        candidate = path.with_name(f"{path.stem} ({counter}){path.suffix}")
-        counter += 1
-    return candidate
-
-
 def _download_photos(ydl: yt_dlp.YoutubeDL, info: Dict[str, Any], hook: "_ProgressHook") -> Dict[str, Any]:
     """Save every image of a TikTok photo post as ``<name> 1.jpg``, ``<name> 2.jpg``…"""
     photos = info[TIKTOK_PHOTOS_KEY]
@@ -561,7 +555,7 @@ def _download_photos(ydl: yt_dlp.YoutubeDL, info: Dict[str, Any], hook: "_Progre
                 last_error = exc
         else:
             raise RuntimeError(f"Photo {number}/{len(photos)}: {last_error}")
-        path = _unique_path(base.with_name(f"{base.stem.rstrip()} {number}.{ext}"))
+        path = unique_path(base.with_name(f"{base.stem.rstrip()} {number}.{ext}"))
         path.write_bytes(data)
         paths.append(path)
         total += len(data)
@@ -829,11 +823,16 @@ class ActiveBatchQueue:
         self.items: List[Dict[str, Any]] = []
         self.results: List[Dict[str, Any]] = []
         self.cursor: int = 0
+        # Set under ``lock`` once the loop has taken its last item; later URLs need a new batch.
+        self.closed = False
 
-    def add_urls(self, urls: List[str]) -> int:
+    def add_urls(self, urls: List[str]) -> Optional[int]:
+        """Queue ``urls``; None when the batch has already finished and they were not added."""
         expanded = expand_batch_urls(urls, self.cookies)
         added_count = 0
         with self.lock:
+            if self.closed:
+                return None
             for item in expanded:
                 idx = len(self.items)
                 entry = {"index": idx, "url": item["url"], "title": item["title"]}
@@ -862,8 +861,7 @@ def add_to_batch(job_id: Optional[str], urls: List[str]) -> bool:
     if not queue:
         return False
 
-    queue.add_urls(clean_urls)
-    return True
+    return queue.add_urls(clean_urls) is not None
 
 
 def download_batch(
@@ -890,6 +888,7 @@ def download_batch(
             ctx.check_cancelled()
             with batch_queue.lock:
                 if batch_queue.cursor >= len(batch_queue.items):
+                    batch_queue.closed = True
                     break
                 current_item = batch_queue.items[batch_queue.cursor]
                 index = batch_queue.cursor
@@ -963,5 +962,7 @@ def download_batch(
             "outdir": str(Path(outdir).expanduser()),
         }
     finally:
+        with batch_queue.lock:
+            batch_queue.closed = True
         with _active_batches_lock:
             _active_batches.pop(ctx.job_id, None)

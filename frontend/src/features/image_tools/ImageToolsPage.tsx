@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Button, Caption1, makeStyles, Spinner, tokens } from "@fluentui/react-components";
+import { Button, Caption1, makeStyles, Spinner, tokens, useEventCallback } from "@fluentui/react-components";
 import {
   Add16Regular,
   ArrowRight16Regular,
@@ -11,6 +11,7 @@ import {
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { ActionBar } from "../../components/ActionBar";
+import { hasCommandModifier, isTypingTarget } from "../../lib/keyboard";
 import { AfterGallery } from "../../components/AfterGallery";
 import { DropZone } from "../../components/DropZone";
 import { FileStrip } from "../../components/FileStrip";
@@ -274,21 +275,21 @@ export default function ImageToolsPage() {
       .catch((err) => notify.error(String(err)));
   };
 
+  const onKey = useEventCallback((e: KeyboardEvent) => {
+    if (!preview || hasCommandModifier(e) || isTypingTarget(e.target)) return;
+    const key = e.key.toLowerCase();
+    if (key === "c") setActiveTool("crop");
+    else if (key === "r") setActiveTool("resize");
+    else if (key === "t") setActiveTool("transform");
+    else if (key === "v") setActiveTool("select");
+    else if (e.key === "Enter" && activeTool === "crop") applyCrop();
+    else if (e.key === "Escape" && activeTool === "crop") cancelCrop();
+  });
+
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (!preview || (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable))) return;
-      const key = e.key.toLowerCase();
-      if (key === "c") setActiveTool("crop");
-      else if (key === "r") setActiveTool("resize");
-      else if (key === "t") setActiveTool("transform");
-      else if (key === "v") setActiveTool("select");
-      else if (e.key === "Enter" && activeTool === "crop") applyCrop();
-      else if (e.key === "Escape" && activeTool === "crop") cancelCrop();
-    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  });
+  }, [onKey]);
 
   if (!files.length) {
     return (

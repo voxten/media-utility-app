@@ -264,3 +264,14 @@ def test_media_summary_takes_the_height_from_the_video_stream():
     info = {"ext": "mp4", "requested_formats": [{"height": 720}, {"height": None}], "uploader": "Someone"}
     assert download.media_summary(info)["height"] == 720
     assert download.media_summary(info)["uploader"] == "Someone"
+
+
+def test_links_added_after_the_batch_finished_are_refused(monkeypatch, ctx):
+    from backend.services import download as dl
+
+    monkeypatch.setattr(dl, "expand_batch_urls", lambda urls, cookies=None: [{"url": u, "title": u} for u in urls])
+    queue = dl.ActiveBatchQueue(ctx, {})
+    assert queue.add_urls(["https://a"]) == 1
+    queue.closed = True
+    assert queue.add_urls(["https://b"]) is None
+    assert [item["url"] for item in queue.items] == ["https://a"]

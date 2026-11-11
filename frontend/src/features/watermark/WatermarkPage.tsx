@@ -22,6 +22,7 @@ import { SingleImageTool } from "../../components/SingleImageTool";
 import { api } from "../../lib/bridge";
 import { formatList, IMAGE_EXTENSIONS } from "../../lib/fileTypes";
 import { fileName } from "../../lib/format";
+import { hasCommandModifier, isTypingTarget } from "../../lib/keyboard";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { MaskCanvas, type MaskCanvasHandle } from "./MaskCanvas";
 
@@ -134,12 +135,12 @@ export default function WatermarkPage() {
     runner.start(() => api.watermark.remove(form.image!.path, mask, form.method)).catch((err) => notify.error(String(err)));
   };
 
-  // Keyboard shortcuts while editing.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!form.image || form.result || (e.target as HTMLElement).tagName === "INPUT") return;
+      if (!form.image || form.result || isTypingTarget(e.target)) return;
       if (e.ctrlKey && e.key.toLowerCase() === "z") (e.shiftKey ? canvasRef.current?.redo() : canvasRef.current?.undo());
       else if (e.ctrlKey && e.key.toLowerCase() === "y") canvasRef.current?.redo();
+      else if (hasCommandModifier(e)) return;
       else if (e.key === "b") form.set({ tool: "brush" });
       else if (e.key === "e") form.set({ tool: "eraser" });
       else if (e.key === "[") form.set({ brush: Math.max(4, form.brush - 4) });

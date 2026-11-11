@@ -13,7 +13,6 @@ const DEFAULT_SETTINGS: Settings = {
   outputDir: "C:\\Users\\demo\\Downloads",
   cookies: { youtube: "", x: "", instagram: "" },
   recentFolders: ["C:\\Users\\demo\\Pictures", "C:\\Users\\demo\\Videos"],
-  hardwareAcceleration: true,
   maxConcurrency: 4,
   desktopNotifications: true,
   completionSound: true,

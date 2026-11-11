@@ -4,15 +4,14 @@ Supports single-file & batch resizing, cropping, rotation, flipping,
 format preservation and live preview generation.
 """
 
-import io
-import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
-from PIL import Image
+from PIL import Image, ImageOps
 
-from backend.core import thumbs
+from backend.core import imaging, thumbs
 from backend.core.jobs import JobContext
+from backend.core.paths import unique_path
 
 RESAMPLE_FILTERS = {
     "lanczos": Image.Resampling.LANCZOS,
@@ -21,11 +20,8 @@ RESAMPLE_FILTERS = {
     "nearest": Image.Resampling.NEAREST,
 }
 
-ALPHA_FORMATS = {"png", "webp", "tiff", "gif"}
-
-
-def _has_alpha(img: Image.Image) -> bool:
-    return img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info)
+# EXIF orientations that swap width and height.
+_SIDEWAYS_ORIENTATIONS = {5, 6, 7, 8}
 
 
 def load_preview(path: str) -> Dict[str, Any]:
@@ -34,8 +30,8 @@ def load_preview(path: str) -> Dict[str, Any]:
     if not p.is_file():
         raise FileNotFoundError(f"File not found: {path}")
 
-    with Image.open(p) as img:
-        has_alpha = _has_alpha(img)
+    with imaging.open_image(p) as img:
+        has_alpha = imaging.has_alpha(img)
         w, h = img.width, img.height
         raw_format = (img.format or p.suffix.lstrip(".")).upper()
         # Preview thumbnail
@@ -66,12 +62,15 @@ def thumbnail(path: str, max_side: int = 256) -> Dict[str, Any]:
 
     with Image.open(p) as img:
         w, h = img.width, img.height
+        if img.getexif().get(0x0112) in _SIDEWAYS_ORIENTATIONS:
+            w, h = h, w
         fmt = (img.format or p.suffix.lstrip(".")).upper()
-        has_alpha = _has_alpha(img)
+        has_alpha = imaging.has_alpha(img)
         # JPEG decoders can scale down while decoding, which skips most of the work for big photos.
         img.draft("RGB", (max_side, max_side))
+        upright = ImageOps.exif_transpose(img) or img
         data_url = thumbs.to_data_url(
-            img,
+            upright,
             max_size=(max_side, max_side),
             fmt="WEBP" if has_alpha else "JPEG",
             quality=80,
@@ -137,9 +136,9 @@ def preview_transform(path: str, ops: Dict[str, Any]) -> Dict[str, Any]:
     if not p.is_file():
         raise FileNotFoundError(f"File not found: {path}")
 
-    with Image.open(p) as img:
+    with imaging.open_image(p) as img:
         transformed = apply_operations(img, ops)
-        has_alpha = _has_alpha(transformed)
+        has_alpha = imaging.has_alpha(transformed)
         w, h = transformed.width, transformed.height
         thumb_data = thumbs.to_data_url(
             transformed,
@@ -171,38 +170,18 @@ def save_transformed(
     target = Path(target_path)
     target.parent.mkdir(parents=True, exist_ok=True)
 
-    with Image.open(src) as img:
+    with imaging.open_image(src) as img:
         orig_format = (img.format or src.suffix.lstrip(".")).lower()
         transformed = apply_operations(img, ops)
 
-        fmt = (out_fmt or orig_format or "png").lower()
-        if fmt == "jpg":
-            fmt = "jpeg"
-
-        # Alpha handling for formats that don't support transparency
-        if fmt == "jpeg":
-            if _has_alpha(transformed):
-                bg = Image.new("RGB", transformed.size, (255, 255, 255))
-                if transformed.mode != "RGBA":
-                    transformed = transformed.convert("RGBA")
-                bg.paste(transformed, mask=transformed.split()[3])
-                work_img = bg
-            elif transformed.mode != "RGB":
-                work_img = transformed.convert("RGB")
-            else:
-                work_img = transformed
-        elif fmt in ALPHA_FORMATS and _has_alpha(transformed):
-            work_img = transformed.convert("RGBA") if transformed.mode != "RGBA" else transformed
-        elif transformed.mode != "RGB":
-            work_img = transformed.convert("RGB")
-        else:
-            work_img = transformed
+        fmt = imaging.normalize_format(out_fmt or orig_format or "png")
+        work_img = imaging.prepare_for_format(transformed, fmt)
 
         save_kwargs: Dict[str, Any] = {}
         if fmt in ("jpeg", "webp"):
             save_kwargs["quality"] = quality
 
-        work_img.save(target, fmt.upper(), **save_kwargs)
+        work_img.save(target, imaging.pil_format(fmt), **save_kwargs)
 
     return {
         "outPath": str(target),
@@ -231,10 +210,11 @@ def batch_process(
     results: List[Dict[str, Any]] = []
 
     for idx, f in enumerate(files):
+        ctx.check_cancelled()
         src = Path(f)
         if not src.is_file():
             failed += 1
-            ctx.log(f"Plik nie istnieje: {f}")
+            ctx.log("imageTools.log.missing", "error", file=f)
             continue
 
         ctx.progress(int((idx / total) * 100), "imageTools.status.processing", {"index": idx + 1, "total": total})
@@ -250,11 +230,8 @@ def batch_process(
         elif isinstance(ops, dict):
             file_ops = ops
 
-        ext = (out_fmt or src.suffix.lstrip(".") or "png").lower()
-        if ext == "jpeg":
-            ext = "jpg"
-        target_name = f"{src.stem}_edited.{ext}"
-        target = out_dir / target_name
+        ext = imaging.extension(out_fmt or src.suffix or "png")
+        target = unique_path(out_dir / f"{src.stem}_edited.{ext}")
 
         try:
             res = save_transformed(str(src), str(target), file_ops, out_fmt=out_fmt, quality=quality)
@@ -268,7 +245,7 @@ def batch_process(
             processed += 1
         except Exception as e:
             failed += 1
-            ctx.log(f"Błąd przetwarzania {src.name}: {e}")
+            ctx.log("imageTools.log.failed", "error", file=src.name, error=str(e))
 
     ctx.progress(100, "imageTools.status.done")
     return {

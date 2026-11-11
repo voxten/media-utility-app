@@ -250,8 +250,8 @@ def scan(ctx: JobContext, folder: str, mode: str, threshold: float = HASH_THRESH
 
 
 def export_csv(groups: List[List[Dict[str, Any]]], out_path: str) -> str:
-    """Write groups (as returned by :func:`scan`) to a CSV file."""
-    with open(out_path, "w", newline="", encoding="utf-8") as f:
+    """Write groups (as returned by :func:`scan`) to a CSV file; the BOM makes Excel read Polish letters right."""
+    with open(out_path, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
         writer.writerow(["Group", "Filename", "Resolution", "Duration (ms)", "Size (bytes)", "Full path"])
         for idx, group in enumerate(groups, start=1):

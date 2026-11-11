@@ -1,3 +1,4 @@
+import codecs
 import csv
 
 import numpy as np
@@ -63,7 +64,8 @@ def test_export_csv(tmp_path):
     groups = [[{"filename": "a.png", "path": "/x/a.png", "width": 1, "height": 2, "duration": None, "size": 10}]]
     out = tmp_path / "report.csv"
     duplicates.export_csv(groups, str(out))
-    with open(out, encoding="utf-8") as f:
+    assert out.read_bytes().startswith(codecs.BOM_UTF8)
+    with open(out, encoding="utf-8-sig") as f:
         rows = list(csv.reader(f))
     assert rows[0][0] == "Group"
     assert rows[1] == ["1", "a.png", "1x2", "", "10", "/x/a.png"]

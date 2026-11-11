@@ -14,7 +14,7 @@ import subprocess
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Sequence
+from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
 from backend.core import deps
 from backend.core.jobs import JobContext
@@ -102,13 +102,20 @@ def run_process(
         thread.start()
 
     assert proc.stdout is not None
-    for line in proc.stdout:
-        if on_line is not None:
-            on_line(line.strip())
-    proc.wait()
-    finished.set()
-    for thread in readers:
-        thread.join(timeout=2)
+    try:
+        for line in proc.stdout:
+            if on_line is not None:
+                on_line(line.strip())
+        proc.wait()
+    except BaseException:
+        proc.kill()
+        proc.wait()
+        _remove(out_path)
+        raise
+    finally:
+        finished.set()
+        for thread in readers:
+            thread.join(timeout=2)
 
     if ctx.cancelled:
         _remove(out_path)
@@ -118,6 +125,11 @@ def run_process(
         tail = "\n".join(stderr_lines[-8:])
         logger.error("%s failed (%s): %s", Path(cmd[0]).name, proc.returncode, tail)
         raise RuntimeError(f"{Path(cmd[0]).stem} failed: {tail or proc.returncode}")
+
+
+def same_file(a: Union[str, Path], b: Union[str, Path]) -> bool:
+    """Whether two paths name the same file (case-insensitive on Windows)."""
+    return os.path.normcase(os.path.abspath(a)) == os.path.normcase(os.path.abspath(b))
 
 
 def run_ffmpeg(
@@ -130,6 +142,10 @@ def run_ffmpeg(
     status_key: Optional[str] = None,
 ) -> None:
     """Runs ffmpeg with ``args`` and maps its output time onto the job's progress range."""
+    if out_path is not None:
+        inputs = [args[i + 1] for i in range(len(args) - 1) if args[i] == "-i"]
+        if any(same_file(src, out_path) for src in inputs):
+            raise ValueError("common.outputIsInput")
     ffmpeg = resolve_binary("ffmpeg")
     cmd = [ffmpeg, "-y", "-hide_banner", "-v", "error", "-nostats", "-progress", "pipe:1", *args]
 
