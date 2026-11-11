@@ -1,13 +1,15 @@
 import { lazy, Suspense, useEffect, useState, type ComponentType, type LazyExoticComponent } from "react";
+import { useTranslation } from "react-i18next";
 import { makeStyles, mergeClasses, Spinner, tokens, Toaster } from "@fluentui/react-components";
 import { ConfirmHost } from "../components/ConfirmDialog";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 import { EngineUpdateHost } from "../components/EngineUpdateHost";
 import { DropOverlay } from "../components/DropOverlay";
 import { useClipboardLinks } from "../lib/clipboardLink";
 import { TransferModal } from "../components/TransferModal";
 import { WhatsNewHost } from "../components/WhatsNewDialog";
 import { TOASTER_ID } from "../components/notify";
-import { useRoute } from "../lib/router";
+import { navigate, useRoute } from "../lib/router";
 import { useRecentTools } from "../stores/recentTools";
 import { useUi } from "../stores/ui";
 import { CommandPalette } from "./CommandPalette";
@@ -100,6 +102,7 @@ function PageForRoute({ route }: { route: string }) {
 
 export function Shell() {
   const styles = useStyles();
+  const { t } = useTranslation();
   const route = useRoute();
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const mica = useUi((s) => s.mica);
@@ -143,7 +146,14 @@ export function Shell() {
           }
         >
           <div key={route} className={styles.page}>
-            <PageForRoute route={route} />
+            <ErrorBoundary
+              actions={(reset) => [
+                { label: t("errors.retry"), onClick: reset },
+                ...(route === "home" ? [] : [{ label: t("errors.goHome"), onClick: () => navigate("home") }]),
+              ]}
+            >
+              <PageForRoute route={route} />
+            </ErrorBoundary>
           </div>
         </Suspense>
       </main>

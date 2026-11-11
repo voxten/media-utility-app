@@ -25,6 +25,7 @@ import { GifOutputPanel } from "./GifOutputPanel";
 import { useCropKeys } from "./useCropKeys";
 import { useFrameLoader } from "./useFrameLoader";
 import { useGifOutput } from "./useGifOutput";
+import { errorMessage, reportError } from "../../lib/errors";
 
 const FORMATS: GifFormat[] = ["gif", "webp", "apng"];
 const WIDTHS = [0, 240, 320, 480, 640, 800];
@@ -79,7 +80,7 @@ export default function VideoToGifPage() {
       setCrop(null);
       setDraftCrop(null);
     } catch (err) {
-      notify.error(t("video_to_gif.errors.load"), { body: String((err as Error)?.message ?? err) });
+      notify.error(t("video_to_gif.errors.load"), { body: errorMessage(t, err) });
     }
   };
 
@@ -118,7 +119,7 @@ export default function VideoToGifPage() {
       api.video_to_gif
         .frames(video.path, range.start, 0.01, 1, Math.min(video.height, STILL_HEIGHT))
         .then((r) => live && r.frames[0] && setStill(r.frames[0].dataUrl))
-        .catch(() => undefined);
+        .catch((err) => reportError("preview", err));
     }, FRAME_DELAY_MS);
     return () => {
       live = false;
@@ -132,7 +133,7 @@ export default function VideoToGifPage() {
     try {
       setPreview(await api.video_to_gif.preview(params));
     } catch (err) {
-      notify.error(t("video_to_gif.errors.preview"), { body: String((err as Error)?.message ?? err) });
+      notify.error(t("video_to_gif.errors.preview"), { body: errorMessage(t, err) });
     } finally {
       setPreviewing(false);
     }

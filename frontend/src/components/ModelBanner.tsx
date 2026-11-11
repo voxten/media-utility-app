@@ -15,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../lib/bridge";
 import { useJob } from "../stores/jobs";
 import { useNotify } from "./notify";
+import { errorMessage } from "../lib/errors";
 
 const useStyles = makeStyles({
   progress: { marginTop: "6px" },
@@ -52,7 +53,7 @@ export function ModelBanner({ depId, title, description, installLabel, readyMess
     try {
       setJobId(await api.system.installDependency(depId));
     } catch (err) {
-      notify.error(t("settings.deps.failed"), { body: String(err) });
+      notify.error(t("settings.deps.failed"), { body: errorMessage(t, err) });
     }
   };
 

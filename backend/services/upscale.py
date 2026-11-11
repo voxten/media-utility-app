@@ -13,7 +13,7 @@ import numpy as np
 
 from backend.core import thumbs
 from backend.core.jobs import JobCancelled, JobContext
-from backend.core.paths import app_data_dir, cache_dir, project_root
+from backend.core.paths import cache_dir, models_dir, project_root
 
 if TYPE_CHECKING:
     import torch
@@ -22,10 +22,10 @@ SUPPORTED_FORMATS = (".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff", ".tif")
 
 
 def get_model_weights_path(model_id: str) -> Optional[Path]:
-    """Finds downloaded weights for the specified model in %APPDATA%/MediaStudio/models or project root."""
+    """Finds downloaded weights for the specified model in the models folder (models_dir) or project root."""
     filename = "realesr-general-x4v3.pth" if model_id == "general" else "RealESRGAN_x4plus_anime_6B.pth"
     candidates = [
-        app_data_dir() / "models" / filename,
+        models_dir() / filename,
         Path.home() / ".cache" / "torch" / "hub" / "checkpoints" / filename,
         project_root() / "models" / filename,
     ]

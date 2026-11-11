@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, Optional
 
-from backend.core.paths import app_data_dir
+from backend.core.paths import models_dir
 
 # faster-whisper 1.2.1 opens files with an argument PyAV 19 no longer has; the app decodes audio
 # with its own FFmpeg instead, but the import of faster_whisper still needs av.
@@ -106,7 +106,7 @@ def model_for_dep(dep_id: str) -> Optional[WhisperModel]:
 
 
 def model_dir(model_id: str) -> Path:
-    return app_data_dir() / "models" / "whisper" / model_id
+    return models_dir() / "whisper" / model_id
 
 
 def file_url(model: WhisperModel, name: str) -> str:

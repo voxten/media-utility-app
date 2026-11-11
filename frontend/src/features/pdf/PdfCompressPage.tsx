@@ -12,6 +12,7 @@ import { fileName, formatBytes } from "../../lib/format";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { SinglePdfTool } from "./SinglePdfTool";
+import { errorMessage } from "../../lib/errors";
 
 interface CompressResult {
   inPath: string;
@@ -55,7 +56,7 @@ export default function PdfCompressPage() {
     const outPath = await api.dialogs.saveFile(defaultName, [dialogFilter(t, "pdf")]);
     if (!outPath) return;
     const target = outPath.toLowerCase().endsWith(".pdf") ? outPath : `${outPath}.pdf`;
-    compress.start(() => api.pdf.compress(file, target, preset)).catch((err) => notify.error(String(err)));
+    compress.start(() => api.pdf.compress(file, target, preset)).catch((err) => notify.error(errorMessage(t, err)));
   };
 
   const presetLabel: Record<Preset, string> = {

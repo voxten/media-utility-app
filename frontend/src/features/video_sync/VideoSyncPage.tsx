@@ -24,6 +24,7 @@ import type { VideoInfo, WaveformData } from "../../lib/types";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { OFFSET_LIMIT_SEC, WaveformTimeline } from "./WaveformTimeline";
+import { errorMessage } from "../../lib/errors";
 
 const WAVEFORM_POINTS = 4000;
 const PREVIEW_LENGTHS = [10, 15, 30, 60];
@@ -57,7 +58,6 @@ const useStyles = makeStyles({
   mode: { minWidth: "240px" },
 });
 
-const errorText = (err: unknown) => String((err as Error)?.message ?? err);
 
 export default function VideoSyncPage() {
   const styles = useStyles();
@@ -95,7 +95,7 @@ export default function VideoSyncPage() {
     api.video_sync
       .waveform(video.path, WAVEFORM_POINTS, 0, undefined, trackStreamIndex)
       .then((wave) => current && setTrackWave(wave))
-      .catch((err) => notify.error(t("video_sync.errors.loadVideo"), { body: errorText(err) }));
+      .catch((err) => notify.error(t("video_sync.errors.loadVideo"), { body: errorMessage(t, err) }));
     return () => {
       current = false;
     };
@@ -118,7 +118,7 @@ export default function VideoSyncPage() {
       setOutputPath(`${path.replace(/\.[^.\\/]+$/, "")}_synced.mp4`);
       runner.reset();
     } catch (err) {
-      notify.error(t("video_sync.errors.loadVideo"), { body: errorText(err) });
+      notify.error(t("video_sync.errors.loadVideo"), { body: errorMessage(t, err) });
     }
   };
 
@@ -140,7 +140,7 @@ export default function VideoSyncPage() {
       setSource("external");
       setExternalWave(await api.video_sync.waveform(path, WAVEFORM_POINTS));
     } catch (err) {
-      notify.error(t("video_sync.errors.loadAudio"), { body: errorText(err) });
+      notify.error(t("video_sync.errors.loadAudio"), { body: errorMessage(t, err) });
     }
   };
 
@@ -161,7 +161,7 @@ export default function VideoSyncPage() {
       });
       setPreviewClip({ url: res.previewUrl, startSec: previewStartSec });
     } catch (err) {
-      notify.error(t("video_sync.errors.preview"), { body: errorText(err) });
+      notify.error(t("video_sync.errors.preview"), { body: errorMessage(t, err) });
     } finally {
       setPreviewing(false);
     }
@@ -184,7 +184,7 @@ export default function VideoSyncPage() {
         .catch((err) => {
           if (framesErrorFor.current !== path) {
             framesErrorFor.current = path;
-            notify.error(t("video_sync.errors.frames"), { body: errorText(err) });
+            notify.error(t("video_sync.errors.frames"), { body: errorMessage(t, err) });
           }
           return [];
         });

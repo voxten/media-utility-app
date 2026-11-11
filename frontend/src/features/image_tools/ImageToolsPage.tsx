@@ -38,6 +38,7 @@ import {
   type TransformResult,
   createDefaultOperations,
 } from "./types";
+import { errorMessage } from "../../lib/errors";
 
 const PREVIEW_DELAY_MS = 150;
 const OUTPUT_FORMATS: ImageOutputFormat[] = ["original", "png", "jpeg", "webp"];
@@ -153,7 +154,7 @@ export default function ImageToolsPage() {
         setSizes((prev) => ({ ...prev, [current]: { width: data.width, height: data.height } }));
         setOpsByFile((prev) => (prev[current] ? prev : { ...prev, [current]: createDefaultOperations(data.width, data.height) }));
       })
-      .catch((err) => notify.error(String(err)));
+      .catch((err) => notify.error(errorMessage(t, err)));
     return () => {
       live = false;
     };
@@ -257,7 +258,7 @@ export default function ImageToolsPage() {
       try {
         setSaved(await api.image_editor.saveTransformed(current, outPath, compileOps(ops, preview.width, preview.height)));
       } catch (err) {
-        notify.error(t("imageTools.toast.error"), { body: String(err) });
+        notify.error(t("imageTools.toast.error"), { body: errorMessage(t, err) });
       }
       return;
     }
@@ -272,7 +273,7 @@ export default function ImageToolsPage() {
     );
     job
       .start(() => api.image_editor.startBatch(files, outDir, perFile, outputFormat === "original" ? undefined : outputFormat))
-      .catch((err) => notify.error(String(err)));
+      .catch((err) => notify.error(errorMessage(t, err)));
   };
 
   const onKey = useEventCallback((e: KeyboardEvent) => {

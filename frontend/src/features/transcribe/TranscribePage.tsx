@@ -19,6 +19,7 @@ import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useSettings } from "../../stores/settings";
 import { languageOptions } from "./languages";
+import { errorMessage } from "../../lib/errors";
 
 const MEDIA_EXTENSIONS = [...VIDEO_EXTENSIONS, ...AUDIO_EXTENSIONS];
 const FORMATS: TranscriptFormat[] = ["srt", "vtt", "txt"];
@@ -72,7 +73,7 @@ export default function TranscribePage() {
       job.reset();
       setMedia(info);
     } catch (err) {
-      notify.error(t("transcribe.errors.load"), { body: String((err as Error)?.message ?? err) });
+      notify.error(t("transcribe.errors.load"), { body: errorMessage(t, err) });
     }
   };
 

@@ -46,6 +46,7 @@ import { api } from "../../lib/bridge";
 import { dialogFilter } from "../../lib/fileTypes";
 import { dirName, formatBytes, formatDuration } from "../../lib/format";
 import { useJobRunner } from "../../lib/useJobRunner";
+import { errorMessage } from "../../lib/errors";
 
 type Mode = "image" | "video";
 
@@ -257,7 +258,7 @@ export default function DuplicatesPage() {
         await api.system.trash(path);
         removed.add(path);
       } catch (err) {
-        failures.push(`${path}: ${String(err)}`);
+        failures.push(`${path}: ${errorMessage(t, err)}`);
       }
     }
     removeFromResults(removed);
@@ -272,12 +273,12 @@ export default function DuplicatesPage() {
       const path = await api.duplicates.exportCsv(groups, out.toLowerCase().endsWith(".csv") ? out : `${out}.csv`);
       notify.success(t("duplicates.toast.exported"), { action: { label: t("common.showInFolder"), onClick: () => api.system.reveal(path).catch(() => undefined) } });
     } catch (err) {
-      notify.error(String(err));
+      notify.error(errorMessage(t, err));
     }
   };
 
   const start = () =>
-    runner.start(() => api.duplicates.scan(form.folder, form.mode, form.threshold)).catch((err) => notify.error(t("duplicates.toast.error"), { body: String(err) }));
+    runner.start(() => api.duplicates.scan(form.folder, form.mode, form.threshold)).catch((err) => notify.error(t("duplicates.toast.error"), { body: errorMessage(t, err) }));
 
   return (
     <ToolPage toolId="duplicates">

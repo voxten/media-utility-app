@@ -1,7 +1,7 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { api, emitLocal } from "../lib/bridge";
 import type { HistoryEntry, JobInfo, Settings } from "../lib/types";
-import { earlierJobs, historyJob, initJobEvents, isQuietJob, listedJobs, retryJob, useJobs } from "./jobs";
+import { earlierJobs, historyJob, initJobEvents, isQuietJob, listedJobs, pruneJobs, retryJob, useJobs } from "./jobs";
 import { useSettings } from "./settings";
 
 const started = (id: string, extra: Partial<JobInfo> = {}): JobInfo => ({
@@ -166,5 +166,45 @@ describe("listedJobs", () => {
     emitLocal("job:started", started("new"));
 
     expect(listedJobs(useJobs.getState()).map((j) => j.id)).toEqual(["new", "work"]);
+  });
+});
+
+describe("pruneJobs", () => {
+  const state = (specs: [string, string, JobInfo["status"]][]) => ({
+    jobs: Object.fromEntries(
+      specs.map(([id, kind, status]) => [id, { ...started(id, { kind, status }), logs: [], partials: [], extra: {} }]),
+    ),
+    order: specs.map(([id]) => id),
+  });
+
+  it("keeps everything within the limits", () => {
+    expect(pruneJobs(state([["a", "converter", "done"], ["b", "converter", "done"]]), { finished: 5, quiet: 5 })).toBeNull();
+  });
+
+  it("drops the oldest finished jobs but never a running one", () => {
+    const pruned = pruneJobs(
+      state([
+        ["new", "converter", "done"],
+        ["mid", "converter", "done"],
+        ["run", "converter", "running"],
+        ["old", "converter", "error"],
+      ]),
+      { finished: 1, quiet: 5 },
+    );
+    expect(pruned?.order).toEqual(["new", "mid", "run"]);
+    expect(Object.keys(pruned!.jobs).sort()).toEqual(["mid", "new", "run"]);
+  });
+
+  it("keeps the newest job of each kind and limits helper steps on their own", () => {
+    const pruned = pruneJobs(
+      state([
+        ["p3", "pdf.inspect", "done"],
+        ["p2", "pdf.inspect", "done"],
+        ["p1", "pdf.inspect", "done"],
+        ["tts", "tts", "done"],
+      ]),
+      { finished: 0, quiet: 1 },
+    );
+    expect(pruned?.order).toEqual(["p3", "p2", "tts"]);
   });
 });

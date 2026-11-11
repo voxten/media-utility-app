@@ -17,10 +17,10 @@ from webview.dom import DOMEventHandler
 
 from backend import APP_NAME, APP_VERSION
 from backend.bridge.events import EventBus
-from backend.core import single_instance, win_theme
+from backend.core import logs, single_instance, win_theme
 from backend.core.addons import PIP_FLAG, activate_addons, run_pip_main
 from backend.core.engines import CHECK_FLAG, activate_engines, run_check_main
-from backend.core.paths import app_data_dir, resource_path
+from backend.core.paths import app_data_dir, migrate_models, resource_path
 from backend.core.settings import Settings
 
 DEV_URL = "http://localhost:5173"
@@ -81,27 +81,16 @@ def resolve_dark(theme: str) -> bool:
     return system_prefers_dark() if theme == "system" else theme == "dark"
 
 
-def ensure_output_streams() -> None:
-    """A --windowed PyInstaller build has no stdout/stderr (None); send them to a log file.
-
-    Without this, any print() or traceback.print_exc() in a worker raises and the job would
-    never report its error to the UI.
-    """
-    if sys.stdout is not None and sys.stderr is not None:
-        return
-    log_dir = app_data_dir() / "logs"
-    log_dir.mkdir(parents=True, exist_ok=True)
-    log = open(log_dir / "app.log", "a", encoding="utf-8", buffering=1)  # noqa: SIM115 - lives for the process
-    sys.stdout = sys.stdout or log
-    sys.stderr = sys.stderr or log
-
-
 def main() -> None:
     if len(sys.argv) > 1 and sys.argv[1] == PIP_FLAG:
         sys.exit(run_pip_main(sys.argv[2:]))
     if len(sys.argv) > 1 and sys.argv[1] == CHECK_FLAG:
         sys.exit(run_check_main(sys.argv[2:]))
-    ensure_output_streams()
+    # Before anything else runs: a --windowed build has no stdout/stderr, so a print() or an uncaught
+    # error would otherwise raise or vanish. dev.log keeps a --dev run out of the installed app's file.
+    logs.setup("dev" if "--dev" in sys.argv[1:] else "app")
+    logs.log_start(APP_NAME, APP_VERSION)
+    migrate_models()
     activate_addons()
     activate_engines()
     # Imported only now: it pulls in yt_dlp and gallery_dl, which must come from the activated engines.

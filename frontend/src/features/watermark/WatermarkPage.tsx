@@ -25,6 +25,7 @@ import { fileName } from "../../lib/format";
 import { hasCommandModifier, isTypingTarget } from "../../lib/keyboard";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { MaskCanvas, type MaskCanvasHandle } from "./MaskCanvas";
+import { errorMessage } from "../../lib/errors";
 
 type Method = "telea" | "ns" | "lama";
 
@@ -122,7 +123,7 @@ export default function WatermarkPage() {
       const currentSrc = keepSource ? form.sourcePath || path : path;
       output.reset(currentSrc, getDefaultOutFileName(currentSrc));
     } catch (err) {
-      notify.error(t("watermark.toast.loadError"), { body: String(err) });
+      notify.error(t("watermark.toast.loadError"), { body: errorMessage(t, err) });
     }
   };
 
@@ -132,7 +133,7 @@ export default function WatermarkPage() {
       return;
     }
     const mask = canvasRef.current.toDataUrl();
-    runner.start(() => api.watermark.remove(form.image!.path, mask, form.method)).catch((err) => notify.error(String(err)));
+    runner.start(() => api.watermark.remove(form.image!.path, mask, form.method)).catch((err) => notify.error(errorMessage(t, err)));
   };
 
   useEffect(() => {

@@ -39,6 +39,7 @@ import { GifOutputPanel } from "./GifOutputPanel";
 import { useCropKeys } from "./useCropKeys";
 import { useFrameLoader } from "./useFrameLoader";
 import { useGifOutput } from "./useGifOutput";
+import { errorMessage } from "../../lib/errors";
 
 const FORMATS: GifFormat[] = ["gif", "webp", "apng", "mp4"];
 
@@ -151,7 +152,7 @@ export default function GifEditorPage() {
         setInfo(res);
         setGifsicle(res.gifsicle);
       })
-      .catch((err) => notify.error(t("gif_editor.errors.load"), { body: String((err as Error)?.message ?? err) }));
+      .catch((err) => notify.error(t("gif_editor.errors.load"), { body: errorMessage(t, err) }));
     return () => {
       live = false;
     };
@@ -165,7 +166,7 @@ export default function GifEditorPage() {
     try {
       setPreview(await api.gif_editor.preview(current, operations, output.params));
     } catch (err) {
-      notify.error(t("gif_editor.errors.preview"), { body: String((err as Error)?.message ?? err) });
+      notify.error(t("gif_editor.errors.preview"), { body: errorMessage(t, err) });
     } finally {
       setPreviewing(false);
     }

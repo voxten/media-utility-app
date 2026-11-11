@@ -30,6 +30,7 @@ import {
   Cookies24Regular,
   DarkTheme24Regular,
   Database24Regular,
+  DocumentText24Regular,
   Delete16Regular,
   Desktop24Regular,
   DeveloperBoard24Regular,
@@ -60,6 +61,7 @@ import { PathPicker } from "../../components/PathPicker";
 import { Select } from "../../components/Select";
 import { SettingGroup, SettingRow } from "../../components/SettingRow";
 import { api, getBackendMode } from "../../lib/bridge";
+import { errorMessage } from "../../lib/errors";
 import { dialogFilter } from "../../lib/fileTypes";
 import { formatBytes } from "../../lib/format";
 import type { AppInfo, Dependency, EngineInfo, HardwareInfo, Language, StorageInfo, ThemePreference } from "../../lib/types";
@@ -138,7 +140,7 @@ function DependencyRowItem({ dep, onRefresh }: { dep: Dependency; onRefresh: () 
       const id = await api.system.installDependency(dep.id);
       setJobId(id);
     } catch (err) {
-      notify.error(t("settings.deps.failed"), { body: String(err) });
+      notify.error(t("settings.deps.failed"), { body: errorMessage(t, err) });
     }
   };
 
@@ -310,7 +312,7 @@ function EnginesSection() {
   }, [load, job?.status]);
 
   const run = (action: () => Promise<void>, error: string) => () => {
-    action().catch((err) => notify.error(t(error), { body: String(err) }));
+    action().catch((err) => notify.error(t(error), { body: errorMessage(t, err) }));
   };
 
   const list = engines ?? [];
@@ -425,7 +427,7 @@ function StorageSection() {
       notify.success(t("settings.storage.cacheCleared", { size: formatBytes(res.freedBytes) }));
       await loadStorage();
     } catch (err) {
-      notify.error(String(err));
+      notify.error(errorMessage(t, err));
     } finally {
       setClearing(false);
     }
@@ -435,16 +437,18 @@ function StorageSection() {
     try {
       await api.system.openAppData();
     } catch (err) {
-      notify.error(String(err));
+      notify.error(errorMessage(t, err));
     }
   };
+
+  const handleOpenLogs = () => api.system.openLogs().catch((err) => notify.error(errorMessage(t, err)));
 
   const handleClearRecent = async () => {
     try {
       await clearRecentFolders();
       notify.success(t("settings.storage.recentCleared"));
     } catch (err) {
-      notify.error(String(err));
+      notify.error(errorMessage(t, err));
     }
   };
 
@@ -475,8 +479,17 @@ function StorageSection() {
           <SettingRow
             icon={Bot24Regular}
             title={t("settings.storage.modelsTitle")}
-            description={t("settings.storage.usage", { size: formatBytes(storage.modelsBytes), count: storage.modelsFiles })}
-          />
+            description={`${t("settings.storage.usage", { size: formatBytes(storage.modelsBytes), count: storage.modelsFiles })} · ${storage.modelsDir}`}
+          >
+            <Button
+              appearance="subtle"
+              size="medium"
+              icon={<FolderOpen16Regular />}
+              onClick={() => api.system.openPath(storage.modelsDir).catch((err) => notify.error(errorMessage(t, err)))}
+            >
+              {t("settings.storage.openFolder")}
+            </Button>
+          </SettingRow>
         )}
 
         <SettingRow
@@ -494,6 +507,12 @@ function StorageSection() {
             icon={<FolderOpen16Regular />}
             onClick={handleOpenAppData}
           >
+            {t("settings.storage.openFolder")}
+          </Button>
+        </SettingRow>
+
+        <SettingRow icon={DocumentText24Regular} title={t("settings.storage.logsTitle")} description={t("settings.storage.logsDesc")}>
+          <Button appearance="subtle" size="medium" icon={<FolderOpen16Regular />} onClick={handleOpenLogs}>
             {t("settings.storage.openFolder")}
           </Button>
         </SettingRow>
@@ -660,7 +679,7 @@ function AdvancedSection() {
       await reset();
       notify.success(t("settings.advanced.resetSuccess"));
     } catch (err) {
-      notify.error(String(err));
+      notify.error(errorMessage(t, err));
     }
   };
 

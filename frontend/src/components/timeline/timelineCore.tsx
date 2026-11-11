@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import { darkTheme, lightTheme, useIsDark } from "../../app/theme";
 import { useSettings } from "../../stores/settings";
 import type { VideoFrame } from "../../lib/types";
+import { reportError } from "../../lib/errors";
 
 export const RULER_HEIGHT = 22;
 export const PICTURE_HEIGHT = 48;
@@ -126,7 +127,8 @@ export function useFrameTrack(loadFrames: LoadFrames, frameAspect: number, view:
           }
           setFrameBatches((batches) => (batches.length === 0 ? [frames] : [batches[0], ...batches.slice(1).slice(-(KEPT_FRAME_BATCHES - 1)), frames]));
         })
-        .catch(() => undefined);
+        // The strip simply stays empty; repeating a toast while scrolling would only get in the way.
+        .catch((err) => reportError("timeline", err));
     }, FRAME_FETCH_DELAY_MS);
     return () => {
       current = false;

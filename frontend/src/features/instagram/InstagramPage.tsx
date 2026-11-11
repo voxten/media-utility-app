@@ -27,6 +27,7 @@ import type { InstagramItem, InstagramListing, InstagramResult } from "../../lib
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useSettings } from "../../stores/settings";
 import { useInstagramForm } from "./store";
+import { errorMessage } from "../../lib/errors";
 
 // Above this many saved files the result shows the folder instead of a thumbnail per file.
 const GALLERY_LIMIT = 40;
@@ -116,14 +117,14 @@ export default function InstagramPage() {
   const stopListing = () => {
     if (!probe.jobId) return;
     setStoppedJob(probe.jobId);
-    api.instagram.stop(probe.jobId).catch((err) => notify.error(String(err)));
+    api.instagram.stop(probe.jobId).catch((err) => notify.error(errorMessage(t, err)));
   };
 
   const runProbe = () => {
     const url = form.url.trim();
     if (!url || probe.running) return;
     form.set({ post: null, selected: [], result: null });
-    probe.start(() => api.instagram.probe(url)).catch((err) => notify.error(String(err)));
+    probe.start(() => api.instagram.probe(url)).catch((err) => notify.error(errorMessage(t, err)));
   };
 
   useEffect(() => {
@@ -154,7 +155,7 @@ export default function InstagramPage() {
     if (!post || selected.length === 0) return;
     download
       .start(() => api.instagram.start({ url: post.url, outdir, indices: selected, title }))
-      .catch((err) => notify.error(String(err)));
+      .catch((err) => notify.error(errorMessage(t, err)));
   };
 
   const tileLabel = (item: InstagramItem) => {

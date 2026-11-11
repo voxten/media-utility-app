@@ -274,3 +274,23 @@ def test_limit_is_clamped_and_ignores_garbage():
     manager.set_limit("abc")
     assert manager.limit == 16
     manager.shutdown()
+
+
+def test_only_the_newest_finished_jobs_are_kept(monkeypatch):
+    from backend.core import jobs
+
+    monkeypatch.setattr(jobs, "MAX_FINISHED_JOBS", 3)
+    manager = JobManager()
+    ids = [manager.submit("test", lambda ctx: None) for _ in range(5)]
+    deadline = time.time() + 5
+    while manager.active_count() and time.time() < deadline:
+        time.sleep(0.01)
+    blocker = threading.Event()
+    running = manager.submit("test", lambda ctx: blocker.wait(5))
+
+    kept = {job["id"] for job in manager.list()}
+
+    assert len(kept) == 4 and running in kept
+    assert kept - {running} <= set(ids)
+    blocker.set()
+    manager.shutdown(wait=True)

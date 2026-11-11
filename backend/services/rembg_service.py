@@ -14,7 +14,7 @@ from PIL import Image
 
 from backend.core import thumbs
 from backend.core.jobs import JobCancelled, JobContext
-from backend.core.paths import app_data_dir, cache_dir
+from backend.core.paths import cache_dir, models_dir
 
 logger = logging.getLogger(__name__)
 
@@ -46,10 +46,8 @@ def _get_rembg_session(model_name: str) -> Any:
     if resolved_model in _SESSIONS:
         return _SESSIONS[resolved_model]
 
-    # Ensure models are stored in %APPDATA%/MediaStudio/models
-    models_dir = app_data_dir() / "models"
-    models_dir.mkdir(parents=True, exist_ok=True)
-    os.environ["U2NET_HOME"] = str(models_dir)
+    # rembg downloads its models into U2NET_HOME (~/.u2net otherwise).
+    os.environ["U2NET_HOME"] = str(models_dir())
 
     import rembg
 

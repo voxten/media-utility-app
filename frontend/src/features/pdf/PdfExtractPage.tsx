@@ -11,6 +11,7 @@ import { fileName, formatBytes } from "../../lib/format";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { SinglePdfTool } from "./SinglePdfTool";
+import { errorMessage } from "../../lib/errors";
 
 interface ExtractTextResult {
   outPath: string;
@@ -43,7 +44,7 @@ export default function PdfExtractPage() {
     const outPath = await api.dialogs.saveFile(defaultName, [dialogFilter(t, "text")]);
     if (!outPath) return;
     const target = outPath.toLowerCase().endsWith(".txt") ? outPath : `${outPath}.txt`;
-    extract.start(() => api.pdf.extractText(file, target)).catch((err) => notify.error(String(err)));
+    extract.start(() => api.pdf.extractText(file, target)).catch((err) => notify.error(errorMessage(t, err)));
   };
 
   return (

@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from backend.core import whisper_models
-from backend.core.paths import app_data_dir, project_root
+from backend.core.paths import app_data_dir, models_dir, project_root
 
 LAMA_EXPECTED_SIZE = 205669692
 LAMA_EXPECTED_SHA256 = "344c77bbcb158f17dd143070d1e789f38a66c04202311ae3a258ef66667a9ea9"
@@ -41,7 +41,7 @@ def ensure_app_paths(custom_ffmpeg: Optional[str] = None) -> None:
 def lama_model_path() -> Optional[Path]:
     """Finds the LaMa model weights file if present."""
     candidates = [
-        app_data_dir() / "models" / "big-lama.pt",
+        models_dir() / "big-lama.pt",
         Path.home() / ".cache" / "torch" / "hub" / "checkpoints" / "big-lama.pt",
         project_root() / "models" / "big-lama.pt",
     ]
@@ -64,7 +64,7 @@ def upscale_model_path(model_id: str) -> Optional[Path]:
     """Finds downloaded Real-ESRGAN weights if present."""
     filename = "realesr-general-x4v3.pth" if model_id == "general" else "RealESRGAN_x4plus_anime_6B.pth"
     candidates = [
-        app_data_dir() / "models" / filename,
+        models_dir() / filename,
         Path.home() / ".cache" / "torch" / "hub" / "checkpoints" / filename,
         project_root() / "models" / filename,
     ]

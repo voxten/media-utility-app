@@ -1,6 +1,6 @@
 // Floating jobs popup anchored to the navigation rail: this session's jobs and the saved history, in two tabs.
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Button,
   Caption1,
@@ -38,10 +38,10 @@ import {
 import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import { confirm } from "../components/ConfirmDialog";
-import { JobCard } from "../components/JobCard";
+import { HistoryJobCard, JobCard } from "../components/JobCard";
 import { translateMessage } from "../lib/jobMessage";
 import type { HistoryEntry } from "../lib/types";
-import { historyJob, listedJobs, useJobs } from "../stores/jobs";
+import { listedJobs, useJobs } from "../stores/jobs";
 import { useUi, type JobsTab } from "../stores/ui";
 import { ALL, EMPTY_FILTER, filterHistory, groupByDay, historyFacets, type HistoryFilter } from "./historyFilter";
 import { toolById } from "./tools";
@@ -231,9 +231,10 @@ export function JobsPopup({ collapsed }: { collapsed: boolean }) {
     };
   }, [open, setPopupOpen]);
 
+  const close = useCallback(() => setPopupOpen(false), [setPopupOpen]);
+
   if (!open) return null;
 
-  const close = () => setPopupOpen(false);
   const leftPosition = collapsed ? "68px" : "284px";
 
   return (
@@ -305,7 +306,6 @@ function HistoryTab({ history, onNavigate }: { history: HistoryEntry[]; onNaviga
   const styles = useStyles();
   const { t, i18n } = useTranslation();
   const mica = useUi((s) => s.mica);
-  const liveJobs = useJobs((s) => s.jobs);
   const clearHistory = useJobs((s) => s.clearHistory);
 
   const [filter, setFilter] = useState<HistoryFilter>(EMPTY_FILTER);
@@ -433,14 +433,9 @@ function HistoryTab({ history, onNavigate }: { history: HistoryEntry[]; onNaviga
         {groups.map((group) => (
           <div key={group.day} className={styles.dayGroup}>
             <Caption1Strong className={styles.dayHeading}>{dayLabel(group.day, group.date)}</Caption1Strong>
-            {group.entries.map((entry) => {
-              const live = liveJobs[entry.id];
-              return live ? (
-                <JobCard key={entry.id} job={live} when="time" onNavigate={onNavigate} />
-              ) : (
-                <JobCard key={entry.id} job={historyJob(entry)} saved={entry} when="time" onNavigate={onNavigate} />
-              );
-            })}
+            {group.entries.map((entry) => (
+              <HistoryJobCard key={entry.id} entry={entry} preferLive when="time" onNavigate={onNavigate} />
+            ))}
           </div>
         ))}
       </div>

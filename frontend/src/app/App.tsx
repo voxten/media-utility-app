@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { FluentProvider, makeStyles, Spinner, tokens } from "@fluentui/react-components";
+import { useTranslation } from "react-i18next";
+import { ErrorBoundary, ErrorScreen } from "../components/ErrorBoundary";
 import i18n from "../i18n";
 import { api, on, ready } from "../lib/bridge";
+import { errorMessage, installGlobalErrorReporting } from "../lib/errors";
 import { initJobEvents, useJobs } from "../stores/jobs";
 import { useSettings } from "../stores/settings";
 import { useUi } from "../stores/ui";
@@ -12,7 +15,18 @@ const useStyles = makeStyles({
   splash: { height: "100vh", display: "grid", placeItems: "center", backgroundColor: tokens.colorNeutralBackground2 },
 });
 
+/** Longer than any normal start; past it the backend is stuck and waiting longer will not help. */
+const BOOT_TIMEOUT_MS = 30_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = window.setTimeout(() => reject(new Error(i18n.t("errors.bootTimeout"))), ms);
+    promise.then(resolve, reject).finally(() => window.clearTimeout(timer));
+  });
+}
+
 async function boot(load: () => Promise<unknown>) {
+  installGlobalErrorReporting();
   const mode = await ready;
   initJobEvents(); // subscribe before the backend starts delivering events
   on("app:mica", ({ active }) => useUi.setState({ mica: active }));
@@ -26,6 +40,7 @@ async function boot(load: () => Promise<unknown>) {
 
 export function App() {
   const styles = useStyles();
+  const { t } = useTranslation();
   const settings = useSettings((s) => s.settings);
   const load = useSettings((s) => s.load);
   const [bootError, setBootError] = useState<string | null>(null);
@@ -34,7 +49,7 @@ export function App() {
   const theme = dark ? darkTheme : lightTheme;
 
   useEffect(() => {
-    boot(load).catch((err) => setBootError(String(err)));
+    withTimeout(boot(load), BOOT_TIMEOUT_MS).catch((err) => setBootError(errorMessage(i18n.t, err)));
   }, [load]);
 
   useEffect(() => {
@@ -65,10 +80,19 @@ export function App() {
   return (
     <FluentProvider theme={theme}>
       {settings ? (
-        <Shell />
+        <ErrorBoundary actions={() => [{ label: t("errors.reload"), onClick: () => window.location.reload() }]}>
+          <Shell />
+        </ErrorBoundary>
       ) : (
         <div className={styles.splash}>
-          <Spinner label={bootError ?? undefined} />
+          {bootError ? (
+            <ErrorScreen
+              message={t("errors.bootFailed", { error: bootError })}
+              actions={[{ label: t("errors.reload"), onClick: () => window.location.reload() }]}
+            />
+          ) : (
+            <Spinner />
+          )}
         </div>
       )}
     </FluentProvider>

@@ -55,6 +55,7 @@ import { useTransferStore } from "../../stores/transfer";
 import { groupColor } from "./groupColors";
 import { usePdfPagePreview } from "./PdfPagePreview";
 import type { PdfPageInfo } from "./usePdfPages";
+import { errorMessage } from "../../lib/errors";
 
 interface PdfPageItem extends PdfPageInfo {
   key: string;
@@ -283,7 +284,7 @@ export default function PdfPage() {
 
   const addMergeFiles = (paths: string[]) => {
     const pdfs = paths.filter((p) => p.toLowerCase().endsWith(".pdf"));
-    if (pdfs.length) inspect.start(() => api.pdf.inspect(pdfs)).catch((err) => notify.error(String(err)));
+    if (pdfs.length) inspect.start(() => api.pdf.inspect(pdfs)).catch((err) => notify.error(errorMessage(t, err)));
   };
 
   useIncomingTransfer("pdf", (files) => {
@@ -315,7 +316,7 @@ export default function PdfPage() {
           target,
         ),
       )
-      .catch((err) => notify.error(String(err)));
+      .catch((err) => notify.error(errorMessage(t, err)));
   };
 
   const sortByFile = () =>

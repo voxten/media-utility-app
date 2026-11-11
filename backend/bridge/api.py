@@ -16,10 +16,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
+frontend_logger = logging.getLogger("backend.frontend")
 
 from backend import APP_NAME, APP_VERSION
 from backend.bridge.events import EventBus
-from backend.core import clipboard, deps, engines, ffmpeg, paths, system, win_theme
+from backend.core import clipboard, deps, engines, ffmpeg, logs, paths, system, win_theme
 from backend.core.app_shell import AppShell
 from backend.core.history import JobHistory
 from backend.core.jobs import JobManager
@@ -109,6 +110,10 @@ class AppApi(_Namespace):
         """Translated texts for the tray menu and native prompts (the backend has no i18n)."""
         self._ctx.shell.set_labels(labels)
 
+    def report_error(self, source: str, message: str, stack: str = "") -> None:
+        """An unexpected error in the window, written to the app log next to the backend's own."""
+        frontend_logger.error("[%s] %s\n%s", str(source)[:40], str(message)[:2000], str(stack)[:8000])
+
 
 class SettingsApi(_Namespace):
     def get(self) -> Dict[str, Any]:
@@ -186,6 +191,9 @@ class SystemApi(_Namespace):
 
     def hardware_info(self) -> Dict[str, Any]:
         return system_info.get_hardware_info()
+
+    def open_logs(self) -> None:
+        system.open_path(str(logs.logs_dir()))
 
     def open_app_data(self) -> None:
         try:

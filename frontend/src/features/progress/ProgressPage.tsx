@@ -43,6 +43,7 @@ import { checkerboard } from "../../lib/checkerboard";
 import { dialogFilter } from "../../lib/fileTypes";
 import { fileName } from "../../lib/format";
 import { ProgressCard, rowPercent, type CardOptions, type ProgressRow, type ValueMode } from "./ProgressCard";
+import { errorMessage } from "../../lib/errors";
 
 // Gradients from the original style.css plus a few extras.
 const PRESETS: { from: string; to: string }[] = [
@@ -298,7 +299,7 @@ export default function ProgressPage() {
     try {
       form.set({ bannerPath: path, options: { ...form.options, banner: await api.progress.loadBanner(path) } });
     } catch (err) {
-      notify.error(t("progress.toast.bannerError"), { body: String(err) });
+      notify.error(t("progress.toast.bannerError"), { body: errorMessage(t, err) });
     }
   };
 
@@ -315,7 +316,7 @@ export default function ProgressPage() {
         action: { label: t("common.showInFolder"), onClick: () => api.system.reveal(result.outPath).catch(() => undefined) },
       });
     } catch (err) {
-      notify.error(t("progress.toast.error"), { body: String(err) });
+      notify.error(t("progress.toast.error"), { body: errorMessage(t, err) });
     } finally {
       setExporting(false);
     }

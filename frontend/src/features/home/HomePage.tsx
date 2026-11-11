@@ -4,14 +4,14 @@ import { ArrowRight16Regular, DocumentAdd16Regular, History24Regular, Link24Regu
 import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import { CATEGORIES, CATEGORY_ACCENTS, CATEGORY_ICONS, TOOLS, toolById, type ToolDefinition } from "../../app/tools";
-import { JobCard } from "../../components/JobCard";
+import { HistoryJobCard, JobCard } from "../../components/JobCard";
 import { Page, Section } from "../../components/Page";
 import { api } from "../../lib/bridge";
 import { linkFromText, openClipboardLink } from "../../lib/clipboardLink";
 import { claimDrop, DROP_ZONE_ATTR } from "../../lib/drop";
 import { allFilesFilter } from "../../lib/fileTypes";
 import { navigate } from "../../lib/router";
-import { earlierJobs, historyJob, listedJobs, useJobs } from "../../stores/jobs";
+import { earlierJobs, listedJobs, useJobs } from "../../stores/jobs";
 import { useRecentTools } from "../../stores/recentTools";
 import { useTransferStore } from "../../stores/transfer";
 
@@ -282,7 +282,7 @@ function RecentJobs() {
         <JobCard key={job.id} job={job} />
       ))}
       {earlier.map((entry) => (
-        <JobCard key={entry.id} job={historyJob(entry)} saved={entry} />
+        <HistoryJobCard key={entry.id} entry={entry} />
       ))}
     </div>
   );

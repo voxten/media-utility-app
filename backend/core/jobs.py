@@ -8,9 +8,9 @@ Events: ``job:started``, ``job:progress``, ``job:log``, ``job:partial``,
 ``job:meta``, ``job:done``, ``job:error``, ``job:cancelled``; ``jobs:history`` once a finished job is saved.
 """
 
+import logging
 import threading
 import time
-import traceback
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
@@ -23,7 +23,11 @@ Emit = Callable[[str, Dict[str, Any]], None]
 PROGRESS_INTERVAL_S = 0.1
 # Upper bound of the thread pool; the user-facing limit (``maxConcurrency``) is enforced by JobManager.
 POOL_SIZE = 16
+
+logger = logging.getLogger(__name__)
 QUEUE_POLL_S = 0.2
+# Finished jobs kept for get()/list()/retry(); older ones live on only in the saved history.
+MAX_FINISHED_JOBS = 100
 
 
 class JobCancelled(Exception):
@@ -224,7 +228,7 @@ class JobManager:
             self._finish(info, "cancelled")
             self._emit("job:cancelled", {"jobId": info.id})
         except Exception as exc:  # noqa: BLE001 - every failure must reach the UI
-            traceback.print_exc()
+            logger.exception("Job %s (%s) failed", info.id, info.kind)
             if ctx.cancelled:
                 self._finish(info, "cancelled")
                 self._emit("job:cancelled", {"jobId": info.id})
@@ -249,7 +253,7 @@ class JobManager:
         try:
             entry = self._history.record(info.to_dict(), result)
         except Exception:  # noqa: BLE001 - history must never break a finished job
-            traceback.print_exc()
+            logger.exception("Could not save job %s to the history", info.id)
             return
         if entry is not None:
             self._emit("jobs:history", entry)
@@ -261,6 +265,17 @@ class JobManager:
             info.finished_at = time.time()
             if status != "error":
                 info.fn = None
+            self._prune()
+        logger.info("Job %s (%s) %s after %.1f s", info.id, info.kind, status, info.finished_at - info.started_at)
+
+    def _prune(self) -> None:
+        """Forget the oldest finished jobs beyond MAX_FINISHED_JOBS (caller holds the lock)."""
+        finished = [job for job in self._jobs.values() if job.status != "running"]
+        excess = len(finished) - MAX_FINISHED_JOBS
+        if excess <= 0:
+            return
+        for job in sorted(finished, key=lambda job: job.finished_at or 0)[:excess]:
+            del self._jobs[job.id]
 
     def retry(self, job_id: str) -> Optional[str]:
         """Run a failed job again with the same settings; the new job's id, or None when it cannot be retried."""

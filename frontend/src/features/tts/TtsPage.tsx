@@ -28,6 +28,7 @@ import { formatOptions } from "../../lib/fileTypes";
 import { joinPath } from "../../lib/format";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useSettings } from "../../stores/settings";
+import { errorMessage } from "../../lib/errors";
 
 type Engine = "edge" | "pyttsx3";
 interface Voice {
@@ -205,7 +206,7 @@ export default function TtsPage() {
       .start(() =>
         api.tts.synthesize({ text: form.text, engine: form.engine, voice: form.voice, rate: form.rate[form.engine], outPath }),
       )
-      .catch((err) => notify.error(t("tts.toast.error"), { body: String(err) }));
+      .catch((err) => notify.error(t("tts.toast.error"), { body: errorMessage(t, err) }));
 
   const voicePanel = (
     <Panel title={t("tts.voice")}>

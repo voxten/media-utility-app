@@ -65,6 +65,7 @@ def test_ensure_app_paths_with_custom_ffmpeg(tmp_path, monkeypatch):
 def test_storage_info(tmp_path, monkeypatch):
     monkeypatch.setattr(system_info, "app_data_dir", lambda: tmp_path)
     monkeypatch.setattr(system_info, "cache_dir", lambda: tmp_path / "cache")
+    monkeypatch.setattr(system_info, "models_dir", lambda: tmp_path / "models")
 
     cache_dir = tmp_path / "cache"
     cache_dir.mkdir(parents=True, exist_ok=True)

@@ -7,9 +7,12 @@ Events emitted before the page is ready are buffered.
 """
 
 import json
+import logging
 import queue
 import threading
 from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 BATCH_WINDOW_S = 0.03
 MAX_BATCH = 200
@@ -66,4 +69,4 @@ class EventBus:
         try:
             self._window.run_js(f"window.__bridge && window.__bridge.emitBatch({data});")
         except Exception as exc:  # noqa: BLE001 - window may be closing
-            print(f"[event-bus] delivery failed: {exc}")
+            logger.warning("Event delivery failed: %s", exc)

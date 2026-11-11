@@ -43,6 +43,7 @@ import { useSettings } from "../../stores/settings";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { useTransferStore } from "../../stores/transfer";
 import { AfterGallery } from "../../components/AfterGallery";
+import { errorMessage } from "../../lib/errors";
 
 const FORMATS = ["PNG", "WEBP", "JPEG", "GIF", "TIFF", "BMP", "PDF"] as const;
 type ImageFormat = (typeof FORMATS)[number];
@@ -251,7 +252,7 @@ export default function ConverterPage() {
             : { files: form.source === "file" ? [form.file] : form.files }),
         }),
       )
-      .catch((err) => notify.error(t("converter.toast.error"), { body: String(err) }));
+      .catch((err) => notify.error(t("converter.toast.error"), { body: errorMessage(t, err) }));
 
   const outputPanel = (
     <Panel title={t("converter.output")}>

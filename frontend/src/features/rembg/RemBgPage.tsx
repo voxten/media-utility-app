@@ -25,6 +25,7 @@ import { formatList, IMAGE_EXTENSIONS } from "../../lib/fileTypes";
 import { fileName } from "../../lib/format";
 import type { RemBgOptions, RemBgPreview, RemBgResult } from "../../lib/types";
 import { useJobRunner } from "../../lib/useJobRunner";
+import { errorMessage } from "../../lib/errors";
 
 type ModelType = "birefnet" | "birefnet-lite" | "isnet" | "u2net";
 type BgMode = "checker" | "black" | "white" | "green";
@@ -177,7 +178,7 @@ export default function RemBgPage() {
       form.set({ image: preview, sourcePath: path, result: null });
       output.reset(path, `${fileName(path).replace(/\.[^.]+$/, "")}_nobg.png`);
     } catch (err) {
-      notify.error(t("common.jobStatus.error"), { body: String(err) });
+      notify.error(t("common.jobStatus.error"), { body: errorMessage(t, err) });
     }
   };
 
@@ -191,7 +192,7 @@ export default function RemBgPage() {
       feather: form.feather,
       despeckle: form.despeckle,
     };
-    runner.start(() => api.rembg.remove(opts)).catch((err) => notify.error(String(err)));
+    runner.start(() => api.rembg.remove(opts)).catch((err) => notify.error(errorMessage(t, err)));
   };
 
   const modelOptions = [

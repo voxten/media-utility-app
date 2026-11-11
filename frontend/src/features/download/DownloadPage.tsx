@@ -28,6 +28,7 @@ import { ProbeResultPanel } from "./ProbeResultPanel";
 import { SubtitlesField, useDownloadSubtitles } from "./SubtitlesField";
 import { useDownloadForm } from "./store";
 import type { BatchItem, ProbeResult } from "./types";
+import { errorMessage } from "../../lib/errors";
 
 const TEMPLATE_TOKENS = ["{title}", "{id}", "{ext}"];
 
@@ -122,7 +123,7 @@ export default function DownloadPage() {
     setLastBatch(null);
     batch
       .start(() => api.download.batch({ urls: targetUrls, outdir, template: form.template, subtitles: subtitles.params }))
-      .catch((err) => notify.error(String(err)));
+      .catch((err) => notify.error(errorMessage(t, err)));
   };
 
   const activeJob = form.tab === "batch" ? batch.job : download.running ? download.job : probe.running ? probe.job : download.job;
@@ -138,7 +139,7 @@ export default function DownloadPage() {
   const runProbe = () => {
     if (!form.url.trim()) return;
     form.set({ probe: null, formatId: "" });
-    probe.start(() => api.download.probe(form.url.trim())).catch((err) => notify.error(String(err)));
+    probe.start(() => api.download.probe(form.url.trim())).catch((err) => notify.error(errorMessage(t, err)));
   };
 
   useEffect(() => {
@@ -161,7 +162,7 @@ export default function DownloadPage() {
     batch
       .start(() => api.download.batch({ urls: batchUrls, outdir, template: form.template, subtitles: subtitles.params }))
       .then(() => form.set({ batchText: "" }))
-      .catch((err) => notify.error(String(err)));
+      .catch((err) => notify.error(errorMessage(t, err)));
   };
 
   const startDownload = () => {
@@ -177,7 +178,7 @@ export default function DownloadPage() {
             form.set({ batchText: "" });
             notify.success(t("download.toast.addedToBatch", { count: urls.length }));
           })
-          .catch((err) => notify.error(String(err)));
+          .catch((err) => notify.error(errorMessage(t, err)));
         return;
       }
       startBatch(urls);
@@ -190,7 +191,7 @@ export default function DownloadPage() {
       setLastBatch(null);
       batch
         .start(() => api.download.batch({ urls: playlistUrls, outdir, template: form.template, subtitles: subtitles.params }))
-        .catch((err) => notify.error(String(err)));
+        .catch((err) => notify.error(errorMessage(t, err)));
       return;
     }
     download
@@ -206,7 +207,7 @@ export default function DownloadPage() {
           subtitles: subtitles.params,
         }),
       )
-      .catch((err) => notify.error(String(err)));
+      .catch((err) => notify.error(errorMessage(t, err)));
   };
 
   const canDownload =

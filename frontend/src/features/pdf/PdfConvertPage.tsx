@@ -30,6 +30,7 @@ import { useJobRunner } from "../../lib/useJobRunner";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { useTransferStore } from "../../stores/transfer";
 import { SinglePdfTool } from "./SinglePdfTool";
+import { errorMessage } from "../../lib/errors";
 
 const VISIBLE_IMAGES = 10;
 
@@ -107,7 +108,7 @@ export default function PdfConvertPage() {
     if (!pdfFile) return;
     const outDir = await api.dialogs.openFolder();
     if (!outDir) return;
-    toImages.start(() => api.pdf.toImages(pdfFile, outDir, format, dpi, pageRange)).catch((err) => notify.error(String(err)));
+    toImages.start(() => api.pdf.toImages(pdfFile, outDir, format, dpi, pageRange)).catch((err) => notify.error(errorMessage(t, err)));
   };
 
   const startFromImages = async () => {
@@ -115,7 +116,7 @@ export default function PdfConvertPage() {
     const outPath = await api.dialogs.saveFile(t("pdf.convert.defaultPdfName"), [dialogFilter(t, "pdf")]);
     if (!outPath) return;
     const target = outPath.toLowerCase().endsWith(".pdf") ? outPath : `${outPath}.pdf`;
-    fromImages.start(() => api.pdf.fromImages(imageFiles, target)).catch((err) => notify.error(String(err)));
+    fromImages.start(() => api.pdf.fromImages(imageFiles, target)).catch((err) => notify.error(errorMessage(t, err)));
   };
 
   const isBusy = toImages.running || fromImages.running;

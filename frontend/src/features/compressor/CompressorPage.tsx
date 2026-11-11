@@ -34,6 +34,7 @@ import { IMAGE_STAGE_HEIGHT } from "../../lib/imageStage";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useTransferStore } from "../../stores/transfer";
+import { errorMessage } from "../../lib/errors";
 
 type Mode = "smart" | "lossless" | "target";
 const FORMATS: ImageOutputFormat[] = ["original", "webp", "jpeg", "png"];
@@ -146,7 +147,7 @@ export default function CompressorPage() {
     api.compressor
       .loadPreview(current)
       .then((p) => live && setPreview(p))
-      .catch((err) => notify.error(String(err)));
+      .catch((err) => notify.error(errorMessage(t, err)));
     return () => {
       live = false;
     };

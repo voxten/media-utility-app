@@ -123,6 +123,7 @@ export const api = {
     setTitleBarTheme: (dark: boolean) => call<boolean>("app", "set_title_bar_theme", dark),
     notify: (title: string, body: string, force = false) => call<boolean>("app", "notify", title, body, force),
     setShellLabels: (labels: ShellLabels) => call<void>("app", "set_shell_labels", labels),
+    reportError: (source: string, message: string, stack: string) => call<void>("app", "report_error", source, message, stack),
   },
   settings: {
     get: () => call<Settings>("settings", "get"),
@@ -148,6 +149,7 @@ export const api = {
     clearCache: () => call<ClearCacheResult>("system", "clear_cache"),
     hardwareInfo: () => call<HardwareInfo>("system", "hardware_info"),
     openAppData: () => call<void>("system", "open_app_data"),
+    openLogs: () => call<void>("system", "open_logs"),
     engines: () => call<EngineInfo[]>("system", "engines"),
     checkEngines: () => call<EngineInfo[]>("system", "check_engines"),
     updateEngines: () => call<JobId>("system", "update_engines"),

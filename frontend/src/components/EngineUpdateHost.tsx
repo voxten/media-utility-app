@@ -4,6 +4,7 @@ import { api, on } from "../lib/bridge";
 import { useEngines } from "../stores/engines";
 import { useJob } from "../stores/jobs";
 import { useNotify } from "./notify";
+import { errorMessage } from "../lib/errors";
 
 /** Offers download engine updates found at start-up and reports how an update went. */
 export function EngineUpdateHost() {
@@ -22,7 +23,7 @@ export function EngineUpdateHost() {
           action: {
             label: t("engines.update"),
             onClick: () => {
-              useEngines.getState().update().catch((err) => notify.error(t("engines.failed"), { body: String(err) }));
+              useEngines.getState().update().catch((err) => notify.error(t("engines.failed"), { body: errorMessage(t, err) }));
             },
           },
           timeout: 15000,

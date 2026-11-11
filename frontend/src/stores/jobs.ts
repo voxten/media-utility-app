@@ -8,7 +8,11 @@ import { translateMessage } from "../lib/jobMessage";
 import type { HistoryEntry, JobInfo, LogEntry } from "../lib/types";
 import { useSettings } from "./settings";
 
-const MAX_LOGS = 2000;
+const MAX_LOGS = 1000;
+/** Finished jobs kept in memory for a long session in the tray; older ones remain in the history. */
+const MAX_FINISHED_JOBS = 100;
+/** Finished helper steps kept: their results (PDF page thumbnails, link checks) are large and copied by the pages. */
+const MAX_FINISHED_QUIET_JOBS = 10;
 
 /**
  * Jobs left out of the job lists and the running count, and that finish without a toast, desktop
@@ -23,11 +27,23 @@ export const isQuietJob = (kind: string | undefined) => !!kind && QUIET_KINDS.ha
 const notificationTitle = (jobTitle?: string | null) =>
   jobTitle ? `${i18n.t("app.name")} · ${translateMessage(i18n.t, jobTitle)}` : i18n.t("app.name");
 
+// One context for every chime: browsers cap how many can exist and each holds an audio device.
+let chimeContext: AudioContext | null = null;
+
+function audioContext(): AudioContext | null {
+  if (!chimeContext) {
+    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioCtx) return null;
+    chimeContext = new AudioCtx();
+  }
+  if (chimeContext.state === "suspended") chimeContext.resume().catch(() => undefined);
+  return chimeContext;
+}
+
 export function playChime(kind: "done" | "error" = "done") {
   try {
-    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
+    const ctx = audioContext();
+    if (!ctx) return;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
@@ -98,6 +114,35 @@ export const useJobs = create<JobsStore>((set) => ({
     })),
 }));
 
+/**
+ * Drops the oldest finished jobs beyond the limits, or returns null when nothing has to go. The newest
+ * job of each kind always stays, because the tool page that started it may still be showing it.
+ */
+export function pruneJobs(
+  state: Pick<JobsStore, "jobs" | "order">,
+  limits = { finished: MAX_FINISHED_JOBS, quiet: MAX_FINISHED_QUIET_JOBS },
+): Pick<JobsStore, "jobs" | "order"> | null {
+  const kinds = new Set<string>();
+  const drop = new Set<string>();
+  let finished = 0;
+  let quiet = 0;
+  for (const id of state.order) {
+    const job = state.jobs[id];
+    if (!job) continue;
+    if (!kinds.has(job.kind)) {
+      kinds.add(job.kind);
+      continue;
+    }
+    if (job.status === "running") continue;
+    if (isQuietJob(job.kind) ? ++quiet > limits.quiet : ++finished > limits.finished) drop.add(id);
+  }
+  if (drop.size === 0) return null;
+  return {
+    jobs: Object.fromEntries(Object.entries(state.jobs).filter(([id]) => !drop.has(id))),
+    order: state.order.filter((id) => !drop.has(id)),
+  };
+}
+
 function patch(jobId: string, fn: (job: JobState) => Partial<JobState>) {
   useJobs.setState((state) => {
     const job = state.jobs[jobId];
@@ -147,12 +192,14 @@ export function initJobEvents() {
     jobId: string,
     status: JobState["status"],
     fields: Partial<JobState> | ((job: JobState) => Partial<JobState>) = {},
-  ) =>
+  ) => {
     patch(jobId, (job) => ({
       status,
       finishedAt: Date.now() / 1000,
       ...(typeof fields === "function" ? fields(job) : fields),
     }));
+    useJobs.setState((state) => pruneJobs(state) ?? state);
+  };
 
   on("job:done", ({ jobId, result }) => {
     finish(jobId, "done", (job) => ({

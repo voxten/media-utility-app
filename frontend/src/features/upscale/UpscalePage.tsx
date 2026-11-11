@@ -13,6 +13,7 @@ import { formatList, IMAGE_EXTENSIONS } from "../../lib/fileTypes";
 import { fileName } from "../../lib/format";
 import type { UpscaleOptions, UpscalePreview, UpscaleResult } from "../../lib/types";
 import { useJobRunner } from "../../lib/useJobRunner";
+import { errorMessage } from "../../lib/errors";
 
 type ModelType = "general" | "anime";
 type AlphaMode = "smooth" | "ai";
@@ -131,7 +132,7 @@ export default function UpscalePage() {
       const currentSrc = keepSource ? form.sourcePath || path : path;
       output.reset(currentSrc, getDefaultOutFileName(currentSrc, form.scale));
     } catch (err) {
-      notify.error(t("upscale.toast.loadError"), { body: String(err) });
+      notify.error(t("upscale.toast.loadError"), { body: errorMessage(t, err) });
     }
   };
 
@@ -152,7 +153,7 @@ export default function UpscalePage() {
       antiHalo: form.antiHalo,
     };
 
-    runner.start(() => api.upscale.start(opts)).catch((err) => notify.error(String(err)));
+    runner.start(() => api.upscale.start(opts)).catch((err) => notify.error(errorMessage(t, err)));
   };
 
   const modelOptions = [

@@ -6,6 +6,8 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/bridge";
 import { ON_IMAGE } from "../../lib/onImage";
 import type { PdfPageInfo } from "./usePdfPages";
+import { errorMessage } from "../../lib/errors";
+import { useNotify } from "../../components/notify";
 
 const useStyles = makeStyles({
   surface: { width: "min(80vw, 900px)", maxWidth: "min(80vw, 900px)" },
@@ -22,6 +24,7 @@ const useStyles = makeStyles({
 export function usePdfPagePreview() {
   const styles = useStyles();
   const { t } = useTranslation();
+  const notify = useNotify();
   // The last page is kept after closing so the dialog does not empty out during its exit animation.
   const [preview, setPreview] = useState<{ page: PdfPageInfo; src: string } | null>(null);
   const [open, setOpen] = useState(false);
@@ -32,7 +35,7 @@ export function usePdfPagePreview() {
     api.pdf
       .renderPage(page.file, page.page)
       .then((src) => setPreview((p) => (p && p.page.file === page.file && p.page.page === page.page ? { ...p, src } : p)))
-      .catch(() => undefined);
+      .catch((err) => notify.error(t("errors.previewFailed"), { body: errorMessage(t, err) }));
   };
 
   const dialog = (

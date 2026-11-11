@@ -134,6 +134,7 @@ export function createMockBackend(emit: Emit) {
       set_title_bar_theme: () => ok(false),
       notify: () => ok(false),
       set_shell_labels: () => ok(undefined),
+      report_error: () => ok(undefined),
     },
     settings: {
       get: () => ok(settings),
@@ -206,7 +207,7 @@ export function createMockBackend(emit: Emit) {
         ok({
           appDataDir: "C:\\Users\\demo\\AppData\\Roaming\\MediaStudio",
           cacheDir: "C:\\Users\\demo\\AppData\\Roaming\\MediaStudio\\cache",
-          modelsDir: "C:\\Users\\demo\\AppData\\Roaming\\MediaStudio\\models",
+          modelsDir: "C:\\Users\\demo\\AppData\\Local\\MediaStudio\\models",
           binDir: "C:\\Users\\demo\\AppData\\Roaming\\MediaStudio\\bin",
           cacheBytes: 52_428_800,
           cacheFiles: 28,
@@ -238,6 +239,7 @@ export function createMockBackend(emit: Emit) {
           osName: "Windows 11 Pro",
         }),
       open_app_data: () => ok(undefined),
+      open_logs: () => ok(undefined),
       clipboard_link: () => ok({ url: "https://www.youtube.com/watch?v=aqz-KE-bpKQ", target: "download" }),
       path_info: (path: string) => ok({ exists: true, isDir: !path.includes("."), isFile: path.includes("."), name: path.split("\\").pop(), parent: "" }),
     },

@@ -8,6 +8,7 @@ import { dirName, fileName, joinPath } from "../lib/format";
 import { useSettings } from "../stores/settings";
 import { useNotify } from "./notify";
 import { PathPicker } from "./PathPicker";
+import { errorMessage } from "../lib/errors";
 
 const useStyles = makeStyles({
   row: { display: "flex", flexWrap: "wrap", gap: "16px", alignItems: "flex-end" },
@@ -41,7 +42,7 @@ export function useSaveOutput(save: (resultPath: string, target: string) => Prom
         action: { label: t("common.showInFolder"), onClick: () => api.system.reveal(saved).catch(() => undefined) },
       });
     } catch (err) {
-      notify.error(t("common.saveError"), { body: String(err) });
+      notify.error(t("common.saveError"), { body: errorMessage(t, err) });
     }
   };
 

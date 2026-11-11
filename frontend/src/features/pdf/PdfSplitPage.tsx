@@ -12,6 +12,7 @@ import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { GROUP_COLORS, groupColor } from "./groupColors";
 import type { PageMark } from "./PdfPageGrid";
 import { SinglePdfTool } from "./SinglePdfTool";
+import { errorMessage } from "../../lib/errors";
 
 interface SplitResult {
   files: string[];
@@ -110,7 +111,7 @@ export default function PdfSplitPage() {
     if (!file) return;
     const outDir = await api.dialogs.openFolder();
     if (!outDir) return;
-    split.start(() => api.pdf.split(file, outDir, mode, outputGroups)).catch((err) => notify.error(String(err)));
+    split.start(() => api.pdf.split(file, outDir, mode, outputGroups)).catch((err) => notify.error(errorMessage(t, err)));
   };
 
   const toolbar = mode === "groups" && (

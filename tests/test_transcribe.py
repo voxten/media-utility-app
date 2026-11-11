@@ -81,7 +81,7 @@ def test_srt_is_written_with_bom(tmp_path):
 
 
 def test_model_registry(monkeypatch, tmp_path):
-    monkeypatch.setattr(whisper_models, "app_data_dir", lambda: tmp_path)
+    monkeypatch.setattr(whisper_models, "models_dir", lambda: tmp_path / "models")
     assert whisper_models.model_for_dep("whisper_small").id == "small"
     assert whisper_models.model_for_dep("whisper_nope") is None
     assert whisper_models.model_for_dep("rembg") is None
@@ -102,7 +102,7 @@ def test_model_registry(monkeypatch, tmp_path):
 
 
 def test_install_whisper_downloads_missing_files(monkeypatch, tmp_path, ctx):
-    monkeypatch.setattr(whisper_models, "app_data_dir", lambda: tmp_path)
+    monkeypatch.setattr(whisper_models, "models_dir", lambda: tmp_path / "models")
     fake = whisper_models.WhisperModel("fake", "org/fake", "abc", {"config.json": 2, "model.bin": 8})
     monkeypatch.setitem(whisper_models.MODELS, "fake", fake)
     monkeypatch.setattr(whisper_models, "is_engine_installed", lambda: True)

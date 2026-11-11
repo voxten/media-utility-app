@@ -1,6 +1,6 @@
 // Job card shared by the jobs popup and the home page's recent jobs.
 
-import { useMemo, useState, type ReactElement } from "react";
+import { memo, useMemo, useState, type ReactElement } from "react";
 import {
   Button,
   Caption1,
@@ -38,7 +38,8 @@ import { formatBytes, formatDateTime, formatDuration, formatTime } from "../lib/
 import { jobMessage, translateMessage } from "../lib/jobMessage";
 import { jobSummary } from "../lib/jobSummary";
 import { navigate } from "../lib/router";
-import { retryJob, type JobState } from "../stores/jobs";
+import { historyJob, retryJob, useJobs, type JobState } from "../stores/jobs";
+import type { HistoryEntry } from "../lib/types";
 import { useTransferStore } from "../stores/transfer";
 import { useLiveElapsed } from "./LiveElapsed";
 import { useNotify } from "./notify";
@@ -409,8 +410,11 @@ interface JobCardProps {
   when?: "date" | "time";
 }
 
-/** One job: what it works on, its progress or result in one line, and its actions as icons and a menu. */
-export function JobCard({ job, onNavigate, saved, when = saved ? "date" : undefined }: JobCardProps) {
+/**
+ * One job: what it works on, its progress or result in one line, and its actions as icons and a menu.
+ * Memoised: a progress event re-renders only the card of the job it belongs to.
+ */
+export const JobCard = memo(function JobCard({ job, onNavigate, saved, when = saved ? "date" : undefined }: JobCardProps) {
   const styles = useStyles();
   const { t, i18n } = useTranslation();
   const notify = useNotify();
@@ -619,4 +623,21 @@ export function JobCard({ job, onNavigate, saved, when = saved ? "date" : undefi
       )}
     </div>
   );
+});
+
+interface HistoryJobCardProps extends Pick<JobCardProps, "onNavigate" | "when"> {
+  entry: HistoryEntry;
+  /** Show this session's live job instead while the store still has it. */
+  preferLive?: boolean;
 }
+
+/** A job from the saved history. Subscribes to its own job only, so other jobs' progress leaves it alone. */
+export const HistoryJobCard = memo(function HistoryJobCard({ entry, preferLive, when, onNavigate }: HistoryJobCardProps) {
+  const live = useJobs((state) => (preferLive ? state.jobs[entry.id] : undefined));
+  const saved = useMemo(() => historyJob(entry), [entry]);
+  return live ? (
+    <JobCard job={live} when={when} onNavigate={onNavigate} />
+  ) : (
+    <JobCard job={saved} saved={entry} when={when} onNavigate={onNavigate} />
+  );
+});

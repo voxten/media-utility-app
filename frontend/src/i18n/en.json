@@ -208,6 +208,8 @@
       "modelsTitle": "AI models",
       "appDataTitle": "App data folder",
       "appDataDesc": "Primary Media Studio directory containing settings and app data.",
+      "logsTitle": "Logs",
+      "logsDesc": "Errors and app activity, useful when reporting a problem.",
       "recentFoldersTitle": "Recent Folders History",
       "recentFoldersDesc": "History of recently accessed directories in picker dialogs.",
       "clearCache": "Clear Cache",
@@ -1322,5 +1324,15 @@
       "failed": "{{file}}: {{error}}",
       "targetMissed": "{{file}} stays above the size limit ({{size}})."
     }
+  },
+  "errors": {
+    "crashTitle": "Something went wrong",
+    "unknown": "Unknown error.",
+    "previewFailed": "Could not load the preview.",
+    "retry": "Try again",
+    "goHome": "Go to Home",
+    "reload": "Reload window",
+    "bootTimeout": "The app did not respond.",
+    "bootFailed": "The app could not start: {{error}}"
   }
 }

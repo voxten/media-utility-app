@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
-from backend.core.paths import app_data_dir, cache_dir
+from backend.core.paths import app_data_dir, cache_dir, models_dir
 
 logger = logging.getLogger("media_studio.system_info")
 
@@ -37,7 +37,7 @@ def get_storage_info() -> Dict[str, Any]:
     """Returns filesystem usage breakdown for Media Studio data directories."""
     app_data = app_data_dir()
     cache = cache_dir()
-    models = app_data / "models"
+    models = models_dir()
     bin_dir = app_data / "bin"
 
     cache_bytes, cache_files = _dir_stats(cache)

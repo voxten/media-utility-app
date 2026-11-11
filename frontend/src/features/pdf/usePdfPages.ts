@@ -14,7 +14,18 @@ export interface PdfPageInfo {
   height: number;
 }
 
+/** Files whose thumbnails stay in memory; reopening an older one renders it again. */
+const CACHE_FILES = 20;
 const cache = new Map<string, PdfPageInfo[]>();
+
+function remember(file: string, pages: PdfPageInfo[]) {
+  cache.delete(file);
+  cache.set(file, pages);
+  for (const oldest of cache.keys()) {
+    if (cache.size <= CACHE_FILES) break;
+    cache.delete(oldest);
+  }
+}
 
 export function usePdfPages(file: string | null) {
   const [jobId, setJobId] = useState<string | null>(null);
@@ -43,7 +54,7 @@ export function usePdfPages(file: string | null) {
 
   const finished = job?.status === "done" ? (job.result as { pages: PdfPageInfo[] }).pages : undefined;
   useEffect(() => {
-    if (file && finished) cache.set(file, finished);
+    if (file && finished) remember(file, finished);
   }, [file, finished]);
 
   return {

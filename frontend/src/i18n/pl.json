@@ -212,6 +212,8 @@
       "modelsTitle": "Modele AI",
       "appDataTitle": "Folder danych aplikacji",
       "appDataDesc": "Główny katalog Media Studio zawierający konfigurację i pliki tymczasowe.",
+      "logsTitle": "Logi",
+      "logsDesc": "Błędy i przebieg pracy aplikacji, przydatne przy zgłaszaniu problemu.",
       "recentFoldersTitle": "Historia ostatnich folderów",
       "recentFoldersDesc": "Historia ostatnio używanych katalogów w oknach wyboru.",
       "clearCache": "Wyczyść pamięć podręczną",
@@ -1418,5 +1420,15 @@
       "failed": "{{file}}: {{error}}",
       "targetMissed": "{{file}} przekracza limit rozmiaru ({{size}})."
     }
+  },
+  "errors": {
+    "crashTitle": "Coś poszło nie tak",
+    "unknown": "Nieznany błąd.",
+    "previewFailed": "Nie udało się wczytać podglądu.",
+    "retry": "Spróbuj ponownie",
+    "goHome": "Przejdź do Startu",
+    "reload": "Odśwież okno",
+    "bootTimeout": "Aplikacja nie odpowiada.",
+    "bootFailed": "Nie udało się uruchomić aplikacji: {{error}}"
   }
 }

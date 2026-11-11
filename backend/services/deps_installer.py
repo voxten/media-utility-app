@@ -23,7 +23,7 @@ from backend.core.deps import (
     lama_model_path,
 )
 from backend.core.jobs import JobCancelled, JobContext
-from backend.core.paths import app_data_dir, cache_dir
+from backend.core.paths import app_data_dir, cache_dir, models_dir
 
 logger = logging.getLogger(__name__)
 
@@ -147,7 +147,7 @@ def install_lama(ctx: JobContext) -> Dict[str, Any]:
     if not has_torch:
         _install_torch(ctx)
 
-    model_dest = app_data_dir() / "models" / "big-lama.pt"
+    model_dest = models_dir() / "big-lama.pt"
     if not model_dest.is_file() or model_dest.stat().st_size < 100_000_000:
         ctx.progress(40 if not has_torch else 5, "deps.status.downloadingModel", {"percent": 0})
         ctx.log("deps.log.downloadingModel")
@@ -255,7 +255,7 @@ def install_upscale(ctx: JobContext, dep_id: str) -> Dict[str, Any]:
     if not has_torch:
         _install_torch(ctx)
 
-    dest = app_data_dir() / "models" / cfg["filename"]
+    dest = models_dir() / cfg["filename"]
     if not dest.is_file() or dest.stat().st_size < cfg["min_size"]:
         start_pct = 40 if not has_torch else 5
         span_pct = 50 if not has_torch else 85

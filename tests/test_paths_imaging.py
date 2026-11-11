@@ -52,3 +52,43 @@ def test_run_ffmpeg_refuses_to_overwrite_its_input(tmp_path: Path, ctx):
     with pytest.raises(ValueError, match="common.outputIsInput"):
         run_ffmpeg(ctx, ["-i", str(src), "-c", "copy", str(src)], duration=1.0, out_path=src)
     assert src.read_bytes() == b"original"
+
+
+def test_models_move_out_of_the_roaming_folder(tmp_path):
+    from backend.core.paths import migrate_models
+
+    old, new = tmp_path / "Roaming" / "models", tmp_path / "Local" / "models"
+    (old / "whisper" / "base").mkdir(parents=True)
+    (old / "whisper" / "base" / "model.bin").write_bytes(b"w")
+    (old / "big-lama.pt").write_bytes(b"lama")
+    (new / "whisper" / "small").mkdir(parents=True)
+    (new / "whisper" / "small" / "model.bin").write_bytes(b"s")
+
+    migrate_models(old, new)
+
+    assert not old.exists()
+    assert (new / "big-lama.pt").read_bytes() == b"lama"
+    assert (new / "whisper" / "base" / "model.bin").read_bytes() == b"w"
+    assert (new / "whisper" / "small" / "model.bin").read_bytes() == b"s"
+
+
+def test_a_model_already_in_the_new_place_is_kept(tmp_path):
+    from backend.core.paths import migrate_models
+
+    old, new = tmp_path / "old", tmp_path / "new"
+    old.mkdir()
+    new.mkdir()
+    (old / "model.pth").write_bytes(b"old copy")
+    (new / "model.pth").write_bytes(b"new copy")
+
+    migrate_models(old, new)
+
+    assert (new / "model.pth").read_bytes() == b"new copy"
+    assert (old / "model.pth").exists()  # left for the user; nothing is lost
+
+
+def test_nothing_happens_without_old_models(tmp_path):
+    from backend.core.paths import migrate_models
+
+    migrate_models(tmp_path / "missing", tmp_path / "new")
+    assert not (tmp_path / "new").exists()
