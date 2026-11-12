@@ -19,7 +19,7 @@ export function fileExtension(path: string) {
 }
 
 /** Kinds of files that tools can pass to each other through "Send to". */
-export type MediaKind = "gif" | "image" | "pdf" | "video";
+export type MediaKind = "audio" | "gif" | "image" | "pdf" | "video";
 
 export function mediaKind(path: string): MediaKind | null {
   const ext = fileExtension(path);
@@ -27,6 +27,7 @@ export function mediaKind(path: string): MediaKind | null {
   if (ALL_IMAGE_EXTENSIONS.includes(ext)) return "image";
   if (PDF_EXTENSIONS.includes(ext)) return "pdf";
   if (VIDEO_EXTENSIONS.includes(ext)) return "video";
+  if (AUDIO_EXTENSIONS.includes(ext)) return "audio";
   return null;
 }
 

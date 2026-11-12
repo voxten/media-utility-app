@@ -111,6 +111,10 @@
     "progress": {
       "name": "Generator postępu",
       "description": "Twórz grafiki z paskami postępu projektu."
+    },
+    "media_convert": {
+      "name": "Konwerter wideo i audio",
+      "description": "Zmień format, zmniejsz do rozmiaru, przytnij, zmniejsz rozdzielczość, wyciągnij dźwięk albo wyrównaj głośność."
     }
   },
   "home": {
@@ -1527,6 +1531,55 @@
     "textEmpty": "Najpierw wpisz tekst.",
     "maskEmpty": "Najpierw zamaluj obszar do usunięcia.",
     "pdfUnreadable": "Plik {{file}} nie jest poprawnym PDF-em albo jest uszkodzony.",
-    "pdfEncrypted": "Plik {{file}} jest chroniony hasłem."
+    "pdfEncrypted": "Plik {{file}} jest chroniony hasłem.",
+    "noVideo": "{{file}} nie ma ścieżki wideo.",
+    "allFilesFailed_one": "Nie udało się przekonwertować pliku. Szczegóły są w logu.",
+    "allFilesFailed_few": "Nie udało się przekonwertować żadnego z {{count}} plików. Szczegóły są w logu.",
+    "allFilesFailed_many": "Nie udało się przekonwertować żadnego z {{count}} plików. Szczegóły są w logu.",
+    "allFilesFailed_other": "Nie udało się przekonwertować żadnego z {{count}} plików. Szczegóły są w logu."
+  },
+  "media_convert": {
+    "output": "Wynik",
+    "format": "Format",
+    "video": "Wideo",
+    "audio": "Audio",
+    "audioOnly": "sam dźwięk",
+    "byQuality": "Jakość",
+    "bySize": "Rozmiar pliku",
+    "qualityLabel": "Jakość",
+    "quality": {
+      "high": "Wysoka",
+      "balanced": "Zrównoważona",
+      "small": "Mały plik"
+    },
+    "targetSize": "Docelowy rozmiar",
+    "targetSizeEach": "Dla każdego pliku",
+    "resolution": "Rozdzielczość",
+    "keepResolution": "Bez zmian",
+    "mute": "Usuń dźwięk",
+    "bitrate": "Przepływność",
+    "normalize": "Wyrównaj głośność",
+    "files": "Pliki",
+    "dropTitle": "Upuść filmy albo pliki audio",
+    "trim": "Przytnij",
+    "wholeFile": "Cały plik",
+    "start": "Konwertuj",
+    "done_one": "Przekonwertowano plik",
+    "done_few": "Przekonwertowano {{count}} pliki",
+    "done_many": "Przekonwertowano {{count}} plików",
+    "done_other": "Przekonwertowano {{count}} pliku",
+    "toast": {
+      "error": "Konwersja nie powiodła się"
+    },
+    "status": {
+      "converting": "Konwertowanie…",
+      "analyzing": "Analiza filmu…",
+      "done": "Gotowe"
+    },
+    "log": {
+      "starting": "Konwersja {{file}} do {{format}}",
+      "done": "Zapisano {{file}}",
+      "error": "{{file}}: {{error}}"
+    }
   }
 }

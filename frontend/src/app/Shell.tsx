@@ -40,6 +40,7 @@ const TOOL_PAGES: Record<string, LazyExoticComponent<ComponentType>> = {
   instagram: lazy(() => import("../features/instagram/InstagramPage")),
   video_sync: lazy(() => import("../features/video_sync/VideoSyncPage")),
   video_to_gif: lazy(() => import("../features/gif/VideoToGifPage")),
+  media_convert: lazy(() => import("../features/media_convert/MediaConvertPage")),
   gif_editor: lazy(() => import("../features/gif/GifEditorPage")),
   watermark: lazy(() => import("../features/watermark/WatermarkPage")),
   progress: lazy(() => import("../features/progress/ProgressPage")),

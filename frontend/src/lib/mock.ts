@@ -676,6 +676,50 @@ export function createMockBackend(emit: Emit) {
           offsetSec: params.offsetSec,
         }, 1500),
     },
+    media_convert: {
+      probe: (path: string) =>
+        ok({
+          path,
+          fileName: path.split(/[\\/]/).pop() || "clip.mp4",
+          size: 18_000_000,
+          format: "mp4",
+          duration: 42.5,
+          hasVideo: !/\.(mp3|wav|m4a|flac|ogg|opus|aac)$/i.test(path),
+          hasAudio: true,
+          width: 1280,
+          height: 720,
+          fps: 30,
+          videoCodec: "h264",
+          audioTracks: [],
+          thumbnail: fakePhoto(3),
+        }),
+      frames: (_path: string, startSec: number, duration: number, count: number) =>
+        ok({
+          frames: Array.from({ length: count }, (_, i) => {
+            const time = startSec + ((i + 0.5) * duration) / count;
+            return { time, dataUrl: fakePhoto(Math.floor(time / 5)) };
+          }),
+        }),
+      start: (params: { paths: string[]; outputDir: string; format: string }) => {
+        const files = params.paths.map((p) => `${params.outputDir}\\${(p.split(/[\\/]/).pop() || "clip").replace(/\.[^.]+$/, "")}.${params.format}`);
+        return simulateJob(
+          "media_convert",
+          params.paths.length === 1 ? params.paths[0].split(/[\\/]/).pop() || "clip" : `${params.paths.length} files`,
+          {
+            total: files.length,
+            converted: files.length,
+            failed: 0,
+            inBytes: files.length * 18_000_000,
+            outBytes: files.length * 7_400_000,
+            outputDir: params.outputDir,
+            outPath: files.length === 1 ? files[0] : null,
+            files,
+            results: files.map((dest, i) => ({ file: params.paths[i], dest, inBytes: 18_000_000, outBytes: 7_400_000 })),
+          },
+          2200,
+        );
+      },
+    },
     video_to_gif: {
       probe: (path: string) =>
         ok({

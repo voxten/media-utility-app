@@ -20,7 +20,8 @@ describe("mediaKind", () => {
     expect(mediaKind("a.webp")).toBe("image");
     expect(mediaKind("a.PDF")).toBe("pdf");
     expect(mediaKind("a.mkv")).toBe("video");
-    expect(mediaKind("a.mp3")).toBeNull();
+    expect(mediaKind("a.mp3")).toBe("audio");
+    expect(mediaKind("a.txt")).toBeNull();
   });
 });
 

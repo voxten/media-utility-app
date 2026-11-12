@@ -23,6 +23,8 @@ import {
   FilmstripImage24Regular,
   FolderSearch24Filled,
   FolderSearch24Regular,
+  VideoSwitch24Filled,
+  VideoSwitch24Regular,
   Gif24Filled,
   Gif24Regular,
   Image24Regular,
@@ -87,6 +89,7 @@ export const CATEGORY_ICONS: Record<CategoryId, FluentIcon> = {
 export const SETTINGS_ACCENT = "#5b6b7f";
 
 export const TOOLS: ToolDefinition[] = [
+  { id: "media_convert", category: "video", icon: bundleIcon(VideoSwitch24Filled, VideoSwitch24Regular), accent: CATEGORY_ACCENTS.video, accepts: { video: true, audio: true } },
   { id: "download", category: "video", icon: bundleIcon(ArrowDownload24Filled, ArrowDownload24Regular), accent: CATEGORY_ACCENTS.video },
   { id: "instagram", category: "video", icon: bundleIcon(Camera24Filled, Camera24Regular), accent: CATEGORY_ACCENTS.video },
   { id: "video_sync", category: "video", icon: bundleIcon(Timeline24Filled, Timeline24Regular), accent: CATEGORY_ACCENTS.video, accepts: { video: true } },

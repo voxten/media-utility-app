@@ -36,6 +36,7 @@ import type {
   VideoInfo,
   VideoSyncParams,
   VideoToGifParams,
+  MediaConvertParams,
   VideoToGifPreview,
   WaveformData,
   WhisperModelInfo,
@@ -364,6 +365,12 @@ export const api = {
       audioTrackIndex?: number;
     }) => call<SyncPreviewResult>("video_sync", "preview", params),
     start: (params: VideoSyncParams) => call<JobId>("video_sync", "start", params),
+  },
+  media_convert: {
+    probe: (path: string) => call<VideoInfo>("media_convert", "probe", path),
+    frames: (path: string, startSec: number, duration: number, count: number, height: number) =>
+      call<{ frames: VideoFrame[] }>("media_convert", "frames", path, startSec, duration, count, height),
+    start: (params: MediaConvertParams) => call<JobId>("media_convert", "start", params),
   },
   video_to_gif: {
     probe: (path: string) => call<VideoInfo & { gifsicle: boolean }>("video_to_gif", "probe", path),

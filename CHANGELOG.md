@@ -8,6 +8,9 @@ The app shows this file (and its Polish translation, [CHANGELOG.pl.md](CHANGELOG
 
 ## [Unreleased]
 
+### Added
+
+- **Video & Audio Converter**: change the format of videos (MP4, MKV, MOV, WebM) and audio (MP3, M4A, OGG, Opus, WAV, FLAC), choose a quality or a target file size such as 25 MB, trim on a timeline, scale down, remove the sound, extract only the sound and even out the loudness. Several files can be converted at once; video and audio files can be sent to it from other tools.
 ### Changed
 
 - **Progress Generator** saves the card into the output folder with a file name you can change, instead of asking where to save every time.

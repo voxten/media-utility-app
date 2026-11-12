@@ -18,6 +18,7 @@ import {
   Document24Regular,
   DocumentPdf24Regular,
   Image24Regular,
+  MusicNote224Regular,
   Video24Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
@@ -217,6 +218,8 @@ export function TransferModal() {
                     <FileThumbnail path={firstFile} className={styles.sourceThumbImg} fallback={<Image24Regular fontSize={24} />} />
                   ) : fileType === "pdf" ? (
                     <DocumentPdf24Regular fontSize={26} color={CATEGORY_ACCENTS.pdf} />
+                  ) : fileType === "audio" ? (
+                    <MusicNote224Regular fontSize={26} color={CATEGORY_ACCENTS.video} />
                   ) : fileType === "video" ? (
                     <Video24Regular fontSize={26} color={CATEGORY_ACCENTS.video} />
                   ) : (

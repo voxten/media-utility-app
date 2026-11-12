@@ -4,6 +4,9 @@ Polskie tłumaczenie [CHANGELOG.md](CHANGELOG.md), pokazywane w aplikacji przy p
 
 ## [Unreleased]
 
+### Dodano
+
+- **Konwerter wideo i audio**: zmiana formatu filmów (MP4, MKV, MOV, WebM) i dźwięku (MP3, M4A, OGG, Opus, WAV, FLAC), wybór jakości albo docelowego rozmiaru pliku, np. 25 MB, przycinanie na osi czasu, zmniejszanie rozdzielczości, usuwanie dźwięku, wyciąganie samego dźwięku i wyrównywanie głośności. Można konwertować kilka plików naraz; filmy i pliki audio da się do niego wysłać z innych narzędzi.
 ### Zmieniono
 
 - **Generator postępu** zapisuje kartę w folderze z pola „Folder zapisu” z nazwą pliku, którą można zmienić, zamiast za każdym razem pytać, gdzie zapisać.

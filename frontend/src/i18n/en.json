@@ -109,6 +109,10 @@
     "progress": {
       "name": "Progress generator",
       "description": "Create project progress-bar graphics."
+    },
+    "media_convert": {
+      "name": "Video & Audio Converter",
+      "description": "Change the format, shrink to a size, trim, scale down, extract the sound or even out the loudness."
     }
   },
   "home": {
@@ -1423,6 +1427,51 @@
     "textEmpty": "Enter some text first.",
     "maskEmpty": "Paint over the area to remove first.",
     "pdfUnreadable": "{{file}} is not a valid PDF or is damaged.",
-    "pdfEncrypted": "{{file}} is protected with a password."
+    "pdfEncrypted": "{{file}} is protected with a password.",
+    "noVideo": "{{file}} has no video track.",
+    "allFilesFailed_one": "The file could not be converted. Details are in the log.",
+    "allFilesFailed_other": "None of the {{count}} files could be converted. Details are in the log."
+  },
+  "media_convert": {
+    "output": "Output",
+    "format": "Format",
+    "video": "Video",
+    "audio": "Audio",
+    "audioOnly": "sound only",
+    "byQuality": "Quality",
+    "bySize": "File size",
+    "qualityLabel": "Quality",
+    "quality": {
+      "high": "High",
+      "balanced": "Balanced",
+      "small": "Small file"
+    },
+    "targetSize": "Target size",
+    "targetSizeEach": "For each file",
+    "resolution": "Resolution",
+    "keepResolution": "Unchanged",
+    "mute": "Remove sound",
+    "bitrate": "Bitrate",
+    "normalize": "Even out loudness",
+    "files": "Files",
+    "dropTitle": "Drop videos or audio files",
+    "trim": "Trim",
+    "wholeFile": "Whole file",
+    "start": "Convert",
+    "done_one": "File converted",
+    "done_other": "{{count}} files converted",
+    "toast": {
+      "error": "Conversion failed"
+    },
+    "status": {
+      "converting": "Converting…",
+      "analyzing": "Analyzing the video…",
+      "done": "Done"
+    },
+    "log": {
+      "starting": "Converting {{file}} to {{format}}",
+      "done": "Saved {{file}}",
+      "error": "{{file}}: {{error}}"
+    }
   }
 }

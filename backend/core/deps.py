@@ -183,7 +183,7 @@ def check_dependencies(custom_ffmpeg: Optional[str] = None) -> List[Dict[str, An
             "id": "ffmpeg",
             "ok": ffmpeg_ok,
             "detail": ffmpeg if ffmpeg_ok else "settings.deps.detailFfprobeMissing" if ffmpeg else "settings.deps.detailFfmpegMissing",
-            "usedBy": ["download", "tts", "video_sync", "video_to_gif", "gif_editor"],
+            "usedBy": ["media_convert", "download", "tts", "video_sync", "video_to_gif", "gif_editor"],
             "required": True,
             "installable": not ffmpeg_ok,
             "sizeEstimate": "~35 MB" if not ffmpeg_ok else "",

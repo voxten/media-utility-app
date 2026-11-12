@@ -97,6 +97,8 @@ function summarise(t: TFunction, kind: string, r: Result): (string | undefined)[
       return [countParts(t, "jobs.summary.rotatedPages", positive(r.rotatedCount)), bytes(r.bytes)];
     case "pdf.extract_text":
       return [countParts(t, "jobs.summary.chars", num(r.charCount), 0), bytes(r.bytes)];
+    case "media_convert":
+      return [countParts(t, "jobs.summary.files", num(r.converted), 2), sizeChange(r.inBytes, r.outBytes), failedPart(t, r)];
     case "video_to_gif.render":
       return [dimensions(r), countParts(t, "jobs.summary.frames", positive(r.frames)), bytes(r.size)];
     case "transcribe": {

@@ -48,6 +48,7 @@ tts = lazy_import("backend.services.tts")
 upscale = lazy_import("backend.services.upscale")
 video_sync = lazy_import("backend.services.video_sync")
 video_to_gif = lazy_import("backend.services.video_to_gif")
+media_convert = lazy_import("backend.services.media_convert")
 watermark = lazy_import("backend.services.watermark")
 
 
@@ -682,6 +683,23 @@ class VideoToGifApi(_Namespace):
         )
 
 
+class MediaConvertApi(_Namespace):
+    def probe(self, path: str) -> Dict[str, Any]:
+        return ffmpeg.probe_media(path)
+
+    def frames(self, path: str, start_sec: float, duration: float, count: int, height: int = 96) -> Dict[str, Any]:
+        return ffmpeg.extract_frames(path, float(start_sec), float(duration), int(count), int(height))
+
+    def start(self, params: Dict[str, Any]) -> str:
+        paths = params.get("paths") or []
+        title = Path(paths[0]).name if len(paths) == 1 else f"{len(paths)} files"
+        return self._ctx.jobs.submit(
+            "media_convert",
+            lambda ctx: media_convert.convert(ctx, params),
+            title=title,
+        )
+
+
 class TranscribeApi(_Namespace):
     def models(self) -> List[Dict[str, Any]]:
         return transcribe.models()
@@ -740,6 +758,7 @@ class Api:
         self.image_editor = ImageEditorApi(self._ctx)
         self.video_sync = VideoSyncApi(self._ctx)
         self.video_to_gif = VideoToGifApi(self._ctx)
+        self.media_convert = MediaConvertApi(self._ctx)
         self.gif_editor = GifEditorApi(self._ctx)
         self.transcribe = TranscribeApi(self._ctx)
 

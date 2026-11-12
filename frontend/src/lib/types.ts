@@ -364,6 +364,32 @@ export interface VideoToGifPreview {
   estimatedSize: number;
 }
 
+export interface MediaConvertParams {
+  paths: string[];
+  outputDir: string;
+  format: string;
+  quality: string;
+  targetMb: number;
+  height: number;
+  mute: boolean;
+  audioKbps: number;
+  normalize: boolean;
+  start: number;
+  end: number;
+}
+
+export interface MediaConvertResult {
+  total: number;
+  converted: number;
+  failed: number;
+  inBytes: number;
+  outBytes: number;
+  outputDir: string;
+  outPath: string | null;
+  files: string[];
+  results: Array<{ file: string; dest: string; inBytes: number; outBytes: number }>;
+}
+
 export interface VideoToGifResult {
   outPath: string;
   size: number;

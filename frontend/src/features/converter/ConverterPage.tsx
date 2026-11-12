@@ -7,14 +7,12 @@ import {
   mergeClasses,
   Tab,
   TabList,
-  Text,
   tokens,
   Tooltip,
 } from "@fluentui/react-components";
 import {
   ArrowRight16Regular,
   ArrowSwap20Regular,
-  Delete16Regular,
   Folder24Regular,
   Image24Regular,
   FolderOpen16Regular,
@@ -26,6 +24,7 @@ import { useTranslation } from "react-i18next";
 import { create } from "zustand";
 import { ActionBar } from "../../components/ActionBar";
 import { DropZone } from "../../components/DropZone";
+import { FileList } from "../../components/FileList";
 import { LogPanel } from "../../components/LogPanel";
 import { useNotify } from "../../components/notify";
 import { Columns } from "../../components/Columns";
@@ -38,12 +37,11 @@ import { SliderField } from "../../components/SliderField";
 import { api } from "../../lib/bridge";
 import { useOpenPath } from "../../lib/useOpenPath";
 import { ALL_IMAGE_EXTENSIONS, dialogFilter, formatList, formatName, formatOptions } from "../../lib/fileTypes";
-import { fileName, formatBytes } from "../../lib/format";
+import { formatBytes } from "../../lib/format";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useAcceptFiles } from "../../lib/useAcceptFiles";
 import { useThumbnail } from "../../lib/useThumbnail";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
-import { useTransferStore } from "../../stores/transfer";
 import { AfterGallery } from "../../components/AfterGallery";
 import { errorMessage } from "../../lib/errors";
 import { addUnique } from "../../lib/fileList";
@@ -105,22 +103,6 @@ const useForm = create<ConverterForm>((set) => ({
 const useStyles = makeStyles({
   row: { display: "flex", gap: "12px", alignItems: "flex-end", flexWrap: "wrap", minWidth: 0 },
   grow: { flexGrow: 1, minWidth: 0 },
-  fileList: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "2px",
-    maxHeight: "180px",
-    overflowY: "auto",
-  },
-  fileItem: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    padding: "4px 4px 4px 10px",
-    borderRadius: tokens.borderRadiusMedium,
-    ":hover": { backgroundColor: tokens.colorNeutralBackground2Hover },
-  },
-  fileName: { flexGrow: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
   muted: { color: tokens.colorNeutralForeground3 },
   summary: {
     display: "grid",
@@ -139,7 +121,6 @@ const useStyles = makeStyles({
   statValue: { fontSize: tokens.fontSizeBase500, fontWeight: tokens.fontWeightSemibold, lineHeight: tokens.lineHeightBase500 },
   good: { color: tokens.colorPaletteGreenForeground1 },
   bad: { color: tokens.colorPaletteRedForeground1 },
-  fileActions: { display: "flex", gap: "8px" },
 });
 
 /** What the backend read from the chosen file: format, size in pixels and file size. */
@@ -359,38 +340,12 @@ export default function ConverterPage() {
                 onFiles={addFiles}
                 onBrowse={browseFiles}
               />
-              {form.files.length > 0 && (
-                <>
-                  <div className={styles.fileList}>
-                    {form.files.map((file) => (
-                      <div key={file} className={styles.fileItem} title={file}>
-                        <Image16Regular />
-                        <Text className={styles.fileName}>{fileName(file)}</Text>
-                        <Button
-                          appearance="subtle"
-                          size="small"
-                          icon={<Delete16Regular />}
-                          aria-label={t("common.remove")}
-                          onClick={() => form.set({ files: form.files.filter((f) => f !== file) })}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  <div className={styles.fileActions}>
-                    <Button appearance="subtle" size="small" onClick={() => form.set({ files: [] })}>
-                      {t("common.clearAll")}
-                    </Button>
-                    <Button
-                      appearance="subtle"
-                      size="small"
-                      icon={<ArrowRight16Regular />}
-                      onClick={() => useTransferStore.getState().openModal(form.files, "converter")}
-                    >
-                      {t("transfer.sendTo")}
-                    </Button>
-                  </div>
-                </>
-              )}
+              <FileList
+                files={form.files}
+                icon={<Image16Regular />}
+                onChange={(files) => form.set({ files })}
+                sourceToolId="converter"
+              />
             </>
           )}
         </Panel>
