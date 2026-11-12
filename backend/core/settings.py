@@ -1,7 +1,9 @@
 """Persistent user settings stored as JSON in the per-user app data directory."""
 
 import copy
+import ctypes
 import json
+import locale
 import os
 import sys
 import threading
@@ -28,16 +30,29 @@ DEFAULT_COOKIES = {
         app_data_dir() / "cookies" / "instagram_cookies.txt",
     ],
 }
+LANG_POLISH = 0x15
 LEGACY_COOKIES = {
     "youtube": resource_path("cookies", "youtube_cookies.txt"),
     "x": resource_path("cookies", "x.com_cookies.txt"),
 }
 
 
+def system_language() -> str:
+    """Polish when Windows (or the locale elsewhere) is in Polish, English otherwise."""
+    if sys.platform == "win32":
+        try:
+            lang_id = ctypes.windll.kernel32.GetUserDefaultUILanguage()
+            return "pl" if lang_id & 0x3FF == LANG_POLISH else "en"
+        except (AttributeError, OSError):
+            pass
+    name = (locale.getlocale()[0] or "").lower()
+    return "pl" if name.startswith(("pl", "polish")) else "en"
+
+
 def default_settings() -> Dict[str, Any]:
     return {
         "theme": "system",  # system | light | dark
-        "language": "pl",  # pl | en
+        "language": system_language(),  # pl | en
         "mica": True,  # Windows 11 backdrop; applied on next start
         "outputDir": str(default_output_dir()),
         "cookies": {"youtube": "", "x": "", "instagram": ""},

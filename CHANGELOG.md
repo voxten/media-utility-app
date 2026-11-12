@@ -10,6 +10,8 @@ The app shows this file (and its Polish translation, [CHANGELOG.pl.md](CHANGELOG
 
 ### Added
 
+- On the first start the app uses the language of Windows: Polish on a Polish system, English otherwise (it used to start in Polish every time).
+- Video tools (Video & Audio Converter, Video Downloader, Audio-Video Sync, Video to GIF, Transcription) offer to install FFmpeg right on the page when it is missing, instead of failing only after you start a task.
 - **Windows integration**: the installer can add "Open in Media Studio" to the right-click menu of images, videos, audio and PDF files, list the app under "Open with" and add it to "Send to". The files open in the "Open in tool" dialog of the running window; several files selected together arrive as one set.
 - The taskbar button shows the progress of running tasks.
 - **Video & Audio Converter**: change the format of videos (MP4, MKV, MOV, WebM) and audio (MP3, M4A, OGG, Opus, WAV, FLAC), choose a quality or a target file size such as 25 MB, trim on a timeline, scale down, remove the sound, extract only the sound and even out the loudness. Several files can be converted at once; video and audio files can be sent to it from other tools.

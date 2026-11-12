@@ -61,6 +61,8 @@ export interface ToolDefinition {
   accent: string;
   /** File kinds the tool takes from "Send to"; an object opens a sub-tab, whose name replaces the description. */
   accepts?: Partial<Record<MediaKind, true | { subTab: string; noteKey: string }>>;
+  /** Shows the FFmpeg install banner while FFmpeg is missing. */
+  needsFfmpeg?: boolean;
 }
 
 export const CATEGORIES: CategoryId[] = ["video", "gif", "image", "text", "pdf", "system", "generators"];
@@ -89,11 +91,11 @@ export const CATEGORY_ICONS: Record<CategoryId, FluentIcon> = {
 export const SETTINGS_ACCENT = "#5b6b7f";
 
 export const TOOLS: ToolDefinition[] = [
-  { id: "media_convert", category: "video", icon: bundleIcon(VideoSwitch24Filled, VideoSwitch24Regular), accent: CATEGORY_ACCENTS.video, accepts: { video: true, audio: true } },
-  { id: "download", category: "video", icon: bundleIcon(ArrowDownload24Filled, ArrowDownload24Regular), accent: CATEGORY_ACCENTS.video },
+  { id: "media_convert", category: "video", icon: bundleIcon(VideoSwitch24Filled, VideoSwitch24Regular), accent: CATEGORY_ACCENTS.video, accepts: { video: true, audio: true }, needsFfmpeg: true },
+  { id: "download", category: "video", icon: bundleIcon(ArrowDownload24Filled, ArrowDownload24Regular), accent: CATEGORY_ACCENTS.video, needsFfmpeg: true },
   { id: "instagram", category: "video", icon: bundleIcon(Camera24Filled, Camera24Regular), accent: CATEGORY_ACCENTS.video },
-  { id: "video_sync", category: "video", icon: bundleIcon(Timeline24Filled, Timeline24Regular), accent: CATEGORY_ACCENTS.video, accepts: { video: true } },
-  { id: "video_to_gif", category: "gif", icon: bundleIcon(FilmstripImage24Filled, FilmstripImage24Regular), accent: CATEGORY_ACCENTS.gif, accepts: { video: true } },
+  { id: "video_sync", category: "video", icon: bundleIcon(Timeline24Filled, Timeline24Regular), accent: CATEGORY_ACCENTS.video, accepts: { video: true }, needsFfmpeg: true },
+  { id: "video_to_gif", category: "gif", icon: bundleIcon(FilmstripImage24Filled, FilmstripImage24Regular), accent: CATEGORY_ACCENTS.gif, accepts: { video: true }, needsFfmpeg: true },
   { id: "gif_editor", category: "gif", icon: bundleIcon(Gif24Filled, Gif24Regular), accent: CATEGORY_ACCENTS.gif, accepts: { gif: true } },
   { id: "compressor", category: "image", icon: bundleIcon(ArrowMinimize24Filled, ArrowMinimize24Regular), accent: CATEGORY_ACCENTS.image, accepts: { image: true } },
   { id: "image_tools", category: "image", icon: bundleIcon(Crop24Filled, Crop24Regular), accent: CATEGORY_ACCENTS.image, accepts: { image: true } },
@@ -102,7 +104,7 @@ export const TOOLS: ToolDefinition[] = [
   { id: "upscale", category: "image", icon: bundleIcon(ArrowMaximize24Filled, ArrowMaximize24Regular), accent: CATEGORY_ACCENTS.image, accepts: { image: true } },
   { id: "watermark", category: "image", icon: bundleIcon(ImageEdit24Filled, ImageEdit24Regular), accent: CATEGORY_ACCENTS.image, accepts: { image: true } },
   { id: "tts", category: "text", icon: bundleIcon(PersonVoice24Filled, PersonVoice24Regular), accent: CATEGORY_ACCENTS.text },
-  { id: "transcribe", category: "text", icon: bundleIcon(ClosedCaption24Filled, ClosedCaption24Regular), accent: CATEGORY_ACCENTS.text, accepts: { video: true } },
+  { id: "transcribe", category: "text", icon: bundleIcon(ClosedCaption24Filled, ClosedCaption24Regular), accent: CATEGORY_ACCENTS.text, accepts: { video: true }, needsFfmpeg: true },
   { id: "pdf", category: "pdf", icon: bundleIcon(DocumentMultiple24Filled, DocumentMultiple24Regular), accent: CATEGORY_ACCENTS.pdf, accepts: { pdf: true } },
   { id: "pdf_compress", category: "pdf", icon: DocumentCompress24, accent: CATEGORY_ACCENTS.pdf, accepts: { pdf: true } },
   { id: "pdf_split", category: "pdf", icon: DocumentSplit24, accent: CATEGORY_ACCENTS.pdf, accepts: { pdf: true } },

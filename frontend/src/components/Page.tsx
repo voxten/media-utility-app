@@ -4,6 +4,7 @@ import type { FluentIcon } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { appTokens } from "../app/theme";
 import { toolById } from "../app/tools";
+import { FfmpegBanner } from "./FfmpegBanner";
 import { PAGE_GUTTER, PAGE_MAX_WIDTH, PageFooterContext } from "./pageFooter";
 import { ToolIconTile } from "./ToolIconTile";
 
@@ -91,7 +92,7 @@ export function Page({ title, description, icon: Icon, accent, actions, children
 }
 
 /** Page for a tool from app/tools.tsx; title, description, icon and accent come from its definition. */
-export function ToolPage({ toolId, ...rest }: Omit<PageProps, "title" | "description" | "icon" | "accent"> & { toolId: string }) {
+export function ToolPage({ toolId, children, ...rest }: Omit<PageProps, "title" | "description" | "icon" | "accent"> & { toolId: string }) {
   const { t } = useTranslation();
   const tool = toolById(toolId);
   return (
@@ -101,7 +102,10 @@ export function ToolPage({ toolId, ...rest }: Omit<PageProps, "title" | "descrip
       icon={tool?.icon}
       accent={tool?.accent}
       {...rest}
-    />
+    >
+      {tool?.needsFfmpeg && <FfmpegBanner />}
+      {children}
+    </Page>
   );
 }
 

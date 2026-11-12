@@ -5,7 +5,7 @@ import pl from "./pl.json";
 
 i18n.use(initReactI18next).init({
   resources: { pl: { translation: pl }, en: { translation: en } },
-  lng: "pl",
+  lng: navigator.language.toLowerCase().startsWith("pl") ? "pl" : "en",
   fallbackLng: "en",
   interpolation: { escapeValue: false },
   returnNull: false,

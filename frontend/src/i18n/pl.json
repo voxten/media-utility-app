@@ -1581,5 +1581,11 @@
       "done": "Zapisano {{file}}",
       "error": "{{file}}: {{error}}"
     }
+  },
+  "ffmpegBanner": {
+    "title": "FFmpeg nie jest zainstalowany",
+    "description": "To narzędzie potrzebuje FFmpeg do odczytu i zapisu wideo oraz dźwięku (~35 MB).",
+    "install": "Zainstaluj",
+    "ready": "Zainstalowano FFmpeg"
   }
 }

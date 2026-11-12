@@ -67,3 +67,10 @@ def test_backend_writes_are_not_restricted(tmp_path):
     settings = Settings(tmp_path / "settings.json")
     settings.update({"engineLatest": {"yt-dlp": {"version": "1"}}, "trayHintShown": True})
     assert settings.get("trayHintShown") is True
+
+
+def test_default_language_follows_the_system(monkeypatch, tmp_path):
+    from backend.core import settings as settings_module
+
+    monkeypatch.setattr(settings_module, "system_language", lambda: "en")
+    assert settings_module.Settings(path=tmp_path / "s.json").get("language") == "en"

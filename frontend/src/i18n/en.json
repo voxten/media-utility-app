@@ -1473,5 +1473,11 @@
       "done": "Saved {{file}}",
       "error": "{{file}}: {{error}}"
     }
+  },
+  "ffmpegBanner": {
+    "title": "FFmpeg is not installed",
+    "description": "This tool needs FFmpeg to read and save video and audio (~35 MB).",
+    "install": "Install",
+    "ready": "FFmpeg installed"
   }
 }
