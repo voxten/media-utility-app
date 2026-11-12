@@ -71,9 +71,9 @@ const useStyles = makeStyles({
   },
 });
 
-const MODELS: Record<ModelType, { depId: string; name: string; size: string }> = {
-  general: { depId: "upscale_general", name: "General (x4v3)", size: "~4.8 MB" },
-  anime: { depId: "upscale_anime", name: "Anime (x4plus)", size: "~17.9 MB" },
+const MODELS: Record<ModelType, { depId: string; size: string }> = {
+  general: { depId: "upscale_general", size: "~4.8 MB" },
+  anime: { depId: "upscale_anime", size: "~17.9 MB" },
 };
 
 function UpscaleModelBanner({ model, onInstalled }: { model: ModelType; onInstalled: () => void }) {
@@ -82,7 +82,7 @@ function UpscaleModelBanner({ model, onInstalled }: { model: ModelType; onInstal
   return (
     <ModelBanner
       depId={m.depId}
-      title={t("upscale.modelPromo.title", { model: m.name })}
+      title={t("upscale.modelPromo.title", { model: t(`upscale.models.${model}`) })}
       description={t("upscale.modelPromo.desc")}
       installLabel={t("upscale.modelPromo.installBtn", { size: m.size })}
       readyMessage={t("upscale.modelPromo.ready")}

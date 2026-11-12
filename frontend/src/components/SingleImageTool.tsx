@@ -189,7 +189,7 @@ export function SingleImageTool({
         <SaveOutputFields output={output} />
       </Panel>
 
-      <ActionBar job={job?.status === "running" ? job : undefined} idleText={idleText} onCancel={onCancel}>
+      <ActionBar job={job} idleText={idleText} onCancel={onCancel}>
         {result ? (
           <>
             {resultActions}

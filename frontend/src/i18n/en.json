@@ -212,14 +212,10 @@
       "appDataDesc": "Primary Media Studio directory containing settings and app data.",
       "logsTitle": "Logs",
       "logsDesc": "Errors and app activity, useful when reporting a problem.",
-      "recentFoldersTitle": "Recent Folders History",
-      "recentFoldersDesc": "History of recently accessed directories in picker dialogs.",
       "clearCache": "Clear Cache",
       "clearingCache": "Clearing…",
       "cacheCleared": "Cache cleared: freed {{size}}",
       "openFolder": "Open in Explorer",
-      "clearRecent": "Clear History",
-      "recentCleared": "Cleared recent folders history",
       "archiveTitle": "Download archive",
       "clearArchive": "Clear archive",
       "archiveCleared": "Download archive cleared",
@@ -334,7 +330,16 @@
     "replaceBody": "{{name}} already exists in this folder.",
     "replace": "Replace",
     "increase": "Increase",
-    "decrease": "Decrease"
+    "decrease": "Decrease",
+    "idle": {
+      "filesReady_one": "{{count}} file ready",
+      "filesReady_other": "{{count}} files ready",
+      "pickFile": "Add a file to start.",
+      "pickFiles": "Add files to start.",
+      "ready": "Ready to start."
+    },
+    "skippedFiles_one": "{{count}} file skipped: this tool cannot open it",
+    "skippedFiles_other": "{{count}} files skipped: this tool cannot open them"
   },
   "fileTypes": {
     "images": "Images",
@@ -376,7 +381,6 @@
     "quality": "Quality",
     "method": "WEBP compression method",
     "methodHint": "0 = fastest, 6 = best compression.",
-    "outputFolder": "Output folder",
     "start": "Convert",
     "filesSelected_one": "{{count}} file selected",
     "filesSelected_other": "{{count}} files selected",
@@ -611,7 +615,6 @@
       "female": "female"
     },
     "rate": "Speaking rate",
-    "outputFolder": "Output folder",
     "fileName": "File name",
     "format": "Format",
     "defaultName": "speech",
@@ -628,7 +631,9 @@
       "notText": "Only .txt files can be read into the text.",
       "textTooLarge": "The text file is larger than 1 MB.",
       "readText": "Could not read the text file"
-    }
+    },
+    "wordsPerMinute_one": "{{count}} word/min",
+    "wordsPerMinute_other": "{{count}} words/min"
   },
   "transcribe": {
     "dropTitle": "Drop a video or recording here",
@@ -732,7 +737,6 @@
       "skipped": "Downloaded before"
     },
     "output": "Save",
-    "outdir": "Output folder",
     "template": "File name template",
     "subtitles": {
       "label": "Subtitles",
@@ -804,7 +808,7 @@
       "anime": "Real-ESRGAN · Anime & illustrations"
     },
     "modelPromo": {
-      "title": "Real-ESRGAN AI Model ({{model}})",
+      "title": "AI model: {{model}}",
       "desc": "Requires a one-time download of model weights to run locally on your computer.",
       "installBtn": "Download & activate model ({{size}})",
       "ready": "AI model downloaded and ready to use!"
@@ -1213,7 +1217,6 @@
     },
     "status": {
       "probing": "Reading post…",
-      "thumbnails": "Loading previews…",
       "probed": "Post loaded",
       "downloading": "Downloading {{current}} of {{count}}…",
       "done": "Done",
@@ -1282,8 +1285,7 @@
     "audioSource": "Audio",
     "pickAudio": "Audio file…",
     "previewLength": "Preview length",
-    "preview": "Preview",
-    "output": "Output file"
+    "preview": "Preview"
   },
   "gif": {
     "speed": "Speed",

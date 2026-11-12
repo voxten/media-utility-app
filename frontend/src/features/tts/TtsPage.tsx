@@ -21,7 +21,7 @@ import { useNotify } from "../../components/notify";
 import { Columns } from "../../components/Columns";
 import { ToolPage } from "../../components/Page";
 import { Panel } from "../../components/Panel";
-import { PathPicker } from "../../components/PathPicker";
+import { OutputFolderField, useOutputDir } from "../../components/OutputFolderField";
 import { Select } from "../../components/Select";
 import { SliderField } from "../../components/SliderField";
 import { api } from "../../lib/bridge";
@@ -29,7 +29,6 @@ import { useOpenPath } from "../../lib/useOpenPath";
 import { dialogFilter, formatOptions } from "../../lib/fileTypes";
 import { joinPath } from "../../lib/format";
 import { useJobRunner } from "../../lib/useJobRunner";
-import { useSettings } from "../../stores/settings";
 import { errorMessage } from "../../lib/errors";
 import { claimDrop, DROP_ZONE_ATTR, matchesExtensions } from "../../lib/drop";
 import { useToolShortcuts } from "../../lib/useToolShortcuts";
@@ -47,7 +46,7 @@ interface Voice {
 const FORMATS = ["mp3", "wav", "ogg", "flac"] as const;
 const RATE = {
   edge: { min: -50, max: 100, step: 5, default: 0, format: (v: number) => `${v > 0 ? "+" : ""}${v}%` },
-  pyttsx3: { min: 80, max: 320, step: 10, default: 200, format: (v: number) => `${v} wpm` },
+  pyttsx3: { min: 80, max: 320, step: 10, default: 200, format: null },
 };
 
 interface TtsForm {
@@ -118,7 +117,6 @@ export default function TtsPage() {
   const styles = useStyles();
   const notify = useNotify();
   const form = useForm();
-  const outputDir = useSettings((s) => s.settings?.outputDir ?? "");
   const [voices, setVoices] = useState<Voice[] | null>(voiceCache[form.engine] ?? null);
   const [dropOver, setDropOver] = useState(false);
   // Local, so a recording plays by itself only right after it is made, not on every visit.
@@ -202,7 +200,7 @@ export default function TtsPage() {
       };
     });
   const rateCfg = RATE[form.engine];
-  const effectiveOutDir = form.outDir || outputDir;
+  const effectiveOutDir = useOutputDir(form.outDir);
   const rawName = form.fileName.trim() || t("tts.defaultName");
   const cleanName = rawName.replace(/\.[^.\\/]+$/, "");
   const effectiveFileName = `${cleanName}.${form.format}`;
@@ -286,17 +284,11 @@ export default function TtsPage() {
         min={rateCfg.min}
         max={rateCfg.max}
         step={rateCfg.step}
-        format={rateCfg.format}
+        format={rateCfg.format ?? ((v: number) => t("tts.wordsPerMinute", { count: v }))}
         onChange={(v) => form.set({ rate: { ...form.rate, [form.engine]: v } })}
       />
 
-      <Field label={t("tts.outputFolder")}>
-        <PathPicker
-          value={effectiveOutDir}
-          onChange={(dir) => form.set({ outDir: dir })}
-          openable
-        />
-      </Field>
+      <OutputFolderField value={form.outDir} onChange={(dir) => form.set({ outDir: dir })} />
 
       <div className={styles.row}>
         <Field label={t("tts.fileName")}>

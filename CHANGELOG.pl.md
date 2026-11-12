@@ -6,7 +6,16 @@ Polskie tłumaczenie [CHANGELOG.md](CHANGELOG.md), pokazywane w aplikacji przy p
 
 ### Zmieniono
 
-- **Generator postępu** zapisuje kartę w folderze z pola „Folder zapisu”, zamiast za każdym razem pytać o nazwę pliku.
+- **Generator postępu** zapisuje kartę w folderze z pola „Folder zapisu” z nazwą pliku, którą można zmienić, zamiast za każdym razem pytać, gdzie zapisać.
+- Pasek na dole każdego narzędzia w spoczynku podpowiada następny krok (wybierz plik, pliki gotowe), a zadanie pokazuje tylko w trakcie. Zakończone i nieudane zadania są zgłaszane raz, w dymku i na karcie zadania, zamiast zostawać w pasku.
+- Konwerter, Pobieranie wideo, Instagram, Tekst na mowę i Synchronizacja audio-wideo mają to samo pole folderu zapisu co reszta narzędzi. Synchronizacja zapisuje w folderze zapisu zamiast obok filmu źródłowego i ma pole nazwy pliku.
+- Upuszczenie lub wybranie plików, których narzędzie nie otworzy, pokazuje, ile pominięto, zamiast pomijać je bez słowa.
+- Klawiatura i czytnik ekranu: okno zadań przejmuje fokus po otwarciu i oddaje go po zamknięciu, paleta poleceń ogłasza zaznaczone narzędzie, do paska miniatur da się dojść Tabem i przechodzić strzałkami (Delete usuwa plik), a przyciski widoku przed/po mówią, który jest włączony.
+- Tempo mowy i nazwy modeli w Powiększaniu obrazu są tłumaczone.
+
+### Usunięto
+
+- „Ostatnie foldery” w Ustawieniach → Przechowywanie. Lista wypełniała się tylko skanami Duplikatów i nic z niej nie korzystało.
 
 ### Naprawiono
 

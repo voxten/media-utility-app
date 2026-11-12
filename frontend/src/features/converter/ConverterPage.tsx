@@ -32,6 +32,7 @@ import { Columns } from "../../components/Columns";
 import { ToolPage } from "../../components/Page";
 import { Panel } from "../../components/Panel";
 import { PathPicker } from "../../components/PathPicker";
+import { OutputFolderField, useOutputDir } from "../../components/OutputFolderField";
 import { Select } from "../../components/Select";
 import { SliderField } from "../../components/SliderField";
 import { api } from "../../lib/bridge";
@@ -39,8 +40,8 @@ import { useOpenPath } from "../../lib/useOpenPath";
 import { ALL_IMAGE_EXTENSIONS, dialogFilter, formatList, formatName, formatOptions } from "../../lib/fileTypes";
 import { fileName, formatBytes } from "../../lib/format";
 import { useJobRunner } from "../../lib/useJobRunner";
+import { useAcceptFiles } from "../../lib/useAcceptFiles";
 import { useThumbnail } from "../../lib/useThumbnail";
-import { useSettings } from "../../stores/settings";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { useTransferStore } from "../../stores/transfer";
 import { AfterGallery } from "../../components/AfterGallery";
@@ -199,8 +200,7 @@ export default function ConverterPage() {
   const styles = useStyles();
   const notify = useNotify();
   const form = useForm();
-  const defaultOutput = useSettings((s) => s.settings?.outputDir ?? "");
-  const outputDir = form.outputDir || defaultOutput;
+  const outputDir = useOutputDir(form.outputDir);
 
   const runner = useJobRunner<ConvertResult>("converter", {
     onError: (error) => notify.error(t("converter.toast.error"), { body: error }),
@@ -232,7 +232,8 @@ export default function ConverterPage() {
     return t("converter.idle.ready", { count: fileCount });
   }, [form.source, form.file, form.inputDir, form.files.length, fileCount, t]);
 
-  const addFiles = (paths: string[]) => form.set({ files: addUnique(useForm.getState().files, paths) });
+  const acceptFiles = useAcceptFiles(ALL_IMAGE_EXTENSIONS);
+  const addFiles = (paths: string[]) => form.set({ files: addUnique(useForm.getState().files, acceptFiles(paths)) });
   const browseFiles = async () => addFiles(await api.dialogs.openFiles([dialogFilter(t, "images", ALL_IMAGE_EXTENSIONS)]));
   const browse = async () => {
     if (form.source === "files") return browseFiles();
@@ -290,9 +291,7 @@ export default function ConverterPage() {
           onChange={(method) => form.set({ method })}
         />
       )}
-      <Field label={t("converter.outputFolder")}>
-        <PathPicker value={outputDir} onChange={(dir) => form.set({ outputDir: dir })} openable />
-      </Field>
+      <OutputFolderField value={form.outputDir} onChange={(dir) => form.set({ outputDir: dir })} />
     </Panel>
   );
 

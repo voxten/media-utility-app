@@ -29,6 +29,7 @@ import { dialogFilter, formatList, formatName, IMAGE_EXTENSIONS, imageFormatLabe
 import { fileName, formatBytes, joinPath } from "../../lib/format";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { useJobRunner } from "../../lib/useJobRunner";
+import { useAcceptFiles } from "../../lib/useAcceptFiles";
 import { useTransferStore } from "../../stores/transfer";
 import { ImageToolbox } from "./ImageToolbox";
 import { ToolOptionsBar } from "./ToolOptionsBar";
@@ -99,10 +100,12 @@ export default function ImageToolsPage() {
     form.set({ saved: null });
   };
 
+  const acceptFiles = useAcceptFiles(IMAGE_EXTENSIONS);
   const addFiles = (paths: string[]) => {
-    if (!paths.length) return;
+    const accepted = acceptFiles(paths);
+    if (!accepted.length) return;
     resetResults();
-    form.set({ files: addUnique(useImageToolsForm.getState().files, paths) });
+    form.set({ files: addUnique(useImageToolsForm.getState().files, accepted) });
   };
 
   const browse = async () => addFiles(await api.dialogs.openFiles([dialogFilter(t, "images")]));
@@ -444,7 +447,7 @@ export default function ImageToolsPage() {
         />
       )}
 
-      <ActionBar job={job.job?.status === "done" ? undefined : job.job} onCancel={job.cancel}>
+      <ActionBar job={job.job} idleText={files.length ? t("common.idle.filesReady", { count: files.length }) : t("common.idle.pickFiles")} onCancel={job.cancel}>
         <Button icon={<Copy16Regular />} disabled={!transformed} onClick={copyToClipboard}>
           {t("imageTools.copyClipboard")}
         </Button>

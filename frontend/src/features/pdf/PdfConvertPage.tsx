@@ -249,7 +249,7 @@ export default function PdfConvertPage() {
 
           <ActionBar
             job={fromImages.job}
-            idleText={imageFiles.length ? undefined : t("converter.idle.pickFiles")}
+            idleText={imageFiles.length ? t("common.idle.filesReady", { count: imageFiles.length }) : t("converter.idle.pickFiles")}
             onCancel={fromImages.cancel}
           >
             <Button appearance="primary" icon={<DocumentPdf24Regular />} disabled={!canFromImages} onClick={startFromImages}>

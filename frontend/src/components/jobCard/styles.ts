@@ -1,6 +1,10 @@
 import { makeStyles, tokens } from "@fluentui/react-components";
 
 export const useJobCardStyles = makeStyles({
+  running: { color: tokens.colorPaletteBlueForeground2 },
+  done: { color: tokens.colorPaletteGreenForeground1 },
+  error: { color: tokens.colorPaletteRedForeground1 },
+  cancelled: { color: tokens.colorPaletteDarkOrangeForeground1 },
   jobCard: {
     display: "flex",
     flexDirection: "column",

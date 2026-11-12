@@ -216,14 +216,10 @@
       "appDataDesc": "Główny katalog Media Studio zawierający konfigurację i pliki tymczasowe.",
       "logsTitle": "Logi",
       "logsDesc": "Błędy i przebieg pracy aplikacji, przydatne przy zgłaszaniu problemu.",
-      "recentFoldersTitle": "Historia ostatnich folderów",
-      "recentFoldersDesc": "Historia ostatnio używanych katalogów w oknach wyboru.",
       "clearCache": "Wyczyść pamięć podręczną",
       "clearingCache": "Czyszczenie…",
       "cacheCleared": "Wyczyszczono pamięć podręczną: zwolniono {{size}}",
       "openFolder": "Otwórz w Eksploratorze",
-      "clearRecent": "Wyczyść historię",
-      "recentCleared": "Wyczyszczono historię ostatnich folderów",
       "archiveTitle": "Archiwum pobranych",
       "clearArchive": "Wyczyść archiwum",
       "archiveCleared": "Archiwum pobranych wyczyszczone",
@@ -344,7 +340,20 @@
     "replaceBody": "Plik {{name}} już jest w tym folderze.",
     "replace": "Zastąp",
     "increase": "Zwiększ",
-    "decrease": "Zmniejsz"
+    "decrease": "Zmniejsz",
+    "idle": {
+      "filesReady_one": "{{count}} plik gotowy",
+      "filesReady_few": "{{count}} pliki gotowe",
+      "filesReady_many": "{{count}} plików gotowych",
+      "filesReady_other": "{{count}} pliku gotowego",
+      "pickFile": "Dodaj plik, aby zacząć.",
+      "pickFiles": "Dodaj pliki, aby zacząć.",
+      "ready": "Gotowe do startu."
+    },
+    "skippedFiles_one": "Pominięto {{count}} plik: to narzędzie go nie otworzy",
+    "skippedFiles_few": "Pominięto {{count}} pliki: to narzędzie ich nie otworzy",
+    "skippedFiles_many": "Pominięto {{count}} plików: to narzędzie ich nie otworzy",
+    "skippedFiles_other": "Pominięto {{count}} pliku: to narzędzie ich nie otworzy"
   },
   "fileTypes": {
     "images": "Obrazy",
@@ -388,7 +397,6 @@
     "quality": "Jakość",
     "method": "Metoda kompresji WEBP",
     "methodHint": "0 = najszybciej, 6 = najlepsza kompresja.",
-    "outputFolder": "Folder docelowy",
     "start": "Konwertuj",
     "filesSelected_one": "Wybrano {{count}} plik",
     "filesSelected_few": "Wybrano {{count}} pliki",
@@ -659,7 +667,6 @@
       "female": "żeński"
     },
     "rate": "Tempo mowy",
-    "outputFolder": "Folder docelowy",
     "fileName": "Nazwa pliku",
     "format": "Format",
     "defaultName": "mowa",
@@ -676,7 +683,11 @@
       "notText": "Do tekstu można wczytać tylko plik .txt.",
       "textTooLarge": "Plik tekstowy ma ponad 1 MB.",
       "readText": "Nie udało się odczytać pliku tekstowego"
-    }
+    },
+    "wordsPerMinute_one": "{{count}} słowo/min",
+    "wordsPerMinute_few": "{{count}} słowa/min",
+    "wordsPerMinute_many": "{{count}} słów/min",
+    "wordsPerMinute_other": "{{count}} słowa/min"
   },
   "transcribe": {
     "dropTitle": "Upuść tutaj film lub nagranie",
@@ -788,7 +799,6 @@
       "skipped": "Pobrany wcześniej"
     },
     "output": "Zapis",
-    "outdir": "Folder docelowy",
     "template": "Wzorzec nazwy pliku",
     "subtitles": {
       "label": "Napisy",
@@ -868,7 +878,7 @@
       "anime": "Real-ESRGAN · Anime i ilustracje"
     },
     "modelPromo": {
-      "title": "Model AI Real-ESRGAN ({{model}})",
+      "title": "Model AI: {{model}}",
       "desc": "Wymaga jednorazowego pobrania wag modelu AI do uruchomienia na Twoim komputerze.",
       "installBtn": "Pobierz i aktywuj model ({{size}})",
       "ready": "Model AI został pobrany i jest gotowy do użycia!"
@@ -1299,7 +1309,6 @@
     },
     "status": {
       "probing": "Odczytywanie posta…",
-      "thumbnails": "Wczytywanie podglądów…",
       "probed": "Post wczytany",
       "downloading": "Pobieranie {{current}} z {{count}}…",
       "done": "Gotowe",
@@ -1372,8 +1381,7 @@
     "audioSource": "Dźwięk",
     "pickAudio": "Plik audio…",
     "previewLength": "Długość podglądu",
-    "preview": "Podgląd",
-    "output": "Plik wyjściowy"
+    "preview": "Podgląd"
   },
   "gif": {
     "speed": "Prędkość",

@@ -9,7 +9,6 @@ export interface Settings {
   mica: boolean;
   outputDir: string;
   cookies: { youtube: string; x: string; instagram: string };
-  recentFolders: string[];
   maxConcurrency: number;
   desktopNotifications: boolean;
   completionSound: boolean;

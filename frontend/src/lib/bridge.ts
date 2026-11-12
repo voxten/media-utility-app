@@ -129,8 +129,6 @@ export const api = {
   settings: {
     get: () => call<Settings>("settings", "get"),
     update: (patch: Partial<Settings>) => call<Settings>("settings", "update", patch),
-    addRecentFolder: (folder: string) => call<void>("settings", "add_recent_folder", folder),
-    clearRecentFolders: () => call<Settings>("settings", "clear_recent_folders"),
     reset: () => call<Settings>("settings", "reset"),
   },
   dialogs: {

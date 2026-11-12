@@ -8,7 +8,6 @@ import {
   DocumentText24Regular,
   FolderOpen16Regular,
   HardDrive24Regular,
-  History24Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { useNotify } from "../../../components/notify";
@@ -19,14 +18,11 @@ import { useOpenPath } from "../../../lib/useOpenPath";
 import { errorMessage } from "../../../lib/errors";
 import { formatBytes } from "../../../lib/format";
 import type { StorageInfo } from "../../../lib/types";
-import { useSettings } from "../../../stores/settings";
 
 export function StorageSection() {
   const { t } = useTranslation();
   const { openPath } = useOpenPath();
   const notify = useNotify();
-  const settings = useSettings((s) => s.settings);
-  const clearRecentFolders = useSettings((s) => s.clearRecentFolders);
   const [storage, setStorage] = useState<StorageInfo | null>(null);
   const [clearing, setClearing] = useState(false);
   const [archiveCount, setArchiveCount] = useState(0);
@@ -77,15 +73,6 @@ export function StorageSection() {
   };
 
   const handleOpenLogs = () => api.system.openLogs().catch((err) => notify.error(errorMessage(t, err)));
-
-  const handleClearRecent = async () => {
-    try {
-      await clearRecentFolders();
-      notify.success(t("settings.storage.recentCleared"));
-    } catch (err) {
-      notify.error(errorMessage(t, err));
-    }
-  };
 
   return (
     <Section title={t("settings.storage.title")}>
@@ -162,21 +149,6 @@ export function StorageSection() {
           </Button>
         </SettingRow>
 
-        <SettingRow
-          icon={History24Regular}
-          title={t("settings.storage.recentFoldersTitle")}
-          description={t("settings.storage.recentFoldersDesc", { count: settings?.recentFolders.length ?? 0 })}
-        >
-          <Button
-            appearance="subtle"
-            size="medium"
-            icon={<Delete16Regular />}
-            disabled={!settings?.recentFolders.length}
-            onClick={handleClearRecent}
-          >
-            {t("settings.storage.clearRecent")}
-          </Button>
-        </SettingRow>
       </SettingGroup>
     </Section>
   );

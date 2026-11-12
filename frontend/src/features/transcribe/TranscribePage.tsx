@@ -230,7 +230,7 @@ export default function TranscribePage() {
         )}
       </Columns>
 
-      <ActionBar job={job.job?.status === "done" ? undefined : job.job} onCancel={job.cancel}>
+      <ActionBar job={job.job} idleText={media ? t("common.idle.ready") : t("common.idle.pickFile")} onCancel={job.cancel}>
         <Button
           appearance="primary"
           icon={<ClosedCaption24Regular />}

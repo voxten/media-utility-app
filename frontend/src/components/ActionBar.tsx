@@ -37,14 +37,14 @@ const useStyles = makeStyles({
   message: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
   percent: { color: tokens.colorNeutralForeground3, fontVariantNumeric: "tabular-nums" },
   idle: { color: tokens.colorNeutralForeground3 },
-  error: { color: tokens.colorPaletteRedForeground1 },
   actions: { display: "flex", gap: "8px", flexShrink: 0, flexWrap: "wrap" },
 });
 
 interface ActionBarProps {
+  /** Its status and progress are shown while it runs; how it ended is reported by the page and a toast. */
   job?: JobState;
   /** Shown when no job is running (e.g. "12 files ready"). */
-  idleText?: ReactNode;
+  idleText: ReactNode;
   /** Extra stats on the right of the status line (e.g. speed, ETA). */
   detail?: ReactNode;
   onCancel?: () => void;
@@ -61,16 +61,16 @@ export function ActionBar({ job, idleText, detail, onCancel, children }: ActionB
   const bar = (
     <div className={mergeClasses(styles.bar, footer ? styles.docked : styles.standalone)}>
       <div className={styles.status} aria-live="polite">
-        {job ? (
+        {job && running ? (
           <>
             <div className={styles.line}>
-              <Text className={mergeClasses(styles.message, job.status === "error" && styles.error)}>{jobMessage(t, job) || (running ? t("common.status.working") : t(`common.jobStatus.${job.status}`))}</Text>
+              <Text className={styles.message}>{jobMessage(t, job) || t("common.status.working")}</Text>
               <Caption1 className={styles.percent}>
                 {detail}
-                {running && job.percent != null && `  ${Math.round(job.percent)}%`}
+                {job.percent != null && `  ${Math.round(job.percent)}%`}
               </Caption1>
             </div>
-            {running && <ProgressBar value={job.percent == null ? undefined : job.percent / 100} thickness="large" shape="rounded" />}
+            <ProgressBar value={job.percent == null ? undefined : job.percent / 100} thickness="large" shape="rounded" />
           </>
         ) : (
           <Text className={styles.idle}>{idleText}</Text>

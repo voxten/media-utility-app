@@ -45,7 +45,7 @@ export const Group: Story = {
         <SettingRow icon={WindowNew24Regular} title={t("settings.mica")} description={t("settings.micaDescription")}>
           <Switch checked={mica} onChange={(_, d) => setMica(d.checked)} />
         </SettingRow>
-        <SettingRow icon={Folder24Regular} title={t("download.outdir")} wide>
+        <SettingRow icon={Folder24Regular} title={t("common.outputFolder")} wide>
           <PathPicker value={folder} onChange={setFolder} openable />
         </SettingRow>
       </SettingGroup>

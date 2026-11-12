@@ -305,7 +305,7 @@ export default function VideoToGifPage() {
         )}
       </Columns>
 
-      <ActionBar job={job.job?.status === "done" ? undefined : job.job} onCancel={job.cancel}>
+      <ActionBar job={job.job} idleText={video ? t("common.idle.ready") : t("common.idle.pickFile")} onCancel={job.cancel}>
         <Button icon={<Eye16Regular />} disabled={previewing || job.running || cropping} onClick={runPreview}>
           {previewing ? t("common.loading") : t("gif.preview")}
         </Button>

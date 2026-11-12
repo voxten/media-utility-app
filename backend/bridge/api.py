@@ -127,13 +127,6 @@ class SettingsApi(_Namespace):
         self._ctx.jobs.set_limit(updated.get("maxConcurrency"))
         return updated
 
-    def add_recent_folder(self, folder: str) -> None:
-        if folder:
-            self._ctx.settings.add_recent_folder(folder)
-
-    def clear_recent_folders(self) -> Dict[str, Any]:
-        return self._ctx.settings.clear_recent_folders()
-
     def reset(self) -> Dict[str, Any]:
         updated = self._ctx.settings.reset()
         self._ctx.jobs.set_limit(updated.get("maxConcurrency"))
@@ -355,7 +348,6 @@ class DuplicatesApi(_Namespace):
     def scan(self, folder: str, mode: str, threshold: float = duplicates.HASH_THRESHOLD) -> str:
         if not Path(folder).is_dir():
             raise AppError("errors.notFolder", folder=folder)
-        self._ctx.settings.add_recent_folder(folder)
         return self._ctx.jobs.submit(
             f"duplicates.{mode}", lambda ctx: duplicates.scan(ctx, folder, mode, float(threshold)), title=Path(folder).name
         )

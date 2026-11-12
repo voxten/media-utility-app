@@ -182,6 +182,7 @@ export function ImageComparison({
           appearance="subtle"
           icon={<ImageSplit20Regular />}
           className={mergeClasses(styles.modeBtn, mode === "split" && styles.modeBtnActive)}
+          aria-pressed={mode === "split"}
           onClick={() => setMode("split")}
         >
           {t("common.viewSplit")}
@@ -191,6 +192,7 @@ export function ImageComparison({
           appearance="subtle"
           icon={<ColumnDoubleCompare20Regular />}
           className={mergeClasses(styles.modeBtn, mode === "side" && styles.modeBtnActive)}
+          aria-pressed={mode === "side"}
           onClick={() => setMode("side")}
         >
           {t("common.viewSide")}
@@ -200,6 +202,7 @@ export function ImageComparison({
           appearance="subtle"
           icon={<Eye20Regular />}
           className={mergeClasses(styles.modeBtn, mode === "after" && styles.modeBtnActive)}
+          aria-pressed={mode === "after"}
           onClick={() => setMode("after")}
         >
           {t("common.viewAfter")}
@@ -209,6 +212,7 @@ export function ImageComparison({
           appearance="subtle"
           icon={<Image20Regular />}
           className={mergeClasses(styles.modeBtn, mode === "before" && styles.modeBtnActive)}
+          aria-pressed={mode === "before"}
           onClick={() => setMode("before")}
         >
           {t("common.viewBefore")}

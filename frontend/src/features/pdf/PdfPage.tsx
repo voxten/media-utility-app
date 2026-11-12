@@ -48,6 +48,7 @@ import { api } from "../../lib/bridge";
 import { dialogFilter, PDF_EXTENSIONS } from "../../lib/fileTypes";
 import { fileName, joinPath } from "../../lib/format";
 import { useJobRunner } from "../../lib/useJobRunner";
+import { useAcceptFiles } from "../../lib/useAcceptFiles";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { ON_IMAGE } from "../../lib/onImage";
 import { useTransferStore } from "../../stores/transfer";
@@ -287,8 +288,9 @@ export default function PdfPage() {
   const colorOf = (file: string) => groupColor(Math.max(0, files.indexOf(file)));
   const streaming = (inspect.job?.status === "running" ? inspect.job.partials : []) as PdfPageInfo[];
 
+  const acceptFiles = useAcceptFiles(PDF_EXTENSIONS);
   const addMergeFiles = (paths: string[]) => {
-    const pdfs = paths.filter((p) => p.toLowerCase().endsWith(".pdf"));
+    const pdfs = acceptFiles(paths);
     if (pdfs.length) inspect.start(() => api.pdf.inspect(pdfs)).catch((err) => notify.error(errorMessage(t, err)));
   };
 

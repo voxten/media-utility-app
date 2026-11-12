@@ -36,7 +36,7 @@ import { useNotify } from "../../components/notify";
 import { Columns } from "../../components/Columns";
 import { ToolPage } from "../../components/Page";
 import { Panel } from "../../components/Panel";
-import { PathPicker } from "../../components/PathPicker";
+import { OutputFolderField, useOutputDir } from "../../components/OutputFolderField";
 import { api } from "../../lib/bridge";
 import { formatBytes, formatDuration } from "../../lib/format";
 import { useJobRunner } from "../../lib/useJobRunner";
@@ -85,8 +85,7 @@ export default function DownloadPage() {
   const styles = useStyles();
   const notify = useNotify();
   const form = useDownloadForm();
-  const defaultOutdir = useSettings((s) => s.settings?.outputDir ?? "");
-  const outdir = form.outdir || defaultOutdir;
+  const outdir = useOutputDir(form.outdir);
   const lastBatch = form.lastBatch;
   const setLastBatch = (items: BatchItem[] | null) => form.set({ lastBatch: items });
   const [pending, setPending] = useState<PendingQueue | null>(null);
@@ -288,9 +287,7 @@ export default function DownloadPage() {
 
   const outputPanel = (
     <Panel title={t("download.output")}>
-      <Field label={t("download.outdir")}>
-        <PathPicker value={outdir} onChange={(dir) => form.set({ outdir: dir })} openable />
-      </Field>
+      <OutputFolderField value={form.outdir} onChange={(dir) => form.set({ outdir: dir })} />
       <Field label={t("download.template")}>
         <Input className={styles.templateInput} value={form.template} onChange={(_, d) => form.set({ template: d.value })} />
         <div className={styles.tokens}>

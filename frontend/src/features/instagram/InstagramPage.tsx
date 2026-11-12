@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Button, Checkbox, Field, Input, makeStyles, mergeClasses, Spinner, tokens, Tooltip } from "@fluentui/react-components";
+import { Button, Checkbox, Input, makeStyles, mergeClasses, Spinner, tokens, Tooltip } from "@fluentui/react-components";
 import {
   ArrowDownload16Filled,
   Camera24Regular,
@@ -18,13 +18,12 @@ import { EmptyState } from "../../components/EmptyState";
 import { useNotify } from "../../components/notify";
 import { ToolPage } from "../../components/Page";
 import { Panel } from "../../components/Panel";
-import { PathPicker } from "../../components/PathPicker";
+import { OutputFolderField, useOutputDir } from "../../components/OutputFolderField";
 import { ResultCard } from "../../components/ResultCard";
 import { api } from "../../lib/bridge";
 import { formatBytes, formatDuration } from "../../lib/format";
 import type { InstagramItem, InstagramListing, InstagramResult } from "../../lib/types";
 import { useJobRunner } from "../../lib/useJobRunner";
-import { useSettings } from "../../stores/settings";
 import { useInstagramForm } from "./store";
 import { errorMessage } from "../../lib/errors";
 import { useToolShortcuts } from "../../lib/useToolShortcuts";
@@ -89,8 +88,7 @@ export default function InstagramPage() {
   const styles = useStyles();
   const notify = useNotify();
   const form = useInstagramForm();
-  const defaultOutdir = useSettings((s) => s.settings?.outputDir ?? "");
-  const outdir = form.outdir || defaultOutdir;
+  const outdir = useOutputDir(form.outdir);
   const { post, selected } = form;
 
   const probe = useJobRunner<InstagramListing>("instagram.probe", {
@@ -269,9 +267,7 @@ export default function InstagramPage() {
       )}
 
       <Panel title={t("download.output")}>
-        <Field label={t("download.outdir")}>
-          <PathPicker value={outdir} onChange={(dir) => form.set({ outdir: dir })} openable />
-        </Field>
+        <OutputFolderField value={form.outdir} onChange={(dir) => form.set({ outdir: dir })} />
       </Panel>
 
       {form.result && form.result.files.length > GALLERY_LIMIT && (

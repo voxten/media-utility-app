@@ -20,7 +20,9 @@ interface VideoSyncForm {
   previewStartSec: number;
   previewDuration: number;
   previewClip: { url: string; startSec: number } | null;
-  outputPath: string;
+  /** Folder picked in the tool; "" means the default output folder. */
+  outputDir: string;
+  outputName: string;
   exportMode: ExportMode;
   set: (patch: Partial<Omit<VideoSyncForm, "set">>) => void;
 }
@@ -37,7 +39,8 @@ export const useVideoSyncForm = create<VideoSyncForm>((set) => ({
   previewStartSec: 0,
   previewDuration: 30,
   previewClip: null,
-  outputPath: "",
+  outputDir: "",
+  outputName: "",
   exportMode: "fast_copy",
   set: (patch) => set(patch),
 }));

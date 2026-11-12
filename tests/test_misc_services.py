@@ -21,11 +21,6 @@ def test_settings_defaults_persist_and_deep_merge(tmp_path):
     assert reloaded.get("cookies") == {"youtube": "C:/c.txt", "x": "", "instagram": ""}
 
 
-def test_settings_recent_folders_dedup(tmp_path):
-    s = Settings(tmp_path / "s.json")
-    for folder in ["a", "b", "a"]:
-        s.add_recent_folder(folder)
-    assert s.get("recentFolders") == ["a", "b"]
 
 
 def test_settings_survive_corrupted_file(tmp_path):

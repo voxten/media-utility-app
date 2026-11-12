@@ -15,7 +15,6 @@ def test_default_settings_keys():
         "mica",
         "outputDir",
         "cookies",
-        "recentFolders",
         "maxConcurrency",
         "desktopNotifications",
         "completionSound",
@@ -30,21 +29,13 @@ def test_default_settings_keys():
     assert isinstance(defaults["maxConcurrency"], int)
 
 
-def test_settings_reset_and_clear_recent(tmp_path):
+def test_settings_reset(tmp_path):
     settings_file = tmp_path / "settings.json"
     s = Settings(path=settings_file)
     s.update({"theme": "dark", "maxConcurrency": 12, "customFfmpegPath": "C:\\custom\\ffmpeg.exe"})
-    s.add_recent_folder("C:\\test\\folder1")
-    s.add_recent_folder("C:\\test\\folder2")
 
-    assert len(s.get("recentFolders")) == 2
     assert s.get("theme") == "dark"
     assert s.get("maxConcurrency") == 12
-
-    # Clear recent
-    s.clear_recent_folders()
-    assert s.get("recentFolders") == []
-    assert s.get("theme") == "dark"
 
     # Reset
     reset_data = s.reset()

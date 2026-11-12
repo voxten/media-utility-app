@@ -1,6 +1,6 @@
 // Horizontal strip of image thumbnails for tools that work on several files with one shared viewer.
 
-import type { ReactNode } from "react";
+import { useId, type KeyboardEvent, type ReactNode } from "react";
 import { Button, makeStyles, mergeClasses, tokens, Tooltip } from "@fluentui/react-components";
 import { Dismiss12Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
@@ -9,7 +9,17 @@ import { FileThumbnail } from "./FileThumbnail";
 
 const useStyles = makeStyles({
   root: { display: "flex", alignItems: "center", gap: "12px", minWidth: 0 },
-  strip: { display: "flex", gap: "8px", overflowX: "auto", paddingBottom: "4px", scrollbarWidth: "thin", flexGrow: 1, minWidth: 0 },
+  strip: {
+    display: "flex",
+    gap: "8px",
+    overflowX: "auto",
+    paddingBottom: "4px",
+    scrollbarWidth: "thin",
+    flexGrow: 1,
+    minWidth: 0,
+    borderRadius: tokens.borderRadiusMedium,
+    ":focus-visible": { outline: `2px solid ${tokens.colorStrokeFocus2}`, outlineOffset: "2px" },
+  },
   actions: { display: "flex", flexDirection: "column", alignItems: "stretch", gap: "4px", flexShrink: 0 },
   item: {
     position: "relative",
@@ -61,13 +71,43 @@ interface FileStripProps {
 export function FileStrip({ files, selected, onSelect, onRemove, edited, actions }: FileStripProps) {
   const styles = useStyles();
   const { t } = useTranslation();
+  const idPrefix = useId();
+
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    const last = files.length - 1;
+    const next =
+      e.key === "ArrowRight" || e.key === "ArrowDown"
+        ? Math.min(last, selected + 1)
+        : e.key === "ArrowLeft" || e.key === "ArrowUp"
+          ? Math.max(0, selected - 1)
+          : e.key === "Home"
+            ? 0
+            : e.key === "End"
+              ? last
+              : null;
+    if (next !== null) {
+      e.preventDefault();
+      if (next !== selected) onSelect(next);
+    } else if (e.key === "Delete" && files[selected]) {
+      e.preventDefault();
+      onRemove(selected);
+    }
+  };
 
   return (
     <div className={styles.root}>
-      <div className={styles.strip} role="listbox" aria-label={t("common.files")}>
+      <div
+        className={styles.strip}
+        role="listbox"
+        aria-label={t("common.files")}
+        tabIndex={files.length ? 0 : -1}
+        aria-activedescendant={files[selected] ? `${idPrefix}-${selected}` : undefined}
+        onKeyDown={onKeyDown}
+      >
         {files.map((file, i) => (
           <div
             key={file}
+            id={`${idPrefix}-${i}`}
             role="option"
             aria-selected={i === selected}
             title={file}

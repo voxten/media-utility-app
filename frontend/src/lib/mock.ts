@@ -12,7 +12,6 @@ const DEFAULT_SETTINGS: Settings = {
   mica: false,
   outputDir: "C:\\Users\\demo\\Downloads",
   cookies: { youtube: "", x: "", instagram: "" },
-  recentFolders: ["C:\\Users\\demo\\Pictures", "C:\\Users\\demo\\Videos"],
   maxConcurrency: 4,
   desktopNotifications: true,
   completionSound: true,
@@ -144,16 +143,6 @@ export function createMockBackend(emit: Emit) {
       get: () => ok(settings),
       update: (patch: Partial<Settings>) => {
         settings = { ...settings, ...patch, cookies: { ...settings.cookies, ...(patch.cookies ?? {}) } };
-        saveSettings(settings);
-        return ok(settings);
-      },
-      add_recent_folder: (folder: string) => {
-        settings = { ...settings, recentFolders: [folder, ...settings.recentFolders.filter((f) => f !== folder)].slice(0, 8) };
-        saveSettings(settings);
-        return ok(undefined);
-      },
-      clear_recent_folders: () => {
-        settings = { ...settings, recentFolders: [] };
         saveSettings(settings);
         return ok(settings);
       },

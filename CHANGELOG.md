@@ -10,7 +10,16 @@ The app shows this file (and its Polish translation, [CHANGELOG.pl.md](CHANGELOG
 
 ### Changed
 
-- **Progress Generator** saves the card into the output folder field instead of asking for a file name every time.
+- **Progress Generator** saves the card into the output folder with a file name you can change, instead of asking where to save every time.
+- The bar at the bottom of each tool says what to do next while nothing runs (pick a file, files ready) and shows a task only while it runs. Finished and failed tasks are reported once, in the toast and on the task card, instead of staying in the bar.
+- Video Converter, Video Downloader, Instagram, Text to Speech and Audio-Video Sync use the same output folder field as the other tools. Audio-Video Sync saves into the output folder instead of next to the source video, with a file name field.
+- Dropping or choosing files a tool cannot open shows how many were skipped instead of ignoring them silently.
+- Keyboard and screen reader: the jobs popup takes focus when it opens and gives it back when it closes, the command palette announces the highlighted tool, the thumbnail strip can be reached with Tab and browsed with arrow keys (Delete removes a file), and the before/after view buttons say which one is on.
+- Speech rate and Image Upscaler model names are translated.
+
+### Removed
+
+- "Recent folders" in Settings → Storage. The list filled only from Duplicate Finder scans and nothing used it.
 
 ### Fixed
 

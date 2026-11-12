@@ -53,6 +53,8 @@ const useStyles = makeStyles({
   popup: {
     position: "fixed",
     bottom: "16px",
+    left: "284px",
+    ":focus-visible": { outline: "none" },
     zIndex: 990,
     width: "420px",
     maxWidth: "calc(100vw - 32px)",
@@ -74,6 +76,7 @@ const useStyles = makeStyles({
     transitionDuration: tokens.durationGentle,
     transitionTimingFunction: tokens.curveEasyEase,
   },
+  popupCollapsed: { left: "68px" },
   popupFixedHeight: {
     height: "min(580px, calc(100vh - 32px))",
   },
@@ -206,6 +209,15 @@ export function JobsPopup({ collapsed }: { collapsed: boolean }) {
 
   useEffect(() => {
     if (!open) return;
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    popupRef.current?.focus();
+    return () => {
+      if (previous?.isConnected) previous.focus();
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -235,14 +247,17 @@ export function JobsPopup({ collapsed }: { collapsed: boolean }) {
 
   if (!open) return null;
 
-  const leftPosition = collapsed ? "68px" : "284px";
-
   return (
     <div
       ref={popupRef}
       // A fixed height keeps the bottom-anchored popup from jumping when switching tabs or filtering.
-      className={mergeClasses(styles.popup, hasHistory && styles.popupFixedHeight, mica && styles.mica)}
-      style={{ left: leftPosition }}
+      className={mergeClasses(
+        styles.popup,
+        collapsed && styles.popupCollapsed,
+        hasHistory && styles.popupFixedHeight,
+        mica && styles.mica,
+      )}
+      tabIndex={-1}
       role="dialog"
       aria-label={t("jobs.title")}
     >

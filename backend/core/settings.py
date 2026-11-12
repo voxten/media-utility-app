@@ -11,7 +11,6 @@ from typing import Any, Dict, Optional
 from backend.core.errors import AppError
 from backend.core.paths import app_data_dir, default_output_dir, resource_path
 
-MAX_RECENT = 8
 
 # Default cookie files: project cookies/ dir, then the app data dir.
 DEFAULT_COOKIES = {
@@ -42,7 +41,6 @@ def default_settings() -> Dict[str, Any]:
         "mica": True,  # Windows 11 backdrop; applied on next start
         "outputDir": str(default_output_dir()),
         "cookies": {"youtube": "", "x": "", "instagram": ""},
-        "recentFolders": [],
         "maxConcurrency": min(4, os.cpu_count() or 4),
         "desktopNotifications": True,
         "completionSound": True,
@@ -63,7 +61,7 @@ def default_settings() -> Dict[str, Any]:
 
 # Written by the app itself; the window may read them but never change them. engineLatest decides
 # which engine version pip installs, so a forged one could install an old or vulnerable release.
-INTERNAL_KEYS = frozenset({"recentFolders", "trayHintShown", "engineLastCheck", "engineLatest"})
+INTERNAL_KEYS = frozenset({"trayHintShown", "engineLastCheck", "engineLatest"})
 # Options the tools remember between runs; they have no default and only the window reads them.
 TOOL_OPTION_TYPES: Dict[str, type] = {"gifOutput": dict, "transcribe": dict, "downloadSubtitles": str}
 CHOICES: Dict[str, frozenset] = {
@@ -160,18 +158,6 @@ class Settings:
         """Deep-merge ``patch`` into the settings, persist and return the new state."""
         with self._lock:
             self._data = _merge(self._data, patch)
-            self._save()
-            return copy.deepcopy(self._data)
-
-    def add_recent_folder(self, folder: str) -> None:
-        with self._lock:
-            recent = [f for f in self._data.get("recentFolders", []) if f != folder]
-            self._data["recentFolders"] = [folder, *recent][:MAX_RECENT]
-            self._save()
-
-    def clear_recent_folders(self) -> Dict[str, Any]:
-        with self._lock:
-            self._data["recentFolders"] = []
             self._save()
             return copy.deepcopy(self._data)
 

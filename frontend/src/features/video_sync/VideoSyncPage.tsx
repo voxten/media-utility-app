@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Button,
   Field,
+  Input,
   makeStyles,
   Spinner,
   tokens,
@@ -13,13 +14,13 @@ import { DropZone } from "../../components/DropZone";
 import { useNotify } from "../../components/notify";
 import { ToolPage } from "../../components/Page";
 import { Panel } from "../../components/Panel";
-import { PathPicker } from "../../components/PathPicker";
+import { OutputFolderField, useOutputDir } from "../../components/OutputFolderField";
 import { ResultCard } from "../../components/ResultCard";
 import { Select } from "../../components/Select";
 import { SliderField } from "../../components/SliderField";
 import { api } from "../../lib/bridge";
 import { allFilesFilter, dialogFilter, formatList, formatName, VIDEO_EXTENSIONS } from "../../lib/fileTypes";
-import { fileName } from "../../lib/format";
+import { fileName, joinPath } from "../../lib/format";
 
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { useJobRunner } from "../../lib/useJobRunner";
@@ -54,6 +55,7 @@ const useStyles = makeStyles({
   source: { minWidth: "260px" },
   length: { width: "120px" },
   output: { flex: "1 1 320px", minWidth: 0 },
+  name: { width: "240px" },
   mode: { minWidth: "240px" },
 });
 
@@ -66,7 +68,7 @@ export default function VideoSyncPage() {
   const framesErrorFor = useRef<string | null>(null);
 
   const form = useVideoSyncForm();
-  const { video, trackWave, externalAudio, externalWave, source, trackIndex, offsetSec, previewStartSec, previewDuration, previewClip, outputPath, exportMode } =
+  const { video, trackWave, externalAudio, externalWave, source, trackIndex, offsetSec, previewStartSec, previewDuration, previewClip, outputDir, outputName, exportMode } =
     form;
   const setOffsetSec = (next: number) => form.set({ offsetSec: next });
   const setPreviewStartSec = (next: number) => form.set({ previewStartSec: next });
@@ -116,7 +118,7 @@ export default function VideoSyncPage() {
         offsetSec: 0,
         previewStartSec: 0,
         previewClip: null,
-        outputPath: `${path.replace(/\.[^.\\/]+$/, "")}_synced.mp4`,
+        outputName: `${fileName(path).replace(/\.[^.]+$/, "")}_synced.mp4`,
       });
       setPlayheadSec(null);
       runner.reset();
@@ -169,6 +171,8 @@ export default function VideoSyncPage() {
     }
   };
 
+  const exportDir = useOutputDir(outputDir);
+  const outputPath = exportDir && outputName.trim() ? joinPath(exportDir, outputName.trim()) : "";
   const canExport = !!video && !!outputPath && !runner.running;
   const startExport = () => {
     if (!video || !outputPath) return;
@@ -301,14 +305,9 @@ export default function VideoSyncPage() {
         </div>
 
         <div className={styles.row}>
-          <Field label={t("video_sync.output")} className={styles.output}>
-            <PathPicker
-              mode="save"
-              value={outputPath}
-              onChange={(next) => form.set({ outputPath: next })}
-              defaultFileName={fileName(outputPath)}
-              fileTypes={[dialogFilter(t, "videos", [".mp4"])]}
-            />
+          <OutputFolderField value={outputDir} onChange={(dir) => form.set({ outputDir: dir })} className={styles.output} />
+          <Field label={t("common.fileName")} className={styles.name}>
+            <Input value={outputName} onChange={(_, d) => form.set({ outputName: d.value })} />
           </Field>
           <Field label={t("video_sync.export.mode")} className={styles.mode}>
             <Select
@@ -324,7 +323,7 @@ export default function VideoSyncPage() {
         )}
       </Panel>
 
-      <ActionBar job={runner.job?.status === "done" ? undefined : runner.job} onCancel={runner.cancel}>
+      <ActionBar job={runner.job} idleText={video ? t("common.idle.ready") : t("common.idle.pickFile")} onCancel={runner.cancel}>
         <Button appearance="primary" icon={<Save16Regular />} disabled={!canExport} onClick={startExport}>
           {t("video_sync.export.action")}
         </Button>

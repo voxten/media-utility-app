@@ -86,7 +86,14 @@ interface ProgressState {
   options: CardOptions;
   bannerPath: string;
   outputDir: string;
+  /** "" = the default name. */
+  fileName: string;
   set: (patch: Partial<Omit<ProgressState, "set">>) => void;
+}
+
+/** `name` with its extension replaced by .png. */
+function pngName(name: string): string {
+  return `${name.trim().replace(/\.[^./\\]*$/, "")}.png`;
 }
 
 const useForm = create<ProgressState>((set) => ({
@@ -94,6 +101,7 @@ const useForm = create<ProgressState>((set) => ({
   options: { title: "", banner: null, width: 900, barHeight: 52, rounded: false, theme: "dark", valueMode: "percent", showValue: true },
   bannerPath: "",
   outputDir: "",
+  fileName: "",
   set: (patch) => set(patch),
 }));
 
@@ -154,6 +162,9 @@ const useStyles = makeStyles({
   },
   muted: { color: tokens.colorNeutralForeground3 },
   stack: { display: "flex", flexDirection: "column", gap: "16px" },
+  saveRow: { display: "flex", flexWrap: "wrap", gap: "16px", alignItems: "flex-end" },
+  saveDir: { flex: "1 1 280px", minWidth: 0 },
+  saveName: { width: "200px" },
 });
 
 function ColorButton({ row: r, onChange }: { row: ProgressRow; onChange: (c: { from: string; to: string }) => void }) {
@@ -328,7 +339,7 @@ export default function ProgressPage() {
     setExporting(true);
     try {
       const dataUrl = await toPng(cardRef.current, { pixelRatio: 2, cacheBust: true });
-      const result = await api.progress.save(dataUrl, joinPath(outputDir, t("progress.defaultName")));
+      const result = await api.progress.save(dataUrl, joinPath(outputDir, pngName(form.fileName || t("progress.defaultName"))));
       notify.success(t("progress.toast.saved"), {
         body: result.outPath,
         action: { label: t("common.showInFolder"), onClick: () => reveal(result.outPath) },
@@ -420,7 +431,12 @@ export default function ProgressPage() {
                 <Switch checked={form.options.showValue} label={t("progress.showValue")} onChange={(_, d) => setOption("showValue", d.checked)} />
               </div>
             </div>
-            <OutputFolderField value={form.outputDir} onChange={(dir) => form.set({ outputDir: dir })} />
+            <div className={styles.saveRow}>
+              <OutputFolderField value={form.outputDir} onChange={(dir) => form.set({ outputDir: dir })} className={styles.saveDir} />
+              <Field label={t("common.fileName")} className={styles.saveName}>
+                <Input value={form.fileName} placeholder={t("progress.defaultName")} onChange={(_, d) => form.set({ fileName: d.value })} />
+              </Field>
+            </div>
           </Panel>
         </div>
 

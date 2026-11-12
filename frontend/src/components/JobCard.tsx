@@ -1,7 +1,7 @@
 // Job card shared by the jobs popup and the home page's recent jobs.
 
 import { memo, useMemo, useState, type ReactElement } from "react";
-import { Button, Caption1, mergeClasses, ProgressBar, Text, tokens, Tooltip } from "@fluentui/react-components";
+import { Button, Caption1, mergeClasses, ProgressBar, Text, Tooltip } from "@fluentui/react-components";
 import {
   ArrowClockwise16Regular,
   CheckmarkCircle16Filled,
@@ -25,21 +25,6 @@ import { SubtaskRow } from "./jobCard/SubtaskRow";
 import { jobInfoLine, SEPARATOR } from "./jobCard/summary";
 import { extractSubtasks, openTarget, revealTarget, transferTargets } from "./jobCard/targets";
 import { useLiveElapsed } from "./LiveElapsed";
-
-function statusColor(status: JobState["status"]): string {
-  switch (status) {
-    case "running":
-      return tokens.colorPaletteBlueForeground2;
-    case "done":
-      return tokens.colorPaletteGreenForeground1;
-    case "error":
-      return tokens.colorPaletteRedForeground1;
-    case "cancelled":
-      return tokens.colorPaletteDarkOrangeForeground1;
-    default:
-      return tokens.colorNeutralForeground2;
-  }
-}
 
 function StatusBadge({ status }: { status: JobState["status"] }) {
   const styles = useJobCardStyles();
@@ -130,7 +115,7 @@ export const JobCard = memo(function JobCard({ job, onNavigate, saved, when = sa
           </div>
         ) : (
           Icon && (
-            <div className={styles.toolIcon} style={{ color: statusColor(job.status) }}>
+            <div className={mergeClasses(styles.toolIcon, styles[job.status])}>
               <Icon />
             </div>
           )

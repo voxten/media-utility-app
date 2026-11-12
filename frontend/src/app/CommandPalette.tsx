@@ -139,6 +139,10 @@ export function CommandPalette() {
             autoFocus
             contentBefore={<Search20Regular />}
             placeholder={t("palette.placeholder")}
+            role="combobox"
+            aria-expanded
+            aria-controls="palette-list"
+            aria-activedescendant={results[active] ? `palette-${results[active].id}` : undefined}
             value={query}
             onChange={(_, d) => setQuery(d.value)}
             onKeyDown={(e) => {
@@ -155,11 +159,12 @@ export function CommandPalette() {
             }}
           />
         </div>
-        <div className={styles.list} ref={listRef} role="listbox">
+        <div className={styles.list} ref={listRef} role="listbox" id="palette-list">
           {results.length === 0 && <div className={styles.empty}>{t("palette.noResults")}</div>}
           {results.map((c, i) => (
             <div
               key={c.id}
+              id={`palette-${c.id}`}
               data-index={i}
               role="option"
               aria-selected={i === active}

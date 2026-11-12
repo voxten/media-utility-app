@@ -157,7 +157,7 @@ export function SinglePdfTool({
       )}
       {preview.dialog}
 
-      <ActionBar job={job} idleText={file ? undefined : t("pdf.idle.empty")} onCancel={onCancel}>
+      <ActionBar job={job} idleText={file ? t("common.idle.ready") : t("pdf.idle.empty")} onCancel={onCancel}>
         {action}
       </ActionBar>
     </>

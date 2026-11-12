@@ -30,11 +30,11 @@ import { TrimTimeline } from "../../components/timeline/TrimTimeline";
 import { api } from "../../lib/bridge";
 import { ANIMATION_EXTENSIONS, dialogFilter, formatList, formatName } from "../../lib/fileTypes";
 import { fileName, formatBytes, formatDuration } from "../../lib/format";
-import { matchesExtensions } from "../../lib/drop";
 import { IMAGE_STAGE_HEIGHT } from "../../lib/imageStage";
 import type { AnimationInfo, GifEditorPreview, GifEditorResult, GifFormat, GifOperations } from "../../lib/types";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { useJobRunner } from "../../lib/useJobRunner";
+import { useAcceptFiles } from "../../lib/useAcceptFiles";
 import { GifOutputPanel } from "./GifOutputPanel";
 import { useCropKeys } from "./useCropKeys";
 import { useFrameLoader } from "./useFrameLoader";
@@ -95,8 +95,9 @@ export default function GifEditorPage() {
   const operations = useMemo(() => toOperations(edits), [edits]);
   const loadFrames = useFrameLoader(api.gif_editor.frames, current);
 
+  const acceptFiles = useAcceptFiles(ANIMATION_EXTENSIONS);
   const addFiles = (paths: string[]) => {
-    const accepted = paths.filter((p) => matchesExtensions(p, ANIMATION_EXTENSIONS));
+    const accepted = acceptFiles(paths);
     if (!accepted.length) return;
     job.reset();
     form.set({ files: addUnique(useGifEditorForm.getState().files, accepted) });
@@ -383,7 +384,7 @@ export default function GifEditorPage() {
         )}
       </Columns>
 
-      <ActionBar job={job.job?.status === "done" ? undefined : job.job} onCancel={job.cancel}>
+      <ActionBar job={job.job} idleText={files.length ? t("common.idle.filesReady", { count: files.length }) : t("common.idle.pickFiles")} onCancel={job.cancel}>
         <Button icon={<Eye16Regular />} disabled={!info || previewing || job.running || cropping} onClick={runPreview}>
           {previewing ? t("common.loading") : t("gif.preview")}
         </Button>

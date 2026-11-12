@@ -28,12 +28,13 @@ import { Select } from "../../components/Select";
 import { SliderField } from "../../components/SliderField";
 import { api } from "../../lib/bridge";
 import { checkerboard } from "../../lib/checkerboard";
-import { claimDrop, DROP_ZONE_ATTR, matchesExtensions } from "../../lib/drop";
+import { claimDrop, DROP_ZONE_ATTR } from "../../lib/drop";
 import { dialogFilter, formatList, formatName, IMAGE_EXTENSIONS, imageFormatLabel, type ImageOutputFormat } from "../../lib/fileTypes";
 import { fileName, formatBytes } from "../../lib/format";
 import { IMAGE_STAGE_HEIGHT } from "../../lib/imageStage";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { useJobRunner } from "../../lib/useJobRunner";
+import { useAcceptFiles } from "../../lib/useAcceptFiles";
 import { useTransferStore } from "../../stores/transfer";
 import { errorMessage } from "../../lib/errors";
 import { OutputFolderField, useOutputDir } from "../../components/OutputFolderField";
@@ -119,8 +120,9 @@ export default function CompressorPage() {
     [format, mode, quality, targetKb],
   );
 
+  const acceptFiles = useAcceptFiles(IMAGE_EXTENSIONS);
   const addFiles = (paths: string[]) => {
-    const accepted = paths.filter((p) => matchesExtensions(p, IMAGE_EXTENSIONS));
+    const accepted = acceptFiles(paths);
     if (!accepted.length) return;
     job.reset();
     form.set({ files: addUnique(useCompressorForm.getState().files, accepted) });
@@ -348,7 +350,7 @@ export default function CompressorPage() {
         )}
       </Columns>
 
-      <ActionBar job={job.job?.status === "done" ? undefined : job.job} onCancel={job.cancel}>
+      <ActionBar job={job.job} idleText={files.length ? t("common.idle.filesReady", { count: files.length }) : t("common.idle.pickFiles")} onCancel={job.cancel}>
         <Button appearance="primary" icon={<ArrowMinimize24Regular />} disabled={!canStart} onClick={start}>
           {files.length > 1 ? t("compressor.compressAll", { count: files.length }) : t("compressor.compressAction")}
         </Button>
