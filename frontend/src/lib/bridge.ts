@@ -126,6 +126,7 @@ export const api = {
     notify: (title: string, body: string, force = false) => call<boolean>("app", "notify", title, body, force),
     setShellLabels: (labels: ShellLabels) => call<void>("app", "set_shell_labels", labels),
     reportError: (source: string, message: string, stack: string) => call<void>("app", "report_error", source, message, stack),
+    setTaskbarProgress: (state: string, value: number) => call<void>("app", "set_taskbar_progress", state, value),
   },
   settings: {
     get: () => call<Settings>("settings", "get"),

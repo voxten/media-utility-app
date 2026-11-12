@@ -62,6 +62,7 @@ class _Context:
         self.jobs = JobManager(bus.emit, max_workers=settings.get("maxConcurrency", 4), history=self.history)
         self.shell = AppShell(APP_NAME, settings, self.jobs.active_count, bus.emit)
         self.window: Any = None
+        self.taskbar = TaskbarProgress(lambda: win_theme.window_handle(self.window) if self.window else None)
         self.mica = False  # set by main.py once the backdrop is active
         self.engine_check_started = False
 
@@ -113,6 +114,9 @@ class AppApi(_Namespace):
     def set_shell_labels(self, labels: Dict[str, str]) -> None:
         """Translated texts for the tray menu and native prompts (the backend has no i18n)."""
         self._ctx.shell.set_labels(labels)
+
+    def set_taskbar_progress(self, state: str, value: float = 0.0) -> None:
+        self._ctx.taskbar.set(state, value)
 
     def report_error(self, source: str, message: str, stack: str = "") -> None:
         """An unexpected error in the window, written to the app log next to the backend's own."""

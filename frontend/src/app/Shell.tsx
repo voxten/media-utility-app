@@ -18,6 +18,7 @@ import { Navigation } from "./Navigation";
 import { appTokens } from "./theme";
 import { toolById } from "./tools";
 import { useJobNotifications } from "./useJobNotifications";
+import { useTaskbarProgress } from "./useTaskbarProgress";
 
 const HomePage = lazy(() => import("../features/home/HomePage"));
 const SettingsPage = lazy(() => import("../features/settings/SettingsPage"));
@@ -117,6 +118,7 @@ export function Shell() {
   }, [collapsed]);
 
   useJobNotifications(route);
+  useTaskbarProgress();
   useClipboardLinks();
 
   useEffect(() => {

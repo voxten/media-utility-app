@@ -6,6 +6,8 @@ Polskie tłumaczenie [CHANGELOG.md](CHANGELOG.md), pokazywane w aplikacji przy p
 
 ### Dodano
 
+- **Integracja z Windows**: instalator może dodać „Otwórz w Media Studio” do menu prawego przycisku dla obrazów, filmów, plików audio i PDF, pokazać aplikację w „Otwórz za pomocą” i dodać ją do „Wyślij do”. Pliki otwierają się w oknie „Otwórz w narzędziu” działającej aplikacji; kilka plików zaznaczonych razem trafia tam jako jeden zestaw.
+- Przycisk aplikacji na pasku zadań pokazuje postęp trwających zadań.
 - **Konwerter wideo i audio**: zmiana formatu filmów (MP4, MKV, MOV, WebM) i dźwięku (MP3, M4A, OGG, Opus, WAV, FLAC), wybór jakości albo docelowego rozmiaru pliku, np. 25 MB, przycinanie na osi czasu, zmniejszanie rozdzielczości, usuwanie dźwięku, wyciąganie samego dźwięku i wyrównywanie głośności. Można konwertować kilka plików naraz; filmy i pliki audio da się do niego wysłać z innych narzędzi.
 ### Zmieniono
 

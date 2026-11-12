@@ -106,6 +106,7 @@ def main() -> None:
     parser.add_argument("--dev", action="store_true", help="load the Vite dev server")
     parser.add_argument("--url", default=DEV_URL, help="dev server URL (with --dev)")
     parser.add_argument("--selftest", metavar="REPORT", help="run the bundle smoke test, write JSON and exit")
+    parser.add_argument("files", nargs="*", help="files to open (Open with, Send to, Explorer menu)")
     args = parser.parse_args()
 
     if args.selftest:
@@ -115,7 +116,8 @@ def main() -> None:
 
     # A second launch only brings the running (possibly hidden) window back.
     channel = "dev" if args.dev else "app"
-    if single_instance.notify_running(channel):
+    launch_paths = [os.path.abspath(p) for p in args.files if os.path.exists(p)]
+    if single_instance.notify_running(channel, launch_paths):
         return
     instance = single_instance.listen(channel)
     cleanup_webview_cache()  # only once we know no other instance is using the cache
@@ -151,6 +153,14 @@ def main() -> None:
     api._attach_window(window)
     api._set_mica(use_mica)  # optimistic, so the UI boots transparent; corrected below if DWM refuses
 
+    # Queued until the frontend is ready, then offered in the "Open in tool" dialog.
+    open_files = single_instance.PathBatcher(lambda paths: bus.emit("files:dropped", {"paths": paths}))
+    open_files.add(launch_paths)
+
+    def on_launch(paths: list) -> None:
+        api._show_window()
+        open_files.add(paths)
+
     def on_drop(event: dict) -> None:
         files = (event.get("dataTransfer") or {}).get("files") or []
         paths = [f["pywebviewFullPath"] for f in files if f.get("pywebviewFullPath")]
@@ -172,7 +182,7 @@ def main() -> None:
     window.events.loaded += on_loaded
     window.events.closing += api._on_closing
     if instance is not None:
-        instance.serve(api._show_window)
+        instance.serve(on_launch)
 
     webview.start(
         debug=args.dev,

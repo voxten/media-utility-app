@@ -1,20 +1,24 @@
 """One app instance per user: a second launch asks the running one to show its window.
 
 With close-to-tray the app often keeps running hidden, so starting it again from the Start
-menu must bring that window back instead of opening a second copy.
+menu must bring that window back instead of opening a second copy. Files passed to the second
+launch (Open with, Send to, the Explorer menu) travel along and open in the running window.
 """
 
 import ctypes
 import getpass
+import json
 import sys
 import threading
 import time
 from multiprocessing import AuthenticationError
 from multiprocessing.connection import Client, Listener
-from typing import Callable, Optional
+from typing import Callable, List, Optional, Sequence
 
 AUTHKEY = b"media-studio-instance"
-SHOW = b"show"
+MAX_MESSAGE = 1 << 20
+# Explorer starts one copy per selected file; paths arriving this close together open as one set.
+BATCH_DELAY_S = 0.6
 
 
 def _address(channel: str) -> str:
@@ -26,14 +30,14 @@ def _address(channel: str) -> str:
     return rf"\\.\pipe\MediaStudio-{channel}-{safe}"
 
 
-def notify_running(channel: str) -> bool:
-    """Ask an already running instance to show itself; True when one answered."""
+def notify_running(channel: str, paths: Sequence[str] = ()) -> bool:
+    """Ask an already running instance to show itself and open ``paths``; True when one answered."""
     if sys.platform == "win32":
         ASFW_ANY = -1  # this fresh launch owns the foreground; let the running window take it
         ctypes.windll.user32.AllowSetForegroundWindow(ASFW_ANY)
     try:
         with Client(_address(channel), family="AF_PIPE", authkey=AUTHKEY) as conn:
-            conn.send_bytes(SHOW)
+            conn.send_bytes(json.dumps({"paths": list(paths)}).encode("utf-8"))
         return True
     except (OSError, EOFError, ValueError, AuthenticationError):
         return False
@@ -42,18 +46,18 @@ def notify_running(channel: str) -> bool:
 class InstanceListener:
     def __init__(self, channel: str) -> None:
         self._listener: Optional[Listener] = Listener(_address(channel), family="AF_PIPE", authkey=AUTHKEY)
-        self._on_show: Callable[[], None] = lambda: None
+        self._on_message: Callable[[List[str]], None] = lambda paths: None
 
-    def serve(self, on_show: Callable[[], None]) -> None:
-        self._on_show = on_show
+    def serve(self, on_message: Callable[[List[str]], None]) -> None:
+        """``on_message`` gets the paths a later launch passed (often none) on the listener thread."""
+        self._on_message = on_message
         threading.Thread(target=self._loop, name="single-instance", daemon=True).start()
 
     def _loop(self) -> None:
         while self._listener is not None:
             try:
                 with self._listener.accept() as conn:
-                    if conn.recv_bytes(16) == SHOW:
-                        self._on_show()
+                    self._on_message(parse_paths(conn.recv_bytes(MAX_MESSAGE)))
             except (AuthenticationError, EOFError):
                 continue  # a foreign or dropped client must not stop the listener
             except OSError:
@@ -66,6 +70,42 @@ class InstanceListener:
                 listener.close()
             except OSError:
                 pass
+
+
+def parse_paths(message: bytes) -> List[str]:
+    try:
+        data = json.loads(message.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError):
+        return []
+    paths = data.get("paths") if isinstance(data, dict) else None
+    return [p for p in paths if isinstance(p, str)] if isinstance(paths, list) else []
+
+
+class PathBatcher:
+    """Collects paths for ``delay`` seconds after the first one, then hands them over at once."""
+
+    def __init__(self, deliver: Callable[[List[str]], None], delay: float = BATCH_DELAY_S) -> None:
+        self._deliver = deliver
+        self._delay = delay
+        self._paths: List[str] = []
+        self._lock = threading.Lock()
+        self._timer: Optional[threading.Timer] = None
+
+    def add(self, paths: Sequence[str]) -> None:
+        if not paths:
+            return
+        with self._lock:
+            self._paths.extend(p for p in paths if p not in self._paths)
+            if self._timer is None:
+                self._timer = threading.Timer(self._delay, self._flush)
+                self._timer.daemon = True
+                self._timer.start()
+
+    def _flush(self) -> None:
+        with self._lock:
+            paths, self._paths, self._timer = self._paths, [], None
+        if paths:
+            self._deliver(paths)
 
 
 def listen(channel: str) -> Optional[InstanceListener]:

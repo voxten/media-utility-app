@@ -122,13 +122,32 @@ def test_second_launch_reaches_running_instance():
     assert single_instance.notify_running(channel) is False
     listener = single_instance.listen(channel)
     assert listener is not None
+    received = []
     shown = threading.Event()
-    listener.serve(shown.set)
+    listener.serve(lambda paths: (received.append(paths), shown.set()))
     try:
-        assert single_instance.notify_running(channel) is True
+        assert single_instance.notify_running(channel, ["C:\\a.mp4", "C:\\b.mp3"]) is True
         assert shown.wait(2)
+        assert received == [["C:\\a.mp4", "C:\\b.mp3"]]
     finally:
         listener.close()
+
+
+def test_parse_paths_ignores_garbage():
+    assert single_instance.parse_paths(b"show") == []
+    assert single_instance.parse_paths(b'{"paths": ["a", 3]}') == ["a"]
+    assert single_instance.parse_paths(b'{"paths": "a"}') == []
+
+
+def test_path_batcher_merges_close_launches():
+    batches = []
+    done = threading.Event()
+    batcher = single_instance.PathBatcher(lambda paths: (batches.append(paths), done.set()), delay=0.1)
+    batcher.add([])
+    batcher.add(["a"])
+    batcher.add(["b", "a"])
+    assert done.wait(2)
+    assert batches == [["a", "b"]]
 
 
 def test_tray_clipboard_item_opens_the_link(make_shell, monkeypatch):

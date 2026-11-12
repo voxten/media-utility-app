@@ -13,6 +13,31 @@
 ; would make Setup treat existing installations as a different app instead of updating them.
 #define MyAppGuid "8B7A1C94-4F3D-4A8E-952B-7E8B1A2C3D4E"
 
+; Files offered to the app from Explorer (menu, Open with); keep in step with lib/fileTypes.ts.
+#dim FileTypes[21]
+#define FileTypes[0] ".png"
+#define FileTypes[1] ".jpg"
+#define FileTypes[2] ".jpeg"
+#define FileTypes[3] ".webp"
+#define FileTypes[4] ".bmp"
+#define FileTypes[5] ".tif"
+#define FileTypes[6] ".tiff"
+#define FileTypes[7] ".gif"
+#define FileTypes[8] ".mp4"
+#define FileTypes[9] ".mkv"
+#define FileTypes[10] ".mov"
+#define FileTypes[11] ".avi"
+#define FileTypes[12] ".webm"
+#define FileTypes[13] ".m4v"
+#define FileTypes[14] ".mp3"
+#define FileTypes[15] ".wav"
+#define FileTypes[16] ".m4a"
+#define FileTypes[17] ".flac"
+#define FileTypes[18] ".ogg"
+#define FileTypes[19] ".opus"
+#define FileTypes[20] ".pdf"
+#define I
+
 [Setup]
 AppId={{{#MyAppGuid}}}
 AppName={#MyAppName}
@@ -56,10 +81,15 @@ english.UpdateReadyHeading=Update
 english.UpdateReadyLine=Installed version %1 will be updated to %2. Settings and add-ons are kept.
 english.ReinstallReadyLine=Version %1 will be reinstalled.
 english.UpdateButton=&Update
+polish.ShellIntegration=Dodaj „Otwórz w Media Studio” do menu plików, „Otwórz za pomocą” i „Wyślij do”
+polish.OpenInApp=Otwórz w Media Studio
+english.ShellIntegration=Add "Open in Media Studio" to the file menu, "Open with" and "Send to"
+english.OpenInApp=Open in Media Studio
 english.DowngradeConfirm=A newer version (%1) is installed than the one in this installer (%2).%n%nInstall the older version anyway?
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
+Name: "shellintegration"; Description: "{cm:ShellIntegration}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [InstallDelete]
 ; The PyInstaller bundle is replaced as a whole so DLLs and modules dropped from a newer build don't linger.
@@ -76,6 +106,21 @@ Source: "..\dist\MediaStudio\*"; DestDir: "{app}"; Flags: ignoreversion recurses
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{usersendto}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: shellintegration
+
+[Registry]
+; "Open with": the app and the file types it opens. Each launch passes the file to the running window.
+Root: HKA; Subkey: "Software\Classes\Applications\{#MyAppExeName}"; ValueType: string; ValueName: "FriendlyAppName"; ValueData: "{#MyAppName}"; Flags: uninsdeletekey; Tasks: shellintegration
+Root: HKA; Subkey: "Software\Classes\Applications\{#MyAppExeName}\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#MyAppExeName}"" ""%1"""; Tasks: shellintegration
+#sub FileTypeEntries
+Root: HKA; Subkey: "Software\Classes\Applications\{#MyAppExeName}\SupportedTypes"; ValueType: string; ValueName: "{#FileTypes[I]}"; ValueData: ""; Tasks: shellintegration
+Root: HKA; Subkey: "Software\Classes\{#FileTypes[I]}\OpenWithList\{#MyAppExeName}"; Flags: uninsdeletekey; Tasks: shellintegration
+Root: HKA; Subkey: "Software\Classes\SystemFileAssociations\{#FileTypes[I]}\shell\MediaStudio"; ValueType: string; ValueName: ""; ValueData: "{cm:OpenInApp}"; Flags: uninsdeletekey; Tasks: shellintegration
+Root: HKA; Subkey: "Software\Classes\SystemFileAssociations\{#FileTypes[I]}\shell\MediaStudio"; ValueType: string; ValueName: "Icon"; ValueData: "{app}\{#MyAppExeName}"; Tasks: shellintegration
+Root: HKA; Subkey: "Software\Classes\SystemFileAssociations\{#FileTypes[I]}\shell\MediaStudio"; ValueType: string; ValueName: "MultiSelectModel"; ValueData: "Player"; Tasks: shellintegration
+Root: HKA; Subkey: "Software\Classes\SystemFileAssociations\{#FileTypes[I]}\shell\MediaStudio\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#MyAppExeName}"" ""%1"""; Tasks: shellintegration
+#endsub
+#for {I = 0; I < DimOf(FileTypes); I++} FileTypeEntries
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent

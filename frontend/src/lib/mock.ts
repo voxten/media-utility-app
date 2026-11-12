@@ -135,6 +135,7 @@ export function createMockBackend(emit: Emit) {
       ready: () => ok({ name: "Media Studio", version: "dev-mock", python: "—", platform: navigator.userAgent }),
       info: () => ok({ name: "Media Studio", version: "dev-mock", python: "—", platform: navigator.userAgent }),
       set_title_bar_theme: () => ok(false),
+      set_taskbar_progress: () => ok(undefined),
       notify: () => ok(false),
       set_shell_labels: () => ok(undefined),
       report_error: () => ok(undefined),
