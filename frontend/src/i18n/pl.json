@@ -275,6 +275,17 @@
       "resetConfirmBody": "Wszystkie Twoje preferencje zostaną przywrócone do wartości domyślnych. Pobrane modele AI i dane nie zostaną usunięte.",
       "resetConfirmAction": "Tak, zresetuj wszystko",
       "resetSuccess": "Ustawienia zostały przywrócone do domyślnych."
+    },
+    "cookiesFromBrowser": "Ciasteczka z przeglądarki",
+    "cookiesFromBrowserDescription": "Używane, gdy strona nie ma pliku cookies. Chrome i Edge muszą być zamknięte podczas pobierania; Firefox działa także otwarty.",
+    "browsers": {
+      "off": "Wyłączone",
+      "firefox": "Firefox",
+      "chrome": "Chrome",
+      "edge": "Edge",
+      "brave": "Brave",
+      "opera": "Opera",
+      "vivaldi": "Vivaldi"
     }
   },
   "common": {
@@ -758,7 +769,8 @@
     "error": {
       "xLoginRequired": "X udostępnia filmy tylko zalogowanym. Dodaj plik cookies X w Ustawieniach → Pliki cookies i spróbuj ponownie.",
       "noMedia": "Pod tym linkiem nie znaleziono nic do pobrania.",
-      "noPendingQueue": "Nie ma niedokończonej kolejki do wznowienia."
+      "noPendingQueue": "Nie ma niedokończonej kolejki do wznowienia.",
+      "browserCookies": "Nie udało się odczytać ciasteczek z przeglądarki {{browser}}. Zamknij ją i spróbuj ponownie albo użyj Firefoksa lub pliku cookies."
     },
     "single": "Pojedynczy link",
     "batch": "Kolejka",
@@ -861,7 +873,16 @@
     "downloadSelected_one": "Pobierz {{count}} z {{total}}",
     "downloadSelected_other": "Pobierz {{count}} z {{total}}",
     "downloadSelected_few": "Pobierz {{count}} z {{total}}",
-    "downloadSelected_many": "Pobierz {{count}} z {{total}}"
+    "downloadSelected_many": "Pobierz {{count}} z {{total}}",
+    "sponsorblock": "Wytnij fragmenty sponsorowane",
+    "sponsorblockHint": "Tylko YouTube. Sponsorzy, autopromocja i prośby o subskrypcję są wycinane według społecznej bazy SponsorBlock.",
+    "clip": {
+      "title": "Tylko fragment filmu",
+      "chapter": "Rozdział",
+      "pickChapter": "Wybierz rozdział",
+      "start": "Od",
+      "end": "Do"
+    }
   },
   "upscale": {
     "status": {

@@ -16,8 +16,10 @@ from backend.core.jobs import JobCancelled, JobContext
 from backend.core.paths import unique_path
 from backend.services.download import (
     AUTO_FORMAT,
+    COOKIE_BROWSERS,
     UniqueYoutubeDL,
     _base_opts,
+    browser_cookies,
     clean_error_message,
     cookie_file_for,
 )
@@ -106,7 +108,8 @@ def _feed_extractor(url: str, cookie_file: Optional[str]) -> Any:
     if not cookie_file:
         raise RuntimeError("instagram.error.loginRequired")
     gdl_config.clear()
-    gdl_config.set(("extractor",), "cookies", cookie_file)
+    # A browser name reads that browser's cookies, anything else is a cookies.txt file.
+    gdl_config.set(("extractor",), "cookies", [cookie_file] if cookie_file in COOKIE_BROWSERS else cookie_file)
     gdl_config.set(("extractor",), "cookies-update", False)
     for cls in (gdl_instagram.InstagramStoriesExtractor, gdl_instagram.InstagramPostsExtractor):
         pattern = re.compile(cls.pattern) if isinstance(cls.pattern, str) else cls.pattern
@@ -320,7 +323,7 @@ def probe(ctx: JobContext, url: str, cookies: Dict[str, Optional[str]]) -> Dict[
     try:
         with yt_dlp.YoutubeDL(_opts(url, cookies)) as ydl:
             listing = _list(
-                ydl, url, cookie_file_for(url, cookies), on_page, lambda: ctx.job_id in _stop_requests
+                ydl, url, cookie_file_for(url, cookies) or browser_cookies(cookies), on_page, lambda: ctx.job_id in _stop_requests
             )
     except Exception as exc:
         raise _wrap_errors(ctx, exc) from exc
@@ -407,7 +410,7 @@ def download(
                 listing = _list(
                     ydl,
                     url,
-                    cookie_file_for(url, cookies or {}),
+                    cookie_file_for(url, cookies or {}) or browser_cookies(cookies or {}),
                     lambda entries: ctx.check_cancelled(),
                     wanted=set(keys) if keys else None,
                 )

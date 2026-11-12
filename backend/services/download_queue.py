@@ -266,6 +266,7 @@ def download_batch(
     archive: Optional[str] = None,
     persist: bool = False,
     replaces: Optional[str] = None,
+    sponsorblock: bool = False,
 ) -> Dict[str, Any]:
     """Download several URLs; per-item state is streamed via ``ctx.partial``.
 
@@ -319,7 +320,7 @@ def download_batch(
             slot = 100 / max(1, total)
             share = SUBTITLE_SHARE if _wants_subtitles(subtitles) else 0.0
             hook = _ProgressHook(ctx, scale=(1 - share) / max(1, total), offset=index * slot, item=index)
-            opts = _download_opts(url, fmt, template, mode, target_codec, cookies or {}, hook, embed_meta, archive)
+            opts = _download_opts(url, fmt, template, mode, target_codec, cookies or {}, hook, embed_meta, archive, sponsorblock)
 
             t0 = time.monotonic()
             try:

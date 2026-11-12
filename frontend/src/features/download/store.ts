@@ -22,6 +22,10 @@ interface DownloadForm {
   template: string;
   /** Check the link as soon as the page shows it (set when a copied link is opened). */
   autoProbe: boolean;
+  sponsorblock: boolean;
+  clip: boolean;
+  clipStart: string;
+  clipEnd: string;
   set: (patch: Partial<Omit<DownloadForm, "set">>) => void;
 }
 
@@ -40,5 +44,9 @@ export const useDownloadForm = create<DownloadForm>((set) => ({
   outdir: "",
   template: "{title}.{ext}",
   autoProbe: false,
+  sponsorblock: false,
+  clip: false,
+  clipStart: "",
+  clipEnd: "",
   set: (patch) => set(patch),
 }));

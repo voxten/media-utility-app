@@ -6,6 +6,9 @@ Polskie tłumaczenie [CHANGELOG.md](CHANGELOG.md), pokazywane w aplikacji przy p
 
 ### Dodano
 
+- **Pobieranie wideo** może pobrać tylko fragment filmu: wpisz zakres czasu albo wybierz rozdział.
+- **Pobieranie wideo** może wyciąć z filmów YouTube fragmenty sponsorowane, autopromocję i prośby o subskrypcję dzięki SponsorBlock, także w kolejkach.
+- Ustawienia → Pliki: ciasteczka mogą pochodzić prosto z Firefoksa, Chrome, Edge, Brave, Opery lub Vivaldi, gdy strona nie ma pliku cookies; działa w Pobieraniu wideo i Instagramie.
 - Przy pierwszym uruchomieniu aplikacja wybiera język Windows: polski w polskim systemie, angielski w pozostałych (wcześniej zawsze startowała po polsku).
 - Narzędzia wideo (Konwerter wideo i audio, Pobieranie wideo, Synchronizacja audio-wideo, Wideo do GIF, Transkrypcja) proponują instalację FFmpeg od razu na stronie, gdy go brakuje, zamiast zgłaszać błąd dopiero po uruchomieniu zadania.
 - **Integracja z Windows**: instalator może dodać „Otwórz w Media Studio” do menu prawego przycisku dla obrazów, filmów, plików audio i PDF, pokazać aplikację w „Otwórz za pomocą” i dodać ją do „Wyślij do”. Pliki otwierają się w oknie „Otwórz w narzędziu” działającej aplikacji; kilka plików zaznaczonych razem trafia tam jako jeden zestaw.

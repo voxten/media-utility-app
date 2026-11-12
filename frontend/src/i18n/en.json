@@ -267,6 +267,17 @@
       "resetConfirmBody": "All your preferences will be reset to defaults. Downloaded AI models and user data will not be deleted.",
       "resetConfirmAction": "Yes, reset all",
       "resetSuccess": "Settings have been restored to defaults."
+    },
+    "cookiesFromBrowser": "Cookies from a browser",
+    "cookiesFromBrowserDescription": "Used when a site has no cookie file. Chrome and Edge must be closed while downloading; Firefox works while open.",
+    "browsers": {
+      "off": "Off",
+      "firefox": "Firefox",
+      "chrome": "Chrome",
+      "edge": "Edge",
+      "brave": "Brave",
+      "opera": "Opera",
+      "vivaldi": "Vivaldi"
     }
   },
   "common": {
@@ -704,7 +715,8 @@
     "error": {
       "xLoginRequired": "X shares videos only with signed-in users. Add an X cookie file in Settings → Cookie files and try again.",
       "noMedia": "Nothing to download was found at this link.",
-      "noPendingQueue": "There is no unfinished queue to resume."
+      "noPendingQueue": "There is no unfinished queue to resume.",
+      "browserCookies": "Could not read cookies from {{browser}}. Close the browser and try again, or use Firefox or a cookie file."
     },
     "single": "Single link",
     "batch": "Queue",
@@ -791,7 +803,16 @@
       "replaceBody_other": "{{count}} links left from the last queue will not be offered for resuming anymore."
     },
     "downloadSelected_one": "Download {{count}} of {{total}}",
-    "downloadSelected_other": "Download {{count}} of {{total}}"
+    "downloadSelected_other": "Download {{count}} of {{total}}",
+    "sponsorblock": "Cut out sponsor segments",
+    "sponsorblockHint": "YouTube only. Sponsor, self-promotion and subscribe reminders are removed using the SponsorBlock community database.",
+    "clip": {
+      "title": "Only part of the video",
+      "chapter": "Chapter",
+      "pickChapter": "Pick a chapter",
+      "start": "From",
+      "end": "To"
+    }
   },
   "upscale": {
     "status": {

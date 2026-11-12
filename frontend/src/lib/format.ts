@@ -15,6 +15,15 @@ export function formatDuration(seconds: number | null | undefined): string {
   return `${h ? `${h}:` : ""}${mm}:${String(sec).padStart(2, "0")}`;
 }
 
+/** Seconds from "83", "1:23", "1:02:03" or "1:23.5"; null when the text is not a time. */
+export function parseTime(text: string): number | null {
+  const parts = text.trim().split(":");
+  if (!parts[0] || parts.length > 3 || parts.some((p) => !/^\d+(\.\d+)?$/.test(p))) return null;
+  const nums = parts.map(Number);
+  if (nums.slice(1).some((n) => n >= 60)) return null;
+  return nums.reduce((total, n) => total * 60 + n, 0);
+}
+
 /** Short local date and time for a Unix timestamp in seconds. */
 export function formatDateTime(seconds: number, language: string): string {
   return new Intl.DateTimeFormat(language, { dateStyle: "short", timeStyle: "short" }).format(new Date(seconds * 1000));

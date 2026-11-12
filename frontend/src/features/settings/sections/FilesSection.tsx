@@ -1,14 +1,16 @@
 import { Caption1 } from "@fluentui/react-components";
-import { Cookies24Regular, Folder24Regular } from "@fluentui/react-icons";
+import { Cookies24Regular, Folder24Regular, Globe24Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { Section } from "../../../components/Page";
 import { PathPicker } from "../../../components/PathPicker";
+import { Select } from "../../../components/Select";
 import { SettingGroup, SettingRow } from "../../../components/SettingRow";
 import { dialogFilter } from "../../../lib/fileTypes";
 import { useSettings } from "../../../stores/settings";
 import { useSettingsStyles } from "./styles";
 
 const COOKIE_SITES = ["youtube", "x", "instagram"] as const;
+const BROWSERS = ["", "firefox", "chrome", "edge", "brave", "opera", "vivaldi"] as const;
 
 export function FilesSection() {
   const { t } = useTranslation();
@@ -39,6 +41,16 @@ export function FilesSection() {
             ))}
             <Caption1 className={styles.hint}>{t("settings.cookiesHint")}</Caption1>
           </div>
+        </SettingRow>
+        <SettingRow icon={Globe24Regular} title={t("settings.cookiesFromBrowser")} description={t("settings.cookiesFromBrowserDescription")}>
+          <Select
+            options={BROWSERS.map((value) => ({
+              value,
+              label: value ? t(`settings.browsers.${value}`) : t("settings.browsers.off"),
+            }))}
+            value={settings.cookiesFromBrowser}
+            onChange={(cookiesFromBrowser) => update({ cookiesFromBrowser })}
+          />
         </SettingRow>
       </SettingGroup>
     </Section>

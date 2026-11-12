@@ -1,6 +1,7 @@
 """YouTube / X (Twitter) / generic video downloads via yt-dlp."""
 
 import glob
+import json
 import math
 from pathlib import Path
 import re
@@ -148,12 +149,24 @@ def cookie_file_for(url: str, cookies: Dict[str, Optional[str]]) -> Optional[str
 
 # X answers requests without a logged-in session with these errors, even for public video posts.
 X_LOGIN_HINTS = ("No video could be found", "requires authentication", "not authorized")
+COOKIE_BROWSERS = ("firefox", "chrome", "edge", "brave", "opera", "vivaldi")
+# yt-dlp cannot read a running Chromium browser's cookie database, nor decrypt app-bound cookies.
+BROWSER_COOKIE_HINTS = ("cookie database", "decrypt", "DPAPI", "cookies from browser")
+SPONSOR_CATEGORIES = ["sponsor", "selfpromo", "interaction"]
+
+
+def browser_cookies(cookies: Dict[str, Optional[str]]) -> Optional[str]:
+    browser = cookies.get("browser") or ""
+    return browser if browser in COOKIE_BROWSERS else None
 
 
 def explain_error(url: str, opts: Dict[str, Any], exc: Exception) -> str:
     """Cleaned yt-dlp error, or an i18n key when an X post failed because no cookie file was used."""
     message = clean_error_message(str(exc))
-    if is_x(url) and not opts.get("cookiefile") and any(hint in message for hint in X_LOGIN_HINTS):
+    if opts.get("cookiesfrombrowser") and any(hint.lower() in message.lower() for hint in BROWSER_COOKIE_HINTS):
+        return f"download.error.browserCookies|{json.dumps({'browser': opts['cookiesfrombrowser'][0]})}"
+    logged_in = opts.get("cookiefile") or opts.get("cookiesfrombrowser")
+    if is_x(url) and not logged_in and any(hint in message for hint in X_LOGIN_HINTS):
         return "download.error.xLoginRequired"
     return message
 
@@ -184,6 +197,8 @@ def _base_opts(url: str, cookies: Dict[str, Optional[str]]) -> Dict[str, Any]:
     cookie = cookie_file_for(url, cookies)
     if cookie:
         opts["cookiefile"] = cookie
+    elif browser_cookies(cookies):
+        opts["cookiesfrombrowser"] = (browser_cookies(cookies),)
     return opts
 
 
@@ -350,6 +365,10 @@ def probe(ctx: JobContext, url: str, cookies: Dict[str, Optional[str]]) -> Dict[
         "thumbnail": _fetch_thumbnail(info.get("thumbnail")),
         "isPlaylist": False,
         "photoCount": len(info.get(TIKTOK_PHOTOS_KEY) or []),
+        "chapters": [
+            {"title": c.get("title") or "", "start": float(c.get("start_time") or 0), "end": float(c.get("end_time") or 0)}
+            for c in info.get("chapters") or []
+        ],
         "entries": [],
         "formats": classify_formats(url, info.get("formats") or []),
     }
@@ -484,8 +503,13 @@ def _download_opts(
     hook: _ProgressHook,
     embed_meta: bool = False,
     archive: Optional[str] = None,
+    sponsorblock: bool = False,
+    section: Optional[Tuple[float, float]] = None,
 ) -> Dict[str, Any]:
-    """yt-dlp options for one download; ``archive`` is the file that records every finished download."""
+    """yt-dlp options for one download; ``archive`` is the file that records every finished download.
+
+    ``sponsorblock`` cuts sponsor segments out of YouTube videos; ``section`` keeps only (start, end) seconds.
+    """
     opts = _base_opts(url, cookies)
     opts.update({
         "format": format_id,
@@ -500,12 +524,30 @@ def _download_opts(
     else:
         opts["merge_output_format"] = "mp4"
         opts["postprocessors"] = [{"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}]
+    if sponsorblock and is_youtube(url):
+        opts["postprocessors"].insert(0, {"key": "SponsorBlock", "categories": SPONSOR_CATEGORIES, "when": "after_filter"})
+        opts["postprocessors"].append({"key": "ModifyChapters", "remove_sponsor_segments": SPONSOR_CATEGORIES})
+    if section:
+        opts["download_ranges"] = yt_dlp.utils.download_range_func(None, [section])
+        opts["force_keyframes_at_cuts"] = True
     if embed_meta:
         opts["postprocessors"].append({"key": "FFmpegMetadata", "add_metadata": True})
         opts["writethumbnail"] = mode != "audio" or audio_codec in COVER_CODECS
     if archive:
         opts["download_archive"] = archive
     return opts
+
+
+def parse_section(section: Optional[Dict[str, Any]]) -> Optional[Tuple[float, float]]:
+    """(start, end) in seconds from ``{start, end}``; None for the whole video or a range that is empty."""
+    if not section:
+        return None
+    try:
+        start = max(0.0, float(section.get("start") or 0))
+        end = float(section.get("end") or 0)
+    except (TypeError, ValueError):
+        return None
+    return (start, end) if end > start else None
 
 
 def batch_format(mode: str, max_height: int = 0) -> str:
@@ -860,6 +902,8 @@ def download(
     subtitles: Optional[Dict[str, Any]] = None,
     embed_meta: bool = False,
     archive: Optional[str] = None,
+    sponsorblock: bool = False,
+    section: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Download one URL. ``mode`` is ``video`` | ``audio`` | ``muxed``.
 
@@ -881,6 +925,8 @@ def download(
         _ProgressHook(ctx, scale=1.0 - share),
         embed_meta,
         archive,
+        sponsorblock,
+        parse_section(section),
     )
     target_ext = target_codec if mode == "audio" else "mp4"
     ctx.progress(0, "download.status.starting")

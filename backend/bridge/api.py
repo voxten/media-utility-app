@@ -405,6 +405,8 @@ class DownloadApi(_Namespace):
                 params.get("subtitles"),
                 bool(self._ctx.settings.get("downloadEmbedMeta")),
                 str(download.archive_path()),
+                bool(params.get("sponsorblock")),
+                params.get("section"),
             ),
             title=params.get("title") or params["url"],
         )
@@ -431,6 +433,7 @@ class DownloadApi(_Namespace):
                 archive=str(download.archive_path()),
                 persist=True,
                 replaces=replaces,
+                sponsorblock=bool(params.get("sponsorblock")),
             ),
             title=f"{len(urls)} URL",
         )

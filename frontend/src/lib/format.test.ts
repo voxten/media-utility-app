@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dirName, fileName, formatBytes, formatDuration, joinPath } from "./format";
+import { dirName, fileName, formatBytes, formatDuration, joinPath, parseTime } from "./format";
 
 describe("formatBytes", () => {
   it("picks a unit", () => {
@@ -37,5 +37,21 @@ describe("paths", () => {
     expect(joinPath(String.raw`C:\out`, "a.png")).toBe(String.raw`C:\out\a.png`);
     expect(joinPath("C:\\out\\", "a.png")).toBe(String.raw`C:\out\a.png`);
     expect(joinPath("", "a.png")).toBe("a.png");
+  });
+});
+
+describe("parseTime", () => {
+  it("reads seconds, minutes and hours", () => {
+    expect(parseTime("83")).toBe(83);
+    expect(parseTime(" 1:23 ")).toBe(83);
+    expect(parseTime("1:02:03")).toBe(3723);
+    expect(parseTime("0:01.5")).toBe(1.5);
+  });
+
+  it("rejects text that is not a time", () => {
+    expect(parseTime("")).toBeNull();
+    expect(parseTime("1:75")).toBeNull();
+    expect(parseTime("abc")).toBeNull();
+    expect(parseTime("1:2:3:4")).toBeNull();
   });
 });

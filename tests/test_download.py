@@ -301,3 +301,44 @@ def test_unique_youtube_dl_shortens_a_long_title(tmp_path):
         fn = Path(ydl.prepare_filename({"id": "4", "title": "t" * 300, "ext": "webm"}))
     assert fn.suffix == ".webm"
     assert len(fn.stem) <= download.MAX_STEM_CHARS and len(str(fn)) <= download.MAX_PATH_CHARS + 5
+
+
+def test_browser_cookies_used_only_without_a_cookie_file(tmp_path):
+    from backend.services import download as dl
+
+    opts = dl._base_opts("https://www.youtube.com/watch?v=x", {"youtube": None, "browser": "firefox"})
+    assert opts["cookiesfrombrowser"] == ("firefox",)
+    cookie = tmp_path / "yt.txt"
+    cookie.write_text("# Netscape")
+    opts = dl._base_opts("https://www.youtube.com/watch?v=x", {"youtube": str(cookie), "browser": "firefox"})
+    assert "cookiesfrombrowser" not in opts
+    assert "cookiesfrombrowser" not in dl._base_opts("https://a.com/v", {"browser": "netscape"})
+
+
+def test_browser_cookie_failure_is_explained():
+    from backend.services import download as dl
+
+    opts = {"cookiesfrombrowser": ("chrome",)}
+    message = dl.explain_error("https://youtu.be/x", opts, Exception("ERROR: Could not copy Chrome cookie database"))
+    assert message.startswith("download.error.browserCookies|") and "chrome" in message
+
+
+def test_sponsorblock_and_section_options():
+    from backend.services import download as dl
+
+    opts = dl._download_opts("https://www.youtube.com/watch?v=x", "best", "%(title)s.%(ext)s", "video", "mp3", {},
+                             object(), sponsorblock=True, section=(10.0, 20.0))
+    keys = [pp["key"] for pp in opts["postprocessors"]]
+    assert keys[0] == "SponsorBlock" and "ModifyChapters" in keys
+    assert opts["force_keyframes_at_cuts"] and callable(opts["download_ranges"])
+    other = dl._download_opts("https://vimeo.com/1", "best", "t", "video", "mp3", {}, object(), sponsorblock=True)
+    assert "SponsorBlock" not in [pp["key"] for pp in other["postprocessors"]]
+
+
+def test_parse_section():
+    from backend.services import download as dl
+
+    assert dl.parse_section(None) is None
+    assert dl.parse_section({"start": 5, "end": 2}) is None
+    assert dl.parse_section({"start": "1.5", "end": 9}) == (1.5, 9.0)
+    assert dl.parse_section({"start": "x", "end": 9}) is None

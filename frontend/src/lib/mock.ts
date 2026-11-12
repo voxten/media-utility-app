@@ -12,6 +12,7 @@ const DEFAULT_SETTINGS: Settings = {
   mica: false,
   outputDir: "C:\\Users\\demo\\Downloads",
   cookies: { youtube: "", x: "", instagram: "" },
+  cookiesFromBrowser: "",
   maxConcurrency: 4,
   desktopNotifications: true,
   completionSound: true,
@@ -337,6 +338,11 @@ export function createMockBackend(emit: Emit) {
           viewCount: 128_400,
           thumbnail: fakePhoto(1),
           photoCount: url.includes("/photo/") ? 4 : 0,
+          chapters: [
+            { title: "Intro", start: 0, end: 62 },
+            { title: "Setup", start: 62, end: 410 },
+            { title: "Results", start: 410, end: 754 },
+          ],
           ...(url.includes("list=")
             ? {
                 isPlaylist: true,

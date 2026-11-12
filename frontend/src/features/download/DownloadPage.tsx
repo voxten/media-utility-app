@@ -3,6 +3,7 @@ import {
   Badge,
   Button,
   Field,
+  InfoLabel,
   Input,
   makeStyles,
   MessageBar,
@@ -44,6 +45,7 @@ import { useSettings } from "../../stores/settings";
 import { BatchFormatField } from "./BatchFormatField";
 import { BatchQueue } from "./BatchQueue";
 import { ProbeResultPanel } from "./ProbeResultPanel";
+import { ClipField, clipSection } from "./ClipField";
 import { SubtitlesField, useDownloadSubtitles } from "./SubtitlesField";
 import { useDownloadForm } from "./store";
 import type { BatchItem, ProbeResult } from "./types";
@@ -96,7 +98,15 @@ export default function DownloadPage() {
   const probe = useJobRunner<ProbeResult>("download.probe", {
     onResult: (result) => {
       const first = result.formats.video[0]?.id ?? "";
-      form.set({ probe: result, mode: "video", formatId: first, selectedEntries: (result.entries ?? []).map((_, i) => i) });
+      form.set({
+        probe: result,
+        mode: "video",
+        formatId: first,
+        selectedEntries: (result.entries ?? []).map((_, i) => i),
+        clip: false,
+        clipStart: "",
+        clipEnd: "",
+      });
     },
     onError: (error) => notify.error(t("download.toast.probeError"), { body: error }),
   });
@@ -172,6 +182,7 @@ export default function DownloadPage() {
         mode: form.batchMode,
         audioCodec: form.audioCodec,
         maxHeight: form.maxHeight,
+        sponsorblock: form.sponsorblock,
       }),
     );
   };
@@ -272,6 +283,8 @@ export default function DownloadPage() {
           audioCodec: form.audioCodec,
           title: form.probe!.title,
           subtitles: subtitles.params,
+          sponsorblock: form.sponsorblock,
+          section: clipSection(form.clip, form.clipStart, form.clipEnd, form.probe!.duration),
         }),
       )
       .catch((err) => notify.error(errorMessage(t, err)));
@@ -304,6 +317,14 @@ export default function DownloadPage() {
         label={t("download.embedMeta")}
         onChange={(_, d) => updateSettings({ downloadEmbedMeta: d.checked }).catch(() => undefined)}
       />
+      <Switch
+        checked={form.sponsorblock}
+        label={
+          <InfoLabel info={t("download.sponsorblockHint")}>{t("download.sponsorblock")}</InfoLabel>
+        }
+        onChange={(_, d) => form.set({ sponsorblock: d.checked })}
+      />
+      {form.tab === "single" && form.probe && !form.probe.isPlaylist && !!form.probe.duration && <ClipField probe={form.probe} />}
       <SubtitlesField subtitles={subtitles} />
     </Panel>
   );

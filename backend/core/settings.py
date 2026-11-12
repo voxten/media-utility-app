@@ -56,6 +56,7 @@ def default_settings() -> Dict[str, Any]:
         "mica": True,  # Windows 11 backdrop; applied on next start
         "outputDir": str(default_output_dir()),
         "cookies": {"youtube": "", "x": "", "instagram": ""},
+        "cookiesFromBrowser": "",  # "" | firefox | chrome | edge | brave | opera | vivaldi
         "maxConcurrency": min(4, os.cpu_count() or 4),
         "desktopNotifications": True,
         "completionSound": True,
@@ -197,4 +198,5 @@ class Settings:
                     found = str(p)
                     break
             result[site] = found
+        result["browser"] = self.get("cookiesFromBrowser") or None
         return result

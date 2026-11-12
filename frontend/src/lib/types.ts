@@ -9,6 +9,7 @@ export interface Settings {
   mica: boolean;
   outputDir: string;
   cookies: { youtube: string; x: string; instagram: string };
+  cookiesFromBrowser: "" | "firefox" | "chrome" | "edge" | "brave" | "opera" | "vivaldi";
   maxConcurrency: number;
   desktopNotifications: boolean;
   completionSound: boolean;

@@ -221,6 +221,8 @@ export const api = {
       audioCodec?: string;
       title?: string;
       subtitles?: DownloadSubtitles;
+      sponsorblock?: boolean;
+      section?: { start: number; end: number } | null;
     }) => call<JobId>("download", "start", params),
     batch: (params: {
       urls: string[];
@@ -230,6 +232,7 @@ export const api = {
       mode?: "video" | "audio";
       audioCodec?: string;
       maxHeight?: number;
+      sponsorblock?: boolean;
     }) => call<JobId>("download", "batch", params),
     pendingQueue: () => call<PendingQueue | null>("download", "pending_queue"),
     resumeQueue: () => call<JobId>("download", "resume_queue"),

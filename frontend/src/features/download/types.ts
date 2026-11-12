@@ -32,6 +32,7 @@ export interface ProbeResult {
   thumbnail: string | null;
   isPlaylist?: boolean;
   photoCount?: number;
+  chapters?: Array<{ title: string; start: number; end: number }>;
   entries?: PlaylistEntry[];
   formats: Record<Mode, Format[]>;
 }

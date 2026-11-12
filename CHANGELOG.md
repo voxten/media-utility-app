@@ -10,6 +10,9 @@ The app shows this file (and its Polish translation, [CHANGELOG.pl.md](CHANGELOG
 
 ### Added
 
+- **Video Downloader** can download only part of a video: type a time range or pick one of its chapters.
+- **Video Downloader** can cut sponsor segments, self-promotion and subscribe reminders out of YouTube videos with SponsorBlock, also in queues.
+- Settings → Files: cookies can come straight from Firefox, Chrome, Edge, Brave, Opera or Vivaldi when a site has no cookie file, for Video Downloader and Instagram.
 - On the first start the app uses the language of Windows: Polish on a Polish system, English otherwise (it used to start in Polish every time).
 - Video tools (Video & Audio Converter, Video Downloader, Audio-Video Sync, Video to GIF, Transcription) offer to install FFmpeg right on the page when it is missing, instead of failing only after you start a task.
 - **Windows integration**: the installer can add "Open in Media Studio" to the right-click menu of images, videos, audio and PDF files, list the app under "Open with" and add it to "Send to". The files open in the "Open in tool" dialog of the running window; several files selected together arrive as one set.
