@@ -85,6 +85,8 @@ polish.ShellIntegration=Dodaj „Otwórz w Media Studio” do menu plików, „O
 polish.OpenInApp=Otwórz w Media Studio
 english.ShellIntegration=Add "Open in Media Studio" to the file menu, "Open with" and "Send to"
 english.OpenInApp=Open in Media Studio
+polish.RemoveDataConfirm=Usunąć też ustawienia, historię, ciasteczka, modele AI, dodatki i FFmpeg pobrane przez Media Studio?%n%nPliki zapisane w folderach wyników zostaną.
+english.RemoveDataConfirm=Also remove the settings, history, cookies, AI models, add-ons and FFmpeg downloaded by Media Studio?%n%nFiles saved in your output folders are kept.
 english.DowngradeConfirm=A newer version (%1) is installed than the one in this installer (%2).%n%nInstall the older version anyway?
 
 [Tasks]
@@ -101,6 +103,7 @@ Type: filesandordirs; Name: "{userappdata}\MediaStudio\webview\EBWebView\Default
 
 [Files]
 Source: "..\dist\MediaStudio\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\THIRD_PARTY_NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
@@ -171,6 +174,17 @@ begin
     if Result <> 0 then
       Exit;
   end;
+end;
+
+{ Settings, models and add-ons live outside the install folder; the user decides whether they go too. }
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  if (CurUninstallStep = usPostUninstall) and not UninstallSilent then
+    if MsgBox(CustomMessage('RemoveDataConfirm'), mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then
+    begin
+      DelTree(ExpandConstant('{userappdata}\MediaStudio'), True, True, True);
+      DelTree(ExpandConstant('{localappdata}\MediaStudio'), True, True, True);
+    end;
 end;
 
 function IsUpdate(): Boolean;

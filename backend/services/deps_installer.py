@@ -37,6 +37,9 @@ logger = logging.getLogger(__name__)
 
 LAMA_MODEL_URL = "https://github.com/Sanster/models/releases/download/add_big_lama/big-lama.pt"
 # Pinned releases: a fixed URL is what lets the download be checked against a fixed SHA-256.
+# Add-ons are pinned like faster-whisper, so a new release cannot break an install that worked.
+TORCH_PACKAGES = ["torch==2.15.0"]
+REMBG_PACKAGES = ["rembg[cpu]==2.0.87", "onnxruntime==1.31.1", "pymatting==1.1.16"]
 FFMPEG_WINDOWS_URL = "https://github.com/GyanD/codexffmpeg/releases/download/9.0.2/ffmpeg-9.0.2-essentials_build.zip"
 FFMPEG_WINDOWS_SHA256 = "60f467265b1e312373dbcd92200c2618a74850f98d3d078e94296bb3fa2047ba"
 GIFSICLE_WINDOWS_URL = "https://eternallybored.org/misc/gifsicle/releases/gifsicle-1.97-win64.zip"
@@ -167,7 +170,7 @@ def _run_pip(ctx: JobContext, packages: Sequence[str], target: Optional[Path] = 
 def _install_torch(ctx: JobContext) -> None:
     ctx.progress(5, "deps.status.installingTorch")
     ctx.log("deps.log.installingTorch")
-    _run_pip(ctx, ["torch"])
+    _run_pip(ctx, TORCH_PACKAGES)
     ctx.progress(40, "deps.status.torchInstalled")
     ctx.log("deps.log.torchInstalled")
 
@@ -375,7 +378,7 @@ def install_rembg(ctx: JobContext) -> Dict[str, Any]:
     if not rembg_packages_ready():
         ctx.progress(5, "deps.status.installingRembg")
         ctx.log("deps.log.installingRembg")
-        _run_pip(ctx, ["rembg[cpu]", "onnxruntime", "pymatting"])
+        _run_pip(ctx, REMBG_PACKAGES)
 
         ctx.progress(20, "deps.status.verifying")
         ctx.log("deps.log.verifying")

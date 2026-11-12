@@ -16,6 +16,10 @@ Polskie tłumaczenie [CHANGELOG.md](CHANGELOG.md), pokazywane w aplikacji przy p
 - **Konwerter wideo i audio**: zmiana formatu filmów (MP4, MKV, MOV, WebM) i dźwięku (MP3, M4A, OGG, Opus, WAV, FLAC), wybór jakości albo docelowego rozmiaru pliku, np. 25 MB, przycinanie na osi czasu, zmniejszanie rozdzielczości, usuwanie dźwięku, wyciąganie samego dźwięku i wyrównywanie głośności. Można konwertować kilka plików naraz; filmy i pliki audio da się do niego wysłać z innych narzędzi.
 ### Zmieniono
 
+- Odinstalowanie pyta, czy usunąć też ustawienia, historię, ciasteczka, modele AI, dodatki i FFmpeg; pliki zapisane w folderach wyników nigdy nie są usuwane.
+- MediaStudio.exe pokazuje wersję i nazwę we Właściwościach → Szczegóły.
+- PyTorch, rembg i ONNX Runtime instalują się w sprawdzonych, przypiętych wersjach, więc ich nowe wydanie nie zepsuje instalacji.
+- THIRD_PARTY_NOTICES.md wymienia dołączone i pobierane komponenty z ich licencjami; instalator kopiuje go obok aplikacji. README opisuje instalację, ostrzeżenie SmartScreen i aktualne narzędzia.
 - **Generator postępu** zapisuje kartę w folderze z pola „Folder zapisu” z nazwą pliku, którą można zmienić, zamiast za każdym razem pytać, gdzie zapisać.
 - Pasek na dole każdego narzędzia w spoczynku podpowiada następny krok (wybierz plik, pliki gotowe), a zadanie pokazuje tylko w trakcie. Zakończone i nieudane zadania są zgłaszane raz, w dymku i na karcie zadania, zamiast zostawać w pasku.
 - Konwerter, Pobieranie wideo, Instagram, Tekst na mowę i Synchronizacja audio-wideo mają to samo pole folderu zapisu co reszta narzędzi. Synchronizacja zapisuje w folderze zapisu zamiast obok filmu źródłowego i ma pole nazwy pliku.

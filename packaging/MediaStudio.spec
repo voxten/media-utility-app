@@ -100,6 +100,34 @@ a = Analysis(
 )
 pyz = PYZ(a.pure)
 
+
+def version_info():
+    """Details shown in the exe's Properties dialog, from backend/__init__.py."""
+    import re
+
+    from PyInstaller.utils.win32.versioninfo import (
+        FixedFileInfo, StringFileInfo, StringStruct, StringTable, VarFileInfo, VarStruct, VSVersionInfo,
+    )
+
+    with open(os.path.join(ROOT, "backend", "__init__.py"), encoding="utf-8") as f:
+        version = re.search(r'APP_VERSION = "([^"]+)"', f.read()).group(1)
+    numbers = tuple(int(n) for n in (re.findall(r"\d+", version) + ["0"] * 4)[:4])
+    strings = [
+        StringStruct("CompanyName", "Voxten"),
+        StringStruct("FileDescription", "Media Studio"),
+        StringStruct("FileVersion", version),
+        StringStruct("InternalName", "MediaStudio"),
+        StringStruct("LegalCopyright", "Copyright (c) Voxten"),
+        StringStruct("OriginalFilename", "MediaStudio.exe"),
+        StringStruct("ProductName", "Media Studio"),
+        StringStruct("ProductVersion", version),
+    ]
+    return VSVersionInfo(
+        ffi=FixedFileInfo(filevers=numbers, prodvers=numbers),
+        kids=[StringFileInfo([StringTable("040904B0", strings)]), VarFileInfo([VarStruct("Translation", [0x0409, 1200])])],
+    )
+
+
 exe = EXE(
     pyz,
     a.scripts,
@@ -107,6 +135,7 @@ exe = EXE(
     exclude_binaries=True,
     name="MediaStudio",
     icon=os.path.join(ROOT, "assets", "app.ico"),
+    version=version_info(),
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

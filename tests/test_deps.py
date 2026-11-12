@@ -269,3 +269,11 @@ def test_ffmpeg_install_runs_when_only_ffprobe_is_missing(monkeypatch, tmp_path,
 
     deps_installer.install_ffmpeg(ctx)
     assert {p.name for p in (tmp_path / "data" / "bin").iterdir()} == {"ffmpeg.exe", "ffprobe.exe"}
+
+
+def test_addon_packages_are_pinned():
+    from backend.core import whisper_models
+    from backend.services import deps_installer
+
+    for spec in [*deps_installer.TORCH_PACKAGES, *deps_installer.REMBG_PACKAGES, *whisper_models.ENGINE_PACKAGES]:
+        assert "==" in spec, spec

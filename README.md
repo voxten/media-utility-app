@@ -4,13 +4,14 @@ Windows desktop toolbox for media, documents and text. It is a native window (py
 
 | Tool | What it does |
 |---|---|
-| Video downloader | YouTube, TikTok, X and other sites via yt-dlp: format table, audio only, subtitles, cover art and metadata, playlists with per-entry picks, a batch queue with a quality or audio format for every link, a download archive that skips links saved before, and a queue that resumes after a restart |
+| Video downloader | YouTube, TikTok, X and other sites via yt-dlp: format table, audio only, subtitles, cover art and metadata, playlists with per-entry picks, a batch queue with a quality or audio format for every link, a download archive that skips links saved before, a queue that resumes after a restart, part of a video by time range or chapter, SponsorBlock for YouTube and cookies from a cookie file or straight from a browser |
+| Video & audio converter | MP4, MKV, MOV, WebM and MP3, M4A, OGG, Opus, WAV, FLAC: quality presets or a target file size (two-pass), trim on a timeline, scale down, remove or extract the sound, loudness normalization, several files at once |
 | Instagram download | Posts, carousels, reels, stories, highlights and whole profiles in full quality, picked from a preview grid (yt-dlp for posts, gallery-dl for stories and profiles) |
 | Audio-video sync | Waveform and frame timeline for fixing out-of-sync audio, short preview clips, export by stream copy or re-encode |
 | Video to GIF | A clip of a video as GIF, WebP or APNG: frame range, frame rate, width, speed, crop, reverse, size estimate |
 | GIF editor | Trim, crop, resize, rotate, speed, reverse and boomerang for GIF, WebP and APNG; colour count, dithering, lossy compression and a size limit (optional gifsicle) |
 | Transcription | Speech to SRT, VTT or TXT on this computer with Whisper (Base, Small, Turbo), optional translation into English |
-| Background remover | AI cutouts with BiRefNet, RMBG 1.4, U2Net, IS-Net; edge debleed, touch-up brush and split slider |
+| Background remover | AI cutouts with BiRefNet (full and lite), IS-Net and U2Net; edge debleed, touch-up brush and split slider |
 | Image upscaler | AI 2× / 4× super-resolution via Real-ESRGAN (general and anime) with tiled inference for large images |
 | Watermark remover | Paint a mask, inpaint with OpenCV (Telea / Navier-Stokes) or the optional LaMa model |
 | Image compressor | Smaller PNG, JPEG and WebP files with adjustable quality and size caps |
@@ -21,7 +22,7 @@ Windows desktop toolbox for media, documents and text. It is a native window (py
 | PDF compressor | Smaller PDFs with DPI and quality presets |
 | PDF splitter | Click pages into coloured groups, each saved as its own PDF |
 | PDF converter | PDF pages to PNG, JPEG or WebP, or images to a PDF |
-| PDF extractor | Embedded text and images from PDF documents |
+| PDF extractor | Text from PDF documents, saved as a TXT file |
 | Duplicate finder | Perceptual-hash search for similar images and videos; moves duplicates to the Recycle Bin, exports CSV |
 | Progress generator | Progress-bar graphics exported as PNG |
 
@@ -29,11 +30,22 @@ Other features:
 - **Tasks panel:** "Now" and "History" tabs, history from earlier runs with search and filters, "Open file", "Show in folder", "Retry" and "Send to" on every task; tasks run in a queue with an adjustable number at once;
 - **Tray icon:** closing the window hides it to the notification area while jobs keep running; "Download link from clipboard" opens a copied link in the matching download tool;
 - **Drop anywhere:** files dropped outside a drop area open "Open in a tool";
+- **Windows integration:** the installer can add "Open in Media Studio" to the Explorer menu, "Open with" and "Send to"; the taskbar button shows task progress;
 - **Download engine updates:** newer yt-dlp and gallery-dl install from Settings, are checked before use and can be rolled back;
-- **Add-ons:** PyTorch, rembg, model weights (BiRefNet, Real-ESRGAN, LaMa, Whisper), FFmpeg and gifsicle install from Settings; every download is checked against a pinned SHA-256;
+- **Add-ons:** PyTorch, rembg, model weights (BiRefNet, Real-ESRGAN, LaMa, Whisper), FFmpeg and gifsicle install from Settings; model weights, FFmpeg and gifsicle are checked against pinned SHA-256 checksums and Python add-ons install at pinned versions;
 - `Ctrl+K` command palette; `Ctrl+Enter` runs, `Esc` cancels and `Ctrl+O` adds files in every tool;
 - light, dark and system themes, Windows 11 Mica backdrop, Polish and English interface;
 - "What's new" in Settings shows [CHANGELOG.md](CHANGELOG.md) / [CHANGELOG.pl.md](CHANGELOG.pl.md).
+
+## Installing
+
+1. Download `MediaStudio-Setup-<version>.exe` and run it. It installs for your user only and needs no administrator rights.
+2. Windows SmartScreen may say "Windows protected your PC" because the installer is not signed. Choose **More info → Run anyway**.
+3. Video tools offer to install FFmpeg on first use; AI tools offer their models the same way.
+
+Uninstalling asks whether to remove the settings, history, cookies, models and add-ons as well. Files you saved are never removed.
+
+Third-party components and their licenses are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Requirements
 

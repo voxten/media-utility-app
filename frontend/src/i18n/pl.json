@@ -260,7 +260,7 @@
     "advanced": {
       "title": "Narzędzia i zaawansowane",
       "customFfmpeg": "Niestandardowa ścieżka do FFmpeg",
-      "customFfmpegDesc": "Wskaż własny plik ffmpeg.exe jeśli chcesz użyć innej instalacji niż wbudowana w Media Studio.",
+      "customFfmpegDesc": "Opcjonalnie wskaż własny ffmpeg.exe zamiast tego z PATH albo zainstalowanego w Zależnościach.",
       "customFfmpegInvalid": "Wskaż plik ffmpeg.exe albo folder, w którym się znajduje.",
       "closeToTray": "Zamykanie do zasobnika",
       "closeToTrayDesc": "Przycisk X chowa okno do zasobnika systemowego, a zadania działają dalej. Program zamkniesz z menu ikony w zasobniku.",

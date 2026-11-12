@@ -20,6 +20,10 @@ The app shows this file (and its Polish translation, [CHANGELOG.pl.md](CHANGELOG
 - **Video & Audio Converter**: change the format of videos (MP4, MKV, MOV, WebM) and audio (MP3, M4A, OGG, Opus, WAV, FLAC), choose a quality or a target file size such as 25 MB, trim on a timeline, scale down, remove the sound, extract only the sound and even out the loudness. Several files can be converted at once; video and audio files can be sent to it from other tools.
 ### Changed
 
+- Uninstalling asks whether to remove the settings, history, cookies, AI models, add-ons and FFmpeg as well; files saved in output folders are never removed.
+- MediaStudio.exe shows its version and name under Properties → Details.
+- PyTorch, rembg and ONNX Runtime install at tested, pinned versions, so a new release of them cannot break an install.
+- THIRD_PARTY_NOTICES.md lists the bundled and downloaded components with their licenses; the installer copies it next to the app. README describes installing, the SmartScreen warning and the current tools.
 - **Progress Generator** saves the card into the output folder with a file name you can change, instead of asking where to save every time.
 - The bar at the bottom of each tool says what to do next while nothing runs (pick a file, files ready) and shows a task only while it runs. Finished and failed tasks are reported once, in the toast and on the task card, instead of staying in the bar.
 - Video Converter, Video Downloader, Instagram, Text to Speech and Audio-Video Sync use the same output folder field as the other tools. Audio-Video Sync saves into the output folder instead of next to the source video, with a file name field.
