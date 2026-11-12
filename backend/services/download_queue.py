@@ -30,13 +30,24 @@ QUEUE_VERSION = 2
 
 
 def expand_batch_urls(
-    urls: List[str], cookies: Optional[Dict[str, Optional[str]]] = None
+    urls: List[str],
+    cookies: Optional[Dict[str, Optional[str]]] = None,
+    ctx: Optional[JobContext] = None,
+    report: bool = False,
 ) -> List[Dict[str, Any]]:
-    """Expand playlist/folder URLs into individual video items with flat extraction."""
+    """Expand playlist/folder URLs into individual video items with flat extraction.
+
+    Checking each link takes a request, so ``ctx`` stops the loop when the job is cancelled and,
+    with ``report``, shows how many links are checked.
+    """
     items: List[Dict[str, Any]] = []
     seen_urls: set = set()
 
-    for raw_url in urls:
+    for number, raw_url in enumerate(urls, 1):
+        if ctx:
+            ctx.check_cancelled()
+            if report and len(urls) > 1:
+                ctx.progress(None, "download.status.probingLinks", {"current": number, "total": len(urls)})
         url = sanitize_x_url(raw_url)
         if not url:
             continue
@@ -198,9 +209,9 @@ class ActiveBatchQueue:
         except OSError as exc:
             self.ctx.log("download.log.queueNotSaved", "warning", error=str(exc))
 
-    def add_urls(self, urls: List[str]) -> Optional[int]:
+    def add_urls(self, urls: List[str], report: bool = False) -> Optional[int]:
         """Queue ``urls``; None when the batch has already finished and they were not added."""
-        expanded = expand_batch_urls(urls, self.cookies)
+        expanded = expand_batch_urls(urls, self.cookies, self.ctx, report)
         added_count = 0
         with self.lock:
             if self.closed:
@@ -234,7 +245,10 @@ def add_to_batch(job_id: Optional[str], urls: List[str]) -> bool:
     if not queue:
         return False
 
-    return queue.add_urls(clean_urls) is not None
+    try:
+        return queue.add_urls(clean_urls) is not None
+    except JobCancelled:
+        return False
 
 
 def download_batch(
@@ -282,7 +296,7 @@ def download_batch(
 
     finished_normally = False
     try:
-        batch_queue.add_urls(urls)
+        batch_queue.add_urls(urls, report=True)
         if persist and replaces:
             try:
                 remove_queue(replaces)

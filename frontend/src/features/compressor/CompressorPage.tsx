@@ -11,11 +11,12 @@ import {
   Text,
   tokens,
 } from "@fluentui/react-components";
-import { Add16Regular, ArrowMinimize24Regular, ArrowRight16Regular, Delete16Regular, Image24Regular } from "@fluentui/react-icons";
+import { Add16Regular, ArrowMinimize24Regular, ArrowRight16Regular, Delete16Regular, ErrorCircle24Regular, Image24Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { ActionBar } from "../../components/ActionBar";
 import { AfterGallery } from "../../components/AfterGallery";
 import { DropZone } from "../../components/DropZone";
+import { EmptyState } from "../../components/EmptyState";
 import { FileStrip } from "../../components/FileStrip";
 import { ImageComparison } from "../../components/ImageComparison";
 import { useNotify } from "../../components/notify";
@@ -102,6 +103,7 @@ export default function CompressorPage() {
   const outputDir = useOutputDir(form.outputDir);
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [compressed, setCompressed] = useState<CompressedPreview | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
 
   const job = useJobRunner<CompressResult>("compressor", {
@@ -141,16 +143,17 @@ export default function CompressorPage() {
   useEffect(() => {
     setPreview(null);
     setCompressed(null);
+    setPreviewError(null);
     if (!current) return;
     let live = true;
     api.compressor
       .loadPreview(current)
       .then((p) => live && setPreview(p))
-      .catch((err) => notify.error(errorMessage(t, err)));
+      .catch((err) => live && setPreviewError(errorMessage(t, err)));
     return () => {
       live = false;
     };
-  }, [current, notify, t]);
+  }, [current, t]);
 
   useEffect(() => {
     if (!preview) return;
@@ -161,7 +164,7 @@ export default function CompressorPage() {
         const res = await api.compressor.preview(preview.path, params);
         if (live) setCompressed(res);
       } catch (err) {
-        console.warn("Compressor preview failed:", err);
+        if (live) setPreviewError(errorMessage(t, err));
       } finally {
         if (live) setUpdating(false);
       }
@@ -170,9 +173,10 @@ export default function CompressorPage() {
       live = false;
       window.clearTimeout(timer);
     };
-  }, [preview, params]);
+  }, [preview, params, t]);
 
-  const canStart = !job.running && !!compressed && !!outputDir;
+  // A file that cannot be previewed must not block compressing the others.
+  const canStart = !job.running && !!outputDir && (!!compressed || (!!previewError && files.length > 1));
   const start = () =>
     job.start(() => api.compressor.start({ files, outputDir, ...params })).catch((err) => notify.error(t("compressor.toast.error"), { body: errorMessage(t, err) }));
 
@@ -269,6 +273,8 @@ export default function CompressorPage() {
                 beforeLabel={t("compressor.before")}
                 afterLabel={t("compressor.after")}
               />
+            ) : previewError ? (
+              <EmptyState icon={ErrorCircle24Regular} title={previewError} />
             ) : (
               <Spinner label={t("common.loading")} />
             )}

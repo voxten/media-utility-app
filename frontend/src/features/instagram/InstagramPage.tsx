@@ -22,7 +22,6 @@ import { PathPicker } from "../../components/PathPicker";
 import { ResultCard } from "../../components/ResultCard";
 import { api } from "../../lib/bridge";
 import { formatBytes, formatDuration } from "../../lib/format";
-import { translateMessage } from "../../lib/jobMessage";
 import type { InstagramItem, InstagramListing, InstagramResult } from "../../lib/types";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useSettings } from "../../stores/settings";
@@ -96,7 +95,7 @@ export default function InstagramPage() {
 
   const probe = useJobRunner<InstagramListing>("instagram.probe", {
     onResult: (result) => form.set({ post: result, selected: result.items.filter((it) => it.selected).map((it) => it.index) }),
-    onError: (error) => notify.error(t("instagram.toast.probeError"), { body: translateMessage(t, error) }),
+    onError: (error) => notify.error(t("instagram.toast.probeError"), { body: error }),
   });
 
   const download = useJobRunner<InstagramResult>("instagram", {
@@ -104,7 +103,7 @@ export default function InstagramPage() {
     onDone: (result) => {
       if (!result.files.length) notify.warning(t("instagram.toast.failed", { count: result.failed }));
     },
-    onError: (error) => notify.error(t("instagram.toast.error"), { body: translateMessage(t, error) }),
+    onError: (error) => notify.error(t("instagram.toast.error"), { body: error }),
   });
 
   const running = probe.running || download.running;

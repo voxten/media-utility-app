@@ -16,6 +16,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
+from backend.core.errors import AppError, MissingFile
 from backend.core import deps
 from backend.core.jobs import JobContext
 
@@ -29,7 +30,7 @@ def resolve_binary(name: str) -> str:
     deps.ensure_app_paths()
     path = shutil.which(name)
     if not path:
-        raise RuntimeError(f"Required binary '{name}' was not found.")
+        raise AppError("errors.binaryMissing", name=name)
     return path
 
 
@@ -187,7 +188,7 @@ def probe_media(file_path: str) -> Dict[str, Any]:
     """Inspects a video or audio file with ffprobe and extracts stream metadata and a thumbnail."""
     p = Path(file_path)
     if not p.is_file():
-        raise FileNotFoundError(f"File not found: {file_path}")
+        raise MissingFile(file_path)
 
     ffprobe = resolve_binary("ffprobe")
     ffmpeg = resolve_binary("ffmpeg")
@@ -202,7 +203,7 @@ def probe_media(file_path: str) -> Dict[str, Any]:
         data = json.loads(proc.stdout.decode("utf-8", errors="replace"))
     except Exception as e:
         logger.error("ffprobe failed on %s: %s", file_path, e)
-        raise RuntimeError(f"Could not inspect media file: {e}") from e
+        raise AppError("errors.mediaUnreadable", file=p.name) from e
 
     format_info = data.get("format", {})
     streams = data.get("streams", [])
@@ -312,7 +313,7 @@ def extract_frames(
     """
     p = Path(file_path)
     if not p.is_file():
-        raise FileNotFoundError(f"File not found: {file_path}")
+        raise MissingFile(file_path)
 
     ffmpeg = resolve_binary("ffmpeg")
     count = max(1, min(int(count), 200))

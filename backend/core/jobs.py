@@ -12,20 +12,23 @@ import logging
 import threading
 import time
 import uuid
+from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Deque, Dict, List, Optional, Tuple
 
+from backend.core.errors import describe
 from backend.core.history import JobHistory
 
 Emit = Callable[[str, Dict[str, Any]], None]
 
 PROGRESS_INTERVAL_S = 0.1
-# Upper bound of the thread pool; the user-facing limit (``maxConcurrency``) is enforced by JobManager.
-POOL_SIZE = 16
+# Highest ``maxConcurrency``. The pool has spare threads on top, so quick lookups (link checks, PDF
+# inspection) start at once even when every slot is busy.
+MAX_LIMIT = 16
+POOL_SIZE = MAX_LIMIT + 8
 
 logger = logging.getLogger(__name__)
-QUEUE_POLL_S = 0.2
 # Finished jobs kept for get()/list()/retry(); older ones live on only in the saved history.
 MAX_FINISHED_JOBS = 100
 
@@ -152,9 +155,13 @@ class JobManager:
         self._pool = ThreadPoolExecutor(max_workers=POOL_SIZE, thread_name_prefix="job")
         self._jobs: Dict[str, JobInfo] = {}
         self._lock = threading.Lock()
-        self._slots = threading.Condition()
+        # Limited jobs wait here, not in the pool: a waiting job holds no thread.
+        self._slots = threading.Lock()
+        self._queue: Deque[Tuple[JobInfo, Callable[[JobContext], Any]]] = deque()
         self._limit = 1
         self._busy = 0
+        self._running = 0
+        self._runs = threading.Condition()
         self.set_limit(max_workers)
 
     @property
@@ -168,8 +175,8 @@ class JobManager:
         except (TypeError, ValueError):
             return
         with self._slots:
-            self._limit = max(1, min(POOL_SIZE, value))
-            self._slots.notify_all()
+            self._limit = max(1, min(MAX_LIMIT, value))
+        self._start_queued()
 
     def submit(
         self,
@@ -191,38 +198,47 @@ class JobManager:
         with self._lock:
             self._jobs[job_id] = info
         self._emit("job:started", info.to_dict())
-        self._pool.submit(self._run, info, fn)
+        if not limited:
+            self._pool.submit(self._run, info, fn)
+            return job_id
+        with self._slots:
+            free = self._busy < self._limit and not self._queue
+            if free:
+                self._busy += 1
+            else:
+                ctx.progress(None, "jobs.pending")
+                self._queue.append((info, fn))
+        if free:
+            self._pool.submit(self._run, info, fn)
         return job_id
 
-    def _acquire(self, ctx: JobContext) -> None:
-        """Wait for a free slot; raises JobCancelled if the job is cancelled while queued."""
-        with self._slots:
-            queued = self._busy >= self._limit
-            if queued:
-                ctx.progress(None, "jobs.pending")
-            while self._busy >= self._limit:
-                ctx.check_cancelled()
-                self._slots.wait(QUEUE_POLL_S)
-            ctx.check_cancelled()
-            self._busy += 1
-        if queued:
+    def _start_queued(self) -> None:
+        """Hand queued jobs to the pool while slots are free."""
+        while True:
+            with self._slots:
+                if self._busy >= self._limit or not self._queue:
+                    return
+                info, fn = self._queue.popleft()
+                self._busy += 1
+            ctx = info.context
+            assert ctx is not None
             ctx.message, ctx.params = None, {}
             ctx._send("job:progress", {"percent": None, "message": None, "params": {}})
+            self._pool.submit(self._run, info, fn)
 
     def _release(self) -> None:
         with self._slots:
             self._busy -= 1
-            self._slots.notify()
+        self._start_queued()
 
     def _run(self, info: JobInfo, fn: Callable[[JobContext], Any]) -> None:
         ctx = info.context
         assert ctx is not None
         result: Any = None
-        acquired = False
+        with self._runs:
+            self._running += 1
         try:
-            if info.limited:
-                self._acquire(ctx)
-                acquired = True
+            ctx.check_cancelled()
             result = fn(ctx)
         except JobCancelled:
             self._finish(info, "cancelled")
@@ -233,8 +249,9 @@ class JobManager:
                 self._finish(info, "cancelled")
                 self._emit("job:cancelled", {"jobId": info.id})
             else:
-                self._finish(info, "error", str(exc))
-                self._emit("job:error", {"jobId": info.id, "error": str(exc)})
+                message = describe(exc)
+                self._finish(info, "error", message)
+                self._emit("job:error", {"jobId": info.id, "error": message})
         else:
             if ctx.cancelled:
                 self._finish(info, "cancelled")
@@ -243,9 +260,12 @@ class JobManager:
                 self._finish(info, "done")
                 self._emit("job:done", {"jobId": info.id, "result": result})
         finally:
-            if acquired:
+            if info.limited:
                 self._release()
-        self._record(info, result if info.status == "done" else None)
+            self._record(info, result if info.status == "done" else None)
+            with self._runs:
+                self._running -= 1
+                self._runs.notify_all()
 
     def _record(self, info: JobInfo, result: Any) -> None:
         if self._history is None:
@@ -292,6 +312,14 @@ class JobManager:
         if not info or info.status != "running" or not info.context:
             return False
         info.context.cancel()
+        with self._slots:
+            queued = next((entry for entry in self._queue if entry[0] is info), None)
+            if queued:
+                self._queue.remove(queued)
+        if queued:
+            self._finish(info, "cancelled")
+            self._emit("job:cancelled", {"jobId": info.id})
+            self._record(info, None)
         return True
 
     def get(self, job_id: str) -> Optional[Dict[str, Any]]:
@@ -307,9 +335,17 @@ class JobManager:
         with self._lock:
             return [info.to_dict() for info in self._jobs.values()]
 
-    def shutdown(self, wait: bool = False) -> None:
+    def shutdown(self, wait: bool = False, timeout: float = 0.0) -> bool:
+        """Cancels every job; ``wait`` blocks until all have stopped, ``timeout`` waits at most that long.
+
+        True when no job is still running.
+        """
+        with self._slots:
+            self._queue.clear()
         with self._lock:
             for info in self._jobs.values():
                 if info.context:
                     info.context.cancel()
         self._pool.shutdown(wait=wait, cancel_futures=True)
+        with self._runs:
+            return self._runs.wait_for(lambda: self._running == 0, timeout=timeout)

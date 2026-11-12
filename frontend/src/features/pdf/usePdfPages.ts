@@ -1,7 +1,10 @@
 // Page thumbnails of one PDF, rendered by the backend's pdf.inspect job and kept per file for the session.
 
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { api } from "../../lib/bridge";
+import { errorMessage } from "../../lib/errors";
+import { jobMessage, translateMessage } from "../../lib/jobMessage";
 import { useJob } from "../../stores/jobs";
 
 export interface PdfPageInfo {
@@ -12,6 +15,11 @@ export interface PdfPageInfo {
   thumb: string;
   width: number;
   height: number;
+}
+
+interface InspectResult {
+  pages: PdfPageInfo[];
+  errors: { file: string; error: string }[];
 }
 
 /** Files whose thumbnails stay in memory; reopening an older one renders it again. */
@@ -28,12 +36,15 @@ function remember(file: string, pages: PdfPageInfo[]) {
 }
 
 export function usePdfPages(file: string | null) {
+  const { t } = useTranslation();
   const [jobId, setJobId] = useState<string | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
   const job = useJob(jobId);
   const cached = file ? cache.get(file) : undefined;
 
   useEffect(() => {
     setJobId(null);
+    setFailed(null);
     if (!file || cache.has(file)) return;
     let live = true;
     let started: string | null = null;
@@ -44,22 +55,25 @@ export function usePdfPages(file: string | null) {
         if (live) setJobId(id);
         else api.jobs.cancel(id).catch(() => undefined);
       })
-      .catch(() => undefined);
+      .catch((err) => live && setFailed(errorMessage(t, err)));
     return () => {
       live = false;
       // Switching files mid-render stops the old job instead of letting it finish unseen.
       if (started) api.jobs.cancel(started).catch(() => undefined);
     };
-  }, [file]);
+  }, [file, t]);
 
-  const finished = job?.status === "done" ? (job.result as { pages: PdfPageInfo[] }).pages : undefined;
+  const result = job?.status === "done" ? (job.result as InspectResult) : undefined;
+  const finished = result?.pages;
   useEffect(() => {
-    if (file && finished) remember(file, finished);
+    if (file && finished?.length) remember(file, finished);
   }, [file, finished]);
 
+  const unreadable = result && !result.pages.length && result.errors[0] ? translateMessage(t, result.errors[0].error) : null;
+  const error = failed ?? (job?.status === "error" ? jobMessage(t, job) : unreadable);
   return {
     pages: cached ?? finished ?? ((job?.partials ?? []) as PdfPageInfo[]),
-    loading: !!file && !cached && job?.status !== "done" && job?.status !== "error",
-    error: job?.status === "error" ? job.error : null,
+    loading: !!file && !cached && !error && (!job || job.status === "running"),
+    error,
   };
 }

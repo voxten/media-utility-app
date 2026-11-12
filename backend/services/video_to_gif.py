@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 
 from PIL import Image
 
+from backend.core.errors import MissingFile
 from backend.core.ffmpeg import probe_media, run_ffmpeg
 from backend.core.jobs import JobContext
 from backend.core.paths import unique_path
@@ -168,7 +169,7 @@ def preview(path: str, params: Dict[str, Any]) -> Dict[str, Any]:
 def render(ctx: JobContext, params: Dict[str, Any]) -> Dict[str, Any]:
     path = params["path"]
     if not Path(path).is_file():
-        raise FileNotFoundError(f"File not found: {path}")
+        raise MissingFile(path)
     out_path = unique_path(Path(params["outPath"]))
     opts = OutputOptions.from_dict(params.get("output"))
     if opts.format not in VIDEO_FORMATS:

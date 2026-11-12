@@ -2,6 +2,7 @@ import fitz
 import pytest
 from pathlib import Path
 
+from backend.core.errors import AppError
 from backend.services import pdf
 
 
@@ -249,3 +250,22 @@ def test_compress_downsamples_large_images(tmp_path, ctx, preset):
     assert res["noGain"] is False
     assert res["outBytes"] < res["inBytes"] / 2
     assert not [log for log in ctx.of("job:log") if log["message"] == "pdf.log.rewriteWarning"]
+
+
+def test_password_protected_and_broken_pdfs_get_a_readable_reason(tmp_path, ctx):
+    locked = tmp_path / "locked.pdf"
+    with fitz.open() as doc:
+        doc.new_page()
+        doc.save(str(locked), encryption=fitz.PDF_ENCRYPT_AES_256, user_pw="secret", owner_pw="owner")
+    broken = tmp_path / "broken.pdf"
+    broken.write_bytes(b"garbage")
+
+    result = pdf.inspect(ctx, [str(locked), str(broken)])
+
+    assert [e["error"] for e in result["errors"]] == [
+        'errors.pdfEncrypted|{"file": "locked.pdf"}',
+        'errors.pdfUnreadable|{"file": "broken.pdf"}',
+    ]
+    assert [log["message"] for log in ctx.of("job:log")] == ["errors.pdfEncrypted", "errors.pdfUnreadable"]
+    with pytest.raises(AppError, match="errors.pdfEncrypted"):
+        pdf.compress(ctx, str(locked), str(tmp_path / "out.pdf"))

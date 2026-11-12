@@ -28,7 +28,6 @@ propcache==0.5.2
 proxy_tools==0.1.0
 pycparser==3.0
 pycryptodomex==3.23.0
-pydub==0.25.1
 pymediainfo==7.0.1
 PyMuPDF==1.27.2.3
 pypiwin32==223

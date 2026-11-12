@@ -13,6 +13,12 @@ describe("jobMessage", () => {
     expect(translateMessage(i18n.t, null)).toBe("");
   });
 
+  it("translates a backend error key sent with its values", () => {
+    expect(translateMessage(i18n.t, 'errors.fileMissing|{"file":"żółw.png"}')).toBe(i18n.t("errors.fileMissing", { file: "żółw.png" }));
+    expect(jobMessage(i18n.t, { ...base, status: "error", error: 'errors.fileLocked|{"file":"a.mp4"}' })).toContain("a.mp4");
+    expect(translateMessage(i18n.t, "a|{not json}")).toBe("a|{not json}");
+  });
+
   it("keeps URLs and file names used as job titles intact", () => {
     expect(translateMessage(i18n.t, "https://www.instagram.com/p/abc/")).toBe("https://www.instagram.com/p/abc/");
     expect(translateMessage(i18n.t, "clip.final.mp4")).toBe("clip.final.mp4");

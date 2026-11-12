@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
+from backend.core.errors import AppError, MissingFile
 from backend.core.ffmpeg import NO_WINDOW, extract_frames, probe_media, resolve_binary, run_capture, run_ffmpeg
 from backend.core.jobs import JobContext
 
@@ -78,7 +79,7 @@ def extract_waveform(
     """
     p = Path(file_path)
     if not p.is_file():
-        raise FileNotFoundError(f"File not found: {file_path}")
+        raise MissingFile(file_path)
 
     ffmpeg = resolve_binary("ffmpeg")
     target_points = max(50, min(5000, points))
@@ -114,7 +115,7 @@ def extract_waveform(
             raise
     except Exception as e:
         logger.error("FFmpeg waveform extraction failed: %s", e)
-        raise RuntimeError(f"Could not extract audio waveform: {e}") from e
+        raise AppError("errors.audioUnreadable", file=p.name) from e
 
     sample_count = len(raw_bytes) // 4
     if sample_count == 0:
@@ -146,11 +147,11 @@ def generate_preview(
     """
     v_path = Path(video_path)
     if not v_path.is_file():
-        raise FileNotFoundError(f"Video file not found: {video_path}")
+        raise MissingFile(video_path)
 
     a_path = Path(audio_path) if audio_path else v_path
     if not a_path.is_file():
-        raise FileNotFoundError(f"Audio file not found: {a_path}")
+        raise MissingFile(a_path)
 
     ffmpeg = resolve_binary("ffmpeg")
     preview_dur = max(2.0, min(120.0, float(duration)))
@@ -206,7 +207,7 @@ def generate_preview(
         if proc.returncode != 0:
             err = proc.stderr.decode("utf-8", errors="replace")
             logger.error("FFmpeg preview generation failed: %s", err)
-            raise RuntimeError(f"Preview generation failed: {err}")
+            raise AppError("errors.previewFailed")
 
         file_bytes = temp_out.read_bytes()
         data_url = f"data:video/mp4;base64,{base64.b64encode(file_bytes).decode('ascii')}"
@@ -233,12 +234,12 @@ def sync_video(ctx: JobContext, params: Dict[str, Any]) -> Dict[str, Any]:
     video_path = params["videoPath"]
     v_p = Path(video_path)
     if not v_p.is_file():
-        raise FileNotFoundError(f"Video file not found: {video_path}")
+        raise MissingFile(video_path)
 
     audio_path = params.get("audioPath")
     a_p = Path(audio_path) if audio_path else v_p
     if not a_p.is_file():
-        raise FileNotFoundError(f"Audio file not found: {a_p}")
+        raise MissingFile(a_p)
 
     out_path = Path(params["outputPath"])
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -306,7 +307,7 @@ def sync_video(ctx: JobContext, params: Dict[str, Any]) -> Dict[str, Any]:
                status_key="video_sync.status.syncing")
 
     if not out_path.is_file():
-        raise RuntimeError("Output file was not generated")
+        raise AppError("errors.outputMissing")
 
     final_size = out_path.stat().st_size
     ctx.progress(100, "video_sync.status.done")

@@ -170,7 +170,8 @@
       "failed": "Instalacja nie powiodła się",
       "detailLamaModelOnly": "Wymaga pobrania wag modelu big-lama.pt (~196 MB)",
       "detailLamaFull": "Wymaga instalacji PyTorch oraz modelu LaMa",
-      "detailRembgMissing": "Wymaga instalacji rembg oraz onnxruntime (~140 MB)",
+      "detailRembgMissing": "Wymaga instalacji rembg, onnxruntime i modelu BiRefNet",
+      "detailRembgModelOnly": "Wymaga pobrania modelu BiRefNet",
       "detailFfmpegMissing": "Brak programu FFmpeg na ścieżce PATH",
       "detailFfprobeMissing": "Jest FFmpeg, ale obok brakuje programu ffprobe",
       "detailGifsicleMissing": "Nie znaleziono gifsicle",
@@ -724,7 +725,8 @@
       "postprocessing": "Przetwarzanie końcowe…",
       "done": "Pobieranie zakończone.",
       "batchDone": "Kolejka zakończona.",
-      "subtitles": "Pobieranie napisów…"
+      "subtitles": "Pobieranie napisów…",
+      "probingLinks": "Sprawdzanie linków: {{current}}/{{total}}"
     },
     "log": {
       "itemFailed": "Nie udało się pobrać {{url}}: {{error}}",
@@ -1089,8 +1091,8 @@
     "dropHint": "lub kliknij, aby wybrać plik ({{formats}})",
     "modelPromo": {
       "title": "Model BiRefNet do usuwania tła",
-      "desc": "Do działania narzędzia wymagana jest biblioteka rembg oraz ONNX Runtime. Kliknij poniżej, aby zainstalować w tle.",
-      "installBtn": "Pobierz i aktywuj AI (~140 MB)",
+      "desc": "Usuwanie tła wymaga rembg, ONNX Runtime i modelu BiRefNet. Instalują się w tle.",
+      "installBtn": "Pobierz i aktywuj AI (~1,1 GB)",
       "ready": "Model AI jest gotowy do użycia!"
     },
     "options": {
@@ -1147,7 +1149,7 @@
       "installingTorch": "Instalowanie PyTorch…",
       "torchInstalled": "Zainstalowano PyTorch.",
       "installingRembg": "Instalowanie rembg i onnxruntime…",
-      "downloadingModel": "Pobieranie modelu LaMa ({{percent}}%)…",
+      "downloadingModel": "Pobieranie modelu AI ({{percent}}%)…",
       "downloading": "Pobieranie ({{percent}}%)…",
       "verifying": "Weryfikacja instalacji…",
       "downloadingFfmpeg": "Pobieranie FFmpeg ({{percent}}%)…",
@@ -1162,7 +1164,7 @@
       "torchInstalled": "PyTorch jest gotowy do użycia.",
       "installingRembg": "Instalowanie rembg i onnxruntime przez pip…",
       "pipOutput": "{{line}}",
-      "downloadingModel": "Pobieranie wag modelu AI LaMa (big-lama.pt)…",
+      "downloadingModel": "Pobieranie modelu {{model}}…",
       "modelDownloaded": "Model pobrany i pomyślnie zweryfikowany.",
       "downloadingFfmpeg": "Pobieranie przenośnego pakietu FFmpeg…",
       "extractingFfmpeg": "Rozpakowywanie plików wykonywalnych FFmpeg…",
@@ -1490,6 +1492,32 @@
     "pathMissing": "Plik lub folder już nie istnieje.",
     "openFailed": "Nie udało się otworzyć.",
     "trashFailed": "Nie udało się przenieść do Kosza.",
-    "imageUnreadable": "Nie udało się odczytać obrazu."
+    "imageUnreadable": "Nie udało się odczytać obrazu.",
+    "fileMissing": "Pliku {{file}} już nie ma.",
+    "fileLocked": "Plik {{file}} jest otwarty w innym programie albo chroniony. Zamknij go i spróbuj ponownie.",
+    "diskFull": "Dysk jest pełny.",
+    "outOfMemory": "Za mało pamięci. Zamknij inne programy albo użyj mniejszego pliku.",
+    "notFolder": "{{folder}} nie jest folderem.",
+    "binaryMissing": "Brakuje programu {{name}}. Zainstaluj go w Ustawienia → Zależności.",
+    "mediaUnreadable": "Nie udało się odczytać pliku {{file}} jako wideo ani audio.",
+    "audioUnreadable": "Nie udało się odczytać dźwięku z pliku {{file}}.",
+    "noAudio": "Plik nie ma ścieżki dźwiękowej.",
+    "outputMissing": "FFmpeg zakończył pracę, ale nie utworzył pliku. Szczegóły są w logu.",
+    "ffmpegPathInvalid": "Wybrana ścieżka nie wskazuje programu ffmpeg.",
+    "downloadCorrupted": "Plik {{file}} dotarł uszkodzony albo zmienił się na serwerze. Spróbuj ponownie później.",
+    "archiveIncomplete": "Pobrane archiwum nie zawiera: {{files}}.",
+    "installFailed": "Instalacja nie powiodła się, kod {{code}}. Szczegóły są w logu.",
+    "addonBroken": "Dodatek się zainstalował, ale nie daje się uruchomić. Szczegóły są w logu.",
+    "addonMissing": "To narzędzie potrzebuje dodatku. Zainstaluj go w Ustawienia → Zależności.",
+    "modelMissing": "Model nie jest zainstalowany. Zainstaluj go w Ustawienia → Zależności.",
+    "nothingProcessed": "Nie udało się przetworzyć żadnego pliku. Szczegóły są w logu.",
+    "noPages": "Brak stron do zapisania.",
+    "pdfEmpty": "PDF nie ma żadnych stron.",
+    "noPagesSelected": "Nie wybrano żadnych stron.",
+    "pageRangeInvalid": "„{{range}}” nie wskazuje żadnej strony tego dokumentu.",
+    "textEmpty": "Najpierw wpisz tekst.",
+    "maskEmpty": "Najpierw zamaluj obszar do usunięcia.",
+    "pdfUnreadable": "Plik {{file}} nie jest poprawnym PDF-em albo jest uszkodzony.",
+    "pdfEncrypted": "Plik {{file}} jest chroniony hasłem."
   }
 }

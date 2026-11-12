@@ -2,6 +2,7 @@ from pathlib import Path
 import os
 import pytest
 
+from backend.core.errors import AppError
 from backend.core import deps
 from backend.services import deps_installer, watermark
 from backend.core.jobs import JobContext
@@ -66,19 +67,86 @@ def test_install_lama_when_already_ready(monkeypatch):
     assert res == {"id": "lama", "ok": True}
 
 
-def test_is_rembg_ready_detection(monkeypatch):
+@pytest.fixture
+def rembg_models(monkeypatch, tmp_path):
+    """An empty models folder and a 3-byte stand-in for each background removal model."""
+    import hashlib
+
+    monkeypatch.setattr(deps, "models_dir", lambda: tmp_path)
+    monkeypatch.setattr(deps_installer, "models_dir", lambda: tmp_path)
+    fake = {
+        name: deps.RemBgModel(model.file, 3, hashlib.sha256(b"onx").hexdigest())
+        for name, model in deps.REMBG_MODELS.items()
+    }
+    monkeypatch.setattr(deps, "REMBG_MODELS", fake)
+    monkeypatch.setattr(deps_installer, "REMBG_MODELS", fake)
+    return tmp_path
+
+
+def _put_model(folder, name, data=b"onx"):
+    (folder / f"{name}.onnx").write_bytes(data)
+
+
+def test_rembg_is_ready_only_with_its_packages_and_the_default_model(monkeypatch, rembg_models):
     monkeypatch.setattr(deps, "_has_module", lambda m: m in ("rembg", "onnxruntime"))
+    assert not deps.is_rembg_ready()
+    rembg = next(d for d in deps.check_dependencies() if d["id"] == "rembg")
+    assert (rembg["detail"], rembg["sizeEstimate"]) == ("settings.deps.detailRembgModelOnly", "~930 MB")
+
+    _put_model(rembg_models, "birefnet-general", b"cut")
+    assert deps.rembg_model_path("birefnet-general") is not None
+    _put_model(rembg_models, "birefnet-general", b"cu")
+    assert deps.rembg_model_path("birefnet-general") is None, "an interrupted copy does not count"
+
+    newer_layout = rembg_models / "models" / "birefnet-general"
+    newer_layout.mkdir(parents=True)
+    _put_model(newer_layout, "birefnet-general")
     assert deps.is_rembg_ready()
 
     monkeypatch.setattr(deps, "_has_module", lambda m: m == "rembg")
     assert not deps.is_rembg_ready()
 
 
-def test_install_rembg_when_already_ready(monkeypatch):
-    monkeypatch.setattr(deps_installer, "is_rembg_ready", lambda: True)
-    ctx = JobContext()
-    res = deps_installer.install_dependency(ctx, "rembg")
-    assert res == {"id": "rembg", "ok": True}
+def test_installing_rembg_downloads_the_default_model_with_progress(monkeypatch, rembg_models, ctx):
+    monkeypatch.setattr(deps_installer, "rembg_packages_ready", lambda: True)
+    monkeypatch.setattr(deps_installer, "_run_pip", lambda *a, **k: pytest.fail("packages are already there"))
+    requested = []
+
+    def urlopen(req, timeout=0):
+        requested.append(req.full_url)
+        return _FakeResponse(b"onx")
+
+    monkeypatch.setattr(deps_installer.urllib.request, "urlopen", urlopen)
+
+    assert deps_installer.install_dependency(ctx, "rembg") == {"id": "rembg", "ok": True}
+    assert requested == [deps.REMBG_RELEASE_URL + "BiRefNet-general-epoch_244.onnx"]
+    assert (rembg_models / "birefnet-general.onnx").read_bytes() == b"onx"
+    assert any(p["message"] == "deps.status.downloadingModel" for p in ctx.of("job:progress"))
+
+    deps_installer.install_dependency(ctx, "rembg")
+    assert len(requested) == 1, "a downloaded model is not fetched again"
+
+
+def test_a_rembg_model_that_fails_its_checksum_is_not_kept(monkeypatch, rembg_models, ctx):
+    _serve(monkeypatch, b"bad")
+    with pytest.raises(AppError, match="errors.downloadCorrupted"):
+        deps_installer.download_rembg_model(ctx, "u2net")
+    assert list(rembg_models.iterdir()) == []
+
+
+def test_background_removal_fetches_another_model_before_using_it(monkeypatch, rembg_models, ctx):
+    from backend.services import rembg_service
+
+    fetched = []
+    monkeypatch.setattr(rembg_service, "packages_installed", lambda: True)
+    monkeypatch.setattr(deps_installer, "download_rembg_model", lambda c, name, *a: fetched.append(name))
+    monkeypatch.setattr(rembg_service, "_get_rembg_session", lambda name: pytest.skip("stops before inference"))
+    monkeypatch.setattr(rembg_service, "read_image", lambda path: __import__("numpy").zeros((4, 4, 3), "uint8"))
+    monkeypatch.setitem(__import__("sys").modules, "rembg", object())
+
+    with pytest.raises(pytest.skip.Exception):
+        rembg_service.remove(ctx, {"path": "a.png", "model": "isnet"})
+    assert fetched == ["isnet-general-use"]
 
 
 class _FakeResponse:
@@ -117,7 +185,7 @@ def test_download_throws_away_a_file_whose_sha256_differs(monkeypatch, tmp_path,
     _serve(monkeypatch, b"tampered")
     target = tmp_path / "model.pth"
 
-    with pytest.raises(ValueError, match="SHA-256 mismatch"):
+    with pytest.raises(AppError, match="errors.downloadCorrupted"):
         deps_installer._download_file_with_progress(ctx, "https://example.com/m", target, expected_sha256="0" * 64)
 
     assert list(tmp_path.iterdir()) == []
@@ -135,6 +203,7 @@ def test_every_download_has_a_pinned_sha256():
 
     pinned = [deps.LAMA_EXPECTED_SHA256, deps_installer.FFMPEG_WINDOWS_SHA256, deps_installer.GIFSICLE_WINDOWS_SHA256]
     pinned += [cfg["sha256"] for cfg in deps_installer.UPSCALE_MODELS.values()]
+    pinned += [model.sha256 for model in deps.REMBG_MODELS.values()]
     for model in whisper_models.MODELS.values():
         assert set(model.sha256) == set(model.files), model.id
         pinned += model.sha256.values()
@@ -178,7 +247,7 @@ def test_portable_zip_without_the_executable_fails(monkeypatch, tmp_path, ctx):
     monkeypatch.setattr(deps_installer.shutil, "which", lambda name: None)
     monkeypatch.setattr(deps_installer, "_download_file_with_progress", _fake_zip_download(["readme.txt"]))
 
-    with pytest.raises(RuntimeError, match="gifsicle.exe"):
+    with pytest.raises(AppError, match="gifsicle.exe"):
         deps_installer.install_gifsicle(ctx)
     assert not (tmp_path / "gifsicle.zip").exists()
 

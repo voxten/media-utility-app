@@ -8,6 +8,7 @@
 """
 
 import argparse
+import logging
 import os
 import shutil
 import sys
@@ -164,7 +165,6 @@ def main() -> None:
 
     window.events.loaded += on_loaded
     window.events.closing += api._on_closing
-    window.events.closed += api._shutdown
     if instance is not None:
         instance.serve(api._show_window)
 
@@ -174,10 +174,19 @@ def main() -> None:
         private_mode=False,
         storage_path=str(app_data_dir() / "webview"),
     )
+    api._shutdown()
     if instance is not None:
         instance.close()
     if api._restart_requested():
         restart_app()
+    end_process()
+
+
+def end_process() -> None:
+    """Exit now, even if a job thread ignored Cancel: a process left behind would keep files busy
+    and run next to the copy a restart starts."""
+    logging.shutdown()
+    os._exit(0)
 
 
 def restart_app() -> None:

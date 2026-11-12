@@ -4,6 +4,7 @@ import sys
 
 import pytest
 
+from backend.core.errors import AppError
 from backend.core.settings import Settings, validate_patch
 
 
@@ -54,7 +55,7 @@ def test_custom_ffmpeg_must_be_ffmpeg_or_its_folder(tmp_path):
     (folder / "evil.exe").write_bytes(b"")
 
     for bad in [folder, folder / "evil.exe", tmp_path / "missing" / name]:
-        with pytest.raises(ValueError, match="customFfmpegPath"):
+        with pytest.raises(AppError, match="errors.ffmpegPathInvalid"):
             validate_patch({"customFfmpegPath": str(bad)})
 
     (folder / name).write_bytes(b"")

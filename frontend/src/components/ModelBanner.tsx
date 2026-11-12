@@ -1,6 +1,5 @@
 // Prompt to download an optional AI model or dependency, with in-place install progress.
 
-import { useEffect, useState } from "react";
 import {
   Button,
   makeStyles,
@@ -12,10 +11,9 @@ import {
 } from "@fluentui/react-components";
 import { ArrowDownload16Regular, Dismiss16Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
-import { api } from "../lib/bridge";
-import { useJob } from "../stores/jobs";
+import { jobMessage } from "../lib/jobMessage";
+import { useInstallJob } from "../lib/useInstallJob";
 import { useNotify } from "./notify";
-import { errorMessage } from "../lib/errors";
 
 const useStyles = makeStyles({
   progress: { marginTop: "6px" },
@@ -35,41 +33,24 @@ export function ModelBanner({ depId, title, description, installLabel, readyMess
   const styles = useStyles();
   const { t } = useTranslation();
   const notify = useNotify();
-  const [jobId, setJobId] = useState<string | null>(null);
-  const job = useJob(jobId);
-  const status = job?.status;
-  const error = job?.error;
-
-  useEffect(() => {
-    if (status === "done") {
+  const { job, install, cancel } = useInstallJob(depId, {
+    onInstalled: () => {
       notify.success(readyMessage);
       onInstalled();
-      setJobId(null);
-    } else if (status === "error") {
-      notify.error(t("settings.deps.failed"), { body: error ?? undefined });
-    }
-  }, [status, error, notify, onInstalled, readyMessage, t]);
-
-  const install = async () => {
-    try {
-      setJobId(await api.system.installDependency(depId));
-    } catch (err) {
-      notify.error(t("settings.deps.failed"), { body: errorMessage(t, err) });
-    }
-  };
-
-  const running = job?.status === "running";
+    },
+    onFailed: (message) => notify.error(t("settings.deps.failed"), { body: message }),
+  });
 
   return (
     <MessageBar intent="info" layout="multiline">
       <MessageBarBody>
         <MessageBarTitle>{title}</MessageBarTitle>
-        {running ? (job.message ? t(job.message, job.params) : t("settings.deps.installing")) : description}
-        {running && <ProgressBar className={styles.progress} value={job.percent != null ? job.percent / 100 : undefined} />}
+        {job ? jobMessage(t, job) || t("settings.deps.installing") : description}
+        {job && <ProgressBar className={styles.progress} value={job.percent != null ? job.percent / 100 : undefined} />}
       </MessageBarBody>
       <MessageBarActions>
-        {running ? (
-          <Button size="small" icon={<Dismiss16Regular />} onClick={() => jobId && api.jobs.cancel(jobId)}>
+        {job ? (
+          <Button size="small" icon={<Dismiss16Regular />} onClick={cancel}>
             {t("common.cancel")}
           </Button>
         ) : (

@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Tuple
 
 from PIL import Image, ImageSequence
 
+from backend.core.errors import AppError, MissingFile
 from backend.core import thumbs
 from backend.core.jobs import JobContext
 from backend.core.paths import unique_path
@@ -25,7 +26,7 @@ Frames = Tuple[List[Image.Image], List[int]]
 def _decode(path: str) -> Frames:
     p = Path(path)
     if not p.is_file():
-        raise FileNotFoundError(f"File not found: {path}")
+        raise MissingFile(path)
     frames: List[Image.Image] = []
     durations: List[int] = []
     with Image.open(p) as img:
@@ -46,7 +47,7 @@ def _starts(durations: List[int]) -> List[float]:
 def load(path: str) -> Dict[str, Any]:
     p = Path(path)
     if not p.is_file():
-        raise FileNotFoundError(f"File not found: {path}")
+        raise MissingFile(path)
     with Image.open(p) as img:
         width, height = img.size
         frame_count = getattr(img, "n_frames", 1)
@@ -206,7 +207,7 @@ def render(ctx: JobContext, params: Dict[str, Any]) -> Dict[str, Any]:
                     size=gif_render.human_size(item["size"]))
 
     if not results:
-        raise RuntimeError("No file could be processed")
+        raise AppError("errors.nothingProcessed")
     in_bytes = sum(r["originalSize"] for r in results)
     out_bytes = sum(r["size"] for r in results)
     ctx.progress(100, "gif_editor.status.done")

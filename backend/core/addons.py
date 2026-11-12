@@ -9,6 +9,8 @@ moves to a newer Python never loads binaries built for the old one.
 
 import importlib
 import os
+import re
+import shutil
 import sys
 from pathlib import Path
 from typing import List, Optional, Sequence
@@ -43,6 +45,36 @@ def activate_addons() -> None:
         # Appended, so the app's own bundled copies of shared packages (numpy, Pillow …) win.
         sys.path.append(entry)
     importlib.invalidate_caches()
+
+
+def staging_dir() -> Path:
+    """Where pip puts a new add-on first, next to the add-ons folder (same disk, so moving is a rename)."""
+    folder = addons_dir()
+    return folder.with_name(f"{folder.name}.staging")
+
+
+def _project(dist_info: str) -> str:
+    return re.sub(r"[-_.]+", "_", dist_info.split("-")[0]).lower()
+
+
+def merge_staged(staged: Path, folder: Path) -> None:
+    """Moves a finished install from ``staged`` into ``folder``.
+
+    Packages of the same name are replaced, and so is the metadata of their older versions, the way
+    ``pip install --target --upgrade`` does it.
+    """
+    folder.mkdir(parents=True, exist_ok=True)
+    projects = {_project(item.name) for item in staged.glob("*.dist-info")}
+    for old in folder.glob("*.dist-info"):
+        if _project(old.name) in projects:
+            shutil.rmtree(old)
+    for item in staged.iterdir():
+        dest = folder / item.name
+        if dest.is_dir() and not dest.is_symlink():
+            shutil.rmtree(dest)
+        elif dest.exists():
+            dest.unlink()
+        os.replace(item, dest)
 
 
 def pip_install_command(packages: Sequence[str], target: Optional[Path] = None, no_deps: bool = False) -> List[str]:

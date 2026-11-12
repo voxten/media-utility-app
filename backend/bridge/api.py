@@ -17,8 +17,11 @@ from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 frontend_logger = logging.getLogger("backend.frontend")
+# How long quitting waits for cancelled jobs to stop before main.py ends the process anyway.
+SHUTDOWN_WAIT_S = 3.0
 
 from backend import APP_NAME, APP_VERSION
+from backend.core.errors import AppError
 from backend.bridge.events import EventBus
 from backend.core import clipboard, deps, engines, ffmpeg, logs, paths, system, win_theme
 from backend.core.app_shell import AppShell
@@ -206,6 +209,11 @@ class SystemApi(_Namespace):
             logger.warning("Could not open app data directory: %s", e)
 
     def install_dependency(self, dep_id: str) -> str:
+        title = f"deps.installTitle.{dep_id}"
+        # A second click (or the same install from Settings) follows the running download instead of starting another.
+        running = next((job for job in self._ctx.jobs.list() if job["status"] == "running" and job["title"] == title), None)
+        if running:
+            return running["id"]
         if dep_id.startswith("upscale"):
             tool_prefix = "upscale"
         elif dep_id == "lama":
@@ -221,7 +229,7 @@ class SystemApi(_Namespace):
         return self._ctx.jobs.submit(
             f"{tool_prefix}.install",
             lambda ctx: deps_installer.install_dependency(ctx, dep_id),
-            title=f"deps.installTitle.{dep_id}",
+            title=title,
         )
 
     def engines(self) -> List[Dict[str, Any]]:
@@ -347,7 +355,7 @@ class PdfApi(_Namespace):
 class DuplicatesApi(_Namespace):
     def scan(self, folder: str, mode: str, threshold: float = duplicates.HASH_THRESHOLD) -> str:
         if not Path(folder).is_dir():
-            raise ValueError(f"Not a folder: {folder}")
+            raise AppError("errors.notFolder", folder=folder)
         self._ctx.settings.add_recent_folder(folder)
         return self._ctx.jobs.submit(
             f"duplicates.{mode}", lambda ctx: duplicates.scan(ctx, folder, mode, float(threshold)), title=Path(folder).name
@@ -775,5 +783,6 @@ class Api:
     def _shutdown(self) -> None:
         self._ctx.shell.stop()
         self._ctx.bus.detach()
-        self._ctx.jobs.shutdown()
+        if not self._ctx.jobs.shutdown(timeout=SHUTDOWN_WAIT_S):
+            logger.warning("Jobs still running %.0f s after Cancel; quitting anyway", SHUTDOWN_WAIT_S)
         self._ctx.bus.close()

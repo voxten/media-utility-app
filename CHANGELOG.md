@@ -36,6 +36,15 @@ The app shows this file (and its Polish translation, [CHANGELOG.pl.md](CHANGELOG
 - Very long video titles are shortened so the file fits the Windows path limit.
 - Image Upscaler with the anime model works in tiles and needs far less memory; when memory still runs out it tries again with smaller tiles.
 - Settings no longer report FFmpeg as ready when ffprobe is missing, and installing FFmpeg fills in the missing ffprobe.
+- Error messages are written in your language and say what went wrong (file missing, file in use by another program, disk full, PDF protected with a password or damaged) instead of showing a translation key or English text with terminal color codes. Technical details stay in the log.
+- Quick checks such as reading a link or a PDF answer at once even when many tasks wait in the queue.
+- Image Compressor, Image Tools and the PDF page grid show an error instead of loading forever when a file cannot be read; one broken file no longer blocks the others.
+- A failed model install no longer repeats its error toast, and leaving and coming back during an install no longer starts the same download a second time.
+- Cancel now stops checking a long list of links, the MP3 conversion after a download, Text to Speech and installing AI add-ons. A cancelled add-on install keeps the version that worked before.
+- Text to Speech no longer flashes a console window when saving WAV, OGG or FLAC.
+- Background Remover downloads its model when you install it, with progress and a checksum, instead of standing still at 15% on the first run. Other models are fetched the same way the first time you pick them.
+- Downloading an Image Upscaler model no longer says it is downloading the LaMa model.
+- After Quit the app ends within a few seconds, so Restart no longer starts a second copy while the first one is still running.
 
 ## [0.14.0] - 2026-11-11
 

@@ -207,3 +207,22 @@ def test_pdf_tools_handle_polish_paths(polish_dir, ctx):
     text = polish_dir / "tekst ź.txt"
     pdf.extract_text(ctx, str(a), str(text))
     assert "A1" in text.read_text(encoding="utf-8")
+
+
+def test_installing_a_dependency_twice_follows_the_running_install(monkeypatch):
+    import threading
+
+    from backend.core.jobs import JobManager
+    from backend.services import deps_installer
+
+    release = threading.Event()
+    monkeypatch.setattr(deps_installer, "install_dependency", lambda ctx, dep_id: release.wait(5))
+    jobs = JobManager(max_workers=1)
+    try:
+        system_api = api.SystemApi(SimpleNamespace(jobs=jobs))
+        first = system_api.install_dependency("rembg")
+        assert system_api.install_dependency("rembg") == first
+        assert system_api.install_dependency("lama") != first
+    finally:
+        release.set()
+        jobs.shutdown()

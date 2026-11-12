@@ -17,9 +17,8 @@ import { useNotify } from "../../../components/notify";
 import { Section } from "../../../components/Page";
 import { SettingGroup, SettingRow } from "../../../components/SettingRow";
 import { api } from "../../../lib/bridge";
-import { errorMessage } from "../../../lib/errors";
 import type { Dependency } from "../../../lib/types";
-import { useJob } from "../../../stores/jobs";
+import { useInstallJob } from "../../../lib/useInstallJob";
 import { InstallProgress } from "./InstallProgress";
 import { useSettingsStyles } from "./styles";
 
@@ -39,39 +38,16 @@ function DependencyRowItem({ dep, onRefresh }: { dep: Dependency; onRefresh: () 
   const { t } = useTranslation();
   const styles = useSettingsStyles();
   const notify = useNotify();
-  const [jobId, setJobId] = useState<string | null>(null);
-  const job = useJob(jobId);
-  const status = job?.status;
-  const error = job?.error;
-
-  useEffect(() => {
-    if (status === "done") {
+  const { job, install, cancel } = useInstallJob(dep.id, {
+    onInstalled: () => {
       notify.success(t("settings.deps.installed"), { body: t(`settings.deps.${dep.id}`) });
       onRefresh();
-      setJobId(null);
-    } else if (status === "error") {
-      notify.error(t("settings.deps.failed"), { body: error ?? undefined });
-    }
-  }, [status, error, dep.id, notify, onRefresh, t]);
-
-  const handleInstall = async () => {
-    try {
-      const id = await api.system.installDependency(dep.id);
-      setJobId(id);
-    } catch (err) {
-      notify.error(t("settings.deps.failed"), { body: errorMessage(t, err) });
-    }
-  };
-
-  const handleCancel = async () => {
-    if (jobId) {
-      await api.jobs.cancel(jobId);
-    }
-  };
+    },
+    onFailed: (message) => notify.error(t("settings.deps.failed"), { body: message }),
+  });
 
   const tools = dep.usedBy.map((id) => t(`tools.${id}.name`)).join(", ");
   const detailText = dep.detail ? (dep.detail.startsWith("settings.") ? t(dep.detail) : dep.detail) : "";
-  const isRunning = job?.status === "running";
 
   return (
     <SettingRow
@@ -90,8 +66,8 @@ function DependencyRowItem({ dep, onRefresh }: { dep: Dependency; onRefresh: () 
         </>
       }
     >
-      {isRunning ? (
-        <InstallProgress job={job} onCancel={handleCancel} />
+      {job ? (
+        <InstallProgress job={job} onCancel={cancel} />
       ) : dep.ok ? (
         <Badge appearance="tint" color="success" icon={<CheckmarkCircle16Filled />}>
           {t("settings.depOk")}
@@ -102,7 +78,7 @@ function DependencyRowItem({ dep, onRefresh }: { dep: Dependency; onRefresh: () 
             {dep.required ? t("settings.depMissing") : t("settings.depOptional")}
           </Badge>
           {dep.installable && (
-            <Button appearance="primary" size="small" icon={<ArrowDownload16Regular />} onClick={handleInstall}>
+            <Button appearance="primary" size="small" icon={<ArrowDownload16Regular />} onClick={install}>
               {t("settings.deps.install")} {dep.sizeEstimate ? `(${dep.sizeEstimate})` : ""}
             </Button>
           )}

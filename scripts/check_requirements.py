@@ -103,7 +103,7 @@ def write_lock(requirements_file: Path, lock_file: Path) -> None:
         "# scripts/build.py warns when the build environment differs from this file.",
         *sorted(resolved(requirements_file).values(), key=str.lower),
     ]
-    lock_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    lock_file.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
 
 
 def lock_differences(lock_file: Path) -> List[str]:

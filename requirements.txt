@@ -11,7 +11,6 @@ imagehash
 pymediainfo
 edge-tts
 pyttsx3
-pydub
 audioop-lts; python_version >= "3.13"
 pywin32; sys_platform == "win32"
 pystray  # tray icon (close-to-tray) and system notifications

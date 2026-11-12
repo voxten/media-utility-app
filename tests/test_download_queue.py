@@ -15,7 +15,7 @@ def queue_file(monkeypatch, tmp_path):
     path = tmp_path / "download_queue.json"
     monkeypatch.setattr(download_queue, "queue_path", lambda: path)
     monkeypatch.setattr(download_queue.time, "sleep", lambda s: None)
-    monkeypatch.setattr(download_queue, "expand_batch_urls", lambda urls, cookies=None: [{"url": u, "title": u} for u in urls])
+    monkeypatch.setattr(download_queue, "expand_batch_urls", lambda urls, cookies=None, ctx=None, report=False: [{"url": u, "title": u} for u in urls])
     return path
 
 

@@ -76,3 +76,58 @@ def test_activate_does_nothing_when_running_from_source(monkeypatch, tmp_path):
 
 def test_pip_runs_in_process():
     assert addons.run_pip_main(["--version"]) == 0
+
+
+def test_a_staged_install_replaces_packages_and_their_old_metadata(tmp_path):
+    folder, staged = tmp_path / "addons", tmp_path / "staged"
+    (folder / "torch").mkdir(parents=True)
+    (folder / "torch" / "old.py").write_text("old")
+    (folder / "torch-2.5.0.dist-info").mkdir()
+    (folder / "numpy").mkdir()
+    (staged / "torch").mkdir(parents=True)
+    (staged / "torch" / "new.py").write_text("new")
+    (staged / "torch-2.6.0.dist-info").mkdir()
+
+    addons.merge_staged(staged, folder)
+
+    assert sorted(p.name for p in folder.iterdir()) == ["numpy", "torch", "torch-2.6.0.dist-info"]
+    assert [p.name for p in (folder / "torch").iterdir()] == ["new.py"]
+
+
+def _slow_pip(marker):
+    """A pip stand-in that creates a package in its target folder, then stays silent."""
+    script = (
+        "import pathlib, sys, time\n"
+        "target = pathlib.Path(sys.argv[sys.argv.index('--target') + 1])\n"
+        "(target / 'torch').mkdir(parents=True)\n"
+        f"pathlib.Path({str(marker)!r}).write_text('started')\n"
+        "time.sleep(60)\n"
+    )
+    return lambda packages, target=None, no_deps=False: [sys.executable, "-c", script, "--target", str(target)]
+
+
+def test_cancelled_install_stops_at_once_and_keeps_the_working_addons(frozen, monkeypatch, tmp_path, ctx):
+    import threading
+    import time
+
+    from backend.core.jobs import JobCancelled
+    from backend.services import deps_installer
+
+    (frozen / "torch").mkdir(parents=True)
+    (frozen / "torch" / "working.py").write_text("ok")
+    marker = tmp_path / "started.txt"
+    monkeypatch.setattr(deps_installer, "pip_install_command", _slow_pip(marker))
+
+    def cancel_once_started():
+        while not marker.exists():
+            time.sleep(0.05)
+        ctx.cancel()
+
+    threading.Thread(target=cancel_once_started, daemon=True).start()
+    started = time.monotonic()
+    with pytest.raises(JobCancelled):
+        deps_installer._run_pip(ctx, ["torch"])
+
+    assert time.monotonic() - started < 10
+    assert [p.name for p in (frozen / "torch").iterdir()] == ["working.py"]
+    assert not addons.staging_dir().exists()

@@ -8,6 +8,7 @@ import threading
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from backend.core.errors import AppError
 from backend.core.paths import app_data_dir, default_output_dir, resource_path
 
 MAX_RECENT = 8
@@ -112,7 +113,7 @@ def validate_patch(patch: Any) -> Dict[str, Any]:
     if "maxConcurrency" in patch and not 1 <= patch["maxConcurrency"] <= MAX_CONCURRENCY:
         raise ValueError("Setting maxConcurrency is out of range")
     if not _ffmpeg_folder_ok(patch.get("customFfmpegPath", "")):
-        raise ValueError("Setting customFfmpegPath must point to ffmpeg")
+        raise AppError("errors.ffmpegPathInvalid")
     return patch
 
 

@@ -6,6 +6,7 @@ import {
   Copy16Regular,
   CopySelect20Regular,
   Delete16Regular,
+  ErrorCircle24Regular,
   Image24Regular,
   Save16Regular,
 } from "@fluentui/react-icons";
@@ -14,6 +15,7 @@ import { ActionBar } from "../../components/ActionBar";
 import { hasCommandModifier, isTypingTarget } from "../../lib/keyboard";
 import { AfterGallery } from "../../components/AfterGallery";
 import { DropZone } from "../../components/DropZone";
+import { EmptyState } from "../../components/EmptyState";
 import { FileStrip } from "../../components/FileStrip";
 import { ImageCanvasStage } from "../../components/ImageCanvasStage";
 import type { CropRect } from "../../components/InteractiveCropOverlay";
@@ -72,6 +74,7 @@ export default function ImageToolsPage() {
   const outputDir = useOutputDir(form.outputDir);
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [transformed, setTransformed] = useState<TransformResult | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
   const [crop, setCrop] = useState<CropRect>({ x: 0, y: 0, w: 0, h: 0 });
   const setActiveTool = (tool: ActiveTool) => form.set({ activeTool: tool });
@@ -119,6 +122,7 @@ export default function ImageToolsPage() {
   useEffect(() => {
     setPreview(null);
     setTransformed(null);
+    setPreviewError(null);
     if (!current) return;
     let live = true;
     api.image_editor
@@ -136,11 +140,11 @@ export default function ImageToolsPage() {
           state.set({ opsByFile: { ...opsByFile, [current]: fitted } });
         }
       })
-      .catch((err) => notify.error(errorMessage(t, err)));
+      .catch((err) => live && setPreviewError(errorMessage(t, err)));
     return () => {
       live = false;
     };
-  }, [current, notify, t]);
+  }, [current, t]);
 
   // Sync the crop box with the stored crop whenever the file changes or its preview arrives.
   useEffect(() => {
@@ -227,10 +231,12 @@ export default function ImageToolsPage() {
     }
   };
 
-  const canSave = !!preview && !job.running && !!outputDir;
+  // A file that cannot be previewed must not block saving the others.
+  const canSave = !job.running && !!outputDir && (!!preview || files.length > 1);
   const save = async () => {
-    if (!current || !preview || !ops || !outputDir) return;
+    if (!outputDir) return;
     if (files.length === 1) {
+      if (!current || !preview || !ops) return;
       const ext = preview.format.toLowerCase() === "jpeg" ? "jpg" : preview.format.toLowerCase();
       const outPath = joinPath(outputDir, `${fileName(current).replace(/\.[^.]+$/, "")}_edited.${ext}`);
       try {
@@ -367,6 +373,8 @@ export default function ImageToolsPage() {
                 onCancelCrop={cancelCrop}
                 onResetCrop={resetCrop}
               />
+            ) : previewError ? (
+              <EmptyState icon={ErrorCircle24Regular} title={previewError} />
             ) : (
               <Spinner label={t("common.loading")} />
             )}

@@ -3,10 +3,11 @@
 import base64
 import shutil
 from pathlib import Path
-from typing import Any, Dict, List, Sequence
+from typing import Any, Dict, List, Sequence, Union
 
 import fitz  # PyMuPDF
 
+from backend.core.errors import AppError, MissingFile
 from backend.core.ffmpeg import same_file
 from backend.core.jobs import JobContext
 from backend.core.paths import unique_path
@@ -21,8 +22,23 @@ def _render(page: "fitz.Page", zoom: float) -> str:
     return "data:image/jpeg;base64," + base64.b64encode(data).decode("ascii")
 
 
+def _open(path: Union[str, Path]) -> fitz.Document:
+    """An existing PDF opened for reading; a broken or password-protected one is refused with a readable reason."""
+    name = Path(path).name
+    try:
+        doc = fitz.open(str(path))
+    except fitz.FileNotFoundError as exc:
+        raise MissingFile(path) from exc
+    except (fitz.FileDataError, RuntimeError) as exc:
+        raise AppError("errors.pdfUnreadable", file=name) from exc
+    if doc.needs_pass:
+        doc.close()
+        raise AppError("errors.pdfEncrypted", file=name)
+    return doc
+
+
 def page_count(path: str) -> int:
-    with fitz.open(path) as doc:
+    with _open(path) as doc:
         return len(doc)
 
 
@@ -39,13 +55,16 @@ def inspect(ctx: JobContext, paths: List[str], zoom: float = THUMB_ZOOM) -> Dict
             docs.append((path, page_count(path)))
         except Exception as exc:  # noqa: BLE001 - report unreadable files individually
             errors.append({"file": path, "error": str(exc)})
-            ctx.log("pdf.log.readFailed", "error", file=Path(path).name, error=str(exc))
+            if isinstance(exc, AppError):
+                ctx.log(exc.key, "error", **exc.params)
+            else:
+                ctx.log("pdf.log.readFailed", "error", file=Path(path).name, error=str(exc))
 
     total = sum(count for _, count in docs) or 1
     done = 0
     pages: List[Dict[str, Any]] = []
     for path, count in docs:
-        with fitz.open(path) as doc:
+        with _open(path) as doc:
             for index in range(count):
                 ctx.check_cancelled()
                 page = doc[index]
@@ -66,14 +85,14 @@ def inspect(ctx: JobContext, paths: List[str], zoom: float = THUMB_ZOOM) -> Dict
 
 def render_page(path: str, page: int, zoom: float = PREVIEW_ZOOM) -> str:
     """Large single-page preview (synchronous; one page is fast enough)."""
-    with fitz.open(path) as doc:
+    with _open(path) as doc:
         return _render(doc[page], zoom)
 
 
 def merge(ctx: JobContext, pages: List[Dict[str, Any]], out_path: str) -> Dict[str, Any]:
     """Write ``pages`` (``[{file, page}, ...]`` in the desired order) into a new PDF."""
     if not pages:
-        raise ValueError("No pages to merge")
+        raise AppError("errors.noPages")
 
     sources: Dict[str, "fitz.Document"] = {}
     try:
@@ -82,7 +101,7 @@ def merge(ctx: JobContext, pages: List[Dict[str, Any]], out_path: str) -> Dict[s
                 ctx.check_cancelled()
                 path = item["file"]
                 if path not in sources:
-                    sources[path] = fitz.open(path)
+                    sources[path] = _open(path)
                 rot = item.get("rotation", -1)
                 if rot is not None and rot >= 0:
                     output.insert_pdf(sources[path], from_page=item["page"], to_page=item["page"], rotate=rot % 360)
@@ -153,7 +172,7 @@ def compress(ctx: JobContext, path: str, out_path: str, quality_preset: str = "b
     """Compress a PDF file by downsampling embedded images and deflating streams."""
     src = Path(path)
     if not src.is_file():
-        raise FileNotFoundError(f"File not found: {path}")
+        raise MissingFile(path)
 
     in_bytes = src.stat().st_size
     ctx.progress(10, "pdf.status.compressing")
@@ -171,7 +190,7 @@ def compress(ctx: JobContext, path: str, out_path: str, quality_preset: str = "b
     target = unique_path(Path(out_path))
     target.parent.mkdir(parents=True, exist_ok=True)
 
-    with fitz.open(str(src)) as doc:
+    with _open(src) as doc:
         ctx.check_cancelled()
         ctx.progress(30, "pdf.status.rewritingImages")
         try:
@@ -222,7 +241,7 @@ def split(
     """Split a PDF into one file per page, or with mode 'groups' one file per group of 0-based page indexes."""
     src = Path(path)
     if not src.is_file():
-        raise FileNotFoundError(f"File not found: {path}")
+        raise MissingFile(path)
 
     if mode not in ("all", "groups"):
         raise ValueError(f"Unknown split mode: '{mode}'")
@@ -232,16 +251,16 @@ def split(
     stem = src.stem
 
     created_files: List[str] = []
-    with fitz.open(str(src)) as doc:
+    with _open(src) as doc:
         total = len(doc)
         if total == 0:
-            raise ValueError("PDF document has 0 pages")
+            raise AppError("errors.pdfEmpty")
 
         if mode == "groups":
             valid = [sorted({int(p) for p in g if 0 <= int(p) < total}) for g in groups]
             valid = [g for g in valid if g]
             if not valid:
-                raise ValueError("No pages selected")
+                raise AppError("errors.noPagesSelected")
 
             for idx, group in enumerate(valid):
                 ctx.check_cancelled()
@@ -281,7 +300,7 @@ def pdf_to_images(
     """Export the pages of a PDF as image files: all of them, or those in ``range_spec`` (e.g. '1-3, 5')."""
     src = Path(path)
     if not src.is_file():
-        raise FileNotFoundError(f"File not found: {path}")
+        raise MissingFile(path)
 
     out_dir_path = Path(out_dir)
     out_dir_path.mkdir(parents=True, exist_ok=True)
@@ -291,10 +310,10 @@ def pdf_to_images(
 
     stem = src.stem
     created_files: List[str] = []
-    with fitz.open(str(src)) as doc:
+    with _open(src) as doc:
         pages = parse_page_range(range_spec, len(doc)) if range_spec.strip() else list(range(len(doc)))
         if not pages:
-            raise ValueError(f"No valid pages specified in range: '{range_spec}'")
+            raise AppError("errors.pageRangeInvalid", range=range_spec)
         total = len(pages)
         for done, i in enumerate(pages, start=1):
             ctx.check_cancelled()
@@ -358,12 +377,12 @@ def rotate_pages(ctx: JobContext, path: str, pages: List[int], angle: int, out_p
         raise ValueError(f"Rotation must be a multiple of 90 degrees, got {angle}")
     src = Path(path)
     if not src.is_file():
-        raise FileNotFoundError(f"File not found: {path}")
+        raise MissingFile(path)
 
     target = Path(out_path)
     target.parent.mkdir(parents=True, exist_ok=True)
 
-    with fitz.open(str(src)) as doc:
+    with _open(src) as doc:
         total = len(doc)
         requested = set(pages) if pages else set(range(total))
         pages_to_rotate = {p for p in requested if 0 <= p < total}
@@ -386,13 +405,13 @@ def extract_text(ctx: JobContext, path: str, out_path: str) -> Dict[str, Any]:
     """Extract plain text from all pages of a PDF document to a text file."""
     src = Path(path)
     if not src.is_file():
-        raise FileNotFoundError(f"File not found: {path}")
+        raise MissingFile(path)
 
     target = unique_path(Path(out_path))
     target.parent.mkdir(parents=True, exist_ok=True)
 
     lines: List[str] = []
-    with fitz.open(str(src)) as doc:
+    with _open(src) as doc:
         total = len(doc)
         for i in range(total):
             ctx.check_cancelled()

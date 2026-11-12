@@ -12,8 +12,10 @@ import cv2
 import numpy as np
 from PIL import Image
 
+from backend.core.errors import AppError
 from backend.core import imaging, thumbs
 from backend.core.imaging import split_alpha
+from backend.core.deps import DEFAULT_REMBG_MODEL, REMBG_MODELS, rembg_model_path
 from backend.core.jobs import JobCancelled, JobContext
 from backend.core.paths import cache_dir, models_dir
 
@@ -30,7 +32,7 @@ MODEL_MAP = {
 }
 
 
-def is_available() -> bool:
+def packages_installed() -> bool:
     """Checks if rembg and onnxruntime are installed and importable."""
     try:
         import onnxruntime  # noqa: F401
@@ -39,6 +41,11 @@ def is_available() -> bool:
         return True
     except (ImportError, Exception):
         return False
+
+
+def is_available() -> bool:
+    """rembg works and the default model is downloaded, so the first run starts at once."""
+    return packages_installed() and rembg_model_path(DEFAULT_REMBG_MODEL) is not None
 
 
 def _get_rembg_session(model_name: str) -> Any:
@@ -211,8 +218,8 @@ def load_preview(path: str) -> Dict[str, Any]:
 
 def remove(ctx: JobContext, params: Dict[str, Any]) -> Dict[str, Any]:
     """Executes AI background removal with anti-halo and despeckle post-processing."""
-    if not is_available():
-        raise RuntimeError("Rembg / ONNX Runtime dependencies are not installed.")
+    if not packages_installed():
+        raise AppError("errors.addonMissing")
 
     import rembg
 
@@ -231,7 +238,12 @@ def remove(ctx: JobContext, params: Dict[str, Any]) -> Dict[str, Any]:
     h, w = bgr.shape[:2]
 
     ctx.check_cancelled()
-    ctx.progress(15, "rembg.status.preparingModel", {"model": model_name})
+    resolved_model = MODEL_MAP.get(model_name, model_name)
+    if resolved_model not in _SESSIONS and resolved_model in REMBG_MODELS:
+        from backend.services.deps_installer import download_rembg_model
+
+        download_rembg_model(ctx, resolved_model, 10, 15)
+    ctx.progress(25, "rembg.status.preparingModel", {"model": model_name})
     session = _get_rembg_session(model_name)
 
     ctx.check_cancelled()

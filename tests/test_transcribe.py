@@ -4,6 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from backend.core.errors import AppError
 from backend.core import whisper_models
 from backend.core.jobs import JobCancelled
 from backend.services import deps_installer, transcribe
@@ -204,7 +205,7 @@ def test_cancel_stops_between_segments(monkeypatch, tmp_path, ctx):
 
 def test_missing_model_is_reported(monkeypatch, tmp_path, ctx):
     monkeypatch.setattr(whisper_models, "is_ready", lambda model_id: False)
-    with pytest.raises(RuntimeError, match="not installed"):
+    with pytest.raises(AppError, match="errors.modelMissing"):
         transcribe.run(ctx, {"path": str(tmp_path / "x.wav"), "model": "small", "outPath": str(tmp_path / "x.srt")})
 
 

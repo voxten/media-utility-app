@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, Dict, Optional
 import cv2
 import numpy as np
 
+from backend.core.errors import AppError
 from backend.core import imaging, thumbs
 from backend.core.imaging import split_alpha
 from backend.core.jobs import JobCancelled, JobContext
@@ -206,7 +207,7 @@ def upscale_array(
     # AI Models
     weights_path = get_model_weights_path(model_id)
     if not weights_path:
-        raise FileNotFoundError(f"Model weights for '{model_id}' are not installed.")
+        raise AppError("errors.modelMissing")
 
     bgr, alpha = split_alpha(img)
 

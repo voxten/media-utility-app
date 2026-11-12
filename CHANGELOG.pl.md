@@ -32,6 +32,15 @@ Polskie tłumaczenie [CHANGELOG.md](CHANGELOG.md), pokazywane w aplikacji przy p
 - Bardzo długie tytuły filmów są skracane, żeby plik zmieścił się w limicie długości ścieżki w Windows.
 - Skalowanie obrazów AI modelem anime pracuje na kafelkach i zużywa dużo mniej pamięci; gdy pamięci nadal brakuje, próbuje ponownie z mniejszymi kafelkami.
 - Ustawienia nie pokazują już FFmpeg jako gotowego, gdy brakuje ffprobe, a instalacja FFmpeg uzupełnia brakujący ffprobe.
+- Komunikaty o błędach są w Twoim języku i mówią, co poszło nie tak (brak pliku, plik zajęty przez inny program, pełny dysk, PDF chroniony hasłem albo uszkodzony), zamiast pokazywać klucz tłumaczenia albo angielski tekst z kodami kolorów terminala. Szczegóły techniczne zostają w logu.
+- Szybkie operacje, takie jak sprawdzenie linku czy wczytanie PDF, odpowiadają od razu, nawet gdy w kolejce czeka dużo zadań.
+- Kompresor obrazów, Narzędzia obrazu i siatka stron PDF pokazują błąd zamiast kręcić się bez końca, gdy pliku nie da się odczytać; jeden uszkodzony plik nie blokuje już pozostałych.
+- Nieudana instalacja modelu nie powtarza już dymka z błędem, a wyjście i powrót w trakcie instalacji nie zaczyna drugi raz tego samego pobierania.
+- „Anuluj” zatrzymuje teraz sprawdzanie długiej listy linków, zamianę na MP3 po pobraniu, Tekst na mowę i instalację dodatków AI. Anulowana instalacja dodatku zostawia wersję, która działała wcześniej.
+- Tekst na mowę nie pokazuje już na chwilę okna konsoli przy zapisie WAV, OGG i FLAC.
+- Usuwanie tła AI pobiera model przy instalacji, z paskiem postępu i sumą kontrolną, zamiast stać na 15% przy pierwszym użyciu. Pozostałe modele pobierają się tak samo, gdy wybierzesz je pierwszy raz.
+- Pobieranie modelu w Skalowaniu obrazów AI nie twierdzi już, że pobiera model LaMa.
+- Po „Zakończ” aplikacja zamyka się w kilka sekund, więc „Uruchom ponownie” nie uruchamia już drugiej kopii obok pierwszej.
 
 ## [0.14.0] - 2026-11-11
 

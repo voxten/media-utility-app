@@ -168,7 +168,8 @@
       "failed": "Installation failed",
       "detailLamaModelOnly": "Requires downloading big-lama.pt model weights (~196 MB)",
       "detailLamaFull": "Requires installing PyTorch and LaMa model",
-      "detailRembgMissing": "Requires installing rembg and onnxruntime (~140 MB)",
+      "detailRembgMissing": "Requires installing rembg, onnxruntime and the BiRefNet model",
+      "detailRembgModelOnly": "Requires downloading the BiRefNet model",
       "detailFfmpegMissing": "FFmpeg executable not found in PATH",
       "detailFfprobeMissing": "FFmpeg found, but ffprobe is missing next to it",
       "detailGifsicleMissing": "gifsicle not found",
@@ -676,7 +677,8 @@
       "postprocessing": "Post-processing…",
       "done": "Download finished.",
       "batchDone": "Queue finished.",
-      "subtitles": "Fetching subtitles…"
+      "subtitles": "Fetching subtitles…",
+      "probingLinks": "Checking links: {{current}}/{{total}}"
     },
     "log": {
       "itemFailed": "Failed to download {{url}}: {{error}}",
@@ -1007,8 +1009,8 @@
     "dropHint": "or click to choose a file ({{formats}})",
     "modelPromo": {
       "title": "BiRefNet background removal model",
-      "desc": "This tool requires rembg and ONNX Runtime. Click below to install in the background.",
-      "installBtn": "Download & activate AI (~140 MB)",
+      "desc": "Background removal needs rembg, ONNX Runtime and the BiRefNet model. They install in the background.",
+      "installBtn": "Download & activate AI (~1.1 GB)",
       "ready": "AI model is ready to use!"
     },
     "options": {
@@ -1065,7 +1067,7 @@
       "installingTorch": "Installing PyTorch…",
       "torchInstalled": "PyTorch installed.",
       "installingRembg": "Installing rembg and onnxruntime…",
-      "downloadingModel": "Downloading LaMa model ({{percent}}%)…",
+      "downloadingModel": "Downloading AI model ({{percent}}%)…",
       "downloading": "Downloading ({{percent}}%)…",
       "verifying": "Verifying installation…",
       "downloadingFfmpeg": "Downloading FFmpeg ({{percent}}%)…",
@@ -1080,7 +1082,7 @@
       "torchInstalled": "PyTorch is ready to use.",
       "installingRembg": "Installing rembg and onnxruntime via pip…",
       "pipOutput": "{{line}}",
-      "downloadingModel": "Downloading LaMa AI model weights (big-lama.pt)…",
+      "downloadingModel": "Downloading model {{model}}…",
       "modelDownloaded": "Model downloaded and verified successfully.",
       "downloadingFfmpeg": "Downloading portable FFmpeg package…",
       "extractingFfmpeg": "Extracting FFmpeg executables…",
@@ -1392,6 +1394,32 @@
     "pathMissing": "The file or folder no longer exists.",
     "openFailed": "Could not open it.",
     "trashFailed": "Could not move it to the Recycle Bin.",
-    "imageUnreadable": "The image could not be read."
+    "imageUnreadable": "The image could not be read.",
+    "fileMissing": "{{file}} no longer exists.",
+    "fileLocked": "{{file}} is open in another program or protected. Close it and try again.",
+    "diskFull": "The disk is full.",
+    "outOfMemory": "Not enough memory. Close other programs or use a smaller file.",
+    "notFolder": "{{folder}} is not a folder.",
+    "binaryMissing": "{{name}} is missing. Install it in Settings → Dependencies.",
+    "mediaUnreadable": "{{file}} could not be read as a video or audio file.",
+    "audioUnreadable": "Could not read the audio of {{file}}.",
+    "noAudio": "The file has no audio track.",
+    "outputMissing": "FFmpeg finished without creating the file. Details are in the log.",
+    "ffmpegPathInvalid": "The chosen path does not point to ffmpeg.",
+    "downloadCorrupted": "{{file}} arrived damaged or changed on the server. Try again later.",
+    "archiveIncomplete": "The downloaded archive does not contain {{files}}.",
+    "installFailed": "Installation failed with code {{code}}. Details are in the log.",
+    "addonBroken": "The add-on was installed but does not start. Details are in the log.",
+    "addonMissing": "This tool needs an add-on. Install it in Settings → Dependencies.",
+    "modelMissing": "The model is not installed. Install it in Settings → Dependencies.",
+    "nothingProcessed": "None of the files could be processed. Details are in the log.",
+    "noPages": "There are no pages to save.",
+    "pdfEmpty": "The PDF has no pages.",
+    "noPagesSelected": "No pages are selected.",
+    "pageRangeInvalid": "“{{range}}” does not name any page of this document.",
+    "textEmpty": "Enter some text first.",
+    "maskEmpty": "Paint over the area to remove first.",
+    "pdfUnreadable": "{{file}} is not a valid PDF or is damaged.",
+    "pdfEncrypted": "{{file}} is protected with a password."
   }
 }

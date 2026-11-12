@@ -32,7 +32,6 @@ MODULES = [
     "requests",
     "edge_tts",
     "pyttsx3",
-    "pydub",
     "send2trash",
 ]
 

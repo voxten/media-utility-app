@@ -3,6 +3,7 @@ import numpy as np
 import pytest
 from PIL import Image
 
+from backend.core.errors import AppError
 from backend.core import thumbs
 from backend.core.settings import Settings
 from backend.services import progress_image, tts, watermark
@@ -77,7 +78,7 @@ def test_read_text_file_rejects_other_and_large_files(tmp_path, monkeypatch):
 
 
 def test_tts_rejects_empty_text(ctx):
-    with pytest.raises(ValueError):
+    with pytest.raises(AppError, match="errors.textEmpty"):
         tts.synthesize(ctx, "   ", "edge", "en-US-GuyNeural", 0, "out.mp3")
 
 
@@ -109,7 +110,7 @@ def test_watermark_removes_marked_region(tmp_path, ctx, monkeypatch):
 def test_watermark_empty_mask_rejected(tmp_path, ctx):
     src = tmp_path / "a.png"
     watermark.write_image(np.zeros((10, 10, 3), np.uint8), str(src))
-    with pytest.raises(ValueError):
+    with pytest.raises(AppError, match="errors.maskEmpty"):
         watermark.remove(ctx, str(src), _mask_png((10, 10), (0, 0, 0, 0)), "ns")
 
 

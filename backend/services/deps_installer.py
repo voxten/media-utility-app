@@ -7,20 +7,27 @@ import json
 import logging
 import shutil
 import subprocess
+import threading
+import time
 import urllib.request
 import zipfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
+from backend.core.errors import AppError
 from backend.core import engines, whisper_models
-from backend.core.addons import activate_addons, pip_install_command
+from backend.core.addons import activate_addons, addons_dir, is_frozen, merge_staged, pip_install_command, staging_dir
 from backend.core.deps import (
+    DEFAULT_REMBG_MODEL,
     LAMA_EXPECTED_SHA256,
+    REMBG_MODELS,
+    REMBG_RELEASE_URL,
     _has_module,
     ensure_app_paths,
     is_lama_ready,
-    is_rembg_ready,
     lama_model_path,
+    rembg_model_path,
+    rembg_packages_ready,
 )
 from backend.core.jobs import JobCancelled, JobContext
 from backend.core.paths import app_data_dir, cache_dir, models_dir
@@ -84,7 +91,8 @@ def _download_file_with_progress(
 
         actual = hasher.hexdigest()
         if actual != expected_sha256.lower():
-            raise ValueError(f"SHA-256 mismatch for {target_path.name} (got {actual}, expected {expected_sha256})")
+            logger.error("SHA-256 mismatch for %s: got %s, expected %s", target_path.name, actual, expected_sha256)
+            raise AppError("errors.downloadCorrupted", file=target_path.name)
 
         tmp_path.replace(target_path)
         return target_path
@@ -93,36 +101,62 @@ def _download_file_with_progress(
         raise
 
 
-def _run_pip(ctx: JobContext, packages: Sequence[str], target: Optional[Path] = None, no_deps: bool = False) -> None:
-    """Installs Python packages where this app can import them, streaming pip's output to the job log."""
+CANCEL_POLL_S = 0.2
+
+
+def _pip(ctx: JobContext, cmd: Sequence[str]) -> None:
+    """Runs pip; Cancel stops it at once, also while it downloads without printing anything."""
     proc = subprocess.Popen(
-        pip_install_command(packages, target=target, no_deps=no_deps),
+        list(cmd),
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
+        stdin=subprocess.DEVNULL,
         text=True,
         encoding="utf-8",
         errors="replace",
         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
     )
 
-    try:
-        while True:
+    def stop_on_cancel() -> None:
+        while proc.poll() is None:
             if ctx.cancelled:
-                proc.terminate()
-                raise JobCancelled()
-            line = proc.stdout.readline() if proc.stdout else ""
-            if not line and proc.poll() is not None:
-                break
-            if line:
-                stripped = line.strip()
-                if stripped:
-                    ctx.log("deps.log.pipOutput", line=stripped)
+                proc.kill()
+                return
+            time.sleep(CANCEL_POLL_S)
+
+    threading.Thread(target=stop_on_cancel, daemon=True).start()
+    try:
+        assert proc.stdout is not None
+        for line in proc.stdout:
+            stripped = line.strip()
+            if stripped:
+                ctx.log("deps.log.pipOutput", line=stripped)
+        proc.wait()
     finally:
         if proc.poll() is None:
             proc.kill()
-
+    ctx.check_cancelled()
     if proc.returncode != 0:
-        raise RuntimeError(f"Pip install failed with return code {proc.returncode}")
+        raise AppError("errors.installFailed", code=proc.returncode)
+
+
+def _run_pip(ctx: JobContext, packages: Sequence[str], target: Optional[Path] = None, no_deps: bool = False) -> None:
+    """Installs Python packages where this app can import them, streaming pip's output to the job log.
+
+    The packaged app installs add-ons into a staging folder and moves them into place only when pip
+    succeeds, so a cancelled or failed install never leaves a half-copied PyTorch that looks installed.
+    """
+    staged = None
+    if target is None and is_frozen():
+        staged = target = staging_dir()
+        shutil.rmtree(staged, ignore_errors=True)
+    try:
+        _pip(ctx, pip_install_command(packages, target=target, no_deps=no_deps))
+        if staged is not None:
+            merge_staged(staged, addons_dir())
+    finally:
+        if staged is not None:
+            shutil.rmtree(staged, ignore_errors=True)
 
     # New packages must be importable in this process without restarting the app.
     activate_addons()
@@ -150,7 +184,7 @@ def install_lama(ctx: JobContext) -> Dict[str, Any]:
     model_dest = models_dir() / "big-lama.pt"
     if not model_dest.is_file() or model_dest.stat().st_size < 100_000_000:
         ctx.progress(40 if not has_torch else 5, "deps.status.downloadingModel", {"percent": 0})
-        ctx.log("deps.log.downloadingModel")
+        ctx.log("deps.log.downloadingModel", model=model_dest.name)
         _download_file_with_progress(
             ctx,
             url=LAMA_MODEL_URL,
@@ -171,7 +205,7 @@ def install_lama(ctx: JobContext) -> Dict[str, Any]:
         model = torch.jit.load(str(model_dest), map_location="cpu")
         model.eval()
     except Exception as exc:
-        raise RuntimeError(f"Could not load LaMa model: {exc}") from exc
+        raise AppError("errors.addonBroken") from exc
 
     ctx.progress(100, "deps.status.done")
     ctx.log("deps.log.done")
@@ -233,7 +267,7 @@ def _install_portable_zip(
 
     ensure_app_paths()
     if wanted:
-        raise RuntimeError(f"{', '.join(sorted(wanted))} not found inside the downloaded archive")
+        raise AppError("errors.archiveIncomplete", files=", ".join(sorted(wanted)))
 
     ctx.progress(100, "deps.status.done")
     ctx.log(done_log_key)
@@ -288,7 +322,7 @@ def install_upscale(ctx: JobContext, dep_id: str) -> Dict[str, Any]:
         start_pct = 40 if not has_torch else 5
         span_pct = 50 if not has_torch else 85
         ctx.progress(start_pct, "deps.status.downloadingModel", {"percent": 0})
-        ctx.log("deps.log.downloadingModel")
+        ctx.log("deps.log.downloadingModel", model=dest.name)
         _download_file_with_progress(
             ctx,
             url=cfg["url"],
@@ -311,25 +345,47 @@ def install_upscale(ctx: JobContext, dep_id: str) -> Dict[str, Any]:
     return {"id": dep_id, "ok": True}
 
 
+def download_rembg_model(
+    ctx: JobContext, name: str, progress_start: float = 0.0, progress_span: float = 100.0
+) -> Path:
+    """The background removal model ``name``, downloaded with progress and checked first if missing."""
+    existing = rembg_model_path(name)
+    if existing is not None:
+        return existing
+    model = REMBG_MODELS[name]
+    ctx.progress(progress_start, "deps.status.downloadingModel", {"percent": 0})
+    ctx.log("deps.log.downloadingModel", model=model.file)
+    path = _download_file_with_progress(
+        ctx,
+        url=REMBG_RELEASE_URL + model.file,
+        target_path=models_dir() / f"{name}.onnx",
+        expected_sha256=model.sha256,
+        status_key="deps.status.downloadingModel",
+        progress_start=progress_start,
+        progress_span=progress_span,
+    )
+    ctx.log("deps.log.modelDownloaded")
+    return path
+
+
 def install_rembg(ctx: JobContext) -> Dict[str, Any]:
-    """Installs rembg, onnxruntime, and pymatting for AI background removal."""
-    if is_rembg_ready():
-        ctx.progress(100, "deps.status.done")
-        return {"id": "rembg", "ok": True}
+    """Installs rembg, onnxruntime and pymatting, then downloads the default BiRefNet model."""
+    model_start = 0.0
+    if not rembg_packages_ready():
+        ctx.progress(5, "deps.status.installingRembg")
+        ctx.log("deps.log.installingRembg")
+        _run_pip(ctx, ["rembg[cpu]", "onnxruntime", "pymatting"])
 
-    ctx.progress(5, "deps.status.installingRembg")
-    ctx.log("deps.log.installingRembg")
+        ctx.progress(20, "deps.status.verifying")
+        ctx.log("deps.log.verifying")
+        try:
+            import onnxruntime  # noqa: F401
+            import rembg  # noqa: F401
+        except Exception as exc:
+            raise AppError("errors.addonBroken") from exc
+        model_start = 20.0
 
-    _run_pip(ctx, ["rembg[cpu]", "onnxruntime", "pymatting"])
-
-    ctx.progress(90, "deps.status.verifying")
-    ctx.log("deps.log.verifying")
-
-    try:
-        import onnxruntime  # noqa: F401
-        import rembg  # noqa: F401
-    except Exception as exc:
-        raise RuntimeError(f"Could not verify rembg/onnxruntime installation: {exc}") from exc
+    download_rembg_model(ctx, DEFAULT_REMBG_MODEL, model_start, 100 - model_start)
 
     ctx.progress(100, "deps.status.done")
     ctx.log("deps.log.done")
@@ -378,7 +434,7 @@ def install_whisper(ctx: JobContext, model: whisper_models.WhisperModel) -> Dict
 
         transcribe.verify_model(model.id)
     except Exception as exc:
-        raise RuntimeError(f"Could not load the Whisper model: {exc}") from exc
+        raise AppError("errors.addonBroken") from exc
 
     ctx.progress(100, "deps.status.done")
     ctx.log("deps.log.done")

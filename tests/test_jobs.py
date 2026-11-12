@@ -294,3 +294,50 @@ def test_only_the_newest_finished_jobs_are_kept(monkeypatch):
     assert kept - {running} <= set(ids)
     blocker.set()
     manager.shutdown(wait=True)
+
+
+def test_a_long_queue_does_not_hold_up_quick_lookups():
+    manager = JobManager(max_workers=1)
+    release = threading.Event()
+    for _ in range(30):
+        manager.submit("test", lambda ctx: release.wait(5))
+    quick = manager.submit("download.probe", lambda ctx: "ok", limited=False)
+    assert _wait_until(lambda: manager.get(quick)["status"] == "done")
+    release.set()
+    manager.shutdown()
+
+
+def test_queued_jobs_start_in_order():
+    manager = JobManager(max_workers=1)
+    release = threading.Event()
+    order = []
+    manager.submit("test", lambda ctx: release.wait(5))
+    ids = [manager.submit("test", lambda ctx, n=n: order.append(n)) for n in range(5)]
+    release.set()
+    assert _wait_until(lambda: all(manager.get(i)["status"] == "done" for i in ids))
+    assert order == [0, 1, 2, 3, 4]
+    assert all(manager.get(i)["message"] is None for i in ids)
+    manager.shutdown()
+
+
+def test_quitting_waits_briefly_for_cancelled_jobs_and_reports_stragglers():
+    manager = JobManager(Collector())
+    stop = threading.Event()
+
+    def obeys(ctx):
+        while True:
+            ctx.check_cancelled()
+            time.sleep(0.01)
+
+    def ignores(ctx):
+        stop.wait(10)
+
+    manager.submit("obeys", obeys)
+    assert manager.shutdown(timeout=5) is True
+
+    stubborn = JobManager(Collector())
+    stubborn.submit("ignores", ignores)
+    started = time.monotonic()
+    assert stubborn.shutdown(timeout=0.2) is False
+    assert time.monotonic() - started < 2
+    stop.set()

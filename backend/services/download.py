@@ -4,16 +4,19 @@ import glob
 import math
 from pathlib import Path
 import re
+import subprocess
 import threading
 import time
-from typing import Any, Dict, List, Optional, Set, Tuple
+from contextlib import contextmanager
+from typing import Any, Dict, Iterator, List, Optional, Set, Tuple
 from urllib.parse import urlparse
 
 import yt_dlp
+import yt_dlp.postprocessor.ffmpeg as yt_dlp_ffmpeg
 from yt_dlp.extractor.tiktok import TikTokIE, TikTokUserIE
 from yt_dlp.networking import Request
 from yt_dlp.postprocessor import EmbedThumbnailPP, PostProcessor
-from yt_dlp.utils import ExtractorError, PostProcessingError, mimetype2ext, traverse_obj, url_or_none
+from yt_dlp.utils import ExtractorError, Popen, PostProcessingError, mimetype2ext, traverse_obj, url_or_none
 
 from backend.core import thumbs, whisper_models
 from backend.core.jobs import JobCancelled, JobContext
@@ -566,6 +569,55 @@ def fit_stem(parent: Path, stem: str, suffix: str) -> str:
     return stem[:room].rstrip(" .") or stem[:room]
 
 
+# The job whose yt-dlp download runs on this thread; its FFmpeg steps stop when it is cancelled.
+_running_job = threading.local()
+CANCEL_POLL_S = 0.2
+
+
+class _CancellablePopen(Popen):
+    """yt-dlp's FFmpeg steps (merging, conversion to MP3, metadata) wait for FFmpeg with no way to stop
+    it; this one kills FFmpeg as soon as the job on the calling thread is cancelled."""
+
+    @classmethod
+    def run(cls, *args: Any, timeout: Optional[float] = None, input: Any = None, **kwargs: Any) -> Tuple[Any, Any, int]:
+        ctx: Optional[JobContext] = getattr(_running_job, "ctx", None)
+        if ctx is None:
+            return super().run(*args, timeout=timeout, input=input, **kwargs)
+        if input is not None and kwargs.get("stdin") is None:
+            kwargs["stdin"] = subprocess.PIPE
+        text = kwargs.get("encoding") or kwargs.get("errors") or kwargs.get("text") or kwargs.get("universal_newlines")
+        with cls(*args, **kwargs) as proc:
+            finished = threading.Event()
+
+            def stop_on_cancel() -> None:
+                while not finished.wait(CANCEL_POLL_S):
+                    if ctx.cancelled:
+                        proc.kill()
+                        return
+
+            threading.Thread(target=stop_on_cancel, daemon=True).start()
+            try:
+                stdout, stderr = proc.communicate_or_kill(input=input, timeout=timeout)
+            finally:
+                finished.set()
+        ctx.check_cancelled()
+        empty = "" if text else b""
+        return stdout or empty, stderr or empty, proc.returncode
+
+
+yt_dlp_ffmpeg.Popen = _CancellablePopen
+
+
+@contextmanager
+def _ffmpeg_stops_with(ctx: JobContext) -> Iterator[None]:
+    previous = getattr(_running_job, "ctx", None)
+    _running_job.ctx = ctx
+    try:
+        yield
+    finally:
+        _running_job.ctx = previous
+
+
 class UniqueYoutubeDL(yt_dlp.YoutubeDL):
     """YoutubeDL subclass that prevents overwriting / skipping by appending (1), (2), etc.
     when the target destination file already exists."""
@@ -666,7 +718,7 @@ def _run_ydl(
     """
     hook = opts["progress_hooks"][0]
     try:
-        with UniqueYoutubeDL(opts, target_ext=target_ext) as ydl:
+        with _ffmpeg_stops_with(ctx), UniqueYoutubeDL(opts, target_ext=target_ext) as ydl:
             if not skip_archived:
                 ydl.archive = set()
             ydl.add_post_processor(_InfoPP(hook), when="video")

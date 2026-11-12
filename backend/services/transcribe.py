@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
+from backend.core.errors import AppError
 from backend.core import whisper_models
 from backend.core.ffmpeg import probe_media, run_ffmpeg
 from backend.core.jobs import JobContext
@@ -235,14 +236,14 @@ def transcribe_file(
 ) -> Dict[str, Any]:
     """Transcribes ``path``; returns the segments, words and detected language."""
     if not whisper_models.is_ready(model_id):
-        raise RuntimeError(f"The Whisper model '{model_id}' is not installed.")
+        raise AppError("errors.modelMissing")
 
     def at(fraction: float) -> float:
         return progress_start + progress_span * fraction / 100.0
 
     info = probe(path)
     if not info["hasAudio"]:
-        raise RuntimeError("The file has no audio track.")
+        raise AppError("errors.noAudio")
     duration = float(info["duration"] or 0.0)
     ctx.progress(at(0), "transcribe.status.decoding")
 

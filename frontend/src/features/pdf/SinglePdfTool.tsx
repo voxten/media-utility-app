@@ -3,11 +3,12 @@
 
 import { useMemo, type ReactNode } from "react";
 import { Button, Caption1, makeStyles, tokens } from "@fluentui/react-components";
-import { ArrowRight16Regular, Delete16Regular, DocumentPdf24Regular } from "@fluentui/react-icons";
+import { ArrowRight16Regular, Delete16Regular, DocumentPdf24Regular, ErrorCircle24Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { ActionBar } from "../../components/ActionBar";
 import { Columns } from "../../components/Columns";
 import { DropZone } from "../../components/DropZone";
+import { EmptyState } from "../../components/EmptyState";
 import { OutputFolderField } from "../../components/OutputFolderField";
 import { Panel } from "../../components/Panel";
 import { api } from "../../lib/bridge";
@@ -69,7 +70,7 @@ export function SinglePdfTool({
 }: SinglePdfToolProps) {
   const styles = useStyles();
   const { t } = useTranslation();
-  const { pages, loading } = usePdfPages(file);
+  const { pages, loading, error } = usePdfPages(file);
   const preview = usePdfPagePreview();
 
   const range = pageRange?.value ?? "";
@@ -137,14 +138,18 @@ export function SinglePdfTool({
         <Columns side={filePanel}>
           {dropZone}
           <Panel title={t("pdf.pagesTitle")} actions={pageMarks?.toolbar}>
-            <PdfPageGrid
-              pages={pages}
-              loading={loading}
-              selected={pageRange ? selected : undefined}
-              marks={pageMarks?.marks}
-              onToggle={pageMarks?.onToggle ?? (pageRange ? togglePage : undefined)}
-              onPreview={preview.show}
-            />
+            {error ? (
+              <EmptyState icon={ErrorCircle24Regular} title={error} />
+            ) : (
+              <PdfPageGrid
+                pages={pages}
+                loading={loading}
+                selected={pageRange ? selected : undefined}
+                marks={pageMarks?.marks}
+                onToggle={pageMarks?.onToggle ?? (pageRange ? togglePage : undefined)}
+                onPreview={preview.show}
+              />
+            )}
           </Panel>
         </Columns>
       ) : (

@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useNotify } from "../components/notify";
 import { on } from "../lib/bridge";
-import { translateMessage } from "../lib/jobMessage";
+import { jobMessage, translateMessage } from "../lib/jobMessage";
 import { navigate } from "../lib/router";
 import { isQuietJob, useJobs } from "../stores/jobs";
 import { toolForJob, type ToolDefinition } from "./tools";
@@ -30,7 +30,7 @@ export function useJobNotifications(route: string) {
       if (!job || !tool) return;
       const name = t(`tools.${tool.id}.name`);
       const options = {
-        body: ok ? translateMessage(t, job.title) || undefined : error,
+        body: ok ? translateMessage(t, job.title) || undefined : jobMessage(t, { ...job, status: "error", error: error ?? null }),
         action: { label: t("jobs.openTool"), onClick: () => navigate(tool.id) },
       };
       if (ok) notify.success(t("jobs.toastDone", { tool: name }), options);

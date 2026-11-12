@@ -1,12 +1,16 @@
 """Text-to-speech synthesis with edge-tts (online) or pyttsx3 (local SAPI voices)."""
 
 import asyncio
-import io
+import re
+import shutil
 import tempfile
+import wave
 from pathlib import Path
 from typing import Any, Dict, List
 
-from backend.core.jobs import JobContext
+from backend.core.errors import AppError
+from backend.core.ffmpeg import run_ffmpeg
+from backend.core.jobs import JobCancelled, JobContext
 from backend.core.paths import unique_path
 
 ENGINES = ("edge", "pyttsx3")
@@ -20,6 +24,11 @@ FALLBACK_EDGE_VOICES = [
 DEFAULT_RATE = {"edge": 0, "pyttsx3": 200}
 AUDIO_FORMATS = ("mp3", "wav", "ogg", "flac")
 TEXT_FILE_LIMIT = 1024 * 1024
+# pyttsx3 cannot stop in the middle of a file, so long text is spoken in parts of about this many
+# characters; Cancel takes effect between them.
+CHUNK_CHARS = 600
+# Share of the progress bar for speaking; the rest is for encoding to MP3/OGG/FLAC.
+SPEECH_SHARE = 80.0
 
 
 def _com_init() -> None:
@@ -110,64 +119,113 @@ def pyttsx3_rate(rate: Any) -> int:
     return value if value > 0 else DEFAULT_RATE["pyttsx3"]
 
 
-async def _edge_bytes(text: str, voice: str, rate: str) -> bytes:
+def split_text(text: str, size: int = CHUNK_CHARS) -> List[str]:
+    """``text`` cut after sentence and line ends into parts of about ``size`` characters."""
+    parts: List[str] = []
+    current = ""
+    for piece in re.split(r"(?<=[.!?…\n])\s+", text):
+        if current and len(current) + len(piece) + 1 > size:
+            parts.append(current)
+            current = piece
+        else:
+            current = f"{current} {piece}" if current else piece
+    if current:
+        parts.append(current)
+    return parts
+
+
+def join_wavs(parts: List[Path], out_path: Path) -> None:
+    with wave.open(str(out_path), "wb") as dst:
+        for index, part in enumerate(parts):
+            with wave.open(str(part), "rb") as src:
+                if index == 0:
+                    dst.setparams(src.getparams())
+                dst.writeframes(src.readframes(src.getnframes()))
+
+
+def _wav_seconds(path: Path) -> float:
+    with wave.open(str(path), "rb") as src:
+        return src.getnframes() / float(src.getframerate() or 1)
+
+
+def _export(ctx: JobContext, speech: Path, out_path: Path, duration: float) -> None:
+    """``speech`` saved as ``out_path``; another format goes through FFmpeg (no console window, cancellable)."""
+    ctx.check_cancelled()
+    if speech.suffix.lower() == out_path.suffix.lower():
+        shutil.move(str(speech), str(out_path))
+        return
+    ctx.progress(SPEECH_SHARE, "tts.status.encoding")
+    run_ffmpeg(
+        ctx,
+        ["-i", str(speech), str(out_path)],
+        duration,
+        out_path=out_path,
+        progress_start=SPEECH_SHARE,
+        progress_span=100 - SPEECH_SHARE,
+        status_key="tts.status.encoding",
+    )
+
+
+async def _edge_bytes(ctx: JobContext, text: str, voice: str, rate: str) -> bytes:
     import edge_tts
 
     communicate = edge_tts.Communicate(text, voice, rate=rate)
+    total_words = max(1, len(text.split()))
+    spoken = 0
     audio = bytearray()
     async for chunk in communicate.stream():
+        if ctx.cancelled:
+            raise JobCancelled()
         if chunk["type"] == "audio":
             audio.extend(chunk["data"])
+        elif chunk["type"].endswith("Boundary"):
+            spoken += len(str(chunk.get("text", "")).split())
+            ctx.progress(min(1.0, spoken / total_words) * SPEECH_SHARE, "tts.status.synthesizing")
     return bytes(audio)
 
 
 def _synth_edge(ctx: JobContext, text: str, voice: str, rate: Any, out_path: Path) -> None:
-    ctx.progress(None, "tts.status.synthesizing")
-    audio = asyncio.run(_edge_bytes(text, voice, edge_rate(rate)))
+    ctx.progress(0, "tts.status.synthesizing")
+    audio = asyncio.run(_edge_bytes(ctx, text, voice, edge_rate(rate)))
     if not audio:
         raise RuntimeError("edge-tts returned no audio")
-    ctx.check_cancelled()
-    if out_path.suffix.lower() == ".mp3":
-        out_path.write_bytes(audio)
-    else:
-        from pydub import AudioSegment
-
-        ctx.progress(80, "tts.status.encoding")
-        AudioSegment.from_file(io.BytesIO(audio), format="mp3").export(out_path, format=out_path.suffix.lstrip("."))
+    with tempfile.TemporaryDirectory() as tmp:
+        speech = Path(tmp) / "speech.mp3"
+        speech.write_bytes(audio)
+        _export(ctx, speech, out_path, 0.0)
 
 
 def _synth_pyttsx3(ctx: JobContext, text: str, voice: str, rate: Any, out_path: Path) -> None:
     import pyttsx3
 
     _com_init()
-    ctx.progress(None, "tts.status.synthesizing")
     engine = pyttsx3.init()
     if voice:
         engine.setProperty("voice", voice)
     engine.setProperty("rate", pyttsx3_rate(rate))
 
-    if out_path.suffix.lower() == ".wav":
-        engine.save_to_file(text, str(out_path))
-        engine.runAndWait()
-        return
-
+    parts = split_text(text)
     with tempfile.TemporaryDirectory() as tmp:
-        tmp_wav = Path(tmp) / "speech.wav"
-        engine.save_to_file(text, str(tmp_wav))
-        engine.runAndWait()
-        if not tmp_wav.exists() or tmp_wav.stat().st_size == 0:
-            raise RuntimeError("pyttsx3 produced no audio")
+        files: List[Path] = []
+        for number, part in enumerate(parts, 1):
+            ctx.check_cancelled()
+            ctx.progress((number - 1) / len(parts) * SPEECH_SHARE, "tts.status.synthesizing")
+            wav = Path(tmp) / f"part{number}.wav"
+            engine.save_to_file(part, str(wav))
+            engine.runAndWait()
+            if not wav.is_file() or wav.stat().st_size == 0:
+                raise RuntimeError("pyttsx3 produced no audio")
+            files.append(wav)
         ctx.check_cancelled()
-        from pydub import AudioSegment
-
-        ctx.progress(80, "tts.status.encoding")
-        AudioSegment.from_wav(tmp_wav).export(out_path, format=out_path.suffix.lstrip("."))
+        speech = Path(tmp) / "speech.wav"
+        join_wavs(files, speech)
+        _export(ctx, speech, out_path, _wav_seconds(speech))
 
 
 def synthesize(ctx: JobContext, text: str, engine: str, voice: str, rate: Any, out_path: str) -> Dict[str, Any]:
     text = text.strip()
     if not text:
-        raise ValueError("Text is empty")
+        raise AppError("errors.textEmpty")
     if engine not in ENGINES:
         raise ValueError(f"Unknown engine: {engine}")
 

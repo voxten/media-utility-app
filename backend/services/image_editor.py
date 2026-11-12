@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 
 from PIL import Image, ImageOps
 
+from backend.core.errors import MissingFile
 from backend.core import imaging, thumbs
 from backend.core.jobs import JobContext
 from backend.core.paths import unique_path
@@ -28,7 +29,7 @@ def load_preview(path: str) -> Dict[str, Any]:
     """Inspects an image file and returns metadata and thumbnail data URL."""
     p = Path(path)
     if not p.is_file():
-        raise FileNotFoundError(f"File not found: {path}")
+        raise MissingFile(path)
 
     with imaging.open_image(p) as img:
         has_alpha = imaging.has_alpha(img)
@@ -73,7 +74,7 @@ def thumbnail(path: str, max_side: int = 256) -> Dict[str, Any]:
     """Small preview for file lists; WebP keeps transparency at a fraction of PNG's size."""
     p = Path(path)
     if not p.is_file():
-        raise FileNotFoundError(f"File not found: {path}")
+        raise MissingFile(path)
 
     with Image.open(p) as img:
         w, h = img.width, img.height
@@ -149,7 +150,7 @@ def preview_transform(path: str, ops: Dict[str, Any]) -> Dict[str, Any]:
     """Applies operations in-memory and returns a data URL preview with dimensions."""
     p = Path(path)
     if not p.is_file():
-        raise FileNotFoundError(f"File not found: {path}")
+        raise MissingFile(path)
 
     with imaging.open_image(p) as img:
         transformed = apply_operations(img, ops)
@@ -180,7 +181,7 @@ def save_transformed(
     """Applies operations and saves the resulting image to disk."""
     src = Path(src_path)
     if not src.is_file():
-        raise FileNotFoundError(f"File not found: {src_path}")
+        raise MissingFile(src_path)
 
     target = unique_path(Path(target_path))
     target.parent.mkdir(parents=True, exist_ok=True)

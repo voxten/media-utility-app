@@ -1,7 +1,9 @@
 // Per-page handle on one backend job: start it, follow it, cancel it, react when it ends.
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import i18n from "../i18n";
 import { api, type JobId } from "./bridge";
+import { jobMessage } from "./jobMessage";
 import { useJob, type JobState } from "../stores/jobs";
 
 interface JobRunnerOptions<T> {
@@ -9,7 +11,8 @@ interface JobRunnerOptions<T> {
   onResult?: (result: T, job: JobState) => void;
   /** Feedback such as toasts: only for a job that ended while the page was open. */
   onDone?: (result: T, job: JobState) => void;
-  onError?: (error: string, job: JobState) => void;
+  /** `message` is the translated reason, ready for a toast. */
+  onError?: (message: string, job: JobState) => void;
   onCancelled?: (job: JobState) => void;
 }
 
@@ -38,7 +41,7 @@ export function useJobRunner<T = unknown>(key: string, options: JobRunnerOptions
     }
     if ((job.finishedAt ?? 0) < mountedAt.current) return;
     if (job.status === "done") opts.onDone?.(job.result as T, job);
-    else if (job.status === "error") opts.onError?.(job.error ?? "", job);
+    else if (job.status === "error") opts.onError?.(jobMessage(i18n.t, job), job);
     else if (job.status === "cancelled") opts.onCancelled?.(job);
   }, [job]);
 

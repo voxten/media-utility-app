@@ -8,6 +8,7 @@ from typing import Any, Dict, Optional
 import cv2
 import numpy as np
 
+from backend.core.errors import AppError
 from backend.core import imaging, thumbs
 from backend.core.imaging import split_alpha
 from backend.core.jobs import JobContext
@@ -142,7 +143,7 @@ def inpaint_array(img: np.ndarray, mask: np.ndarray, method: str) -> tuple:
     """Returns ``(result, notice)``; ``notice`` is an i18n key when LaMa fell back to Telea."""
     bgr, alpha = split_alpha(img)
     if not np.any(mask):
-        raise ValueError("Mask is empty")
+        raise AppError("errors.maskEmpty")
 
     notice: Optional[str] = None
     if method == "lama":

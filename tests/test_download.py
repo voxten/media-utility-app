@@ -267,7 +267,7 @@ def test_media_summary_takes_the_height_from_the_video_stream():
 
 
 def test_links_added_after_the_batch_finished_are_refused(monkeypatch, ctx):
-    monkeypatch.setattr(download_queue, "expand_batch_urls", lambda urls, cookies=None: [{"url": u, "title": u} for u in urls])
+    monkeypatch.setattr(download_queue, "expand_batch_urls", lambda urls, cookies=None, ctx=None, report=False: [{"url": u, "title": u} for u in urls])
     queue = download_queue.ActiveBatchQueue(ctx, {})
     assert queue.add_urls(["https://a"]) == 1
     queue.closed = True

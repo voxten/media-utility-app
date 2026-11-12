@@ -54,7 +54,7 @@ export function SubtaskRow({ item }: { item: SubtaskAction }) {
         <Caption1 className={mergeClasses(styles.infoSide, isError ? styles.badIcon : styles.muted)}>{side}</Caption1>
       </div>
       {isRunning && <ProgressBar value={item.percent == null ? undefined : item.percent / 100} thickness="medium" />}
-      {isError && item.error && <Caption1 className={styles.subtaskError}>{item.error}</Caption1>}
+      {isError && item.error && <Caption1 className={styles.subtaskError}>{translateMessage(t, item.error)}</Caption1>}
     </div>
   );
 }

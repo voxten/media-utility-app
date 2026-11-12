@@ -4,13 +4,30 @@ import importlib.util
 import os
 import shutil
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, NamedTuple, Optional
 
 from backend.core import whisper_models
 from backend.core.paths import app_data_dir, models_dir, project_root
 
 LAMA_EXPECTED_SIZE = 205669692
 LAMA_EXPECTED_SHA256 = "344c77bbcb158f17dd143070d1e789f38a66c04202311ae3a258ef66667a9ea9"
+
+
+class RemBgModel(NamedTuple):
+    file: str
+    size: int
+    sha256: str
+
+
+REMBG_RELEASE_URL = "https://github.com/danielgatis/rembg/releases/download/v0.0.0/"
+# rembg's own downloads check MD5 only and show no progress, so the app fetches these files itself.
+REMBG_MODELS: Dict[str, RemBgModel] = {
+    "birefnet-general": RemBgModel("BiRefNet-general-epoch_244.onnx", 972666916, "58f621f00f5d756097615970a88a791584600dcf7c45b18a0a6267535a1ebd3c"),
+    "birefnet-general-lite": RemBgModel("BiRefNet-general-bb_swin_v1_tiny-epoch_232.onnx", 224005088, "5600024376f572a557870a5eb0afb1e5961636bef4e1e22132025467d0f03333"),
+    "isnet-general-use": RemBgModel("isnet-general-use.onnx", 178648008, "60920e99c45464f2ba57bee2ad08c919a52bbf852739e96947fbb4358c0d964a"),
+    "u2net": RemBgModel("u2net.onnx", 175997641, "8d10d2f3bb75ae3b6d527c77944fc5e7dcd94b29809d47a739a7a728a912b491"),
+}
+DEFAULT_REMBG_MODEL = "birefnet-general"
 
 
 def _has_module(name: str) -> bool:
@@ -78,8 +95,23 @@ def is_upscale_ready(model_id: str) -> bool:
     return _has_module("torch") and upscale_model_path(model_id) is not None
 
 
-def is_rembg_ready() -> bool:
+def rembg_model_path(name: str) -> Optional[Path]:
+    """A complete copy of a background removal model where rembg finds it (``U2NET_HOME`` is
+    ``models_dir()``): the flat file the app downloads, or the folder newer rembg versions use."""
+    model = REMBG_MODELS.get(name)
+    root = models_dir()
+    for path in (root / f"{name}.onnx", root / "models" / name / f"{name}.onnx"):
+        if path.is_file() and (model is None or path.stat().st_size == model.size):
+            return path
+    return None
+
+
+def rembg_packages_ready() -> bool:
     return _has_module("rembg") and _has_module("onnxruntime")
+
+
+def is_rembg_ready() -> bool:
+    return rembg_packages_ready() and rembg_model_path(DEFAULT_REMBG_MODEL) is not None
 
 
 def _mediainfo_ok() -> bool:
@@ -138,7 +170,13 @@ def check_dependencies(custom_ffmpeg: Optional[str] = None) -> List[Dict[str, An
 
     upscale_gen_ok = is_upscale_ready("general")
     upscale_anime_ok = is_upscale_ready("anime")
-    rembg_ok = is_rembg_ready()
+    rembg_packages_ok = rembg_packages_ready()
+    rembg_ok = rembg_packages_ok and rembg_model_path(DEFAULT_REMBG_MODEL) is not None
+    rembg_detail = (
+        "BiRefNet (rembg + onnxruntime)"
+        if rembg_ok
+        else "settings.deps.detailRembgModelOnly" if rembg_packages_ok else "settings.deps.detailRembgMissing"
+    )
 
     return [
         {
@@ -180,11 +218,11 @@ def check_dependencies(custom_ffmpeg: Optional[str] = None) -> List[Dict[str, An
         {
             "id": "rembg",
             "ok": rembg_ok,
-            "detail": "BiRefNet / RMBG (rembg + onnxruntime)" if rembg_ok else "settings.deps.detailRembgMissing",
+            "detail": rembg_detail,
             "usedBy": ["rembg"],
             "required": False,
             "installable": not rembg_ok,
-            "sizeEstimate": "~140 MB" if not rembg_ok else "",
+            "sizeEstimate": "" if rembg_ok else "~930 MB" if rembg_packages_ok else "~1.1 GB",
         },
         {
             "id": "upscale_general",

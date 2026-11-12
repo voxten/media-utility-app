@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from PIL import Image
 
+from backend.core.errors import MissingFile
 from backend.core import imaging, thumbs
 from backend.core.jobs import JobContext
 from backend.core.paths import unique_path
@@ -22,7 +23,7 @@ def load_preview(path: str) -> Dict[str, Any]:
     """Inspects image and returns dimensions, file size and data URL preview."""
     p = Path(path)
     if not p.is_file():
-        raise FileNotFoundError(f"File not found: {path}")
+        raise MissingFile(path)
 
     with imaging.open_image(p) as img:
         has_alpha = imaging.has_alpha(img)
@@ -154,7 +155,7 @@ def preview_compress(path: str, params: Dict[str, Any]) -> Dict[str, Any]:
     """Compresses an image in-memory to provide instant visual and size comparison."""
     p = Path(path)
     if not p.is_file():
-        raise FileNotFoundError(f"File not found: {path}")
+        raise MissingFile(path)
 
     in_bytes = p.stat().st_size
     out_fmt = params.get("format", "original").lower()
