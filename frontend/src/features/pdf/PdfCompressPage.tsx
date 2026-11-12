@@ -21,6 +21,7 @@ interface CompressResult {
   outBytes: number;
   savedBytes: number;
   savedPercent: number;
+  noGain?: boolean;
 }
 
 const useStyles = makeStyles({
@@ -82,11 +83,15 @@ export default function PdfCompressPage() {
           compress.result && (
             <ResultCard
               title={t("pdf.toast.compressSuccess")}
-              detail={t("pdf.compress.result", {
-                before: formatBytes(compress.result.inBytes),
-                after: formatBytes(compress.result.outBytes),
-                percent: compress.result.savedPercent,
-              })}
+              detail={
+                compress.result.noGain
+                  ? t("pdf.compress.noGain", { size: formatBytes(compress.result.inBytes) })
+                  : t("pdf.compress.result", {
+                      before: formatBytes(compress.result.inBytes),
+                      after: formatBytes(compress.result.outBytes),
+                      percent: compress.result.savedPercent,
+                    })
+              }
               path={compress.result.outPath}
               sourceToolId="pdf_compress"
             />

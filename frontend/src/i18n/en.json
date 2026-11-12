@@ -170,6 +170,7 @@
       "detailLamaFull": "Requires installing PyTorch and LaMa model",
       "detailRembgMissing": "Requires installing rembg and onnxruntime (~140 MB)",
       "detailFfmpegMissing": "FFmpeg executable not found in PATH",
+      "detailFfprobeMissing": "FFmpeg found, but ffprobe is missing next to it",
       "detailGifsicleMissing": "gifsicle not found",
       "detailUpscaleGenMissing": "Requires downloading realesr-general-x4v3.pth weights (~4.8 MB)",
       "detailUpscaleAnimeMissing": "Requires downloading RealESRGAN_x4plus_anime_6B.pth weights (~17.9 MB)",
@@ -403,7 +404,9 @@
     },
     "log": {
       "done": "{{name}} compressed ({{saved}})",
-      "error": "Compression error for {{file}}: {{error}}"
+      "error": "Compression error for {{file}}: {{error}}",
+      "noGain": "{{name}}: no gain, original kept",
+      "targetMissed": "{{name}}: target size not reached, smallest result is {{size}}"
     },
     "mode": "Compression mode",
     "modeSmart": "Balanced",
@@ -421,7 +424,8 @@
     },
     "dropTitle": "Drop images to compress",
     "dropHint": "One or more files: {{formats}}",
-    "compressAll": "Compress {{count}} files"
+    "compressAll": "Compress {{count}} files",
+    "noGain": "No gain"
   },
   "pdf": {
     "status": {
@@ -437,7 +441,8 @@
     },
     "log": {
       "readFailed": "Cannot read {{file}}: {{error}}",
-      "rewriteWarning": "Image optimization warning: {{error}}"
+      "rewriteWarning": "Image optimization warning: {{error}}",
+      "noGain": "The PDF could not be made smaller; the original was kept."
     },
     "dropTitle": "Drop PDF files here",
     "dropMore": "Add more PDF files",
@@ -464,7 +469,8 @@
       "presetBalanced": "Balanced · 150 DPI",
       "presetHigh": "High · 100 DPI",
       "action": "Compress & save",
-      "result": "{{before}} → {{after}} (−{{percent}}%)"
+      "result": "{{before}} → {{after}} (−{{percent}}%)",
+      "noGain": "{{size}} · could not be made smaller, original kept"
     },
     "split": {
       "mode": "Split mode",
@@ -784,6 +790,9 @@
       "modelInference": "Real-ESRGAN AI model inference…",
       "alphaProcessing": "Processing transparency…",
       "done": "Upscaling completed successfully."
+    },
+    "log": {
+      "smallerTiles": "Not enough memory, trying again with {{size}} px tiles"
     },
     "dropTitle": "Drop image to upscale",
     "dropHint": "or click to choose a file ({{formats}})",
@@ -1262,7 +1271,8 @@
     },
     "log": {
       "starting": "Starting audio sync for {{path}} with offset {{offset}}",
-      "finished": "Exported {{out}} ({{size}} bytes)"
+      "finished": "Exported {{out}} ({{size}} bytes)",
+      "subtitlesSkipped": "Subtitle tracks that {{format}} cannot hold were left out: {{count}}"
     },
     "trackNum": "Track {{num}}",
     "offset": "Audio offset",
@@ -1381,6 +1391,7 @@
     "bootFailed": "The app could not start: {{error}}",
     "pathMissing": "The file or folder no longer exists.",
     "openFailed": "Could not open it.",
-    "trashFailed": "Could not move it to the Recycle Bin."
+    "trashFailed": "Could not move it to the Recycle Bin.",
+    "imageUnreadable": "The image could not be read."
   }
 }

@@ -118,7 +118,9 @@ def _whisper_dependencies() -> List[Dict[str, Any]]:
 def check_dependencies(custom_ffmpeg: Optional[str] = None) -> List[Dict[str, Any]]:
     ensure_app_paths(custom_ffmpeg)
     ffmpeg = shutil.which("ffmpeg")
-    ffmpeg_ok = ffmpeg is not None
+    ffprobe = shutil.which("ffprobe")
+    # Every video tool reads the file with ffprobe first, so FFmpeg alone is not enough.
+    ffmpeg_ok = ffmpeg is not None and ffprobe is not None
     gifsicle = shutil.which("gifsicle")
 
     lama_ok = is_lama_ready()
@@ -142,7 +144,7 @@ def check_dependencies(custom_ffmpeg: Optional[str] = None) -> List[Dict[str, An
         {
             "id": "ffmpeg",
             "ok": ffmpeg_ok,
-            "detail": ffmpeg or "settings.deps.detailFfmpegMissing",
+            "detail": ffmpeg if ffmpeg_ok else "settings.deps.detailFfprobeMissing" if ffmpeg else "settings.deps.detailFfmpegMissing",
             "usedBy": ["download", "tts", "video_sync", "video_to_gif", "gif_editor"],
             "required": True,
             "installable": not ffmpeg_ok,

@@ -595,6 +595,9 @@ class ImageEditorApi(_Namespace):
     def thumbnail(self, path: str) -> Dict[str, Any]:
         return image_editor.thumbnail(path)
 
+    def sizes(self, paths: List[str]) -> List[Optional[Dict[str, int]]]:
+        return image_editor.image_sizes(paths)
+
     def preview_transform(self, path: str, operations: Dict[str, Any]) -> Dict[str, Any]:
         return image_editor.preview_transform(path, operations)
 

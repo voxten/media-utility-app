@@ -8,12 +8,13 @@ waveform amplitude peaks for interactive visualization, fast preview generation
 import base64
 import logging
 import os
-import struct
 import subprocess
 import tempfile
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
+
+import numpy as np
 
 from backend.core.ffmpeg import NO_WINDOW, extract_frames, probe_media, resolve_binary, run_capture, run_ffmpeg
 from backend.core.jobs import JobContext
@@ -26,6 +27,42 @@ SUPPORTED_VIDEO_FORMATS = {
 SUPPORTED_AUDIO_FORMATS = {
     ".mp3", ".wav", ".aac", ".m4a", ".flac", ".ogg", ".opus", ".wma", ".aiff"
 }
+TEXT_SUBTITLE_CODECS = {"subrip", "ass", "ssa", "mov_text", "webvtt", "text"}
+MP4_CONTAINERS = {".mp4", ".m4v", ".mov"}
+
+
+def _subtitle_args(subtitles: List[Dict[str, Any]], out_suffix: str) -> Tuple[List[str], int]:
+    """FFmpeg arguments that keep the video's subtitles ``out_suffix`` can hold, and how many are left out.
+
+    Matroska takes every track as is; MP4 takes text tracks only, converted to mov_text.
+    """
+    suffix = out_suffix.lower()
+    if suffix == ".mkv":
+        kept, codec = subtitles, "copy"
+    elif suffix in MP4_CONTAINERS:
+        kept, codec = [s for s in subtitles if s["codec"] in TEXT_SUBTITLE_CODECS], "mov_text"
+    else:
+        kept, codec = [], ""
+    args = [arg for s in kept for arg in ("-map", f"0:{s['index']}")]
+    if kept:
+        args += ["-c:s", codec]
+    return args, len(subtitles) - len(kept)
+
+
+def _peaks(raw: bytes, target_points: int) -> Tuple[List[float], float]:
+    """Normalized peak level per point, and the loudest sample.
+
+    The points split all samples evenly (none dropped at the end), so point ``i`` of ``n`` covers
+    the ``i``-th share of the audio and lines up with the timeline at any zoom.
+    """
+    samples = np.abs(np.frombuffer(raw, dtype="<f4", count=len(raw) // 4))
+    count = min(target_points, samples.size)
+    starts = np.arange(count) * samples.size // count
+    peaks = np.maximum.reduceat(samples, starts)
+    max_peak = float(peaks.max())
+    if max_peak > 0.001:
+        peaks = np.minimum(1.0, peaks / max_peak)
+    return np.round(peaks, 3).tolist(), max_peak
 
 
 def extract_waveform(
@@ -83,32 +120,7 @@ def extract_waveform(
     if sample_count == 0:
         return {"points": [0.0] * target_points, "duration": duration or 0.0, "sampleCount": 0}
 
-    # Unpack float32 samples in range [-1.0, 1.0]
-    samples = [s[0] for s in struct.iter_unpack("<f", raw_bytes)]
-
-    # Compute bucketed peak amplitudes
-    bucket_size = max(1, sample_count // target_points)
-    peaks: List[float] = []
-    max_peak = 0.0
-
-    for i in range(0, sample_count, bucket_size):
-        chunk = samples[i:i + bucket_size]
-        if not chunk:
-            continue
-        p_val = max(abs(x) for x in chunk)
-        if p_val > max_peak:
-            max_peak = p_val
-        peaks.append(p_val)
-        if len(peaks) >= target_points:
-            break
-
-    # Normalize to 0.0 .. 1.0
-    norm_factor = 1.0 / max_peak if max_peak > 0.001 else 1.0
-    normalized_peaks = [round(min(1.0, p * norm_factor), 3) for p in peaks]
-
-    # Ensure exact length
-    while len(normalized_peaks) < target_points:
-        normalized_peaks.append(0.0)
+    normalized_peaks, max_peak = _peaks(raw_bytes, target_points)
 
     return {
         "points": normalized_peaks,
@@ -237,7 +249,8 @@ def sync_video(ctx: JobContext, params: Dict[str, Any]) -> Dict[str, Any]:
 
     ctx.progress(5, "video_sync.status.preparing")
     ctx.log("video_sync.log.starting", path=v_p.name, offset=f"{offset_sec:+.3f}s")
-    duration = probe_media(str(v_p))["duration"]
+    info = probe_media(str(v_p))
+    duration = info["videoDuration"] or info["duration"]
 
     # Input 0: video
     cmd = ["-i", str(v_p)]
@@ -257,6 +270,15 @@ def sync_video(ctx: JobContext, params: Dict[str, Any]) -> Dict[str, Any]:
 
     cmd.extend(["-filter_complex", filter_str])
     cmd.extend(["-map", "0:v:0", "-map", "[aout]"])
+    subtitle_args, skipped = _subtitle_args(info.get("subtitles", []), out_path.suffix)
+    cmd.extend(subtitle_args)
+    if skipped:
+        ctx.log("video_sync.log.subtitlesSkipped", "warning", count=skipped, format=out_path.suffix.lstrip(".").upper())
+    cmd.extend(["-map_chapters", "0"])
+    # A delayed track runs past the picture; the export keeps the video's length. (-shortest would
+    # also stop at the end of the last subtitle.)
+    if duration > 0:
+        cmd.extend(["-t", f"{duration:.3f}"])
 
     if mode == "fast_copy":
         # Video stream copy (lossless, instant!), re-encode audio to AAC

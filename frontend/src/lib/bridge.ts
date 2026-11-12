@@ -308,6 +308,7 @@ export const api = {
   image_editor: {
     thumbnail: (path: string) =>
       call<{ width: number; height: number; format: string; size: number; dataUrl: string }>("image_editor", "thumbnail", path),
+    sizes: (paths: string[]) => call<Array<{ width: number; height: number } | null>>("image_editor", "sizes", paths),
     loadPreview: (path: string) =>
       call<{
         path: string;

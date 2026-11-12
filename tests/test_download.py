@@ -273,3 +273,31 @@ def test_links_added_after_the_batch_finished_are_refused(monkeypatch, ctx):
     queue.closed = True
     assert queue.add_urls(["https://b"]) is None
     assert [item["url"] for item in queue.items] == ["https://a"]
+
+
+def test_site_checks_compare_the_host():
+    assert download.is_x("https://x.com/u/status/1") and download.is_x("https://mobile.twitter.com/u/status/1")
+    assert not download.is_x("https://www.dropbox.com/s/abc") and not download.is_x("https://www.netflix.com/title/1")
+    assert download.is_youtube("youtu.be/abc") and download.is_youtube("https://m.youtube.com/watch?v=1")
+    assert not download.is_youtube("https://notyoutube.com/watch?v=1")
+    assert download.is_instagram("https://www.instagram.com/p/1")
+    assert not download.is_instagram("https://example.com/?from=instagram.com")
+
+
+def test_long_titles_are_shortened_to_fit_windows_paths():
+    parent = Path("C:/Users/someone/Downloads")
+    assert download.fit_stem(parent, "short", ".mp4") == "short"
+    assert len(download.fit_stem(parent, "a" * 400, ".mp4")) == download.MAX_STEM_CHARS
+    assert download.fit_stem(parent, "x" * 149 + " ." + "y" * 50, ".mp4") == "x" * 149
+
+    deep = Path("C:/" + "d" * 200)
+    stem = download.fit_stem(deep, "b" * 400, ".mp4")
+    assert len(str(deep / f"{stem}.mp4")) <= download.MAX_PATH_CHARS
+
+
+def test_unique_youtube_dl_shortens_a_long_title(tmp_path):
+    opts = {"outtmpl": str(Path(tmp_path) / "%(title)s.%(ext)s")}
+    with download.UniqueYoutubeDL(opts, target_ext="mp4") as ydl:
+        fn = Path(ydl.prepare_filename({"id": "4", "title": "t" * 300, "ext": "webm"}))
+    assert fn.suffix == ".webm"
+    assert len(fn.stem) <= download.MAX_STEM_CHARS and len(str(fn)) <= download.MAX_PATH_CHARS + 5

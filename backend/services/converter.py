@@ -54,7 +54,7 @@ def convert_image(src: Path, output_dir: Path, out_fmt: str, quality: int = 80, 
 
     with imaging.open_image(src) as img:
         work = imaging.prepare_for_format(img, out_fmt)
-        save_kwargs: Dict[str, Any] = {}
+        save_kwargs: Dict[str, Any] = imaging.color_profile(img, out_fmt)
         if out_fmt in ("webp", "jpeg"):
             save_kwargs["quality"] = quality
         if out_fmt == "webp":

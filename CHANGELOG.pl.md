@@ -21,6 +21,17 @@ Polskie tłumaczenie [CHANGELOG.md](CHANGELOG.md), pokazywane w aplikacji przy p
 - „Otwórz plik”, „Pokaż w folderze” i „Przenieś do kosza” mówią, dlaczego się nie udało (pliku już nie ma albo Windows odmówił), zamiast nic nie robić. Wyszukiwarka duplikatów nie usuwa już z listy plików, których nie udało się przenieść do kosza.
 - Wynik ostatniej kolejki w Pobieraniu wideo zostaje na stronie, nawet gdy kolejka skończyła się, kiedy otwarte było inne narzędzie.
 - Karta zadania pisze, że brakuje pliku, tylko przy zakończonych zadaniach.
+- „Zastosuj do wszystkich” w Narzędziach obrazu działa też dla plików, których nie otwierałeś, a kadr i zmiana rozmiaru zachowują proporcje każdego zdjęcia, więc pionowe zdjęcia nie są już rozciągane do poziomego rozmiaru.
+- Usuwanie tła AI, Skalowanie obrazów AI i Usuwanie znaku wodnego obracają zdjęcia z telefonu zgodnie z EXIF i czytają 16-bitowe pliki PNG i TIFF.
+- Przekonwertowane, skompresowane i edytowane zdjęcia zachowują profil kolorów, więc zdjęcia z iPhone'a nie wychodzą już wyblakłe.
+- Zdjęcia z części aparatów Samsung, Sony i Fuji zapisują się jako .jpg zamiast .mpo.
+- Kompresor obrazów i Kompresor PDF zostawiają oryginał, gdy wynik nie byłby mniejszy, i oznaczają go „Bez zysku”. „Docelowy rozmiar” dla PNG nie powtarza już 14 razy tej samej wolnej próby i mówi, gdy nie udało się zejść do zadanego rozmiaru.
+- Kompresor PDF naprawdę zmniejsza duże obrazy; wcześniej każde ustawienie zawodziło na tym kroku i plik był tylko przepakowywany.
+- Przebieg dźwięku w Synchronizacji Audio-Wideo nie rozjeżdża się już przy powiększeniu. Eksport z opóźnionym dźwiękiem zachowuje długość filmu, jego napisy i rozdziały.
+- Linki ze stron takich jak dropbox.com czy netflix.com nie są już traktowane jak linki z X (Twittera).
+- Bardzo długie tytuły filmów są skracane, żeby plik zmieścił się w limicie długości ścieżki w Windows.
+- Skalowanie obrazów AI modelem anime pracuje na kafelkach i zużywa dużo mniej pamięci; gdy pamięci nadal brakuje, próbuje ponownie z mniejszymi kafelkami.
+- Ustawienia nie pokazują już FFmpeg jako gotowego, gdy brakuje ffprobe, a instalacja FFmpeg uzupełnia brakujący ffprobe.
 
 ## [0.14.0] - 2026-11-11
 

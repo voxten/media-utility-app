@@ -27,7 +27,7 @@ def load_preview(path: str) -> Dict[str, Any]:
     with imaging.open_image(p) as img:
         has_alpha = imaging.has_alpha(img)
         w, h = img.width, img.height
-        raw_format = (img.format or p.suffix.lstrip(".")).upper()
+        raw_format = imaging.pil_format(img.format or p.suffix)
         # Preview thumbnail
         thumb_data = thumbs.to_data_url(img, max_size=(1200, 1200), fmt="PNG" if has_alpha else "JPEG")
 
@@ -49,22 +49,26 @@ def _compress_to_buffer(
     mode: str = "smart",
     quality: int = 80,
 ) -> Tuple[bytes, str]:
-    """Compresses a PIL Image in memory and returns (bytes, mime_type). Metadata is not carried over."""
+    """Compresses a PIL Image in memory and returns (bytes, mime_type).
+
+    Only the colour profile is carried over; EXIF and other metadata are dropped.
+    """
     fmt = imaging.normalize_format(fmt)
     work_img = imaging.prepare_for_format(img, fmt)
+    icc = imaging.color_profile(img, fmt)
 
     buf = io.BytesIO()
 
     if fmt == "webp":
         if mode == "lossless":
-            work_img.save(buf, "WEBP", lossless=True, method=6)
+            work_img.save(buf, "WEBP", lossless=True, method=6, **icc)
         else:
-            work_img.save(buf, "WEBP", quality=quality, method=6)
+            work_img.save(buf, "WEBP", quality=quality, method=6, **icc)
         mime = "webp"
 
     elif fmt == "jpeg":
         if mode == "lossless":
-            work_img.save(buf, "JPEG", quality=95, optimize=True, progressive=True)
+            work_img.save(buf, "JPEG", quality=95, optimize=True, progressive=True, **icc)
         else:
             work_img.save(
                 buf,
@@ -73,6 +77,7 @@ def _compress_to_buffer(
                 optimize=True,
                 progressive=True,
                 subsampling="4:2:0" if quality <= 85 else "4:4:4",
+                **icc,
             )
         mime = "jpeg"
 
@@ -80,55 +85,69 @@ def _compress_to_buffer(
         if mode == "smart" and not imaging.has_alpha(work_img):
             # Quantize 24-bit to 8-bit palette with Floyd-Steinberg dithering for massive savings
             quantized = work_img.quantize(colors=256, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.FLOYDSTEINBERG)
-            quantized.save(buf, "PNG", optimize=True, compress_level=9)
+            quantized.save(buf, "PNG", optimize=True, compress_level=9, **icc)
         else:
-            work_img.save(buf, "PNG", optimize=True, compress_level=9)
+            work_img.save(buf, "PNG", optimize=True, compress_level=9, **icc)
         mime = "png"
 
     else:
-        work_img.save(buf, imaging.pil_format(fmt))
+        work_img.save(buf, imaging.pil_format(fmt), **icc)
         mime = fmt
 
     return buf.getvalue(), mime
+
+
+# Formats whose encoder has a quality setting; for the others only scaling can reach a size.
+_QUALITY_FORMATS = {"jpeg", "webp"}
 
 
 def _find_target_quality(
     img: Image.Image,
     fmt: str,
     target_bytes: int,
-) -> Tuple[bytes, str]:
-    """Finds best quality setting using binary search to fit within target_bytes."""
-    low, high = 10, 95
-    best_buf = None
-    best_mime = "jpeg"
+) -> Tuple[bytes, str, bool]:
+    """The best encoding that fits ``target_bytes``: highest quality first, then smaller dimensions.
 
-    # Step 1: Bisection on quality
-    for _ in range(7):
-        mid = (low + high) // 2
-        data, mime = _compress_to_buffer(img, fmt, mode="smart", quality=mid)
-        best_mime = mime
-        if len(data) <= target_bytes:
-            best_buf = data
-            low = mid + 1  # Try higher quality
-        else:
-            high = mid - 1  # Reduce quality
+    Returns ``(data, mime, reached)``; when nothing fits, the smallest encoding produced.
+    """
+    fmt = imaging.normalize_format(fmt)
+    smallest: Optional[Tuple[bytes, str]] = None
 
-    # Step 2: If even lowest quality is too big, scale image dimensions down
-    if best_buf is None or len(best_buf) > target_bytes:
-        current_img = img
-        scale = 0.85
-        while scale >= 0.2:
-            new_w = max(16, int(img.width * scale))
-            new_h = max(16, int(img.height * scale))
-            scaled = current_img.resize((new_w, new_h), Image.Resampling.LANCZOS)
-            data, mime = _compress_to_buffer(scaled, fmt, mode="smart", quality=60)
+    def keep(data: bytes, mime: str) -> None:
+        nonlocal smallest
+        if smallest is None or len(data) < len(smallest[0]):
+            smallest = (data, mime)
+
+    if fmt in _QUALITY_FORMATS:
+        best: Optional[Tuple[bytes, str]] = None
+        low, high = 10, 95
+        while low <= high:
+            mid = (low + high) // 2
+            data, mime = _compress_to_buffer(img, fmt, mode="smart", quality=mid)
+            keep(data, mime)
             if len(data) <= target_bytes:
-                return data, mime
-            scale -= 0.15
-        # Return smallest produced
-        return _compress_to_buffer(img, fmt, mode="smart", quality=15)
+                best = (data, mime)
+                low = mid + 1
+            else:
+                high = mid - 1
+        if best:
+            return best[0], best[1], True
+    else:
+        data, mime = _compress_to_buffer(img, fmt, mode="smart")
+        keep(data, mime)
+        if len(data) <= target_bytes:
+            return data, mime, True
 
-    return best_buf, best_mime
+    scale = 0.85
+    while scale >= 0.2:
+        scaled = img.resize((max(16, int(img.width * scale)), max(16, int(img.height * scale))), Image.Resampling.LANCZOS)
+        data, mime = _compress_to_buffer(scaled, fmt, mode="smart", quality=60)
+        keep(data, mime)
+        if len(data) <= target_bytes:
+            return data, mime, True
+        scale -= 0.15
+    assert smallest is not None
+    return smallest[0], smallest[1], False
 
 
 def preview_compress(path: str, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -148,7 +167,7 @@ def preview_compress(path: str, params: Dict[str, Any]) -> Dict[str, Any]:
     with imaging.open_image(p) as img:
         if mode == "target" and target_kb:
             target_bytes = int(target_kb) * 1024
-            data, mime = _find_target_quality(img, out_fmt, target_bytes)
+            data, mime, _ = _find_target_quality(img, out_fmt, target_bytes)
         else:
             data, mime = _compress_to_buffer(img, out_fmt, mode=mode, quality=quality)
 
@@ -223,12 +242,20 @@ def compress(ctx: JobContext, params: Dict[str, Any]) -> Dict[str, Any]:
             dest = unique_path(out_dir_path / f"{src.stem}_compressed.{ext}")
 
         try:
+            reached = True
             with imaging.open_image(src) as img:
                 if mode == "target" and target_bytes:
-                    data, _ = _find_target_quality(img, out_fmt, target_bytes)
+                    data, _, reached = _find_target_quality(img, out_fmt, target_bytes)
                 else:
                     data, _ = _compress_to_buffer(img, out_fmt, mode=mode, quality=quality)
 
+            # In its own format, a result that is not smaller is worse than the file itself.
+            no_gain = out_fmt == imaging.normalize_format(src.suffix) and len(data) >= in_size
+            if no_gain:
+                data = src.read_bytes()
+                ctx.log("compressor.log.noGain", "warning", name=src.name)
+            elif not reached:
+                ctx.log("compressor.log.targetMissed", "warning", name=src.name, size=f"{len(data) // 1024} KB")
             dest.write_bytes(data)
             out_size = len(data)
             total_out += out_size
@@ -242,10 +269,12 @@ def compress(ctx: JobContext, params: Dict[str, Any]) -> Dict[str, Any]:
                 "inBytes": in_size,
                 "outBytes": out_size,
                 "savedPercent": pct,
+                "noGain": no_gain,
             }
             results.append(res_item)
             ctx.partial(res_item)
-            ctx.log("compressor.log.done", "info", name=src.name, saved=f"-{pct}%")
+            if not no_gain:
+                ctx.log("compressor.log.done", "info", name=src.name, saved=f"-{pct}%")
         except Exception as exc:  # noqa: BLE001
             failed += 1
             ctx.log("compressor.log.error", "error", file=src.name, error=str(exc))

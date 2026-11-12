@@ -33,7 +33,7 @@ def load_preview(path: str) -> Dict[str, Any]:
     with imaging.open_image(p) as img:
         has_alpha = imaging.has_alpha(img)
         w, h = img.width, img.height
-        raw_format = (img.format or p.suffix.lstrip(".")).upper()
+        raw_format = imaging.pil_format(img.format or p.suffix)
         # Preview thumbnail
         thumb_data = thumbs.to_data_url(
             img,
@@ -54,6 +54,21 @@ def load_preview(path: str) -> Dict[str, Any]:
     }
 
 
+def image_sizes(paths: List[str]) -> List[Optional[Dict[str, int]]]:
+    """Upright pixel size of each image, read from the header only; None for a file that cannot be read."""
+    sizes: List[Optional[Dict[str, int]]] = []
+    for path in paths:
+        try:
+            with Image.open(path) as img:
+                w, h = img.width, img.height
+                if img.getexif().get(0x0112) in _SIDEWAYS_ORIENTATIONS:
+                    w, h = h, w
+            sizes.append({"width": w, "height": h})
+        except (OSError, ValueError, Image.DecompressionBombError):
+            sizes.append(None)
+    return sizes
+
+
 def thumbnail(path: str, max_side: int = 256) -> Dict[str, Any]:
     """Small preview for file lists; WebP keeps transparency at a fraction of PNG's size."""
     p = Path(path)
@@ -64,7 +79,7 @@ def thumbnail(path: str, max_side: int = 256) -> Dict[str, Any]:
         w, h = img.width, img.height
         if img.getexif().get(0x0112) in _SIDEWAYS_ORIENTATIONS:
             w, h = h, w
-        fmt = (img.format or p.suffix.lstrip(".")).upper()
+        fmt = imaging.pil_format(img.format or p.suffix)
         has_alpha = imaging.has_alpha(img)
         # JPEG decoders can scale down while decoding, which skips most of the work for big photos.
         img.draft("RGB", (max_side, max_side))
@@ -177,7 +192,7 @@ def save_transformed(
         fmt = imaging.normalize_format(out_fmt or orig_format or "png")
         work_img = imaging.prepare_for_format(transformed, fmt)
 
-        save_kwargs: Dict[str, Any] = {}
+        save_kwargs: Dict[str, Any] = imaging.color_profile(img, fmt)
         if fmt in ("jpeg", "webp"):
             save_kwargs["quality"] = quality
 

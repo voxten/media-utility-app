@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any, Dict, Optional
 import cv2
 import numpy as np
 
-from backend.core import thumbs
+from backend.core import imaging, thumbs
 from backend.core.imaging import split_alpha
 from backend.core.jobs import JobCancelled, JobContext
 from backend.core.paths import cache_dir, models_dir, project_root
@@ -43,15 +43,7 @@ def is_model_available(model_id: str) -> bool:
 
 
 def read_image(path: str) -> np.ndarray:
-    """Unicode-safe image reader preserving alpha channel."""
-    p = Path(path)
-    if not p.is_file():
-        raise FileNotFoundError(path)
-    data = np.fromfile(path, dtype=np.uint8)
-    img = cv2.imdecode(data, cv2.IMREAD_UNCHANGED)
-    if img is None:
-        raise ValueError(f"Cannot decode image: {path}")
-    return img
+    return imaging.read_cv2(path)
 
 
 def write_image(img: np.ndarray, path: str) -> str:
@@ -99,17 +91,6 @@ def _process_tiles(
     h, w, c = img_bgr.shape
     out_h, out_w = h * scale, w * scale
 
-    # If small enough, run direct forward pass
-    if h <= 1024 and w <= 1024:
-        rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
-        tensor = torch.from_numpy(rgb).permute(2, 0, 1).unsqueeze(0).float().to(device) / 255.0
-        with torch.no_grad():
-            out_tensor = model(tensor)
-        out_rgb = out_tensor[0].permute(1, 2, 0).clamp(0, 1).detach().cpu().numpy()
-        out_bgr = cv2.cvtColor((out_rgb * 255.0).astype(np.uint8), cv2.COLOR_RGB2BGR)
-        return out_bgr
-
-    # Tile processing
     output = np.zeros((out_h, out_w, c), dtype=np.uint8)
     tiles_x = int(np.ceil(w / tile_size))
     tiles_y = int(np.ceil(h / tile_size))
@@ -162,6 +143,39 @@ def _process_tiles(
     return output
 
 
+# Tile edge per model. The anime model (RRDBNet) keeps 64 channels at 4x the tile size, so a
+# 1024 px pass needs ~9 GB; 256 px tiles stay well under 1 GB.
+TILE_SIZES = {"general": 512, "anime": 256}
+MIN_TILE_SIZE = 64
+
+
+_OUT_OF_MEMORY_HINTS = ("out of memory", "not enough memory", "can't allocate memory")
+
+
+def _out_of_memory(exc: BaseException) -> bool:
+    message = str(exc).lower()
+    return isinstance(exc, MemoryError) or any(hint in message for hint in _OUT_OF_MEMORY_HINTS)
+
+
+def _upscale_tiles(
+    model: "torch.nn.Module", device: str, img: np.ndarray, tile_size: int, ctx: Optional[JobContext]
+) -> np.ndarray:
+    """``_process_tiles``, started again with half-size tiles while memory runs out."""
+    while True:
+        try:
+            return _process_tiles(model, device, img, tile_size=tile_size, scale=4, ctx=ctx)
+        except (RuntimeError, MemoryError) as exc:
+            if not _out_of_memory(exc) or tile_size // 2 < MIN_TILE_SIZE:
+                raise
+            tile_size //= 2
+            if device == "cuda":
+                import torch
+
+                torch.cuda.empty_cache()
+            if ctx:
+                ctx.log("upscale.log.smallerTiles", "warning", size=tile_size)
+
+
 def _fit(img: np.ndarray, width: int, height: int) -> np.ndarray:
     """Bring the model's native 4x output to the requested size."""
     if img.shape[1] == width and img.shape[0] == height:
@@ -212,7 +226,8 @@ def upscale_array(
 
     model, device = load_upscale_model(model_id, str(weights_path))
     # Native model upscales 4x
-    out_bgr_4x = _process_tiles(model, device, bgr_processed, scale=4, ctx=ctx)
+    tile_size = TILE_SIZES.get(model_id, 512)
+    out_bgr_4x = _upscale_tiles(model, device, bgr_processed, tile_size, ctx)
 
     out_bgr = _fit(out_bgr_4x, out_w, out_h)
 
@@ -223,7 +238,7 @@ def upscale_array(
         if alpha_mode == "ai":
             # Run alpha as 3-channel grayscale through neural model for sharp anime/vector mask
             alpha_3ch = cv2.cvtColor(alpha, cv2.COLOR_GRAY2BGR)
-            alpha_4x = _process_tiles(model, device, alpha_3ch, scale=4, ctx=ctx)
+            alpha_4x = _upscale_tiles(model, device, alpha_3ch, tile_size, ctx)
             alpha_final = _fit(cv2.cvtColor(alpha_4x, cv2.COLOR_BGR2GRAY), out_w, out_h)
         else:
             # Smooth Lanczos-4 interpolation preserves anti-aliased gradients

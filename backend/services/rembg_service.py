@@ -12,7 +12,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from backend.core import thumbs
+from backend.core import imaging, thumbs
 from backend.core.imaging import split_alpha
 from backend.core.jobs import JobCancelled, JobContext
 from backend.core.paths import cache_dir, models_dir
@@ -58,15 +58,7 @@ def _get_rembg_session(model_name: str) -> Any:
 
 
 def read_image(path: str) -> np.ndarray:
-    """Unicode-safe image reader preserving alpha channel."""
-    p = Path(path)
-    if not p.is_file():
-        raise FileNotFoundError(path)
-    data = np.fromfile(path, dtype=np.uint8)
-    img = cv2.imdecode(data, cv2.IMREAD_UNCHANGED)
-    if img is None:
-        raise ValueError(f"Cannot decode image: {path}")
-    return img
+    return imaging.read_cv2(path)
 
 
 def write_image(img: np.ndarray, path: str) -> str:

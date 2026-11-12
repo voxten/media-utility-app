@@ -181,3 +181,22 @@ def test_portable_zip_without_the_executable_fails(monkeypatch, tmp_path, ctx):
     with pytest.raises(RuntimeError, match="gifsicle.exe"):
         deps_installer.install_gifsicle(ctx)
     assert not (tmp_path / "gifsicle.zip").exists()
+
+
+def test_ffmpeg_without_ffprobe_is_not_ready(monkeypatch):
+    monkeypatch.setattr(deps, "ensure_app_paths", lambda custom=None: None)
+    monkeypatch.setattr(deps.shutil, "which", lambda name: "C:/tools/ffmpeg.exe" if name == "ffmpeg" else None)
+    ffmpeg = next(d for d in deps.check_dependencies() if d["id"] == "ffmpeg")
+    assert ffmpeg["ok"] is False and ffmpeg["installable"] is True
+    assert ffmpeg["detail"] == "settings.deps.detailFfprobeMissing"
+
+
+def test_ffmpeg_install_runs_when_only_ffprobe_is_missing(monkeypatch, tmp_path, ctx):
+    monkeypatch.setattr(deps_installer, "app_data_dir", lambda: tmp_path / "data")
+    monkeypatch.setattr(deps_installer, "cache_dir", lambda: tmp_path)
+    monkeypatch.setattr(deps_installer, "ensure_app_paths", lambda: None)
+    monkeypatch.setattr(deps_installer.shutil, "which", lambda name: "C:/tools/ffmpeg.exe" if name == "ffmpeg" else None)
+    monkeypatch.setattr(deps_installer, "_download_file_with_progress", _fake_zip_download(["bin/ffmpeg.exe", "bin/ffprobe.exe"]))
+
+    deps_installer.install_ffmpeg(ctx)
+    assert {p.name for p in (tmp_path / "data" / "bin").iterdir()} == {"ffmpeg.exe", "ffprobe.exe"}

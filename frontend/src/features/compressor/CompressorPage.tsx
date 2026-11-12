@@ -70,7 +70,7 @@ interface CompressResult {
   outputDir: string;
   outPath?: string;
   files?: string[];
-  results: { file: string; dest: string; inBytes: number; outBytes: number; savedPercent: number }[];
+  results: { file: string; dest: string; inBytes: number; outBytes: number; savedPercent: number; noGain?: boolean }[];
 }
 
 const TARGET_PRESETS_KB = [200, 500, 1000, 2000];
@@ -302,7 +302,14 @@ export default function CompressorPage() {
             />
           )}
 
-          {result?.outPath && <ResultCard title={t("compressor.toast.success")} path={result.outPath} sourceToolId="compressor" />}
+          {result?.outPath && (
+            <ResultCard
+              title={t("compressor.toast.success")}
+              detail={result.results[0]?.noGain ? t("compressor.noGain") : undefined}
+              path={result.outPath}
+              sourceToolId="compressor"
+            />
+          )}
         </Panel>
 
         {result && !result.outPath && result.results.length > 0 && (
@@ -327,6 +334,7 @@ export default function CompressorPage() {
               originalSize: r.inBytes,
               size: r.outBytes,
               savedPercent: r.savedPercent,
+              note: r.noGain ? t("compressor.noGain") : undefined,
             }))}
             outputDir={result.outputDir}
             sourceToolId="compressor"

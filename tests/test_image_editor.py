@@ -211,3 +211,21 @@ def test_save_transformed_keeps_an_existing_file(tmp_path: Path):
     res = image_editor.save_transformed(str(src), str(existing), {})
     assert Path(res["outPath"]).name == "pic_edited (1).png"
     assert existing.read_bytes() == b"old"
+
+
+def test_image_sizes_reads_the_upright_size_from_the_header(tmp_path):
+    exif = Image.Exif()
+    exif[0x0112] = 6
+    turned = tmp_path / "turned.jpg"
+    Image.new("RGB", (40, 30)).save(turned, exif=exif)
+    plain = tmp_path / "plain.png"
+    Image.new("RGB", (40, 30)).save(plain)
+    broken = tmp_path / "broken.jpg"
+    broken.write_bytes(b"x")
+
+    assert image_editor.image_sizes([str(turned), str(plain), str(broken), str(tmp_path / "missing.png")]) == [
+        {"width": 30, "height": 40},
+        {"width": 40, "height": 30},
+        None,
+        None,
+    ]

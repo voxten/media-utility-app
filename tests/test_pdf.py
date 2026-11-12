@@ -212,3 +212,40 @@ def test_single_file_outputs_never_overwrite(tmp_path, ctx):
         "merged (1).pdf", "small (1).pdf", "pics (1).pdf", "text (1).txt"]
     for target in ("merged.pdf", "small.pdf", "pics.pdf", "text.txt"):
         assert (tmp_path / target).read_text(encoding="utf-8") == "keep"
+
+
+def test_compress_keeps_the_original_when_the_result_is_bigger(tmp_path, ctx, monkeypatch):
+    src = tmp_path / "doc.pdf"
+    _make_pdf(src, ["Page 1"])
+    save = fitz.Document.save
+
+    def bloated_save(self, filename, *args, **kwargs):
+        save(self, filename, *args, **kwargs)
+        with open(filename, "ab") as f:
+            f.write(b"%" + b"x" * 100_000 + b"\n")
+
+    monkeypatch.setattr(fitz.Document, "save", bloated_save)
+    res = pdf.compress(ctx, str(src), str(tmp_path / "small.pdf"))
+
+    assert res["noGain"] is True
+    assert res["outBytes"] == res["inBytes"] and res["savedPercent"] == 0
+    assert Path(res["outPath"]).read_bytes() == src.read_bytes()
+    assert [log["message"] for log in ctx.of("job:log")] == ["pdf.log.noGain"]
+
+
+@pytest.mark.parametrize("preset", ["low", "balanced", "high"])
+def test_compress_downsamples_large_images(tmp_path, ctx, preset):
+    from PIL import Image
+
+    photo = tmp_path / "photo.png"
+    Image.effect_noise((1500, 1500), 60).convert("RGB").save(photo)
+    src = tmp_path / "scan.pdf"
+    with fitz.open() as doc:
+        doc.new_page(width=200, height=200).insert_image(fitz.Rect(0, 0, 200, 200), filename=str(photo))
+        doc.save(str(src))
+
+    res = pdf.compress(ctx, str(src), str(tmp_path / "small.pdf"), quality_preset=preset)
+
+    assert res["noGain"] is False
+    assert res["outBytes"] < res["inBytes"] / 2
+    assert not [log for log in ctx.of("job:log") if log["message"] == "pdf.log.rewriteWarning"]

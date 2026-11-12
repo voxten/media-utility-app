@@ -92,3 +92,59 @@ def test_nothing_happens_without_old_models(tmp_path):
 
     migrate_models(tmp_path / "missing", tmp_path / "new")
     assert not (tmp_path / "new").exists()
+
+
+@pytest.mark.parametrize("orientation", range(1, 9))
+def test_read_cv2_turns_photos_upright_like_pillow(tmp_path: Path, orientation: int):
+    import numpy as np
+    from PIL import ImageOps
+
+    src = Image.new("RGB", (6, 4))
+    src.putdata([(x * 40, y * 60, (x + y) * 20) for y in range(4) for x in range(6)])
+    exif = Image.Exif()
+    exif[0x0112] = orientation
+    path = tmp_path / f"turned {orientation}.png"
+    src.save(path, exif=exif)
+
+    with Image.open(path) as img:
+        expected = np.asarray(ImageOps.exif_transpose(img).convert("RGB"))[:, :, ::-1]
+    assert np.array_equal(imaging.read_cv2(path), expected)
+
+
+def test_read_cv2_brings_16_bit_images_to_8_bits(tmp_path: Path):
+    import cv2
+    import numpy as np
+
+    deep = np.full((4, 5, 3), 65535, dtype=np.uint16)
+    deep[0, 0] = (10 * 256, 0, 0)
+    path = tmp_path / "głęboki.png"
+    cv2.imencode(".png", deep)[1].tofile(str(path))
+
+    img = imaging.read_cv2(path)
+    assert img.dtype == np.uint8 and img.shape == (4, 5, 3)
+    assert img[1, 1].tolist() == [255, 255, 255]
+    assert img[0, 0].tolist() == [10, 0, 0]
+
+
+def test_read_cv2_names_an_unreadable_file(tmp_path: Path):
+    path = tmp_path / "broken.png"
+    path.write_bytes(b"not an image")
+    with pytest.raises(ValueError, match="errors.imageUnreadable"):
+        imaging.read_cv2(path)
+
+
+def test_mpo_photos_are_saved_as_jpeg():
+    assert imaging.normalize_format("MPO") == "jpeg"
+    assert imaging.extension("mpo") == "jpg"
+    assert imaging.pil_format("mpo") == "JPEG"
+
+
+def test_color_profile_goes_only_to_formats_that_store_one():
+    from PIL import ImageCms
+
+    icc = ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes()
+    img = Image.new("RGB", (8, 8), "red")
+    img.info["icc_profile"] = icc
+    assert imaging.color_profile(img, "jpg") == {"icc_profile": icc}
+    assert imaging.color_profile(img, "gif") == {}
+    assert imaging.color_profile(Image.new("RGB", (8, 8)), "png") == {}

@@ -8,7 +8,7 @@ from typing import Any, Dict, Optional
 import cv2
 import numpy as np
 
-from backend.core import thumbs
+from backend.core import imaging, thumbs
 from backend.core.imaging import split_alpha
 from backend.core.jobs import JobContext
 from backend.core.paths import cache_dir
@@ -53,14 +53,7 @@ def _get_direct_lama_model() -> tuple:
 
 
 def read_image(path: str) -> np.ndarray:
-    """Unicode-safe read keeping the alpha channel."""
-    if not Path(path).is_file():
-        raise FileNotFoundError(path)
-    data = np.fromfile(path, dtype=np.uint8)
-    img = cv2.imdecode(data, cv2.IMREAD_UNCHANGED)
-    if img is None:
-        raise ValueError(f"Cannot decode image: {path}")
-    return img
+    return imaging.read_cv2(path)
 
 
 def write_image(img: np.ndarray, path: str) -> str:

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from PIL import Image
 
 from backend.services import compressor
@@ -90,3 +92,54 @@ def test_single_file_into_folder_reports_its_path(tmp_path, ctx):
 
     assert res["outPath"] == str(out_dir / "photo_compressed (1).webp")
     assert (out_dir / "photo_compressed.webp").read_bytes() == b"old"
+
+
+def test_compress_keeps_the_original_when_it_cannot_shrink(tmp_path, ctx):
+    src = tmp_path / "small.jpg"
+    Image.effect_noise((200, 200), 80).convert("RGB").save(src, quality=10)
+    params = {"files": [str(src)], "format": "original", "mode": "smart", "quality": 95, "outputDir": str(tmp_path / "out")}
+    res = compressor.compress(ctx, params)
+
+    item = res["results"][0]
+    assert item["noGain"] is True
+    assert item["outBytes"] == item["inBytes"]
+    assert Path(item["dest"]).read_bytes() == src.read_bytes()
+    assert [log["message"] for log in ctx.of("job:log")] == ["compressor.log.noGain"]
+
+
+def test_compress_into_another_format_keeps_its_color_profile(tmp_path, ctx):
+    from PIL import ImageCms
+
+    icc = ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes()
+    src = tmp_path / "photo.png"
+    Image.new("RGB", (64, 64), "green").save(src, icc_profile=icc)
+    res = compressor.compress(ctx, {"files": [str(src)], "format": "webp", "mode": "smart", "outputDir": str(tmp_path / "out")})
+
+    item = res["results"][0]
+    assert item["noGain"] is False
+    with Image.open(item["dest"]) as out:
+        assert out.info.get("icc_profile") == icc
+
+
+def test_target_size_without_a_quality_setting_tries_each_size_once(monkeypatch):
+    sizes = []
+    encode = compressor._compress_to_buffer
+
+    def counting(img, fmt, **kwargs):
+        data, mime = encode(img, fmt, **kwargs)
+        sizes.append(len(data))
+        return data, mime
+
+    monkeypatch.setattr(compressor, "_compress_to_buffer", counting)
+    img = Image.effect_noise((300, 300), 90).convert("RGB")
+    data, _, reached = compressor._find_target_quality(img, "png", 1024)
+
+    assert reached is False
+    assert len(sizes) == 6
+    assert len(data) == min(sizes)
+
+
+def test_target_size_reports_a_reached_target():
+    img = Image.effect_noise((300, 300), 90).convert("RGB")
+    data, mime, reached = compressor._find_target_quality(img, "jpeg", 40 * 1024)
+    assert reached is True and len(data) <= 40 * 1024 and mime == "jpeg"

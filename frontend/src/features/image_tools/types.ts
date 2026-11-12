@@ -46,6 +46,10 @@ export interface ImageOperations {
   rotation: number;
   flipH: boolean;
   flipV: boolean;
+
+  /** Natural size of the image the crop and resize values were set on. */
+  baseWidth?: number;
+  baseHeight?: number;
 }
 
 export const createDefaultOperations = (width = 0, height = 0): ImageOperations => ({
@@ -64,4 +68,6 @@ export const createDefaultOperations = (width = 0, height = 0): ImageOperations 
   rotation: 0,
   flipH: false,
   flipV: false,
+  baseWidth: width || undefined,
+  baseHeight: height || undefined,
 });

@@ -74,3 +74,51 @@ def test_sync_video_job(tmp_path, ctx):
     assert res["fileName"] == "export_out.mp4"
     assert out.is_file()
     assert res["bytes"] > 0
+
+
+def test_waveform_points_cover_every_sample_evenly():
+    import numpy as np
+
+    samples = np.zeros(1050, dtype="<f4")
+    samples[0], samples[-1] = -1.0, 0.5
+    points, max_peak = video_sync._peaks(samples.tobytes(), 100)
+    assert len(points) == 100 and max_peak == 1.0
+    assert points[0] == 1.0 and points[-1] == 0.5
+
+    short, _ = video_sync._peaks(np.full(30, 0.2, dtype="<f4").tobytes(), 100)
+    assert short == [1.0] * 30
+
+
+def test_subtitles_are_kept_where_the_container_can_hold_them():
+    subs = [{"index": 2, "codec": "subrip"}, {"index": 3, "codec": "hdmv_pgs_subtitle"}]
+    assert video_sync._subtitle_args(subs, ".mp4") == (["-map", "0:2", "-c:s", "mov_text"], 1)
+    assert video_sync._subtitle_args(subs, ".MKV") == (["-map", "0:2", "-map", "0:3", "-c:s", "copy"], 0)
+    assert video_sync._subtitle_args(subs, ".avi") == ([], 2)
+    assert video_sync._subtitle_args([], ".mp4") == ([], 0)
+
+
+def test_delayed_audio_keeps_the_video_length_subtitles_and_chapters(tmp_path, ctx):
+    srt = tmp_path / "subs.srt"
+    srt.write_text("1\n00:00:00,500 --> 00:00:01,000\nHello\n", encoding="utf-8")
+    chapters = tmp_path / "chapters.txt"
+    chapters.write_text(";FFMETADATA1\n[CHAPTER]\nTIMEBASE=1/1000\nSTART=0\nEND=1500\ntitle=Intro\n", encoding="utf-8")
+    src = tmp_path / "film.mkv"
+    subprocess.run([
+        "ffmpeg", "-y", "-v", "error",
+        "-f", "lavfi", "-i", "testsrc=duration=3:size=320x240:rate=15",
+        "-f", "lavfi", "-i", "sine=frequency=440:duration=3",
+        "-i", str(srt), "-i", str(chapters),
+        "-map", "0", "-map", "1", "-map", "2", "-map_chapters", "3",
+        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "-c:s", "srt",
+        str(src),
+    ], check=True)
+    assert video_sync.probe_media(str(src))["videoDuration"] == pytest.approx(3.0, abs=0.1)
+
+    out = tmp_path / "film_synced.mp4"
+    video_sync.sync_video(ctx, {"videoPath": str(src), "offsetSec": 1.0, "outputPath": str(out), "mode": "fast_copy"})
+
+    meta = video_sync.probe_media(str(out))
+    assert meta["duration"] == pytest.approx(3.0, abs=0.15)
+    assert [s["codec"] for s in meta["subtitles"]] == ["mov_text"]
+    probe = subprocess.run(["ffprobe", "-v", "error", "-show_chapters", "-of", "csv", str(out)], capture_output=True, text=True)
+    assert "Intro" in probe.stdout

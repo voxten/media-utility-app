@@ -7,6 +7,7 @@ import re
 import threading
 import time
 from typing import Any, Dict, List, Optional, Set, Tuple
+from urllib.parse import urlparse
 
 import yt_dlp
 from yt_dlp.extractor.tiktok import TikTokIE, TikTokUserIE
@@ -103,18 +104,23 @@ def fmt_bytes(n: Optional[float]) -> str:
     return f"{round(n / math.pow(1024, i), 2)} {units[i]}"
 
 
+def _host_is(url: str, *domains: str) -> bool:
+    """``url``'s host is one of ``domains`` or below one (``m.youtube.com`` yes, ``netflix.com`` no)."""
+    url = url.strip()
+    host = (urlparse(url if "://" in url else f"https://{url}").hostname or "").lower()
+    return any(host == d or host.endswith(f".{d}") for d in domains)
+
+
 def is_youtube(url: str) -> bool:
-    url_lower = url.lower()
-    return "youtube.com" in url_lower or "youtu.be" in url_lower
+    return _host_is(url, "youtube.com", "youtu.be", "youtube-nocookie.com")
 
 
 def is_x(url: str) -> bool:
-    url_lower = url.lower()
-    return "x.com" in url_lower or "twitter.com" in url_lower
+    return _host_is(url, "x.com", "twitter.com")
 
 
 def is_instagram(url: str) -> bool:
-    return "instagram.com" in url.lower()
+    return _host_is(url, "instagram.com")
 
 
 def sanitize_x_url(url: str) -> str:
@@ -546,6 +552,20 @@ def resolve_format(url: str, format_id: str, mode: str) -> str:
     return format_id
 
 
+# Windows paths stop at 260 characters; yt-dlp's work files add up to ~25 (".f137.webm.part", " (2)").
+MAX_PATH_CHARS = 230
+MAX_STEM_CHARS = 150
+MIN_STEM_CHARS = 16
+
+
+def fit_stem(parent: Path, stem: str, suffix: str) -> str:
+    """``stem`` shortened so the file and its work files stay within the Windows path limit."""
+    room = max(MIN_STEM_CHARS, min(MAX_STEM_CHARS, MAX_PATH_CHARS - len(str(parent)) - len(suffix) - 1))
+    if len(stem) <= room:
+        return stem
+    return stem[:room].rstrip(" .") or stem[:room]
+
+
 class UniqueYoutubeDL(yt_dlp.YoutubeDL):
     """YoutubeDL subclass that prevents overwriting / skipping by appending (1), (2), etc.
     when the target destination file already exists."""
@@ -564,20 +584,12 @@ class UniqueYoutubeDL(yt_dlp.YoutubeDL):
         if "_unique_stem" not in info_dict:
             p = Path(fn)
             target_ext = f".{self.target_ext}" if self.target_ext else p.suffix
-            target_path = p.with_suffix(target_ext)
-            if target_path.exists() or p.exists():
-                stem = p.stem
-                parent = p.parent
-                counter = 1
-                while True:
-                    cand_target = parent / f"{stem} ({counter}){target_ext}"
-                    cand_raw = parent / f"{stem} ({counter}){p.suffix}"
-                    if not cand_target.exists() and not cand_raw.exists():
-                        break
-                    counter += 1
-                info_dict["_unique_stem"] = f"{stem} ({counter})"
-            else:
-                info_dict["_unique_stem"] = p.stem
+            stem = fit_stem(p.parent, p.stem, max(target_ext, p.suffix, key=len))
+            unique, counter = stem, 1
+            while (p.parent / f"{unique}{target_ext}").exists() or (p.parent / f"{unique}{p.suffix}").exists():
+                unique = f"{stem} ({counter})"
+                counter += 1
+            info_dict["_unique_stem"] = unique
 
         unique_stem = info_dict["_unique_stem"]
         p = Path(fn)

@@ -25,6 +25,17 @@ The app shows this file (and its Polish translation, [CHANGELOG.pl.md](CHANGELOG
 - "Open file", "Show in folder" and "Move to Recycle Bin" say why they failed (the file is gone, or Windows refused) instead of doing nothing. Duplicate Finder no longer removes files from the list that were not actually moved to the Recycle Bin.
 - The last Video Downloader queue result stays on the page even when the queue finished while another tool was open.
 - A task card says the file is missing only for finished tasks.
+- Image Tools "Apply to all" now edits files you never opened, and crop and resize keep their share of each photo, so portrait photos are no longer stretched to a landscape size.
+- Background Remover, Image Upscaler and Watermark Remover turn phone photos upright (EXIF) and read 16-bit PNG and TIFF files.
+- Converted, compressed and edited photos keep their color profile, so iPhone photos no longer come out washed out.
+- Photos from some Samsung, Sony and Fuji cameras are saved as .jpg instead of .mpo.
+- Image Compressor and PDF Compressor keep the original when the result would not be smaller, and mark it "No gain". "Target size" for PNG no longer repeats the same slow attempt 14 times and says when the size could not be reached.
+- PDF Compressor now really shrinks large images; every preset used to fail at that step and only repacked the file.
+- The Audio-Video Sync waveform no longer drifts when zoomed in. Exporting with the audio delayed keeps the video's length, its subtitles and chapters.
+- Links from sites such as dropbox.com or netflix.com are no longer treated as X (Twitter) links.
+- Very long video titles are shortened so the file fits the Windows path limit.
+- Image Upscaler with the anime model works in tiles and needs far less memory; when memory still runs out it tries again with smaller tiles.
+- Settings no longer report FFmpeg as ready when ffprobe is missing, and installing FFmpeg fills in the missing ffprobe.
 
 ## [0.14.0] - 2026-11-11
 

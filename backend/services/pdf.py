@@ -1,6 +1,7 @@
 """PDF page inspection, preview rendering and page-level merging (PyMuPDF)."""
 
 import base64
+import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Sequence
 
@@ -158,10 +159,12 @@ def compress(ctx: JobContext, path: str, out_path: str, quality_preset: str = "b
     ctx.progress(10, "pdf.status.compressing")
     ctx.check_cancelled()
 
+    # PyMuPDF needs the threshold above the target (equal values made every rewrite fail); images
+    # up to 1.5x the target are left alone, as Ghostscript does.
     presets = {
-        "low": {"dpi_threshold": 200, "dpi_target": 200, "quality": 85},
-        "balanced": {"dpi_threshold": 150, "dpi_target": 150, "quality": 75},
-        "high": {"dpi_threshold": 100, "dpi_target": 100, "quality": 60},
+        "low": {"dpi_threshold": 300, "dpi_target": 200, "quality": 85},
+        "balanced": {"dpi_threshold": 225, "dpi_target": 150, "quality": 75},
+        "high": {"dpi_threshold": 150, "dpi_target": 100, "quality": 60},
     }
     cfg = presets.get(quality_preset, presets["balanced"])
 
@@ -188,6 +191,12 @@ def compress(ctx: JobContext, path: str, out_path: str, quality_preset: str = "b
         write_path.replace(target)
 
     out_bytes = target.stat().st_size
+    # Rewriting can grow a PDF (e.g. scans already stored as compact JBIG2); then the original is kept.
+    no_gain = out_bytes >= in_bytes
+    if no_gain:
+        shutil.copyfile(src, target)
+        out_bytes = in_bytes
+        ctx.log("pdf.log.noGain", "warning")
     saved_bytes = max(0, in_bytes - out_bytes)
     saved_pct = round((saved_bytes / in_bytes * 100), 1) if in_bytes > 0 else 0.0
 
@@ -199,6 +208,7 @@ def compress(ctx: JobContext, path: str, out_path: str, quality_preset: str = "b
         "outBytes": out_bytes,
         "savedBytes": saved_bytes,
         "savedPercent": saved_pct,
+        "noGain": no_gain,
     }
 
 

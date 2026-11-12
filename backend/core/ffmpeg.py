@@ -171,6 +171,18 @@ def _parse_rate(rate: str) -> float:
         return 0.0
 
 
+def _stream_duration(stream: Dict[str, Any]) -> float:
+    """A stream's own length: ``duration`` (MP4) or the ``DURATION`` tag (Matroska); 0 when unknown."""
+    if stream.get("duration"):
+        return float(stream["duration"])
+    tag = (stream.get("tags") or {}).get("DURATION", "")
+    try:
+        hours, minutes, seconds = tag.split(":")
+        return int(hours) * 3600 + int(minutes) * 60 + float(seconds)
+    except ValueError:
+        return 0.0
+
+
 def probe_media(file_path: str) -> Dict[str, Any]:
     """Inspects a video or audio file with ffprobe and extracts stream metadata and a thumbnail."""
     p = Path(file_path)
@@ -201,6 +213,7 @@ def probe_media(file_path: str) -> Dict[str, Any]:
 
     video_stream: Optional[Dict[str, Any]] = None
     audio_tracks: List[Dict[str, Any]] = []
+    subtitles: List[Dict[str, Any]] = []
 
     for s in streams:
         c_type = s.get("codec_type")
@@ -218,6 +231,7 @@ def probe_media(file_path: str) -> Dict[str, Any]:
                 "height": int(s.get("height") or 0),
                 "fps": fps,
                 "bitrate": int(s.get("bit_rate") or 0),
+                "duration": _stream_duration(s),
             }
         elif c_type == "audio":
             tags = s.get("tags") or {}
@@ -233,6 +247,8 @@ def probe_media(file_path: str) -> Dict[str, Any]:
                 "title": title,
                 "language": lang,
             })
+        elif c_type == "subtitle":
+            subtitles.append({"index": int(s.get("index", 0)), "codec": s.get("codec_name", "")})
 
     thumbnail = ""
     if video_stream and video_stream.get("width", 0) > 0 and duration > 0:
@@ -255,6 +271,8 @@ def probe_media(file_path: str) -> Dict[str, Any]:
         "fps": video_stream["fps"] if video_stream else 0.0,
         "videoCodec": video_stream["codec"] if video_stream else "",
         "audioTracks": audio_tracks,
+        "subtitles": subtitles,
+        "videoDuration": round((video_stream["duration"] or duration) if video_stream else 0.0, 3),
         "thumbnail": thumbnail,
     }
 

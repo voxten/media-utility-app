@@ -172,6 +172,7 @@
       "detailLamaFull": "Wymaga instalacji PyTorch oraz modelu LaMa",
       "detailRembgMissing": "Wymaga instalacji rembg oraz onnxruntime (~140 MB)",
       "detailFfmpegMissing": "Brak programu FFmpeg na ścieżce PATH",
+      "detailFfprobeMissing": "Jest FFmpeg, ale obok brakuje programu ffprobe",
       "detailGifsicleMissing": "Nie znaleziono gifsicle",
       "detailUpscaleGenMissing": "Wymaga pobrania wag modelu realesr-general-x4v3.pth (~4.8 MB)",
       "detailUpscaleAnimeMissing": "Wymaga pobrania wag modelu RealESRGAN_x4plus_anime_6B.pth (~17.9 MB)",
@@ -419,7 +420,9 @@
     },
     "log": {
       "done": "{{name}} skompresowano ({{saved}})",
-      "error": "Błąd kompresji {{file}}: {{error}}"
+      "error": "Błąd kompresji {{file}}: {{error}}",
+      "noGain": "{{name}}: bez zysku, zostawiono oryginał",
+      "targetMissed": "{{name}}: nie udało się zejść do docelowego rozmiaru, najmniejszy wynik to {{size}}"
     },
     "mode": "Tryb kompresji",
     "modeSmart": "Zrównoważona",
@@ -437,7 +440,8 @@
     },
     "dropTitle": "Upuść obrazy do kompresji",
     "dropHint": "Jeden lub więcej plików: {{formats}}",
-    "compressAll": "Kompresuj pliki ({{count}})"
+    "compressAll": "Kompresuj pliki ({{count}})",
+    "noGain": "Bez zysku"
   },
   "pdf": {
     "status": {
@@ -453,7 +457,8 @@
     },
     "log": {
       "readFailed": "Nie można odczytać {{file}}: {{error}}",
-      "rewriteWarning": "Ostrzeżenie przy optymalizacji obrazów: {{error}}"
+      "rewriteWarning": "Ostrzeżenie przy optymalizacji obrazów: {{error}}",
+      "noGain": "Nie udało się zmniejszyć PDF-a, więc zostawiono oryginał."
     },
     "dropTitle": "Upuść pliki PDF tutaj",
     "dropMore": "Dodaj kolejne pliki PDF",
@@ -482,7 +487,8 @@
       "presetBalanced": "Zrównoważona · 150 DPI",
       "presetHigh": "Maksymalna · 100 DPI",
       "action": "Kompresuj i zapisz",
-      "result": "{{before}} → {{after}} (−{{percent}}%)"
+      "result": "{{before}} → {{after}} (−{{percent}}%)",
+      "noGain": "{{size}} · nie dało się zmniejszyć, zostawiono oryginał"
     },
     "split": {
       "mode": "Sposób podziału",
@@ -848,6 +854,9 @@
       "modelInference": "Inferencja modelu AI Real-ESRGAN…",
       "alphaProcessing": "Przetwarzanie przezroczystości…",
       "done": "Skalowanie zakończone sukcesem."
+    },
+    "log": {
+      "smallerTiles": "Za mało pamięci, kolejna próba z kafelkami {{size}} px"
     },
     "dropTitle": "Upuść obraz do przeskalowania",
     "dropHint": "lub kliknij, aby wybrać plik ({{formats}})",
@@ -1352,7 +1361,8 @@
     },
     "log": {
       "starting": "Rozpoczynanie synchronizacji audio dla {{path}} z przesunięciem {{offset}}",
-      "finished": "Zapisano {{out}} ({{size}} bajtów)"
+      "finished": "Zapisano {{out}} ({{size}} bajtów)",
+      "subtitlesSkipped": "Pominięto ścieżki napisów, których nie da się zapisać w {{format}}: {{count}}"
     },
     "trackNum": "Ścieżka {{num}}",
     "offset": "Przesunięcie dźwięku",
@@ -1479,6 +1489,7 @@
     "bootFailed": "Nie udało się uruchomić aplikacji: {{error}}",
     "pathMissing": "Plik lub folder już nie istnieje.",
     "openFailed": "Nie udało się otworzyć.",
-    "trashFailed": "Nie udało się przenieść do Kosza."
+    "trashFailed": "Nie udało się przenieść do Kosza.",
+    "imageUnreadable": "Nie udało się odczytać obrazu."
   }
 }

@@ -30,6 +30,7 @@ import { useJobRunner } from "../../lib/useJobRunner";
 import { useTransferStore } from "../../stores/transfer";
 import { ImageToolbox } from "./ImageToolbox";
 import { ToolOptionsBar } from "./ToolOptionsBar";
+import { compileOps, CROP_RATIOS, fitOps, isEdited } from "./operations";
 import {
   type ActiveTool,
   type BatchResult,
@@ -47,7 +48,6 @@ import { useImageToolsForm } from "./store";
 const PREVIEW_DELAY_MS = 150;
 const OUTPUT_FORMATS: ImageOutputFormat[] = ["original", "png", "jpeg", "webp"];
 
-const CROP_RATIOS: Record<string, number> = { "1_1": 1, "16_9": 16 / 9, "9_16": 9 / 16, "4_3": 4 / 3, "3_2": 3 / 2 };
 
 const useStyles = makeStyles({
   stageRow: { display: "flex", gap: "12px", alignItems: "stretch", minHeight: "520px", height: "68vh" },
@@ -58,33 +58,6 @@ const useStyles = makeStyles({
   output: { display: "flex", gap: "16px", alignItems: "flex-end", flexWrap: "wrap" },
   folder: { flex: "1 1 320px", minWidth: 0 },
 });
-
-/** Converts editor state into the backend's operation dict for an image of the given natural size. */
-function compileOps(ops: ImageOperations, width: number, height: number): Record<string, unknown> {
-  const res: Record<string, unknown> = {};
-  if (ops.cropActive && ops.cropW > 0 && ops.cropH > 0 && (ops.cropW < width || ops.cropH < height || ops.cropX > 0 || ops.cropY > 0)) {
-    res.crop = {
-      x: Math.max(0, ops.cropX),
-      y: Math.max(0, ops.cropY),
-      width: Math.min(width - ops.cropX, ops.cropW),
-      height: Math.min(height - ops.cropY, ops.cropH),
-    };
-  }
-  if (ops.rotation !== 0) res.rotate = ops.rotation;
-  if (ops.flipH) res.flip_h = true;
-  if (ops.flipV) res.flip_v = true;
-  if (ops.resizeActive) {
-    if (ops.scalePercent != null && ops.scalePercent > 0 && ops.scalePercent !== 100) {
-      res.resize = { percent: ops.scalePercent, filter: ops.filter || "lanczos" };
-    } else if (ops.targetWidth && ops.targetHeight && (ops.targetWidth !== width || ops.targetHeight !== height)) {
-      res.resize = { width: ops.targetWidth, height: ops.targetHeight, filter: ops.filter || "lanczos" };
-    }
-  }
-  return res;
-}
-
-const isEdited = (ops: ImageOperations | undefined) =>
-  !!ops && (ops.resizeActive || ops.cropActive || ops.rotation !== 0 || ops.flipH || ops.flipV);
 
 const cropOf = (ops: ImageOperations, width: number, height: number): CropRect =>
   ops.cropActive ? { x: ops.cropX, y: ops.cropY, w: ops.cropW, h: ops.cropH } : { x: 0, y: 0, w: width, h: height };
@@ -156,8 +129,11 @@ export default function ImageToolsPage() {
         const state = useImageToolsForm.getState();
         state.set({ sizes: { ...state.sizes, [current]: { width: data.width, height: data.height } } });
         const { opsByFile } = useImageToolsForm.getState();
-        if (!opsByFile[current]) {
-          state.set({ opsByFile: { ...opsByFile, [current]: createDefaultOperations(data.width, data.height) } });
+        const existing = opsByFile[current];
+        // Edits copied from a photo of another size are carried over to this one's size.
+        if (!existing || existing.baseWidth !== data.width || existing.baseHeight !== data.height) {
+          const fitted = existing ? fitOps(existing, data.width, data.height) : createDefaultOperations(data.width, data.height);
+          state.set({ opsByFile: { ...opsByFile, [current]: fitted } });
         }
       })
       .catch((err) => notify.error(errorMessage(t, err)));
@@ -264,11 +240,29 @@ export default function ImageToolsPage() {
       }
       return;
     }
+    // Files never opened have no known size yet; crop and resize need it to fit each photo.
+    const unknown = files.filter((f) => opsByFile[f] && !sizes[f]);
+    let known = sizes;
+    if (unknown.length) {
+      try {
+        const found = await api.image_editor.sizes(unknown);
+        known = { ...sizes };
+        unknown.forEach((f, i) => {
+          const size = found[i];
+          if (size) known[f] = size;
+        });
+        form.set({ sizes: known });
+      } catch (err) {
+        notify.error(t("imageTools.toast.error"), { body: errorMessage(t, err) });
+        return;
+      }
+    }
     const perFile = Object.fromEntries(
       files.map((f) => {
-        const size = sizes[f];
         const fileOps = opsByFile[f];
-        return [f, fileOps && size ? compileOps(fileOps, size.width, size.height) : {}];
+        if (!fileOps) return [f, {}];
+        const size = known[f] ?? { width: fileOps.baseWidth ?? 0, height: fileOps.baseHeight ?? 0 };
+        return [f, compileOps(fileOps, size.width, size.height)];
       }),
     );
     job

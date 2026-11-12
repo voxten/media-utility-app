@@ -25,6 +25,8 @@ export interface AfterGalleryItem {
   originalSize?: number;
   size?: number;
   savedPercent?: number;
+  /** Shown instead of the saving, e.g. when the original was kept. */
+  note?: string;
   width?: number;
   height?: number;
   dataUrl?: string;
@@ -197,10 +199,17 @@ export function AfterGallery({ title, items, files, outputDir, sourceToolId, sum
                   <span>{formatBytes(item.size)}</span>
                 ) : null}
 
-                {item.savedPercent != null && item.savedPercent > 0 && (
-                  <Badge size="small" appearance="tint" color="success">
-                    −{item.savedPercent}%
+                {item.note ? (
+                  <Badge size="small" appearance="tint" color="informative">
+                    {item.note}
                   </Badge>
+                ) : (
+                  item.savedPercent != null &&
+                  item.savedPercent > 0 && (
+                    <Badge size="small" appearance="tint" color="success">
+                      −{item.savedPercent}%
+                    </Badge>
+                  )
                 )}
               </div>
             </div>
