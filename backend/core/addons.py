@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 from typing import List, Optional, Sequence
 
-from backend.core.paths import app_data_dir
+from backend.core.paths import local_data_dir
 
 # Lets tests and manual checks point the packaged app at a scratch folder.
 ADDONS_DIR_ENV = "MEDIASTUDIO_ADDONS_DIR"
@@ -30,7 +30,7 @@ def addons_dir() -> Path:
     override = os.environ.get(ADDONS_DIR_ENV)
     if override:
         return Path(override)
-    return app_data_dir() / "addons" / f"cp{sys.version_info.major}{sys.version_info.minor}"
+    return local_data_dir() / "addons" / f"cp{sys.version_info.major}{sys.version_info.minor}"
 
 
 def activate_addons() -> None:

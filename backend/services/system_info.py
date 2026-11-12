@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
-from backend.core.paths import app_data_dir, cache_dir, models_dir
+from backend.core.paths import app_data_dir, bin_dir, cache_dir, local_data_dir, models_dir
 
 logger = logging.getLogger("media_studio.system_info")
 
@@ -38,18 +38,20 @@ def get_storage_info() -> Dict[str, Any]:
     app_data = app_data_dir()
     cache = cache_dir()
     models = models_dir()
-    bin_dir = app_data / "bin"
+    binaries = bin_dir()
 
     cache_bytes, cache_files = _dir_stats(cache)
     models_bytes, models_files = _dir_stats(models)
-    bin_bytes, bin_files = _dir_stats(bin_dir)
-    total_app_bytes, total_app_files = _dir_stats(app_data)
+    bin_bytes, bin_files = _dir_stats(binaries)
+    roaming_bytes, roaming_files = _dir_stats(app_data)
+    local_bytes, local_files = _dir_stats(local_data_dir())
+    total_app_bytes, total_app_files = roaming_bytes + local_bytes, roaming_files + local_files
 
     return {
         "appDataDir": str(app_data),
         "cacheDir": str(cache),
         "modelsDir": str(models),
-        "binDir": str(bin_dir),
+        "binDir": str(binaries),
         "cacheBytes": cache_bytes,
         "cacheFiles": cache_files,
         "modelsBytes": models_bytes,

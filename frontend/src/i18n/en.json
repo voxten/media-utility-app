@@ -533,6 +533,7 @@
       "noFiles": "No matching files found.",
       "scanning": "Analysing: {{file}}",
       "grouping": "Grouping similar files…",
+      "thumbnails": "Loading previews of the found files…",
       "done": "Done. Groups found: {{groups}}"
     },
     "log": {

@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, List, NamedTuple, Optional
 
 from backend.core import whisper_models
-from backend.core.paths import app_data_dir, models_dir, project_root
+from backend.core.paths import bin_dir, models_dir, project_root
 
 LAMA_EXPECTED_SIZE = 205669692
 LAMA_EXPECTED_SHA256 = "344c77bbcb158f17dd143070d1e789f38a66c04202311ae3a258ef66667a9ea9"
@@ -46,9 +46,9 @@ def ensure_app_paths(custom_ffmpeg: Optional[str] = None) -> None:
         cdir = cfp if cfp.is_dir() else cfp.parent
         if cdir.is_dir():
             paths_to_add.append(str(cdir))
-    bin_dir = app_data_dir() / "bin"
-    if bin_dir.is_dir():
-        paths_to_add.append(str(bin_dir))
+    binaries = bin_dir()
+    if binaries.is_dir():
+        paths_to_add.append(str(binaries))
     for p in paths_to_add:
         if p not in current_path.split(os.pathsep):
             current_path = p + os.pathsep + current_path

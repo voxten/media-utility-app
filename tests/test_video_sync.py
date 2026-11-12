@@ -2,6 +2,7 @@ import subprocess
 import pytest
 from pathlib import Path
 from backend.services import video_sync
+from tests.conftest import served
 
 
 def _create_sample_video(path: Path, duration: int = 3) -> Path:
@@ -50,12 +51,12 @@ def test_generate_preview(tmp_path):
     vid = _create_sample_video(tmp_path / "preview_test.mp4", duration=4)
     # Test positive audio delay
     p_pos = video_sync.generate_preview(str(vid), offset_sec=0.5, start_sec=0.5, duration=2.0)
-    assert p_pos["previewUrl"].startswith("data:video/mp4;base64,")
+    assert served(p_pos["previewUrl"])[4:8] == b"ftyp"
     assert p_pos["sizeBytes"] > 0
 
     # Test negative audio delay (audio lead)
     p_neg = video_sync.generate_preview(str(vid), offset_sec=-0.5, start_sec=0.0, duration=2.0)
-    assert p_neg["previewUrl"].startswith("data:video/mp4;base64,")
+    assert served(p_neg["previewUrl"])[4:8] == b"ftyp"
     assert p_neg["sizeBytes"] > 0
 
 

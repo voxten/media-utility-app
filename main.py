@@ -21,7 +21,7 @@ from backend.bridge.events import EventBus
 from backend.core import logs, single_instance, win_theme
 from backend.core.addons import PIP_FLAG, activate_addons, run_pip_main
 from backend.core.engines import CHECK_FLAG, activate_engines, run_check_main
-from backend.core.paths import app_data_dir, migrate_models, resource_path
+from backend.core.paths import app_data_dir, clean_cache, migrate_to_local, resource_path
 from backend.core.settings import Settings
 
 DEV_URL = "http://localhost:5173"
@@ -36,7 +36,12 @@ def cleanup_webview_cache() -> None:
         os.environ["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"] = f"{flags} --disable-http-cache".strip()
 
     webview_dir = app_data_dir() / "webview"
-    # Always clear the HTTP and code caches on launch so fresh code is loaded immediately
+    marker = webview_dir / "app_version.txt"
+    try:
+        if marker.read_text(encoding="utf-8").strip() == APP_VERSION:
+            return  # compiled code from this version is still valid and makes the window open faster
+    except OSError:
+        pass
     cache_dirs = [
         webview_dir / "EBWebView" / "Default" / "Cache",
         webview_dir / "EBWebView" / "Default" / "Code Cache",
@@ -49,7 +54,7 @@ def cleanup_webview_cache() -> None:
 
     try:
         webview_dir.mkdir(parents=True, exist_ok=True)
-        (webview_dir / "app_version.txt").write_text(APP_VERSION, encoding="utf-8")
+        marker.write_text(APP_VERSION, encoding="utf-8")
     except Exception:
         pass
 
@@ -91,7 +96,7 @@ def main() -> None:
     # error would otherwise raise or vanish. dev.log keeps a --dev run out of the installed app's file.
     logs.setup("dev" if "--dev" in sys.argv[1:] else "app")
     logs.log_start(APP_NAME, APP_VERSION)
-    migrate_models()
+    migrate_to_local()
     activate_addons()
     activate_engines()
     # Imported only now: it pulls in yt_dlp and gallery_dl, which must come from the activated engines.
@@ -114,6 +119,7 @@ def main() -> None:
         return
     instance = single_instance.listen(channel)
     cleanup_webview_cache()  # only once we know no other instance is using the cache
+    clean_cache()
 
     settings = Settings()
     bus = EventBus()

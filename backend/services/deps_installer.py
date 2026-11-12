@@ -31,6 +31,7 @@ from backend.core.deps import (
 )
 from backend.core.jobs import JobCancelled, JobContext
 from backend.core.paths import app_data_dir, cache_dir, models_dir
+from backend.core.paths import bin_dir as paths_bin_dir
 
 logger = logging.getLogger(__name__)
 
@@ -228,7 +229,7 @@ def _install_portable_zip(
     Skipped when every executable is already on PATH or in the bin folder. ``extract_keys``
     (status, log) show an extracting step at 80 %; without it the download takes the whole bar.
     """
-    bin_dir = app_data_dir() / "bin"
+    bin_dir = paths_bin_dir()
     bin_dir.mkdir(parents=True, exist_ok=True)
     if all(shutil.which(Path(exe).stem) or (bin_dir / exe).is_file() for exe in executables):
         ensure_app_paths()

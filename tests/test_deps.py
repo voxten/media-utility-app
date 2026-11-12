@@ -44,7 +44,7 @@ def test_is_lama_ready_detection(monkeypatch, tmp_path):
 
 
 def test_ensure_app_paths_adds_bin(monkeypatch, tmp_path):
-    monkeypatch.setattr(deps, "app_data_dir", lambda: tmp_path)
+    monkeypatch.setattr(deps, "bin_dir", lambda: tmp_path / "bin")
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir(parents=True, exist_ok=True)
     (bin_dir / "ffmpeg.exe").write_bytes(b"")
@@ -228,7 +228,7 @@ def _fake_zip_download(members):
     ],
 )
 def test_portable_zip_install_copies_only_the_executables(monkeypatch, tmp_path, ctx, dep_id, members, expected):
-    monkeypatch.setattr(deps_installer, "app_data_dir", lambda: tmp_path / "data")
+    monkeypatch.setattr(deps_installer, "paths_bin_dir", lambda: tmp_path / "data" / "bin")
     monkeypatch.setattr(deps_installer, "cache_dir", lambda: tmp_path)
     monkeypatch.setattr(deps_installer, "ensure_app_paths", lambda: None)
     monkeypatch.setattr(deps_installer.shutil, "which", lambda name: None)
@@ -241,7 +241,7 @@ def test_portable_zip_install_copies_only_the_executables(monkeypatch, tmp_path,
 
 
 def test_portable_zip_without_the_executable_fails(monkeypatch, tmp_path, ctx):
-    monkeypatch.setattr(deps_installer, "app_data_dir", lambda: tmp_path / "data")
+    monkeypatch.setattr(deps_installer, "paths_bin_dir", lambda: tmp_path / "data" / "bin")
     monkeypatch.setattr(deps_installer, "cache_dir", lambda: tmp_path)
     monkeypatch.setattr(deps_installer, "ensure_app_paths", lambda: None)
     monkeypatch.setattr(deps_installer.shutil, "which", lambda name: None)
@@ -261,7 +261,7 @@ def test_ffmpeg_without_ffprobe_is_not_ready(monkeypatch):
 
 
 def test_ffmpeg_install_runs_when_only_ffprobe_is_missing(monkeypatch, tmp_path, ctx):
-    monkeypatch.setattr(deps_installer, "app_data_dir", lambda: tmp_path / "data")
+    monkeypatch.setattr(deps_installer, "paths_bin_dir", lambda: tmp_path / "data" / "bin")
     monkeypatch.setattr(deps_installer, "cache_dir", lambda: tmp_path)
     monkeypatch.setattr(deps_installer, "ensure_app_paths", lambda: None)
     monkeypatch.setattr(deps_installer.shutil, "which", lambda name: "C:/tools/ffmpeg.exe" if name == "ffmpeg" else None)

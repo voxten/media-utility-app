@@ -25,3 +25,12 @@ class RecordingContext(JobContext):
 @pytest.fixture
 def ctx() -> RecordingContext:
     return RecordingContext()
+
+
+def served(url: str) -> bytes:
+    """What the window gets from a media server URL."""
+    import urllib.request
+
+    assert url.startswith("http://127.0.0.1:"), url
+    with urllib.request.urlopen(url, timeout=10) as resp:
+        return resp.read()

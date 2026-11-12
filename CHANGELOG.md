@@ -46,6 +46,16 @@ The app shows this file (and its Polish translation, [CHANGELOG.pl.md](CHANGELOG
 - Downloading an Image Upscaler model no longer says it is downloading the LaMa model.
 - After Quit the app ends within a few seconds, so Restart no longer starts a second copy while the first one is still running.
 
+### Performance
+
+- Large photos, GIFs, recordings and video previews reach the window as files instead of tens of megabytes of text, so Background Remover, Watermark Remover, the GIF tools, Image Compressor, Text to Speech and Audio-Video Sync use far less memory and show results faster.
+- GIF Editor keeps the open animation decoded, so each preview no longer decodes every frame again; a preview that finishes after you changed a setting no longer replaces the newer one.
+- Duplicate Finder compares 10 000 photos in seconds instead of hours, can be cancelled while it compares, and makes previews only for the files it found.
+- File lists load previews for the visible files only, a few at a time, and keep a limited number in memory. PDF page thumbnails are sent once instead of twice.
+- The window opens faster: tools load their libraries the first time you use them, and the WebView cache is cleared only after an update.
+- AI add-ons, FFmpeg, download engine updates and the cache moved from the roaming profile (%APPDATA%) to %LOCALAPPDATA%, so a roaming profile no longer copies gigabytes at sign-in. Cache files older than a week are removed at start.
+- Background Remover keeps one model in memory instead of every model used. Watermark Remover with LaMa processes the painted area and its surroundings instead of the whole photo.
+
 ## [0.14.0] - 2026-11-11
 
 ### Added

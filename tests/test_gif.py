@@ -7,6 +7,7 @@ from PIL import Image
 from backend.core import ffmpeg
 from backend.core.jobs import JobCancelled
 from backend.services import gif_editor, gif_render, video_to_gif
+from tests.conftest import served
 
 needs_gifsicle = pytest.mark.skipif(not gif_render.gifsicle_available(), reason="gifsicle not installed")
 
@@ -75,7 +76,7 @@ def test_video_preview_estimates_full_size(tmp_path):
 
     res = video_to_gif.preview(str(vid), {"start": 0, "end": 8, "fps": 8, "width": 120, "output": {"format": "gif"}})
 
-    assert res["dataUrl"].startswith("data:image/gif;base64,")
+    assert served(res["dataUrl"]).startswith(b"GIF8")
     assert res["previewSeconds"] == pytest.approx(video_to_gif.PREVIEW_SECONDS)
     assert res["estimatedSize"] > res["size"]
 
@@ -88,7 +89,7 @@ def test_editor_load(tmp_path):
     assert (info["width"], info["height"], info["frames"]) == (120, 80, 10)
     assert info["duration"] == pytest.approx(1.0)
     assert info["plays"] == 0
-    assert info["dataUrl"].startswith("data:image/gif;base64,")
+    assert served(info["dataUrl"]).startswith(b"GIF8")
 
 
 def test_editor_operations(tmp_path, ctx):
@@ -147,7 +148,7 @@ def test_editor_preview_downscales(tmp_path):
     res = gif_editor.preview(str(gif), {}, {"format": "gif"})
 
     assert (res["width"], res["height"]) == (900, 600)
-    assert res["dataUrl"].startswith("data:image/webp;base64,")
+    assert served(res["dataUrl"])[8:12] == b"WEBP"
 
 
 @needs_gifsicle
@@ -212,3 +213,16 @@ def test_cancel_while_fitting_leaves_no_output(tmp_path, ctx, monkeypatch):
     with pytest.raises(JobCancelled):
         gif_render.save_frames(ctx, frames, [100] * 4, dst, gif_render.OutputOptions(format="webp", target_bytes=1000))
     assert list(tmp_path.iterdir()) == []
+
+
+def test_previews_of_the_same_animation_decode_it_once(tmp_path, monkeypatch):
+    gif = _sample_gif(tmp_path / "a.gif")
+    opened = []
+    real_open = gif_editor.Image.open
+    monkeypatch.setattr(gif_editor.Image, "open", lambda *a, **k: opened.append(a) or real_open(*a, **k))
+
+    first = gif_editor.preview(str(gif), {"speed": 2.0}, {"format": "gif"})
+    second = gif_editor.preview(str(gif), {"reverse": True}, {"format": "gif"})
+
+    assert len(opened) == 1
+    assert first["frames"] == second["frames"] == 10

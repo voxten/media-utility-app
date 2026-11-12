@@ -3,13 +3,13 @@
 import importlib.util
 import uuid
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 import cv2
 import numpy as np
 
 from backend.core.errors import AppError
-from backend.core import imaging, thumbs
+from backend.core import imaging, media_server, thumbs
 from backend.core.imaging import split_alpha
 from backend.core.jobs import JobContext
 from backend.core.paths import cache_dir
@@ -121,7 +121,17 @@ def _inpaint_lama_direct(model: Any, device: str, bgr: np.ndarray, mask: np.ndar
     return cv2.cvtColor(blended_rgb, cv2.COLOR_RGB2BGR)
 
 
-def _inpaint_lama(bgr: np.ndarray, mask: np.ndarray) -> np.ndarray:
+def context_box(mask: np.ndarray, margin_ratio: float = 0.5, min_margin: int = 128) -> Tuple[int, int, int, int]:
+    """``(top, bottom, left, right)`` of the painted area plus surroundings LaMa needs to fill it in."""
+    ys, xs = np.nonzero(mask)
+    h, w = mask.shape[:2]
+    top, bottom, left, right = int(ys.min()), int(ys.max()) + 1, int(xs.min()), int(xs.max()) + 1
+    my = max(min_margin, int((bottom - top) * margin_ratio))
+    mx = max(min_margin, int((right - left) * margin_ratio))
+    return max(0, top - my), min(h, bottom + my), max(0, left - mx), min(w, right + mx)
+
+
+def _inpaint_lama_full(bgr: np.ndarray, mask: np.ndarray) -> np.ndarray:
     model, device = _get_direct_lama_model()
     if model is not None:
         return _inpaint_lama_direct(model, device, bgr, mask)
@@ -137,6 +147,14 @@ def _inpaint_lama(bgr: np.ndarray, mask: np.ndarray) -> np.ndarray:
     result = mm(rgb, mask, InpaintRequest())
     return cv2.cvtColor(np.clip(result, 0, 255).astype(np.uint8), cv2.COLOR_RGB2BGR)
 
+
+def _inpaint_lama(bgr: np.ndarray, mask: np.ndarray) -> np.ndarray:
+    """LaMa on the painted area and its surroundings only: a small mark on a 24 MP photo no longer
+    sends the whole photo through the network."""
+    top, bottom, left, right = context_box(mask)
+    result = bgr.copy()
+    result[top:bottom, left:right] = _inpaint_lama_full(bgr[top:bottom, left:right], mask[top:bottom, left:right])
+    return result
 
 
 def inpaint_array(img: np.ndarray, mask: np.ndarray, method: str) -> tuple:
@@ -173,7 +191,7 @@ def load_preview(path: str) -> Dict[str, Any]:
         "path": path,
         "width": int(img.shape[1]),
         "height": int(img.shape[0]),
-        "dataUrl": thumbs.to_data_url(rgb, max_size=None, fmt="PNG"),
+        "dataUrl": media_server.image_url(path, rgb, "watermark.source"),
     }
 
 
@@ -192,14 +210,10 @@ def remove(ctx: JobContext, image_path: str, mask_png: str, method: str = "telea
     result_path = cache_dir() / f"inpaint_{uuid.uuid4().hex[:10]}.png"
     write_image(result, str(result_path))
 
-    bgr, alpha = split_alpha(result)
-    rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
-    if alpha is not None:
-        rgb = np.dstack([rgb, alpha])
     ctx.progress(100, "watermark.status.done")
     return {
         "resultPath": str(result_path),
-        "dataUrl": thumbs.to_data_url(rgb, max_size=None, fmt="PNG"),
+        "dataUrl": media_server.file_url(result_path),
         "width": int(result.shape[1]),
         "height": int(result.shape[0]),
         "notice": notice,

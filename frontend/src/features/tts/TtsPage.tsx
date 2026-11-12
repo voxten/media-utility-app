@@ -127,7 +127,7 @@ export default function TtsPage() {
   const runner = useJobRunner<{ outPath: string; bytes: number }>("tts", {
     onResult: async (result) => {
       try {
-        form.set({ audioSrc: await api.tts.audioDataUrl(result.outPath), lastOutput: result.outPath });
+        form.set({ audioSrc: await api.tts.audioUrl(result.outPath), lastOutput: result.outPath });
       } catch {
         form.set({ audioSrc: null, lastOutput: result.outPath });
       }

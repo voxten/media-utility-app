@@ -5,11 +5,9 @@ waveform amplitude peaks for interactive visualization, fast preview generation
 (e.g. 10s-30s slice at any point of a long video), and exporting synchronized media.
 """
 
-import base64
 import logging
 import os
 import subprocess
-import tempfile
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -18,7 +16,9 @@ import numpy as np
 
 from backend.core.errors import AppError, MissingFile
 from backend.core.ffmpeg import NO_WINDOW, extract_frames, probe_media, resolve_binary, run_capture, run_ffmpeg
+from backend.core import media_server
 from backend.core.jobs import JobContext
+from backend.core.paths import cache_dir
 
 logger = logging.getLogger(__name__)
 
@@ -143,7 +143,7 @@ def generate_preview(
     """Generates a fast synchronized preview video slice (e.g. 10s-30s).
 
     Fast seeks both video and audio with appropriate delay/advance, scales to 480p
-    using ultrafast preset, and returns the result as a base64 data URL.
+    using ultrafast preset, and returns a URL the window can play it from.
     """
     v_path = Path(video_path)
     if not v_path.is_file():
@@ -158,7 +158,7 @@ def generate_preview(
     preview_start = max(0.0, float(start_sec))
     offset = float(offset_sec)
 
-    temp_out = Path(tempfile.gettempdir()) / f"preview_sync_{os.getpid()}_{int(time.time() * 1000)}.mp4"
+    temp_out = cache_dir() / f"preview_sync_{os.getpid()}_{int(time.time() * 1000)}.mp4"
 
     # Audio timing logic:
     # At preview time t (0 <= t < preview_dur), video is at preview_start + t.
@@ -209,19 +209,15 @@ def generate_preview(
             logger.error("FFmpeg preview generation failed: %s", err)
             raise AppError("errors.previewFailed")
 
-        file_bytes = temp_out.read_bytes()
-        data_url = f"data:video/mp4;base64,{base64.b64encode(file_bytes).decode('ascii')}"
-        size_bytes = len(file_bytes)
-    finally:
-        if temp_out.is_file():
-            try:
-                temp_out.unlink()
-            except OSError:
-                pass
+        size_bytes = temp_out.stat().st_size
+        preview_url = media_server.slot_url("video_sync.preview", temp_out)
+    except BaseException:
+        temp_out.unlink(missing_ok=True)
+        raise
 
     logger.info("Generated %s preview in %.2fs (%d bytes)", preview_dur, time.time() - t0, size_bytes)
     return {
-        "previewUrl": data_url,
+        "previewUrl": preview_url,
         "duration": preview_dur,
         "offsetSec": offset,
         "startSec": preview_start,

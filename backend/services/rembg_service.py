@@ -13,7 +13,7 @@ import numpy as np
 from PIL import Image
 
 from backend.core.errors import AppError
-from backend.core import imaging, thumbs
+from backend.core import imaging, media_server, thumbs
 from backend.core.imaging import split_alpha
 from backend.core.deps import DEFAULT_REMBG_MODEL, REMBG_MODELS, rembg_model_path
 from backend.core.jobs import JobCancelled, JobContext
@@ -59,6 +59,7 @@ def _get_rembg_session(model_name: str) -> Any:
 
     import rembg
 
+    _SESSIONS.clear()  # one model in memory at a time: BiRefNet alone takes about 1 GB
     session = rembg.new_session(resolved_model)
     _SESSIONS[resolved_model] = session
     return session
@@ -212,7 +213,7 @@ def load_preview(path: str) -> Dict[str, Any]:
         "path": path,
         "width": int(img.shape[1]),
         "height": int(img.shape[0]),
-        "dataUrl": thumbs.to_data_url(rgb, max_size=None, fmt="PNG"),
+        "dataUrl": media_server.image_url(path, rgb, "rembg.source"),
     }
 
 
@@ -290,14 +291,10 @@ def remove(ctx: JobContext, params: Dict[str, Any]) -> Dict[str, Any]:
     result_path = cache_dir() / f"rembg_{uuid.uuid4().hex[:10]}.png"
     write_image(result_bgra, str(result_path))
 
-    # Build preview data URL
-    result_rgba = cv2.cvtColor(result_bgra, cv2.COLOR_BGRA2RGBA)
-    preview_url = thumbs.to_data_url(result_rgba, max_size=None, fmt="PNG")
-
     ctx.progress(100, "rembg.status.done")
     return {
         "resultPath": str(result_path),
-        "dataUrl": preview_url,
+        "dataUrl": media_server.file_url(result_path),
         "width": w,
         "height": h,
         "elapsed": round(time.time() - t0, 2),

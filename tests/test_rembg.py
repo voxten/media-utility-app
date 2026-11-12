@@ -8,6 +8,7 @@ from PIL import Image
 
 from backend.services import rembg_service
 from backend.core.jobs import JobContext
+from tests.conftest import served
 
 
 def test_rembg_availability_check(monkeypatch):
@@ -76,7 +77,7 @@ def test_load_preview_and_save(tmp_path):
     preview = rembg_service.load_preview(str(img_path))
     assert preview["width"] == 64
     assert preview["height"] == 48
-    assert preview["dataUrl"].startswith("data:image/png;base64,")
+    assert served(preview["dataUrl"])[1:4] == b"PNG"
 
     out_path = tmp_path / "saved.png"
     saved = rembg_service.save_result(str(img_path), str(out_path))

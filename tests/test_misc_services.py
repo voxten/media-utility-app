@@ -144,3 +144,25 @@ def test_watermark_mask_is_dilated_to_cover_edges(tmp_path, ctx, monkeypatch):
     result = watermark.remove(ctx, str(src), _mask_png((240, 320), (121, 101, 219, 129)), "telea")
     out = watermark.read_image(result["resultPath"]).astype(int)
     assert np.abs(out[100:130, 120:220] - 140).max() < 20
+
+
+def test_lama_works_on_the_painted_area_and_its_surroundings_only(monkeypatch):
+    import numpy as np
+
+    from backend.services import watermark
+
+    image = np.zeros((2000, 3000, 3), np.uint8)
+    mask = np.zeros((2000, 3000), np.uint8)
+    mask[1000:1100, 1500:1700] = 255
+    seen = []
+
+    def fake_lama(bgr, m):
+        seen.append(bgr.shape[:2])
+        return np.full_like(bgr, 9)
+
+    monkeypatch.setattr(watermark, "_inpaint_lama_full", fake_lama)
+    result = watermark._inpaint_lama(image, mask)
+
+    assert seen == [(356, 456)]
+    assert watermark.context_box(mask) == (872, 1228, 1372, 1828)
+    assert result[1050, 1600, 0] == 9 and result[0, 0, 0] == 0

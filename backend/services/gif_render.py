@@ -1,7 +1,6 @@
 """Output side shared by the GIF tools: encoders for GIF, WebP, APNG and MP4, gifsicle
 optimization and fitting a result under a target size."""
 
-import base64
 import math
 import os
 import shutil
@@ -69,10 +68,6 @@ def human_size(size: int) -> str:
 
 def gifsicle_available() -> bool:
     return has_binary("gifsicle")
-
-
-def data_url(path: Path, fmt: str) -> str:
-    return f"data:{MIME_TYPES[fmt]};base64,{base64.b64encode(path.read_bytes()).decode('ascii')}"
 
 
 def temp_path(suffix: str) -> Path:

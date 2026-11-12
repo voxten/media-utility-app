@@ -55,7 +55,7 @@ def test_run_ffmpeg_refuses_to_overwrite_its_input(tmp_path: Path, ctx):
 
 
 def test_models_move_out_of_the_roaming_folder(tmp_path):
-    from backend.core.paths import migrate_models
+    from backend.core.paths import migrate_folder
 
     old, new = tmp_path / "Roaming" / "models", tmp_path / "Local" / "models"
     (old / "whisper" / "base").mkdir(parents=True)
@@ -64,7 +64,7 @@ def test_models_move_out_of_the_roaming_folder(tmp_path):
     (new / "whisper" / "small").mkdir(parents=True)
     (new / "whisper" / "small" / "model.bin").write_bytes(b"s")
 
-    migrate_models(old, new)
+    migrate_folder(old, new)
 
     assert not old.exists()
     assert (new / "big-lama.pt").read_bytes() == b"lama"
@@ -73,7 +73,7 @@ def test_models_move_out_of_the_roaming_folder(tmp_path):
 
 
 def test_a_model_already_in_the_new_place_is_kept(tmp_path):
-    from backend.core.paths import migrate_models
+    from backend.core.paths import migrate_folder
 
     old, new = tmp_path / "old", tmp_path / "new"
     old.mkdir()
@@ -81,16 +81,16 @@ def test_a_model_already_in_the_new_place_is_kept(tmp_path):
     (old / "model.pth").write_bytes(b"old copy")
     (new / "model.pth").write_bytes(b"new copy")
 
-    migrate_models(old, new)
+    migrate_folder(old, new)
 
     assert (new / "model.pth").read_bytes() == b"new copy"
     assert (old / "model.pth").exists()  # left for the user; nothing is lost
 
 
 def test_nothing_happens_without_old_models(tmp_path):
-    from backend.core.paths import migrate_models
+    from backend.core.paths import migrate_folder
 
-    migrate_models(tmp_path / "missing", tmp_path / "new")
+    migrate_folder(tmp_path / "missing", tmp_path / "new")
     assert not (tmp_path / "new").exists()
 
 
@@ -148,3 +148,38 @@ def test_color_profile_goes_only_to_formats_that_store_one():
     assert imaging.color_profile(img, "jpg") == {"icc_profile": icc}
     assert imaging.color_profile(img, "gif") == {}
     assert imaging.color_profile(Image.new("RGB", (8, 8)), "png") == {}
+
+
+def test_old_cache_entries_are_removed_and_recent_ones_kept(tmp_path):
+    import os
+    import time
+
+    from backend.core.paths import clean_cache
+
+    old_file, old_dir, fresh = tmp_path / "old.png", tmp_path / "old_job", tmp_path / "fresh.png"
+    old_file.write_bytes(b"x")
+    old_dir.mkdir()
+    (old_dir / "part.wav").write_bytes(b"x")
+    fresh.write_bytes(b"x")
+    week_ago = time.time() - 8 * 24 * 3600
+    for item in (old_file, old_dir):
+        os.utime(item, (week_ago, week_ago))
+
+    assert clean_cache(folder=tmp_path) == 2
+    assert [p.name for p in tmp_path.iterdir()] == ["fresh.png"]
+
+
+def test_every_large_folder_moves_to_the_local_profile(monkeypatch, tmp_path):
+    from backend.core import paths
+
+    roaming, local = tmp_path / "Roaming", tmp_path / "Local"
+    for name in paths.LOCAL_FOLDERS:
+        (roaming / name).mkdir(parents=True)
+        (roaming / name / "file").write_text(name)
+    monkeypatch.setattr(paths, "app_data_dir", lambda: roaming)
+    monkeypatch.setattr(paths, "local_data_dir", lambda: local)
+
+    paths.migrate_to_local()
+
+    assert list(roaming.iterdir()) == []
+    assert sorted(p.name for p in local.iterdir()) == sorted(paths.LOCAL_FOLDERS)

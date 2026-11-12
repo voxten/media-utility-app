@@ -78,28 +78,64 @@ def _move_tree(source: Path, target: Path) -> List[str]:
     return left
 
 
-def migrate_models(old: Optional[Path] = None, new: Optional[Path] = None) -> None:
-    """Move models downloaded by 0.13.0 and earlier from the roaming app data folder to models_dir()."""
-    old = old or app_data_dir() / "models"
+# Large folders that older versions kept in the roaming profile (models until 0.13.0, the rest until 0.14.0).
+LOCAL_FOLDERS = ("models", "cache", "addons", "bin", "engines")
+CACHE_MAX_AGE_S = 7 * 24 * 3600
+
+
+def migrate_to_local() -> None:
+    """Move what older versions downloaded into %APPDATA% to %LOCALAPPDATA%, so sign-ins stay fast."""
+    for name in LOCAL_FOLDERS:
+        migrate_folder(app_data_dir() / name, local_data_dir() / name)
+
+
+def migrate_folder(old: Path, new: Path) -> None:
+    """Move everything in ``old`` into ``new``; a file already in ``new`` wins and ``old`` keeps its copy."""
     if not old.is_dir():
         return
-    new = new or models_dir()
     new.mkdir(parents=True, exist_ok=True)
     if os.path.normcase(str(old.resolve())) == os.path.normcase(str(new.resolve())):
         return
     started = time.monotonic()
     left = _move_tree(old, new)
     if left:
-        logger.warning("Some models stayed in %s: %s", old, "; ".join(left))
+        logger.warning("Some files stayed in %s: %s", old, "; ".join(left))
         return
     old.rmdir()
-    logger.info("Moved AI models to %s in %.1f s", new, time.monotonic() - started)
+    logger.info("Moved %s to %s in %.1f s", old, new, time.monotonic() - started)
 
 
 def cache_dir() -> Path:
-    path = app_data_dir() / "cache"
+    """Previews and results waiting to be saved; anything older than a week is removed at start."""
+    path = local_data_dir() / "cache"
     path.mkdir(parents=True, exist_ok=True)
     return path
+
+
+def bin_dir() -> Path:
+    """FFmpeg and gifsicle installed from Settings."""
+    return local_data_dir() / "bin"
+
+
+def clean_cache(max_age_s: float = CACHE_MAX_AGE_S, folder: Optional[Path] = None) -> int:
+    """Removes cache entries not touched for ``max_age_s``; returns how many were removed."""
+    folder = folder or cache_dir()
+    cutoff = time.time() - max_age_s
+    removed = 0
+    for item in list(folder.iterdir()):
+        try:
+            if item.stat().st_mtime >= cutoff:
+                continue
+            if item.is_dir() and not item.is_symlink():
+                shutil.rmtree(item)
+            else:
+                item.unlink()
+            removed += 1
+        except OSError:
+            continue  # still open somewhere; next start tries again
+    if removed:
+        logger.info("Removed %d old cache entries from %s", removed, folder)
+    return removed
 
 
 def default_output_dir() -> Path:

@@ -6,9 +6,7 @@ job id immediately; results arrive as ``job:*`` events. Internal state lives in
 underscore attributes so pywebview does not expose it.
 """
 
-import base64
 import logging
-import mimetypes
 import platform
 import sys
 import threading
@@ -23,33 +21,34 @@ SHUTDOWN_WAIT_S = 3.0
 from backend import APP_NAME, APP_VERSION
 from backend.core.errors import AppError
 from backend.bridge.events import EventBus
-from backend.core import clipboard, deps, engines, ffmpeg, logs, paths, system, win_theme
+from backend.core import clipboard, deps, engines, ffmpeg, logs, media_server, paths, system, win_theme
 from backend.core.app_shell import AppShell
 from backend.core.history import JobHistory
 from backend.core.jobs import JobManager
 from backend.core.settings import Settings, validate_patch
-from backend.services import (
-    compressor,
-    converter,
-    deps_installer,
-    download,
-    download_queue,
-    duplicates,
-    gif_editor,
-    gif_render,
-    image_editor,
-    instagram,
-    pdf,
-    progress_image,
-    rembg_service,
-    system_info,
-    transcribe,
-    tts,
-    upscale,
-    video_sync,
-    video_to_gif,
-    watermark,
-)
+from backend.core.lazy import lazy_import
+
+# Loaded on first use, so the window opens before cv2, yt-dlp and PyMuPDF are imported.
+compressor = lazy_import("backend.services.compressor")
+converter = lazy_import("backend.services.converter")
+deps_installer = lazy_import("backend.services.deps_installer")
+download = lazy_import("backend.services.download")
+download_queue = lazy_import("backend.services.download_queue")
+duplicates = lazy_import("backend.services.duplicates")
+gif_editor = lazy_import("backend.services.gif_editor")
+gif_render = lazy_import("backend.services.gif_render")
+image_editor = lazy_import("backend.services.image_editor")
+instagram = lazy_import("backend.services.instagram")
+pdf = lazy_import("backend.services.pdf")
+progress_image = lazy_import("backend.services.progress_image")
+rembg_service = lazy_import("backend.services.rembg_service")
+system_info = lazy_import("backend.services.system_info")
+transcribe = lazy_import("backend.services.transcribe")
+tts = lazy_import("backend.services.tts")
+upscale = lazy_import("backend.services.upscale")
+video_sync = lazy_import("backend.services.video_sync")
+video_to_gif = lazy_import("backend.services.video_to_gif")
+watermark = lazy_import("backend.services.watermark")
 
 
 class _Context:
@@ -381,16 +380,9 @@ class TtsApi(_Namespace):
     def read_text(self, path: str) -> str:
         return tts.read_text_file(path)
 
-    def audio_data_url(self, path: str) -> str:
+    def audio_url(self, path: str) -> str:
         """Generated audio for the in-app player (the WebView cannot read arbitrary local files)."""
-        p = Path(path)
-        if not p.is_file():
-            return ""
-        mime = mimetypes.guess_type(path)[0] or "audio/mpeg"
-        try:
-            return f"data:{mime};base64,{base64.b64encode(p.read_bytes()).decode('ascii')}"
-        except Exception:
-            return ""
+        return media_server.file_url(path) if Path(path).is_file() else ""
 
 
 class DownloadApi(_Namespace):

@@ -284,7 +284,9 @@ export function createMockBackend(emit: Emit) {
             thumb: fakePageThumb(f, page),
           })),
         );
-        return simulateJob("pdf.inspect", "", { pages, errors: [] }, 800);
+        const job = simulateJob("pdf.inspect", "", { pageCount: pages.length, errors: [] }, 800);
+        void job.then((jobId) => pages.forEach((data) => emit("job:partial", { jobId, data })));
+        return job;
       },
       render_page: (_path: string, page: number) => ok(fakePageThumb(0, page)),
       merge: () => simulateJob("pdf.merge", "merged.pdf", { outPath: "C:\\merged.pdf", pageCount: 3, bytes: 1000 }),
@@ -328,7 +330,7 @@ export function createMockBackend(emit: Emit) {
           { id: "en-GB-RyanNeural", name: "Ryan", locale: "en-GB", gender: "Male" },
         ]),
       synthesize: () => simulateJob("tts", "speech.mp3", { outPath: "C:\\speech.mp3", bytes: 1000 }),
-      audio_data_url: () => ok(""),
+      audio_url: () => ok(""),
       read_text: (path: string) => ok(`Text from ${path}`),
     },
     download: {

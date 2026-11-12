@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
-from backend.core.paths import app_data_dir
+from backend.core.paths import local_data_dir
 
 # Lets tests and manual checks point the app at a scratch folder.
 ENGINES_DIR_ENV = "MEDIASTUDIO_ENGINES_DIR"
@@ -77,7 +77,7 @@ def engines_dir() -> Path:
     override = os.environ.get(ENGINES_DIR_ENV)
     if override:
         return Path(override)
-    return app_data_dir() / "engines" / f"cp{sys.version_info.major}{sys.version_info.minor}"
+    return local_data_dir() / "engines" / f"cp{sys.version_info.major}{sys.version_info.minor}"
 
 
 def engine_dir(engine_id: str) -> Path:

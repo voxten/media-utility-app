@@ -25,16 +25,17 @@ def test_inspect_streams_every_page(tmp_path, ctx):
     _make_pdf(a, ["A1", "A2"])
     _make_pdf(b, ["B1"])
     result = pdf.inspect(ctx, [str(a), str(b)])
-    assert [(p["fileName"], p["page"]) for p in result["pages"]] == [("a.pdf", 0), ("a.pdf", 1), ("b.pdf", 0)]
-    assert all(p["thumb"].startswith("data:image/jpeg;base64,") for p in result["pages"])
-    assert len(ctx.of("job:partial")) == 3
+    pages = [p["data"] for p in ctx.of("job:partial")]
+    assert [(p["fileName"], p["page"]) for p in pages] == [("a.pdf", 0), ("a.pdf", 1), ("b.pdf", 0)]
+    assert all(p["thumb"].startswith("data:image/jpeg;base64,") for p in pages)
+    assert result == {"pageCount": 3, "errors": []}
 
 
 def test_inspect_reports_unreadable_files(tmp_path, ctx):
     bad = tmp_path / "bad.pdf"
     bad.write_bytes(b"garbage")
     result = pdf.inspect(ctx, [str(bad)])
-    assert result["pages"] == [] and len(result["errors"]) == 1
+    assert result["pageCount"] == 0 and len(result["errors"]) == 1
 
 
 def test_merge_respects_custom_order(tmp_path, ctx):

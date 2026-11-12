@@ -4,7 +4,7 @@ Supports lossless, lossy (WebP/JPEG/PNG quantize) and target-size bisection comp
 with live preview comparison and batch processing.
 """
 
-import base64
+import uuid
 import io
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -12,9 +12,9 @@ from typing import Any, Dict, List, Optional, Tuple
 from PIL import Image
 
 from backend.core.errors import MissingFile
-from backend.core import imaging, thumbs
+from backend.core import imaging, media_server, thumbs
 from backend.core.jobs import JobContext
-from backend.core.paths import unique_path
+from backend.core.paths import cache_dir, unique_path
 
 SUPPORTED_INPUT_FORMATS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff", ".tif"}
 
@@ -176,14 +176,14 @@ def preview_compress(path: str, params: Dict[str, Any]) -> Dict[str, Any]:
     saved_bytes = max(0, in_bytes - out_bytes)
     saved_percent = round(saved_bytes / in_bytes * 100, 1) if in_bytes > 0 else 0.0
 
-    # Create data URL for preview
-    data_url = f"data:image/{mime};base64,{base64.b64encode(data).decode('ascii')}"
+    shown = cache_dir() / f"compressed_{uuid.uuid4().hex[:10]}.{'jpg' if mime == 'jpeg' else mime}"
+    shown.write_bytes(data)
 
     return {
         "compressedBytes": out_bytes,
         "savedBytes": saved_bytes,
         "savedPercent": saved_percent,
-        "dataUrl": data_url,
+        "dataUrl": media_server.slot_url("compressor.preview", shown),
     }
 
 

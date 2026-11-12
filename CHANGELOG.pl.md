@@ -42,6 +42,16 @@ Polskie tłumaczenie [CHANGELOG.md](CHANGELOG.md), pokazywane w aplikacji przy p
 - Pobieranie modelu w Skalowaniu obrazów AI nie twierdzi już, że pobiera model LaMa.
 - Po „Zakończ” aplikacja zamyka się w kilka sekund, więc „Uruchom ponownie” nie uruchamia już drugiej kopii obok pierwszej.
 
+### Wydajność
+
+- Duże zdjęcia, GIF-y, nagrania i podglądy wideo trafiają do okna jako pliki, a nie jako dziesiątki megabajtów tekstu, więc Usuwanie tła, Usuwanie znaku wodnego, narzędzia GIF, Kompresor obrazów, Tekst na mowę i Synchronizacja audio-wideo zużywają dużo mniej pamięci i szybciej pokazują wynik.
+- Edytor GIF trzyma otwartą animację w pamięci, więc kolejny podgląd nie dekoduje od nowa wszystkich klatek; podgląd, który skończy się po zmianie ustawień, nie zastępuje już nowszego.
+- Wyszukiwarka duplikatów porównuje 10 000 zdjęć w kilka sekund zamiast godzin, daje się anulować w trakcie porównywania i robi podglądy tylko dla znalezionych plików.
+- Listy plików wczytują podglądy tylko widocznych plików, po kilka naraz, i trzymają w pamięci ograniczoną ich liczbę. Miniatury stron PDF są wysyłane raz, a nie dwa razy.
+- Okno otwiera się szybciej: narzędzia ładują swoje biblioteki przy pierwszym użyciu, a pamięć podręczna WebView jest czyszczona tylko po aktualizacji.
+- Dodatki AI, FFmpeg, aktualizacje silników pobierania i pamięć podręczna przeniosły się z profilu Roaming (%APPDATA%) do %LOCALAPPDATA%, więc profil wędrujący nie kopiuje już gigabajtów przy logowaniu. Pliki pamięci podręcznej starsze niż tydzień są usuwane przy starcie.
+- Usuwanie tła trzyma w pamięci jeden model zamiast każdego użytego. Usuwanie znaku wodnego z LaMa przetwarza zamalowany obszar z otoczeniem zamiast całego zdjęcia.
+
 ## [0.14.0] - 2026-11-11
 
 ### Dodano

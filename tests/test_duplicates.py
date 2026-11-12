@@ -83,3 +83,65 @@ def test_phash_matches_imagehash_reference():
     images += [Image.fromarray(rng.integers(0, 255, (h, w, 3), dtype=np.uint8)) for h, w in ((50, 80), (300, 200), (33, 33))]
     for img in images:
         assert duplicates.phash(img) == imagehash.phash(img)
+
+
+def test_grouping_ten_thousand_photos_takes_seconds_and_can_be_cancelled(ctx):
+    import time
+
+    import pytest
+    from imagehash import ImageHash
+
+    from backend.core.jobs import JobCancelled
+
+    rng = np.random.default_rng(3)
+    items = [
+        MediaItem(path=str(n), size=1, width=1, height=1, hashes=[ImageHash(rng.integers(0, 2, (8, 8)).astype(bool))])
+        for n in range(10_000)
+    ]
+    items[9_999].hashes = items[0].hashes
+    started = time.monotonic()
+    groups = group_similar(items)
+    assert time.monotonic() - started < 30
+    assert ["0", "9999"] in [[i.path for i in g] for g in groups]
+
+    ctx.cancel()
+    with pytest.raises(JobCancelled):
+        group_similar(items, ctx=ctx)
+
+
+def test_videos_with_fewer_frames_compare_on_the_frames_both_have():
+    from imagehash import hex_to_hash
+
+    same = [hex_to_hash("ffff0000ffff0000")] * 3
+    a = MediaItem(path="a.mp4", size=1, width=1, height=1, hashes=same + [hex_to_hash("0" * 16)] * 2, duration=5_000)
+    b = MediaItem(path="b.mp4", size=1, width=1, height=1, hashes=same, duration=5_200)
+    assert [[i.path for i in g] for g in group_similar([a, b])] == [["a.mp4", "b.mp4"]]
+
+
+def test_numpy_grouping_matches_comparing_every_pair():
+    from imagehash import ImageHash
+
+    rng = np.random.default_rng(5)
+    base = rng.integers(0, 2, (8, 8)).astype(bool)
+    items = []
+    for n in range(200):
+        noisy = base ^ (rng.random((8, 8)) < 0.12)
+        items.append(MediaItem(path=str(n), size=1, width=1, height=1, hashes=[ImageHash(noisy)]))
+
+    parent = list(range(len(items)))
+
+    def root(i):
+        while parent[i] != i:
+            i = parent[i]
+        return i
+
+    for i in range(len(items)):
+        for j in range(i + 1, len(items)):
+            if items[i].hashes[0] - items[j].hashes[0] <= duplicates.HASH_THRESHOLD:
+                parent[root(j)] = root(i)
+    expected = {}
+    for i in range(len(items)):
+        expected.setdefault(root(i), []).append(str(i))
+    expected_groups = sorted(sorted(g) for g in expected.values() if len(g) > 1)
+
+    assert sorted(sorted(i.path for i in g) for g in group_similar(items)) == expected_groups

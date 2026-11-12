@@ -2,13 +2,14 @@
 geometry, speed and order operations and saves through gif_render."""
 
 import bisect
+import threading
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 from PIL import Image, ImageSequence
 
 from backend.core.errors import AppError, MissingFile
-from backend.core import thumbs
+from backend.core import media_server, thumbs
 from backend.core.jobs import JobContext
 from backend.core.paths import unique_path
 from backend.services import gif_render
@@ -17,23 +18,37 @@ from backend.services.image_editor import apply_operations
 
 SUPPORTED_EXTENSIONS = {".gif", ".webp", ".png", ".apng"}
 DEFAULT_FRAME_MS = 100
-MAX_INLINE_BYTES = 40 * 1024 * 1024
 PREVIEW_MAX_SIDE = 480
 
 Frames = Tuple[List[Image.Image], List[int]]
 
 
+_decoded_lock = threading.Lock()
+_decoded: Dict[Tuple[str, int, int], Frames] = {}
+
+
 def _decode(path: str) -> Frames:
+    """Every frame as RGBA. The last animation stays decoded, so each preview of the same file
+    (every slider change) no longer decodes all of its frames again."""
     p = Path(path)
     if not p.is_file():
         raise MissingFile(path)
-    frames: List[Image.Image] = []
-    durations: List[int] = []
-    with Image.open(p) as img:
-        for frame in ImageSequence.Iterator(img):
-            frames.append(frame.convert("RGBA"))
-            durations.append(int(frame.info.get("duration") or DEFAULT_FRAME_MS))
-    return frames, durations
+    stat = p.stat()
+    key = (str(p.resolve()), stat.st_mtime_ns, stat.st_size)
+    with _decoded_lock:
+        cached = _decoded.get(key)
+    if cached is None:
+        frames: List[Image.Image] = []
+        durations: List[int] = []
+        with Image.open(p) as img:
+            for frame in ImageSequence.Iterator(img):
+                frames.append(frame.convert("RGBA"))
+                durations.append(int(frame.info.get("duration") or DEFAULT_FRAME_MS))
+        cached = (frames, durations)
+        with _decoded_lock:
+            _decoded.clear()
+            _decoded[key] = cached
+    return list(cached[0]), list(cached[1])
 
 
 def _starts(durations: List[int]) -> List[float]:
@@ -68,7 +83,7 @@ def load(path: str) -> Dict[str, Any]:
         "duration": round(sum(durations) / 1000, 3),
         "plays": _plays(fmt, loop),
         "format": fmt,
-        "dataUrl": gif_render.data_url(p, mime_fmt) if size <= MAX_INLINE_BYTES else "",
+        "dataUrl": media_server.file_url(p),
     }
 
 
@@ -151,11 +166,13 @@ def preview(path: str, ops: Dict[str, Any], output: Dict[str, Any]) -> Dict[str,
             preview_fmt = "webp"
         else:
             preview_fmt = opts.format
-        return {**info, "fit": fit, "dataUrl": gif_render.data_url(shown, preview_fmt)}
+        return {**info, "fit": fit, "dataUrl": media_server.slot_url("gif_editor.preview", shown)}
+    except BaseException:
+        shown.unlink(missing_ok=True)
+        raise
     finally:
-        full.unlink(missing_ok=True)
         if shown != full:
-            shown.unlink(missing_ok=True)
+            full.unlink(missing_ok=True)
 
 
 def _render_one(ctx: JobContext, src: str, out_path: Path, ops: Dict[str, Any], opts: OutputOptions) -> Dict[str, Any]:

@@ -45,8 +45,9 @@ def page_count(path: str) -> int:
 def inspect(ctx: JobContext, paths: List[str], zoom: float = THUMB_ZOOM) -> Dict[str, Any]:
     """Render a thumbnail for every page of every PDF.
 
-    Pages are streamed through ``ctx.partial`` as they render so the grid fills in live;
-    the final result also contains the full list and per-file errors.
+    Pages are streamed through ``ctx.partial`` as they render so the grid fills in live; the job
+    keeps them, so the final result only counts them (sending every thumbnail twice doubled the
+    memory a 300-page PDF took) and lists per-file errors.
     """
     docs = []
     errors = []
@@ -62,7 +63,6 @@ def inspect(ctx: JobContext, paths: List[str], zoom: float = THUMB_ZOOM) -> Dict
 
     total = sum(count for _, count in docs) or 1
     done = 0
-    pages: List[Dict[str, Any]] = []
     for path, count in docs:
         with _open(path) as doc:
             for index in range(count):
@@ -76,11 +76,10 @@ def inspect(ctx: JobContext, paths: List[str], zoom: float = THUMB_ZOOM) -> Dict
                     "height": page.rect.height,
                     "thumb": _render(page, zoom),
                 }
-                pages.append(item)
                 ctx.partial(item)
                 done += 1
                 ctx.progress(done / total * 100, "pdf.status.rendering", {"file": item["fileName"], "page": index + 1})
-    return {"pages": pages, "errors": errors}
+    return {"pageCount": done, "errors": errors}
 
 
 def render_page(path: str, page: int, zoom: float = PREVIEW_ZOOM) -> str:

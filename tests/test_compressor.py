@@ -3,6 +3,7 @@ from pathlib import Path
 from PIL import Image
 
 from backend.services import compressor
+from tests.conftest import served
 
 
 def _create_test_image(path, size=(300, 300), color="blue"):
@@ -28,7 +29,7 @@ def test_preview_compress_smart_and_lossless(tmp_path):
     # Smart WebP compression
     res_webp = compressor.preview_compress(str(src), {"format": "webp", "mode": "smart", "quality": 75})
     assert res_webp["compressedBytes"] > 0
-    assert res_webp["dataUrl"].startswith("data:image/webp;base64,")
+    assert served(res_webp["dataUrl"])[8:12] == b"WEBP"
 
     # Lossless compression
     res_lossless = compressor.preview_compress(str(src), {"format": "png", "mode": "lossless"})

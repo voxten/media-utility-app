@@ -18,7 +18,7 @@ export interface PdfPageInfo {
 }
 
 interface InspectResult {
-  pages: PdfPageInfo[];
+  pageCount: number;
   errors: { file: string; error: string }[];
 }
 
@@ -64,12 +64,12 @@ export function usePdfPages(file: string | null) {
   }, [file, t]);
 
   const result = job?.status === "done" ? (job.result as InspectResult) : undefined;
-  const finished = result?.pages;
+  const finished = result ? (job?.partials as PdfPageInfo[]) : undefined;
   useEffect(() => {
     if (file && finished?.length) remember(file, finished);
   }, [file, finished]);
 
-  const unreadable = result && !result.pages.length && result.errors[0] ? translateMessage(t, result.errors[0].error) : null;
+  const unreadable = result && !result.pageCount && result.errors[0] ? translateMessage(t, result.errors[0].error) : null;
   const error = failed ?? (job?.status === "error" ? jobMessage(t, job) : unreadable);
   return {
     pages: cached ?? finished ?? ((job?.partials ?? []) as PdfPageInfo[]),

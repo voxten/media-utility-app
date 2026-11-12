@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Caption1, Field, Input, makeStyles, Switch, tokens } from "@fluentui/react-components";
 import { Crop16Regular, Eye16Regular, FilmstripImage24Regular, VideoSwitch20Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
@@ -111,7 +111,12 @@ export default function VideoToGifPage() {
     [video, range, fps, width, speed, reverse, crop, output.params],
   );
 
-  useEffect(() => setPreview(null), [params]);
+  const previewRequest = useRef(0);
+  useEffect(() => {
+    previewRequest.current += 1;
+    setPreview(null);
+    setPreviewing(false);
+  }, [params]);
 
   useEffect(() => {
     if (!video) return;
@@ -130,13 +135,15 @@ export default function VideoToGifPage() {
 
   const runPreview = async () => {
     if (!params) return;
+    const request = ++previewRequest.current;
     setPreviewing(true);
     try {
-      setPreview(await api.video_to_gif.preview(params));
+      const result = await api.video_to_gif.preview(params);
+      if (request === previewRequest.current) setPreview(result);
     } catch (err) {
-      notify.error(t("video_to_gif.errors.preview"), { body: errorMessage(t, err) });
+      if (request === previewRequest.current) notify.error(t("video_to_gif.errors.preview"), { body: errorMessage(t, err) });
     } finally {
-      setPreviewing(false);
+      if (request === previewRequest.current) setPreviewing(false);
     }
   };
 

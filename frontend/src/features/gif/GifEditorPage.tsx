@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Caption1, Field, makeStyles, Spinner, Switch, ToggleButton, tokens, Tooltip } from "@fluentui/react-components";
 import {
   Add16Regular,
@@ -143,17 +143,24 @@ export default function GifEditorPage() {
     };
   }, [current, notify, t]);
 
-  useEffect(() => setPreview(null), [current, operations, output.params]);
+  const previewRequest = useRef(0);
+  useEffect(() => {
+    previewRequest.current += 1;
+    setPreview(null);
+    setPreviewing(false);
+  }, [current, operations, output.params]);
 
   const runPreview = async () => {
     if (!current) return;
+    const request = ++previewRequest.current;
     setPreviewing(true);
     try {
-      setPreview(await api.gif_editor.preview(current, operations, output.params));
+      const result = await api.gif_editor.preview(current, operations, output.params);
+      if (request === previewRequest.current) setPreview(result);
     } catch (err) {
-      notify.error(t("gif_editor.errors.preview"), { body: errorMessage(t, err) });
+      if (request === previewRequest.current) notify.error(t("gif_editor.errors.preview"), { body: errorMessage(t, err) });
     } finally {
-      setPreviewing(false);
+      if (request === previewRequest.current) setPreviewing(false);
     }
   };
 

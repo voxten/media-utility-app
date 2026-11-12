@@ -9,6 +9,7 @@ from PIL import Image
 from backend.core.errors import MissingFile
 from backend.core.ffmpeg import probe_media, run_ffmpeg
 from backend.core.jobs import JobContext
+from backend.core import media_server
 from backend.core.paths import unique_path
 from backend.services import gif_render
 from backend.services.gif_render import OutputOptions
@@ -157,13 +158,14 @@ def preview(path: str, params: Dict[str, Any]) -> Dict[str, Any]:
         _render(JobContext(), path, sample, opts, out)
         size = out.stat().st_size
         return {
-            "dataUrl": gif_render.data_url(out, opts.format),
+            "dataUrl": media_server.slot_url("video_to_gif.preview", out),
             "size": size,
             "previewSeconds": round(shown_seconds, 3),
             "estimatedSize": int(size * full_seconds / shown_seconds) if shown_seconds else size,
         }
-    finally:
+    except BaseException:
         out.unlink(missing_ok=True)
+        raise
 
 
 def render(ctx: JobContext, params: Dict[str, Any]) -> Dict[str, Any]:

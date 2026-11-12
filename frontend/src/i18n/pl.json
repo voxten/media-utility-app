@@ -563,6 +563,7 @@
       "noFiles": "Nie znaleziono pasujących plików.",
       "scanning": "Analiza: {{file}}",
       "grouping": "Grupowanie podobnych plików…",
+      "thumbnails": "Wczytywanie podglądów znalezionych plików…",
       "done": "Gotowe. Znalezione grupy: {{groups}}"
     },
     "log": {
