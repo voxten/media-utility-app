@@ -121,15 +121,18 @@ export default function TtsPage() {
   const outputDir = useSettings((s) => s.settings?.outputDir ?? "");
   const [voices, setVoices] = useState<Voice[] | null>(voiceCache[form.engine] ?? null);
   const [dropOver, setDropOver] = useState(false);
+  // Local, so a recording plays by itself only right after it is made, not on every visit.
+  const [autoPlay, setAutoPlay] = useState(false);
 
   const runner = useJobRunner<{ outPath: string; bytes: number }>("tts", {
-    onDone: async (result) => {
+    onResult: async (result) => {
       try {
         form.set({ audioSrc: await api.tts.audioDataUrl(result.outPath), lastOutput: result.outPath });
       } catch {
         form.set({ audioSrc: null, lastOutput: result.outPath });
       }
     },
+    onDone: () => setAutoPlay(true),
     onError: (error) => notify.error(t("tts.toast.error"), { body: error }),
   });
 
@@ -362,7 +365,7 @@ export default function TtsPage() {
               </>
             }
           >
-            {form.audioSrc ? <AudioPlayer src={form.audioSrc} autoPlay /> : <Caption1 className={styles.muted}>{form.lastOutput}</Caption1>}
+            {form.audioSrc ? <AudioPlayer src={form.audioSrc} autoPlay={autoPlay} /> : <Caption1 className={styles.muted}>{form.lastOutput}</Caption1>}
           </Panel>
         )}
       </Columns>

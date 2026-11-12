@@ -95,7 +95,7 @@ export default function DownloadPage() {
   const updateSettings = useSettings((s) => s.update);
 
   const probe = useJobRunner<ProbeResult>("download.probe", {
-    onDone: (result) => {
+    onResult: (result) => {
       const first = result.formats.video[0]?.id ?? "";
       form.set({ probe: result, mode: "video", formatId: first, selectedEntries: (result.entries ?? []).map((_, i) => i) });
     },

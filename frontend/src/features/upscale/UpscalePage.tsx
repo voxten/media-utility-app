@@ -115,7 +115,7 @@ export default function UpscalePage() {
   }, []);
 
   const runner = useJobRunner<UpscaleResult>("upscale", {
-    onDone: (result) => form.set({ result }),
+    onResult: (result) => form.set({ result }),
     onError: (error) => notify.error(t("upscale.toast.error"), { body: error }),
   });
 

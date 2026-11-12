@@ -14,6 +14,13 @@ The app shows this file (and its Polish translation, [CHANGELOG.pl.md](CHANGELOG
 
 ### Fixed
 
+- A tool shows the result of a task that finished while another page was open, also after clicking the "done" toast: Duplicate Finder, Image Upscaler, Background Remover, Watermark Remover, Text to Speech, Instagram, the link check in Video Downloader and reading files in PDF Merger.
+- "Send to" the tool that is already open loads the files right away instead of on the next visit.
+- Watermark Remover keeps the painted mask when you switch pages or go back from the result, and undo uses far less memory on large photos.
+- Two download queues running at once no longer overwrite each other's saved links.
+- Instagram downloads exactly the ticked posts even when the account posted something new after the check; checking a profile again stops as soon as all ticked posts are found.
+- A cancelled GIF, WebP or MP4 render no longer leaves a file that looks finished in the output folder.
+- The last Text to Speech recording and the Audio-Video Sync preview no longer start playing every time you open the page.
 - Text to Speech and Progress Generator no longer replace an earlier file with the same name; they add "(1)", "(2)" instead.
 - "Open file", "Show in folder" and "Move to Recycle Bin" say why they failed (the file is gone, or Windows refused) instead of doing nothing. Duplicate Finder no longer removes files from the list that were not actually moved to the Recycle Bin.
 - The last Video Downloader queue result stays on the page even when the queue finished while another tool was open.

@@ -4,15 +4,14 @@ import { useNotify } from "../components/notify";
 import { useTransferStore } from "../stores/transfer";
 
 /**
- * Hook enabling a tool page to automatically receive files transferred from other tools.
- * When the page mounts or becomes active, if a pending transfer matches this toolId,
- * the transfer payload is consumed, onAccept is called with the file paths and optional subTab,
- * and an informative notification is displayed.
+ * Hands files sent to this tool to `onAccept`: on opening the page, and also while the page is
+ * already open (sending to the current tool does not navigate, so there is no new mount).
  */
 export function useIncomingTransfer(
   toolId: string,
   onAccept: (files: string[], subTab?: string) => void,
 ) {
+  const pending = useTransferStore((s) => (s.pendingTransfer?.targetToolId === toolId ? s.pendingTransfer : null));
   const consumeTransfer = useTransferStore((s) => s.consumeTransfer);
   const notify = useNotify();
   const { t } = useTranslation();
@@ -20,6 +19,7 @@ export function useIncomingTransfer(
   onAcceptRef.current = onAccept;
 
   useEffect(() => {
+    if (!pending) return;
     const payload = consumeTransfer(toolId);
     if (!payload || !payload.files.length) return;
 
@@ -31,5 +31,5 @@ export function useIncomingTransfer(
         ? t("transfer.toastLoadedFrom", { source: sourceName })
         : t("transfer.toastLoaded"),
     );
-  }, [toolId, consumeTransfer, notify, t]);
+  }, [pending, toolId, consumeTransfer, notify, t]);
 }

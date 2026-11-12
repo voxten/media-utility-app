@@ -95,13 +95,13 @@ export default function InstagramPage() {
   const { post, selected } = form;
 
   const probe = useJobRunner<InstagramListing>("instagram.probe", {
-    onDone: (result) => form.set({ post: result, selected: result.items.filter((it) => it.selected).map((it) => it.index) }),
+    onResult: (result) => form.set({ post: result, selected: result.items.filter((it) => it.selected).map((it) => it.index) }),
     onError: (error) => notify.error(t("instagram.toast.probeError"), { body: translateMessage(t, error) }),
   });
 
   const download = useJobRunner<InstagramResult>("instagram", {
+    onResult: (result) => form.set({ result }),
     onDone: (result) => {
-      form.set({ result });
       if (!result.files.length) notify.warning(t("instagram.toast.failed", { count: result.failed }));
     },
     onError: (error) => notify.error(t("instagram.toast.error"), { body: translateMessage(t, error) }),
@@ -151,7 +151,10 @@ export default function InstagramPage() {
   const startDownload = () => {
     if (!post || selected.length === 0) return;
     download
-      .start(() => api.instagram.start({ url: post.url, outdir, indices: selected, title }))
+      .start(() => {
+        const keys = post.items.filter((it) => selected.includes(it.index)).map((it) => it.key);
+        return api.instagram.start({ url: post.url, outdir, keys, title });
+      })
       .catch((err) => notify.error(errorMessage(t, err)));
   };
 
@@ -169,10 +172,9 @@ export default function InstagramPage() {
 
   const savedItems = useMemo<AfterGalleryItem[]>(() => {
     if (!form.result) return [];
-    return form.result.files.map((file, i) => ({
-      file,
-      dataUrl: post?.items[form.result!.indices[i]]?.thumbnail ?? undefined,
-    }));
+    const thumbnails = new Map(post?.items.map((it) => [it.key, it.thumbnail]));
+    const keys = form.result.keys;
+    return form.result.files.map((file, i) => ({ file, dataUrl: thumbnails.get(keys[i]) ?? undefined }));
   }, [form.result, post]);
 
   return (

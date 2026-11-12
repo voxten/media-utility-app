@@ -412,7 +412,8 @@ class DownloadApi(_Namespace):
             title=params.get("title") or params["url"],
         )
 
-    def _submit_batch(self, urls: List[str], params: Dict[str, Any]) -> str:
+    def _submit_batch(self, urls: List[str], params: Dict[str, Any], replaces: Optional[str]) -> str:
+        """``replaces`` is the saved unfinished queue this one resumes or replaces."""
         cookies = self._ctx.settings.cookie_files()
         settings = self._ctx.settings
         max_height = params.get("maxHeight") or 0
@@ -432,12 +433,15 @@ class DownloadApi(_Namespace):
                 skip_archived=bool(settings.get("downloadSkipArchived")),
                 archive=str(download.archive_path()),
                 persist=True,
+                replaces=replaces,
             ),
             title=f"{len(urls)} URL",
         )
 
     def batch(self, params: Dict[str, Any]) -> str:
-        return self._submit_batch([u for u in params["urls"] if u.strip()], params)
+        """A new queue replaces the offered unfinished one (the window asks before starting)."""
+        saved = download_queue.pending_queue()
+        return self._submit_batch([u for u in params["urls"] if u.strip()], params, saved["key"] if saved else None)
 
     def pending_queue(self) -> Optional[Dict[str, Any]]:
         """The queue left unfinished by the last run (closed app or cancel), or None."""
@@ -448,7 +452,7 @@ class DownloadApi(_Namespace):
         saved = download_queue.pending_queue()
         if not saved:
             raise RuntimeError("download.error.noPendingQueue")
-        return self._submit_batch(saved["urls"], saved["options"])
+        return self._submit_batch(saved["urls"], saved["options"], saved["key"])
 
     def discard_queue(self) -> bool:
         download_queue.discard_queue()
@@ -484,7 +488,7 @@ class InstagramApi(_Namespace):
         return self._ctx.jobs.submit(
             "instagram",
             lambda ctx: instagram.download(
-                ctx, params["url"], params["outdir"], params.get("indices") or None, cookies
+                ctx, params["url"], params["outdir"], params.get("keys") or None, cookies
             ),
             title=params.get("title") or params["url"],
         )

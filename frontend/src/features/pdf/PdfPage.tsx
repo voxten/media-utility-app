@@ -266,7 +266,7 @@ export default function PdfPage() {
   const preview = usePdfPagePreview();
 
   const inspect = useJobRunner<InspectResult>("pdf.inspect", {
-    onDone: (result) => {
+    onResult: (result) => {
       setPages([...useForm.getState().pages, ...result.pages.map(withKey)]);
       result.errors.forEach((e) => notify.error(t("pdf.toast.readError", { file: fileName(e.file) }), { body: e.error }));
       inspect.reset();

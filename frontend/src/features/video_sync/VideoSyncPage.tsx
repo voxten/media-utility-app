@@ -98,8 +98,12 @@ export default function VideoSyncPage() {
       });
   }, [video, trackStreamIndex, notify, t]);
 
+  // A ref, so a stored preview plays by itself only right after it is made, not on every visit.
+  const playPreviewRef = useRef(false);
   useEffect(() => {
-    if (previewClip) videoRef.current?.play().catch(() => undefined);
+    if (!previewClip || !playPreviewRef.current) return;
+    playPreviewRef.current = false;
+    videoRef.current?.play().catch(() => undefined);
   }, [previewClip]);
 
   const loadVideo = async (path: string) => {
@@ -156,6 +160,7 @@ export default function VideoSyncPage() {
         duration: previewDuration,
         ...audioParams(),
       });
+      playPreviewRef.current = true;
       form.set({ previewClip: { url: res.previewUrl, startSec: previewStartSec } });
     } catch (err) {
       notify.error(t("video_sync.errors.preview"), { body: errorMessage(t, err) });

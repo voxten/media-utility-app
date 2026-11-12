@@ -242,7 +242,7 @@ export const api = {
   instagram: {
     probe: (url: string) => call<JobId>("instagram", "probe", url),
     stop: (jobId: JobId) => call<boolean>("instagram", "stop", jobId),
-    start: (params: { url: string; outdir: string; indices: number[]; title?: string }) => call<JobId>("instagram", "start", params),
+    start: (params: { url: string; outdir: string; keys: string[]; title?: string }) => call<JobId>("instagram", "start", params),
   },
   watermark: {
     load: (path: string) => call<{ path: string; width: number; height: number; dataUrl: string }>("watermark", "load", path),

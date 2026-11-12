@@ -26,7 +26,7 @@ from backend.services.download import (
     sanitize_x_url,
 )
 
-QUEUE_VERSION = 1
+QUEUE_VERSION = 2
 
 
 def expand_batch_urls(
@@ -77,47 +77,94 @@ def expand_batch_urls(
 
 
 def queue_path() -> Path:
-    """Links of the last queue that did not finish, so the next start can resume it."""
+    """Links of queues that did not finish, so the next start can resume them."""
     return app_data_dir() / "download_queue.json"
 
 
-def save_queue(urls: List[str], options: Dict[str, Any], path: Optional[Path] = None) -> None:
-    """Write the unfinished links; no links removes the file."""
-    target = path or queue_path()
-    if not urls:
-        target.unlink(missing_ok=True)
-        return
-    target.parent.mkdir(parents=True, exist_ok=True)
-    tmp = target.with_suffix(".tmp")
-    tmp.write_text(json.dumps({"version": QUEUE_VERSION, "urls": urls, "options": options}, ensure_ascii=False), encoding="utf-8")
-    os.replace(tmp, target)
+# Every batch writes its own entry (keyed by job id), so two queues at once never overwrite each other.
+_file_lock = threading.Lock()
 
 
-def load_queue(path: Optional[Path] = None) -> Optional[Dict[str, Any]]:
-    """The saved unfinished queue as ``{urls, options}``, or None when there is none or it is unreadable."""
-    try:
-        data = json.loads((path or queue_path()).read_text(encoding="utf-8"))
-    except (OSError, ValueError):
+def _valid_entry(entry: Any) -> Optional[Dict[str, Any]]:
+    if not isinstance(entry, dict):
         return None
-    if not isinstance(data, dict) or data.get("version") != QUEUE_VERSION:
-        return None
-    urls = [u for u in data.get("urls") or [] if isinstance(u, str) and u.strip()]
-    options = data.get("options")
+    urls = [u for u in entry.get("urls") or [] if isinstance(u, str) and u.strip()]
+    options = entry.get("options")
     if not urls or not isinstance(options, dict) or not isinstance(options.get("outdir"), str):
         return None
-    return {"urls": urls, "options": options}
+    saved = entry.get("saved")
+    return {"urls": urls, "options": options, "saved": saved if isinstance(saved, (int, float)) else 0}
+
+
+def _read_queues(path: Path) -> Dict[str, Dict[str, Any]]:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    if data.get("version") == 1:
+        entry = _valid_entry(data)
+        return {"previous": entry} if entry else {}
+    if data.get("version") != QUEUE_VERSION or not isinstance(data.get("queues"), dict):
+        return {}
+    queues = {}
+    for key, raw in data["queues"].items():
+        entry = _valid_entry(raw)
+        if isinstance(key, str) and entry:
+            queues[key] = entry
+    return queues
+
+
+def _write_queues(path: Path, queues: Dict[str, Dict[str, Any]]) -> None:
+    if not queues:
+        path.unlink(missing_ok=True)
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps({"version": QUEUE_VERSION, "queues": queues}, ensure_ascii=False), encoding="utf-8")
+    os.replace(tmp, path)
+
+
+def save_queue(key: str, urls: List[str], options: Dict[str, Any], path: Optional[Path] = None) -> None:
+    """Write the unfinished links of one queue; no links removes its entry (and the file when it was the last)."""
+    target = path or queue_path()
+    with _file_lock:
+        queues = _read_queues(target)
+        if urls:
+            queues[key] = {"urls": list(urls), "options": options, "saved": time.time()}
+        else:
+            queues.pop(key, None)
+        _write_queues(target, queues)
+
+
+def remove_queue(key: Optional[str], path: Optional[Path] = None) -> None:
+    if key:
+        save_queue(key, [], {}, path)
+
+
+def load_queue(path: Optional[Path] = None, exclude: Optional[Set[str]] = None) -> Optional[Dict[str, Any]]:
+    """The most recently saved unfinished queue as ``{key, urls, options}``, or None when there is none."""
+    queues = _read_queues(path or queue_path())
+    candidates = [(entry["saved"], key) for key, entry in queues.items() if key not in (exclude or set())]
+    if not candidates:
+        return None
+    key = max(candidates)[1]
+    return {"key": key, "urls": queues[key]["urls"], "options": queues[key]["options"]}
 
 
 def pending_queue() -> Optional[Dict[str, Any]]:
-    """The unfinished queue to offer for resuming; None while a queue is downloading (it owns the file)."""
+    """The unfinished queue to offer for resuming; queues still downloading own their entries and are left out."""
     with _active_batches_lock:
-        if _active_batches:
-            return None
-    return load_queue()
+        active = set(_active_batches)
+    return load_queue(exclude=active)
 
 
 def discard_queue() -> None:
-    save_queue([], {})
+    """Forget the queue that ``pending_queue`` offers."""
+    saved = pending_queue()
+    if saved:
+        remove_queue(saved["key"])
 
 
 class ActiveBatchQueue:
@@ -147,7 +194,7 @@ class ActiveBatchQueue:
         if self.saved_options is None:
             return
         try:
-            save_queue(self.remaining_urls(), self.saved_options)
+            save_queue(self.ctx.job_id, self.remaining_urls(), self.saved_options)
         except OSError as exc:
             self.ctx.log("download.log.queueNotSaved", "warning", error=str(exc))
 
@@ -204,11 +251,14 @@ def download_batch(
     skip_archived: bool = False,
     archive: Optional[str] = None,
     persist: bool = False,
+    replaces: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Download several URLs; per-item state is streamed via ``ctx.partial``.
 
     ``mode`` is ``video`` (best quality up to ``max_height``) or ``audio`` (converted to ``audio_codec``).
     With ``persist``, the links not finished yet are kept in ``queue_path()`` until the batch ends normally.
+    ``replaces`` is the saved queue this batch takes over (resumed or replaced); it is removed once this
+    batch has saved its own links.
     """
     ctx.progress(None, "download.status.probing")
     Path(outdir).expanduser().mkdir(parents=True, exist_ok=True)
@@ -233,6 +283,11 @@ def download_batch(
     finished_normally = False
     try:
         batch_queue.add_urls(urls)
+        if persist and replaces:
+            try:
+                remove_queue(replaces)
+            except OSError as exc:
+                ctx.log("download.log.queueNotSaved", "warning", error=str(exc))
 
         while True:
             ctx.check_cancelled()
@@ -335,6 +390,6 @@ def download_batch(
             _active_batches.pop(ctx.job_id, None)
         if persist and finished_normally:
             try:
-                discard_queue()
+                remove_queue(ctx.job_id)
             except OSError:
                 pass

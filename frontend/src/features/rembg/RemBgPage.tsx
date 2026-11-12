@@ -166,7 +166,7 @@ export default function RemBgPage() {
   }, []);
 
   const runner = useJobRunner<RemBgResult>("rembg", {
-    onDone: (result) => form.set({ result }),
+    onResult: (result) => form.set({ result }),
     onError: (err) => {
       notify.error(t("common.jobStatus.error"), { body: err });
     },

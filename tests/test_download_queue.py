@@ -61,18 +61,36 @@ def test_archive_count_and_clear(tmp_path):
 def test_queue_file_round_trip(tmp_path):
     path = tmp_path / "queue.json"
     options = {"outdir": "C:/Pobrane ąę", "mode": "audio"}
-    download_queue.save_queue(URLS, options, path)
-    assert download_queue.load_queue(path) == {"urls": URLS, "options": options}
-    download_queue.save_queue([], options, path)
+    download_queue.save_queue("job1", URLS, options, path)
+    assert download_queue.load_queue(path) == {"key": "job1", "urls": URLS, "options": options}
+    download_queue.save_queue("job1", [], options, path)
     assert not path.exists()
     assert download_queue.load_queue(path) is None
 
 
+def test_each_queue_keeps_its_own_entry(tmp_path):
+    path = tmp_path / "queue.json"
+    download_queue.save_queue("a", URLS[:1], {"outdir": "A"}, path)
+    download_queue.save_queue("b", URLS[1:], {"outdir": "B"}, path)
+    assert download_queue.load_queue(path)["key"] == "b"
+    assert download_queue.load_queue(path, exclude={"b"})["urls"] == URLS[:1]
+
+    download_queue.save_queue("b", [], {}, path)
+    assert download_queue.load_queue(path) == {"key": "a", "urls": URLS[:1], "options": {"outdir": "A"}}
+
+
+def test_version_1_queue_file_is_still_offered(tmp_path):
+    path = tmp_path / "queue.json"
+    path.write_text(json.dumps({"version": 1, "urls": URLS, "options": {"outdir": "x"}}), encoding="utf-8")
+    assert download_queue.load_queue(path)["urls"] == URLS
+
+
 @pytest.mark.parametrize(
     "content",
-    ["not json", json.dumps([1, 2]), json.dumps({"version": 99, "urls": URLS, "options": {"outdir": "x"}}),
-     json.dumps({"version": 1, "urls": [], "options": {"outdir": "x"}}),
-     json.dumps({"version": 1, "urls": URLS, "options": {}})],
+    ["not json", json.dumps([1, 2]), json.dumps({"version": 99, "queues": {"a": {"urls": URLS, "options": {"outdir": "x"}}}}),
+     json.dumps({"version": 2, "queues": {"a": {"urls": [], "options": {"outdir": "x"}}}}),
+     json.dumps({"version": 2, "queues": {"a": {"urls": URLS, "options": {}}}}),
+     json.dumps({"version": 2, "queues": [1]})],
 )
 def test_broken_queue_file_is_ignored(tmp_path, content):
     path = tmp_path / "queue.json"
@@ -181,16 +199,44 @@ def test_batch_without_persist_writes_no_file(monkeypatch, ctx, tmp_path, queue_
     assert not queue_file.exists()
 
 
-def test_pending_queue_is_hidden_while_a_batch_runs(ctx, queue_file):
-    download_queue.save_queue(URLS, {"outdir": "C:/x"})
+def test_running_queue_is_not_offered_for_resuming(ctx, queue_file):
+    download_queue.save_queue("old", URLS, {"outdir": "C:/x"})
     assert download_queue.pending_queue()["urls"] == URLS
-    download_queue._active_batches["running"] = download_queue.ActiveBatchQueue(ctx, {})
+    download_queue._active_batches["old"] = download_queue.ActiveBatchQueue(ctx, {})
     try:
         assert download_queue.pending_queue() is None
     finally:
-        download_queue._active_batches.pop("running")
+        download_queue._active_batches.pop("old")
     download_queue.discard_queue()
     assert download_queue.pending_queue() is None
+
+
+def test_finished_batch_keeps_the_links_of_another_running_batch(monkeypatch, tmp_path, queue_file):
+    from tests.conftest import RecordingContext
+
+    first, second = RecordingContext("first"), RecordingContext("second")
+    monkeypatch.setattr(download_queue, "_run_ydl", _fake_run({URLS[0]: "cancel"}))
+    with pytest.raises(JobCancelled):
+        download_queue.download_batch(first, URLS, str(tmp_path / "A"), persist=True)
+
+    download_queue.download_batch(second, URLS[2:], str(tmp_path / "B"), persist=True)
+
+    saved = download_queue.load_queue()
+    assert saved["key"] == "first"
+    assert saved["urls"] == URLS
+
+
+def test_resumed_queue_replaces_the_saved_one(monkeypatch, ctx, tmp_path, queue_file):
+    download_queue.save_queue("old", URLS, {"outdir": str(tmp_path)})
+    monkeypatch.setattr(download_queue, "_run_ydl", _fake_run({URLS[1]: "cancel"}))
+
+    with pytest.raises(JobCancelled):
+        download_queue.download_batch(ctx, URLS, str(tmp_path), persist=True, replaces="old")
+
+    saved = download_queue.load_queue()
+    assert saved["key"] == ctx.job_id
+    assert saved["urls"] == URLS[1:]
+    assert download_queue.load_queue(exclude={ctx.job_id}) is None
 
 
 def test_download_settings_are_booleans():

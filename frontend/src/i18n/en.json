@@ -1215,7 +1215,8 @@
       "noStories": "This account has no active stories.",
       "storyExpired": "This story is no longer available. Stories disappear after 24 hours.",
       "noPosts": "This profile has no posts, or it is private and you do not follow it.",
-      "rateLimited": "Instagram is limiting requests from this account. Wait a few minutes and try again."
+      "rateLimited": "Instagram is limiting requests from this account. Wait a few minutes and try again.",
+      "itemsGone": "The chosen posts are no longer on Instagram. Check the link again."
     },
     "toast": {
       "probeError": "Could not read the post",
@@ -1228,7 +1229,8 @@
     "carouselN": "Carousel {{n}}",
     "storiesOf": "Stories of @{{user}}",
     "log": {
-      "itemFailed": "{{name}}: {{error}}"
+      "itemFailed": "{{name}}: {{error}}",
+      "itemGone": "{{name}}: no longer on Instagram"
     }
   },
   "video_sync": {

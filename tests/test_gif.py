@@ -194,3 +194,21 @@ def test_video_to_gif_keeps_an_existing_file(tmp_path, ctx):
                                     "width": 80, "output": {"format": "gif"}})
     assert Path(res["outPath"]).name == "clip (1).gif"
     assert existing.read_bytes() == b"old"
+
+
+def test_cancel_while_fitting_leaves_no_output(tmp_path, ctx, monkeypatch):
+    import random
+
+    rng = random.Random(1)
+    frames = [Image.frombytes("RGBA", (96, 96), bytes(rng.getrandbits(8) for _ in range(96 * 96 * 4))) for _ in range(4)]
+    original_save = Image.Image.save
+
+    def save_then_cancel(self, *args, **kwargs):
+        original_save(self, *args, **kwargs)
+        ctx.cancel()
+
+    monkeypatch.setattr(Image.Image, "save", save_then_cancel)
+    dst = tmp_path / "anim.webp"
+    with pytest.raises(JobCancelled):
+        gif_render.save_frames(ctx, frames, [100] * 4, dst, gif_render.OutputOptions(format="webp", target_bytes=1000))
+    assert list(tmp_path.iterdir()) == []

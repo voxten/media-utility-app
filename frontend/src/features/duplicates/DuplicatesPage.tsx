@@ -213,7 +213,7 @@ export default function DuplicatesPage() {
   const [dropOver, setDropOver] = useState(false);
 
   const runner = useJobRunner<ScanResult>("duplicates", {
-    onDone: (result) => form.set({ groups: result.groups, scanned: result.scanned, selected: new Set() }),
+    onResult: (result) => form.set({ groups: result.groups, scanned: result.scanned, selected: new Set() }),
     onError: (error) => notify.error(t("duplicates.toast.error"), { body: error }),
   });
 

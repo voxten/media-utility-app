@@ -3,11 +3,13 @@ optimization and fitting a result under a target size."""
 
 import base64
 import math
+import os
 import shutil
 import tempfile
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, Iterator, List, Optional, Sequence
 
 from PIL import Image
 
@@ -88,6 +90,21 @@ def ffmpeg_loop_args(fmt: str, plays: int) -> List[str]:
     if fmt == "apng":
         return ["-plays", str(plays)]
     return []
+
+
+@contextmanager
+def staged_output(dst: Path) -> Iterator[Path]:
+    """A working file next to ``dst`` that becomes ``dst`` only when the block succeeds.
+
+    Size fitting rewrites its best attempt several times; a cancel or error part-way must not leave
+    a file in the output folder that looks finished.
+    """
+    work = dst.with_name(f"{dst.stem}.partial{dst.suffix}")
+    try:
+        yield work
+        os.replace(work, dst)
+    finally:
+        work.unlink(missing_ok=True)
 
 
 def optimize_gif(ctx: JobContext, src: Path, dst: Path, opts: OutputOptions, scale: float = 1.0) -> None:
@@ -184,8 +201,19 @@ def save_frames(
         raise ValueError("No frames to save")
     durations = [max(MIN_FRAME_MS, int(d)) for d in durations]
     dst.parent.mkdir(parents=True, exist_ok=True)
-    fit: Optional[Dict[str, Any]] = None
+    with staged_output(dst) as work:
+        fit = _encode_frames(ctx, frames, durations, work, opts)
+    return {"size": dst.stat().st_size, "fit": fit}
 
+
+def _encode_frames(
+    ctx: JobContext,
+    frames: Sequence[Image.Image],
+    durations: List[int],
+    dst: Path,
+    opts: OutputOptions,
+) -> Optional[Dict[str, Any]]:
+    fit: Optional[Dict[str, Any]] = None
     if opts.format == "gif":
         prepared = [_prepare_gif_frame(f, opts) for f in frames]
         extra = {"loop": opts.plays - 1 if opts.plays > 1 else 0} if opts.plays != 1 else {}
@@ -210,8 +238,7 @@ def save_frames(
                        duration=durations, loop=opts.plays, disposal=1)
     else:
         fit = _save_mp4(ctx, frames, durations, dst, opts)
-
-    return {"size": dst.stat().st_size, "fit": fit}
+    return fit
 
 
 def _save_webp(

@@ -88,6 +88,11 @@ def _encode(
 
 def _render(ctx: JobContext, path: str, clip: Dict[str, Any], opts: OutputOptions, out_path: Path) -> Optional[Dict[str, Any]]:
     out_path.parent.mkdir(parents=True, exist_ok=True)
+    with gif_render.staged_output(out_path) as work:
+        return _render_to(ctx, path, clip, opts, work)
+
+
+def _render_to(ctx: JobContext, path: str, clip: Dict[str, Any], opts: OutputOptions, out_path: Path) -> Optional[Dict[str, Any]]:
     if opts.format != "gif" or not gif_render.gifsicle_available():
         _encode(ctx, path, clip, opts, out_path, 95)
         return _fit_by_reencoding(ctx, path, clip, opts, out_path) if opts.target_bytes else None

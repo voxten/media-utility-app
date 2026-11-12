@@ -1301,7 +1301,8 @@
       "noStories": "To konto nie ma teraz aktywnych relacji.",
       "storyExpired": "Ta relacja nie jest już dostępna. Relacje znikają po 24 godzinach.",
       "noPosts": "Ten profil nie ma postów albo jest prywatny i go nie obserwujesz.",
-      "rateLimited": "Instagram ogranicza zapytania z tego konta. Odczekaj kilka minut i spróbuj ponownie."
+      "rateLimited": "Instagram ogranicza zapytania z tego konta. Odczekaj kilka minut i spróbuj ponownie.",
+      "itemsGone": "Wybranych postów już nie ma na Instagramie. Sprawdź link jeszcze raz."
     },
     "toast": {
       "probeError": "Nie udało się odczytać posta",
@@ -1318,7 +1319,8 @@
     "carouselN": "Karuzela {{n}}",
     "storiesOf": "Relacje @{{user}}",
     "log": {
-      "itemFailed": "{{name}}: {{error}}"
+      "itemFailed": "{{name}}: {{error}}",
+      "itemGone": "{{name}}: już nie ma tego na Instagramie"
     }
   },
   "video_sync": {

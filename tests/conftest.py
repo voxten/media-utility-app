@@ -9,10 +9,10 @@ from backend.core.jobs import JobContext
 class RecordingContext(JobContext):
     """JobContext that keeps every emitted event for assertions."""
 
-    def __init__(self) -> None:
+    def __init__(self, job_id: str = "test") -> None:
         self.events: List[Tuple[str, Dict[str, Any]]] = []
         self._events_lock = threading.Lock()
-        super().__init__("test", self._record)
+        super().__init__(job_id, self._record)
 
     def _record(self, event: str, payload: Dict[str, Any]) -> None:
         with self._events_lock:

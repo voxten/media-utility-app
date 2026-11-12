@@ -458,6 +458,8 @@ export interface GifOperations {
 /** One slide of a post, one story, or one post of a profile (then possibly a carousel of `count` files). */
 export interface InstagramItem {
   index: number;
+  /** Stays the same when the link is listed again, unlike `index`. */
+  key: string;
   kind: "image" | "video" | "carousel";
   count: number;
   width: number | null;
@@ -477,8 +479,8 @@ export interface InstagramListing {
 
 export interface InstagramResult {
   files: string[];
-  /** Item index of each file in `files`. */
-  indices: number[];
+  /** Item key of each file in `files`. */
+  keys: string[];
   failed: number;
   size: number;
   duration: number;

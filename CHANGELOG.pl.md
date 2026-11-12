@@ -10,6 +10,13 @@ Polskie tłumaczenie [CHANGELOG.md](CHANGELOG.md), pokazywane w aplikacji przy p
 
 ### Naprawiono
 
+- Narzędzie pokazuje wynik zadania, które skończyło się, gdy otwarta była inna strona, także po kliknięciu dymka „zakończono”: Wyszukiwarka duplikatów, Skalowanie obrazów AI, Usuwanie tła AI, Usuwanie znaku wodnego, Tekst na mowę, Instagram, sprawdzanie linku w Pobieraniu wideo i wczytywanie plików w Łączeniu PDF.
+- „Prześlij do” narzędzia, które jest już otwarte, od razu wczytuje pliki, zamiast przy następnym wejściu.
+- Usuwanie znaku wodnego pamięta namalowaną maskę po przejściu na inną stronę i po powrocie z wyniku, a cofanie zużywa dużo mniej pamięci przy dużych zdjęciach.
+- Dwie kolejki pobierania działające naraz nie nadpisują już sobie zapisanych linków.
+- Instagram pobiera dokładnie zaznaczone posty, nawet gdy konto dodało coś nowego po sprawdzeniu; ponowne sprawdzanie profilu kończy się, gdy tylko znajdzie wszystkie zaznaczone posty.
+- Anulowany zapis GIF, WebP lub MP4 nie zostawia już w folderze pliku, który wygląda na gotowy.
+- Ostatnie nagranie z Tekstu na mowę i podgląd w Synchronizacji Audio-Wideo nie odtwarzają się już same przy każdym wejściu na stronę.
 - Tekst na mowę i Generator postępu nie zastępują już wcześniejszego pliku o tej samej nazwie, tylko dodają „(1)”, „(2)”.
 - „Otwórz plik”, „Pokaż w folderze” i „Przenieś do kosza” mówią, dlaczego się nie udało (pliku już nie ma albo Windows odmówił), zamiast nic nie robić. Wyszukiwarka duplikatów nie usuwa już z listy plików, których nie udało się przenieść do kosza.
 - Wynik ostatniej kolejki w Pobieraniu wideo zostaje na stronie, nawet gdy kolejka skończyła się, kiedy otwarte było inne narzędzie.

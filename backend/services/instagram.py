@@ -157,11 +157,13 @@ def _list(
     cookie_file: Optional[str],
     on_page: Callable[[List[Dict[str, Any]]], None],
     should_stop: Callable[[], bool] = lambda: False,
+    wanted: Optional[Set[str]] = None,
 ) -> Dict[str, Any]:
     """Everything a link points to as entries (one file group each): ``{"kind", "uploader", "subdir", "entries"}``.
 
     A post lists its slides; stories list story items; a profile lists its posts, reported page by
-    page, and ends early with what it has once ``should_stop`` returns True.
+    page, and ends early with what it has once ``should_stop`` returns True or every ``wanted`` stem was seen.
+    Each entry's ``stem`` names its files and identifies it across listings.
     """
     kind, parts = parse_url(url)
     if kind == "post":
@@ -209,13 +211,16 @@ def _list(
         if code not in seen:
             seen.add(code)
             if slides := _slides(parser, media):
-                batch.append({"stem": _stem(user, code), "slides": slides})
+                stem = _stem(user, code)
+                batch.append({"stem": stem, "slides": slides})
+                if wanted is not None:
+                    wanted.discard(stem)
             if len(batch) >= PROFILE_BATCH:
                 entries.extend(batch)
                 on_page(batch)
                 batch = []
         # Checked after each post so a stop never waits for the next page request.
-        if should_stop():
+        if should_stop() or wanted == set():
             break
     entries.extend(batch)
     on_page(batch)
@@ -268,6 +273,7 @@ def _item(index: int, entry: Dict[str, Any], thumbnail: Optional[str]) -> Dict[s
     first = slides[0]
     return {
         "index": index,
+        "key": entry["stem"],
         "kind": "carousel" if len(slides) > 1 else first["kind"],
         "count": len(slides),
         "width": first["width"],
@@ -279,6 +285,14 @@ def _item(index: int, entry: Dict[str, Any], thumbnail: Optional[str]) -> Dict[s
 
 
 _listings: Dict[str, Tuple[float, Dict[str, Any]]] = {}
+
+
+def _cached_listing(url: str) -> Optional[Dict[str, Any]]:
+    now = time.monotonic()
+    for key in [k for k, (stamp, _) in _listings.items() if now - stamp >= LISTING_TTL_S]:
+        del _listings[key]
+    cached = _listings.get(url)
+    return cached[1] if cached else None
 _stop_requests: Set[str] = set()
 
 
@@ -312,6 +326,7 @@ def probe(ctx: JobContext, url: str, cookies: Dict[str, Optional[str]]) -> Dict[
         raise _wrap_errors(ctx, exc) from exc
     finally:
         _stop_requests.discard(ctx.job_id)
+    _cached_listing(url)
     _listings[url] = (time.monotonic(), listing)
     ctx.progress(100, "instagram.status.probed")
     return {"url": url, "kind": listing["kind"], "uploader": listing["uploader"], "items": items}
@@ -367,39 +382,52 @@ def download(
     ctx: JobContext,
     url: str,
     outdir: str,
-    indices: Optional[List[int]] = None,
+    keys: Optional[List[str]] = None,
     cookies: Optional[Dict[str, Optional[str]]] = None,
 ) -> Dict[str, Any]:
-    """Save the chosen items of a link (all of them when ``indices`` is empty).
+    """Save the items of a link whose ``key`` (entry stem) was chosen; all of them when ``keys`` is empty.
 
-    A profile goes into a sub-folder named after the account. When several items are saved, a
-    failed one is logged and skipped; Instagram's rate limit stops the whole job.
+    Items are matched by key, not position, because a listing fetched again (after the cached one
+    expired) may have new posts in front. A profile goes into a sub-folder named after the account.
+    When several items are saved, a failed or vanished one is logged and skipped; Instagram's rate
+    limit stops the whole job.
     """
     t0 = time.monotonic()
     url = url.strip()
     ctx.progress(None, "instagram.status.probing")
     files: List[str] = []
-    file_items: List[int] = []
+    file_keys: List[str] = []
     failed = 0
     size = 0
     try:
         opts = _opts(url, cookies or {})
         with yt_dlp.YoutubeDL(opts) as ydl:
-            cached = _listings.get(url)
-            if cached and time.monotonic() - cached[0] < LISTING_TTL_S:
-                listing = cached[1]
-            else:
-                listing = _list(ydl, url, cookie_file_for(url, cookies or {}), lambda entries: ctx.check_cancelled())
+            listing = _cached_listing(url)
+            if listing is None:
+                listing = _list(
+                    ydl,
+                    url,
+                    cookie_file_for(url, cookies or {}),
+                    lambda entries: ctx.check_cancelled(),
+                    wanted=set(keys) if keys else None,
+                )
             entries = listing["entries"]
             out = Path(outdir).expanduser()
             if listing["subdir"]:
                 out = out / sanitize_filename(listing["subdir"])
             out.mkdir(parents=True, exist_ok=True)
-            chosen = sorted({i for i in (indices or range(len(entries))) if 0 <= i < len(entries)})
+            chosen = [e for e in entries if not keys or e["stem"] in keys]
+            if keys:
+                found = {e["stem"] for e in chosen}
+                for key in keys:
+                    if key not in found:
+                        failed += 1
+                        ctx.log("instagram.log.itemGone", "error", name=key)
+                if not chosen:
+                    raise RuntimeError("instagram.error.itemsGone")
             started = time.monotonic()
-            for position, index in enumerate(chosen):
+            for position, entry in enumerate(chosen):
                 ctx.check_cancelled()
-                entry = entries[index]
                 slides = entry["slides"]
                 params = {"current": position + 1, "count": len(chosen)}
                 try:
@@ -424,7 +452,7 @@ def download(
                         else:
                             path = _save(ctx, ydl, slide, base, on_bytes)
                         files.append(str(path))
-                        file_items.append(index)
+                        file_keys.append(entry["stem"])
                         size += path.stat().st_size
                 except JobCancelled:
                     raise
@@ -439,7 +467,7 @@ def download(
     ctx.progress(100, "instagram.status.done")
     return {
         "files": files,
-        "indices": file_items,
+        "keys": file_keys,
         "failed": failed,
         "size": size,
         "duration": round(time.monotonic() - t0, 1),

@@ -481,6 +481,7 @@ export function createMockBackend(emit: Emit) {
           uploader: "demo.account",
           items: Array.from({ length: profile ? 18 : 4 }, (_, index) => ({
             index,
+            key: `demo.account_DemoPost${index + 1}`,
             kind: index % 4 === 1 ? "video" : profile && index % 3 === 0 ? "carousel" : "image",
             count: profile && index % 3 === 0 ? 5 : 1,
             width: 1080,
@@ -491,10 +492,11 @@ export function createMockBackend(emit: Emit) {
           })),
         }, 900);
       },
-      start: (params?: { outdir?: string; indices?: number[] }) => {
+      start: (params?: { outdir?: string; keys?: string[] }) => {
         const outdir = params?.outdir || "C:\\Downloads";
-        const files = (params?.indices ?? [0]).map((i) => `${outdir}\\demo.account_DemoPost123_${i + 1}.jpg`);
-        return simulateJob("instagram", "DemoPost123", { files, indices: params?.indices ?? [0], failed: 0, size: 2_400_000, duration: 2.1, outdir });
+        const keys = params?.keys ?? ["demo.account_DemoPost1"];
+        const files = keys.map((key) => `${outdir}\\${key}.jpg`);
+        return simulateJob("instagram", "DemoPost123", { files, keys, failed: 0, size: 2_400_000, duration: 2.1, outdir });
       },
     },
     progress: {

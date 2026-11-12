@@ -49,6 +49,8 @@ interface WatermarkState {
   /** Original file the editing session started from (for default save names). */
   sourcePath: string;
   result: InpaintResult | null;
+  /** Painted mask as a PNG data URL, kept while the page is closed or the result is shown. */
+  mask: string | null;
   method: Method;
   brush: number;
   tool: "brush" | "eraser";
@@ -59,6 +61,7 @@ const useForm = create<WatermarkState>((set) => ({
   image: null,
   sourcePath: "",
   result: null,
+  mask: null,
   method: "telea",
   brush: 28,
   tool: "brush",
@@ -103,8 +106,8 @@ export default function WatermarkPage() {
   }, []);
 
   const runner = useJobRunner<InpaintResult>("watermark", {
+    onResult: (result) => form.set({ result }),
     onDone: (result) => {
-      form.set({ result });
       if (result.notice) notify.warning(t("watermark.toast.fallback"), { body: t(result.notice), timeout: 10000 });
     },
     onError: (error) => notify.error(t("watermark.toast.error"), { body: error }),
@@ -119,7 +122,7 @@ export default function WatermarkPage() {
   const load = async (path: string, keepSource = false) => {
     try {
       const image = await api.watermark.load(path);
-      form.set({ image, result: null, ...(keepSource ? {} : { sourcePath: path }) });
+      form.set({ image, result: null, mask: null, ...(keepSource ? {} : { sourcePath: path }) });
       const currentSrc = keepSource ? form.sourcePath || path : path;
       output.reset(getDefaultOutFileName(currentSrc));
     } catch (err) {
@@ -222,6 +225,8 @@ export default function WatermarkPage() {
             height={form.image.height}
             brush={form.brush}
             tool={form.tool}
+            savedMask={form.mask}
+            onSaveMask={(mask) => useForm.getState().set({ mask })}
             onHistoryChange={setHistory}
           />
         )
