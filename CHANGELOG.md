@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 The app shows this file (and its Polish translation, [CHANGELOG.pl.md](CHANGELOG.pl.md)) under "What's new", so every release goes into both files.
 
+## [Unreleased]
+
+### Changed
+
+- **Progress Generator** saves the card into the output folder field instead of asking for a file name every time.
+
+### Fixed
+
+- Text to Speech and Progress Generator no longer replace an earlier file with the same name; they add "(1)", "(2)" instead.
+- "Open file", "Show in folder" and "Move to Recycle Bin" say why they failed (the file is gone, or Windows refused) instead of doing nothing. Duplicate Finder no longer removes files from the list that were not actually moved to the Recycle Bin.
+- The last Video Downloader queue result stays on the page even when the queue finished while another tool was open.
+- A task card says the file is missing only for finished tasks.
+
 ## [0.14.0] - 2026-11-11
 
 ### Added

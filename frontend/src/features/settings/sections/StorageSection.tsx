@@ -15,6 +15,7 @@ import { useNotify } from "../../../components/notify";
 import { Section } from "../../../components/Page";
 import { SettingGroup, SettingRow } from "../../../components/SettingRow";
 import { api } from "../../../lib/bridge";
+import { useOpenPath } from "../../../lib/useOpenPath";
 import { errorMessage } from "../../../lib/errors";
 import { formatBytes } from "../../../lib/format";
 import type { StorageInfo } from "../../../lib/types";
@@ -22,6 +23,7 @@ import { useSettings } from "../../../stores/settings";
 
 export function StorageSection() {
   const { t } = useTranslation();
+  const { openPath } = useOpenPath();
   const notify = useNotify();
   const settings = useSettings((s) => s.settings);
   const clearRecentFolders = useSettings((s) => s.clearRecentFolders);
@@ -118,7 +120,7 @@ export function StorageSection() {
               appearance="subtle"
               size="medium"
               icon={<FolderOpen16Regular />}
-              onClick={() => api.system.openPath(storage.modelsDir).catch((err) => notify.error(errorMessage(t, err)))}
+              onClick={() => openPath(storage.modelsDir)}
             >
               {t("settings.storage.openFolder")}
             </Button>

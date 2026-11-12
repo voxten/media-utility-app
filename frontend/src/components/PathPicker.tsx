@@ -3,6 +3,7 @@ import { Button, Input, makeStyles, Tooltip } from "@fluentui/react-components";
 import { Dismiss16Regular, FolderOpen20Regular, Open16Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { api } from "../lib/bridge";
+import { useOpenPath } from "../lib/useOpenPath";
 
 const useStyles = makeStyles({
   root: {
@@ -67,6 +68,7 @@ export function PathPicker({
 }: PathPickerProps) {
   const styles = useStyles();
   const { t } = useTranslation();
+  const { openPath } = useOpenPath();
   const [rootRef, narrow] = useIsNarrow();
 
   const browse = async () => {
@@ -93,7 +95,7 @@ export function PathPicker({
       />
       {openable && value && (
         <Tooltip content={t("common.openFolder")} relationship="label">
-          <Button className={styles.actionBtn} icon={<Open16Regular />} onClick={() => api.system.openPath(value).catch(() => undefined)} />
+          <Button className={styles.actionBtn} icon={<Open16Regular />} onClick={() => openPath(value)} />
         </Tooltip>
       )}
       {narrow ? (

@@ -340,7 +340,9 @@
     "outputIsInput": "Wynik nie może zastąpić pliku źródłowego. Wybierz inną nazwę lub folder.",
     "replaceTitle": "Zastąpić plik?",
     "replaceBody": "Plik {{name}} już jest w tym folderze.",
-    "replace": "Zastąp"
+    "replace": "Zastąp",
+    "increase": "Zwiększ",
+    "decrease": "Zmniejsz"
   },
   "fileTypes": {
     "images": "Obrazy",
@@ -1472,6 +1474,9 @@
     "goHome": "Przejdź do Startu",
     "reload": "Odśwież okno",
     "bootTimeout": "Aplikacja nie odpowiada.",
-    "bootFailed": "Nie udało się uruchomić aplikacji: {{error}}"
+    "bootFailed": "Nie udało się uruchomić aplikacji: {{error}}",
+    "pathMissing": "Plik lub folder już nie istnieje.",
+    "openFailed": "Nie udało się otworzyć.",
+    "trashFailed": "Nie udało się przenieść do Kosza."
   }
 }

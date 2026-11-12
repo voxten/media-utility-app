@@ -41,7 +41,9 @@ import { SliderField } from "../../components/SliderField";
 import { api } from "../../lib/bridge";
 import { checkerboard } from "../../lib/checkerboard";
 import { dialogFilter } from "../../lib/fileTypes";
-import { fileName } from "../../lib/format";
+import { fileName, joinPath } from "../../lib/format";
+import { OutputFolderField, useOutputDir } from "../../components/OutputFolderField";
+import { useOpenPath } from "../../lib/useOpenPath";
 import { ProgressCard, rowPercent, type CardOptions, type ProgressRow, type ValueMode } from "./ProgressCard";
 import { errorMessage } from "../../lib/errors";
 import { useToolShortcuts } from "../../lib/useToolShortcuts";
@@ -83,6 +85,7 @@ interface ProgressState {
   rows: ProgressRow[];
   options: CardOptions;
   bannerPath: string;
+  outputDir: string;
   set: (patch: Partial<Omit<ProgressState, "set">>) => void;
 }
 
@@ -90,6 +93,7 @@ const useForm = create<ProgressState>((set) => ({
   rows: DEFAULT_ROWS(),
   options: { title: "", banner: null, width: 900, barHeight: 52, rounded: false, theme: "dark", valueMode: "percent", showValue: true },
   bannerPath: "",
+  outputDir: "",
   set: (patch) => set(patch),
 }));
 
@@ -204,6 +208,10 @@ function SortableRow({ row: r, mode, onChange, onRemove }: SortableRowProps) {
   const { t } = useTranslation();
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: r.id });
   const max = mode === "count" ? r.total : 100;
+  const spinLabels = {
+    incrementButton: { "aria-label": t("common.increase") },
+    decrementButton: { "aria-label": t("common.decrease") },
+  };
   return (
     <div
       ref={setNodeRef}
@@ -234,6 +242,7 @@ function SortableRow({ row: r, mode, onChange, onRemove }: SortableRowProps) {
           if (v !== null) onChange({ value: Math.max(0, Math.min(max, v)) });
         }}
         aria-label={t("progress.value")}
+        {...spinLabels}
       />
       {mode === "count" && (
         <>
@@ -250,6 +259,7 @@ function SortableRow({ row: r, mode, onChange, onRemove }: SortableRowProps) {
               onChange({ total, value: Math.min(r.value, total) });
             }}
             aria-label={t("progress.total")}
+            {...spinLabels}
           />
         </>
       )}
@@ -265,6 +275,8 @@ export default function ProgressPage() {
   const styles = useStyles();
   const notify = useNotify();
   const form = useForm();
+  const outputDir = useOutputDir(form.outputDir);
+  const { reveal } = useOpenPath();
   const cardRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -313,15 +325,13 @@ export default function ProgressPage() {
 
   const exportPng = async () => {
     if (!cardRef.current) return;
-    const out = await api.dialogs.saveFile(t("progress.defaultName"), ["PNG (*.png)"]);
-    if (!out) return;
     setExporting(true);
     try {
       const dataUrl = await toPng(cardRef.current, { pixelRatio: 2, cacheBust: true });
-      const result = await api.progress.save(dataUrl, out);
+      const result = await api.progress.save(dataUrl, joinPath(outputDir, t("progress.defaultName")));
       notify.success(t("progress.toast.saved"), {
         body: result.outPath,
-        action: { label: t("common.showInFolder"), onClick: () => api.system.reveal(result.outPath).catch(() => undefined) },
+        action: { label: t("common.showInFolder"), onClick: () => reveal(result.outPath) },
       });
     } catch (err) {
       notify.error(t("progress.toast.error"), { body: errorMessage(t, err) });
@@ -330,7 +340,8 @@ export default function ProgressPage() {
     }
   };
 
-  useToolShortcuts({ run: form.rows.length > 0 && !exporting && exportPng });
+  const canExport = form.rows.length > 0 && !!outputDir && !exporting;
+  useToolShortcuts({ run: canExport && exportPng });
 
   const average = form.rows.length
     ? Math.round(form.rows.reduce((sum, r) => sum + rowPercent(r, form.options.valueMode), 0) / form.rows.length)
@@ -409,6 +420,7 @@ export default function ProgressPage() {
                 <Switch checked={form.options.showValue} label={t("progress.showValue")} onChange={(_, d) => setOption("showValue", d.checked)} />
               </div>
             </div>
+            <OutputFolderField value={form.outputDir} onChange={(dir) => form.set({ outputDir: dir })} />
           </Panel>
         </div>
 
@@ -424,7 +436,7 @@ export default function ProgressPage() {
       </div>
 
       <ActionBar idleText={t("progress.idle", { count: form.rows.length, average })}>
-        <Button appearance="primary" icon={<Save16Filled />} disabled={!form.rows.length || exporting} onClick={exportPng}>
+        <Button appearance="primary" icon={<Save16Filled />} disabled={!canExport} onClick={exportPng}>
           {exporting ? t("progress.exporting") : t("progress.export")}
         </Button>
       </ActionBar>

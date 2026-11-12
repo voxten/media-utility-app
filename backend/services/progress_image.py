@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Dict
 
 from backend.core import thumbs
+from backend.core.paths import unique_path
 
 BANNER_MAX = (1600, 600)
 
@@ -17,6 +18,7 @@ def save_png(data_url: str, out_path: str) -> Dict[str, object]:
     if target.suffix.lower() != ".png":
         target = target.with_suffix(".png")
     target.parent.mkdir(parents=True, exist_ok=True)
+    target = unique_path(target)
     target.write_bytes(thumbs.decode_data_url(data_url))
     return {"outPath": str(target), "bytes": target.stat().st_size}
 

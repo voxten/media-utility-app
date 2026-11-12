@@ -4,6 +4,7 @@ import { Field, Input, makeStyles } from "@fluentui/react-components";
 import { useTranslation } from "react-i18next";
 import { create } from "zustand";
 import { api } from "../lib/bridge";
+import { useOpenPath } from "../lib/useOpenPath";
 import { fileName, joinPath } from "../lib/format";
 import { confirm } from "./ConfirmDialog";
 import { useNotify } from "./notify";
@@ -34,6 +35,7 @@ export interface SaveOutput {
 
 export function useSaveOutput(toolId: string, save: (resultPath: string, target: string) => Promise<string>): SaveOutput {
   const { t } = useTranslation();
+  const { reveal } = useOpenPath();
   const notify = useNotify();
   const target = useSaveTargets((s) => s[toolId]);
   const pickedDir = target?.dir ?? "";
@@ -46,7 +48,7 @@ export function useSaveOutput(toolId: string, save: (resultPath: string, target:
     try {
       const saved = await save(resultPath, path);
       notify.success(t("common.savedSuccess"), {
-        action: { label: t("common.showInFolder"), onClick: () => api.system.reveal(saved).catch(() => undefined) },
+        action: { label: t("common.showInFolder"), onClick: () => reveal(saved) },
       });
     } catch (err) {
       notify.error(t("common.saveError"), { body: errorMessage(t, err) });

@@ -25,6 +25,7 @@ import { PathPicker } from "../../components/PathPicker";
 import { Select } from "../../components/Select";
 import { SliderField } from "../../components/SliderField";
 import { api } from "../../lib/bridge";
+import { useOpenPath } from "../../lib/useOpenPath";
 import { dialogFilter, formatOptions } from "../../lib/fileTypes";
 import { joinPath } from "../../lib/format";
 import { useJobRunner } from "../../lib/useJobRunner";
@@ -113,6 +114,7 @@ const useStyles = makeStyles({
 
 export default function TtsPage() {
   const { t, i18n } = useTranslation();
+  const { reveal } = useOpenPath();
   const styles = useStyles();
   const notify = useNotify();
   const form = useForm();
@@ -347,7 +349,7 @@ export default function TtsPage() {
             title={t("tts.preview")}
             actions={
               <>
-                <Button appearance="subtle" icon={<FolderOpen16Regular />} onClick={() => api.system.reveal(form.lastOutput!).catch(() => undefined)}>
+                <Button appearance="subtle" icon={<FolderOpen16Regular />} onClick={() => reveal(form.lastOutput!)}>
                   {t("common.showInFolder")}
                 </Button>
                 <Button

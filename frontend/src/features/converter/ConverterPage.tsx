@@ -35,6 +35,7 @@ import { PathPicker } from "../../components/PathPicker";
 import { Select } from "../../components/Select";
 import { SliderField } from "../../components/SliderField";
 import { api } from "../../lib/bridge";
+import { useOpenPath } from "../../lib/useOpenPath";
 import { ALL_IMAGE_EXTENSIONS, dialogFilter, formatList, formatName, formatOptions } from "../../lib/fileTypes";
 import { fileName, formatBytes } from "../../lib/format";
 import { useJobRunner } from "../../lib/useJobRunner";
@@ -150,6 +151,7 @@ function DetectedFormat({ path }: { path: string }) {
 /** `showFolder` is off when the AfterGallery below already offers the output folder. */
 function Summary({ result, showFolder }: { result: ConvertResult; showFolder: boolean }) {
   const { t } = useTranslation();
+  const { openPath } = useOpenPath();
   const styles = useStyles();
   const saved = result.inputBytes > 0 ? 1 - result.outputBytes / result.inputBytes : 0;
   return (
@@ -157,7 +159,7 @@ function Summary({ result, showFolder }: { result: ConvertResult; showFolder: bo
       title={t("converter.summary.title")}
       actions={
         showFolder && (
-          <Button icon={<FolderOpen16Regular />} onClick={() => api.system.openPath(result.outputDir)}>
+          <Button icon={<FolderOpen16Regular />} onClick={() => openPath(result.outputDir)}>
             {t("common.openFolder")}
           </Button>
         )

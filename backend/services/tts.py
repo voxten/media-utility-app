@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from backend.core.jobs import JobContext
+from backend.core.paths import unique_path
 
 ENGINES = ("edge", "pyttsx3")
 FALLBACK_EDGE_VOICES = [
@@ -174,6 +175,7 @@ def synthesize(ctx: JobContext, text: str, engine: str, voice: str, rate: Any, o
     if target.suffix.lower().lstrip(".") not in AUDIO_FORMATS:
         target = target.with_suffix(".mp3")
     target.parent.mkdir(parents=True, exist_ok=True)
+    target = unique_path(target)
 
     if engine == "edge":
         _synth_edge(ctx, text, voice, rate, target)

@@ -15,6 +15,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { toolForJob } from "../app/tools";
 import { api } from "../lib/bridge";
+import { useOpenPath } from "../lib/useOpenPath";
 import { jobMessage, translateMessage } from "../lib/jobMessage";
 import type { HistoryEntry } from "../lib/types";
 import { historyJob, retryJob, useJobs, type JobState } from "../stores/jobs";
@@ -65,6 +66,7 @@ interface JobCardProps {
 export const JobCard = memo(function JobCard({ job, onNavigate, saved, when = saved ? "date" : undefined }: JobCardProps) {
   const styles = useJobCardStyles();
   const { t, i18n } = useTranslation();
+  const files = useOpenPath();
   const tool = toolForJob(job.kind);
   const Icon = tool?.icon;
   const subtasks = useMemo(() => extractSubtasks(job), [job]);
@@ -79,7 +81,8 @@ export const JobCard = memo(function JobCard({ job, onNavigate, saved, when = sa
   const [expanded, setExpanded] = useState<boolean>(running && totalSubtasks > 0);
   const elapsed = useLiveElapsed(job.startedAt, job.finishedAt, running);
 
-  const outputMissing = saved ? !saved.available : false;
+  // Only a finished job has output; a failed or cancelled one never wrote a file that could go missing.
+  const outputMissing = saved && done ? !saved.available : false;
   const resultFiles = useMemo(
     () => (done && !outputMissing ? transferTargets(job.result) : []),
     [done, outputMissing, job.result],
@@ -147,12 +150,12 @@ export const JobCard = memo(function JobCard({ job, onNavigate, saved, when = sa
           {canRetry &&
             iconButton(t("jobs.retry"), <ArrowClockwise16Regular />, () => retryJob(job.id).catch(() => undefined))}
           {openPath &&
-            iconButton(t("jobs.openFile"), <Open16Regular />, () => api.system.openPath(openPath).catch(() => undefined))}
+            iconButton(t("jobs.openFile"), <Open16Regular />, () => files.openPath(openPath))}
           {revealPath &&
             iconButton(
               outputMissing ? t("jobs.outputMissing") : t("common.showInFolder"),
               <FolderOpen16Regular />,
-              () => api.system.reveal(revealPath).catch(() => undefined),
+              () => files.reveal(revealPath),
               outputMissing,
             )}
           {!running && (

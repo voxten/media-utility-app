@@ -43,6 +43,7 @@ import { Panel } from "../../components/Panel";
 import { PathPicker } from "../../components/PathPicker";
 import { SliderField } from "../../components/SliderField";
 import { api } from "../../lib/bridge";
+import { useOpenPath } from "../../lib/useOpenPath";
 import { dialogFilter } from "../../lib/fileTypes";
 import { dirName, formatBytes, formatDuration } from "../../lib/format";
 import { useJobRunner } from "../../lib/useJobRunner";
@@ -158,6 +159,7 @@ const useStyles = makeStyles({
 function ItemCard({ item, isKeeper, selected, onToggle, onTrash }: { item: MediaItem; isKeeper: boolean; selected: boolean; onToggle: () => void; onTrash: () => void }) {
   const styles = useStyles();
   const { t } = useTranslation();
+  const { openPath, reveal } = useOpenPath();
   const meta = [item.width && item.height ? `${item.width}×${item.height}` : null, formatBytes(item.size), item.duration != null ? formatDuration(item.duration / 1000) : null]
     .filter(Boolean)
     .join(" · ");
@@ -181,10 +183,10 @@ function ItemCard({ item, isKeeper, selected, onToggle, onTrash }: { item: Media
             </MenuTrigger>
             <MenuPopover onClick={(e) => e.stopPropagation()}>
               <MenuList>
-                <MenuItem icon={<Open16Regular />} onClick={() => api.system.openPath(item.path)}>
+                <MenuItem icon={<Open16Regular />} onClick={() => openPath(item.path)}>
                   {t("common.open")}
                 </MenuItem>
-                <MenuItem icon={<FolderOpen16Regular />} onClick={() => api.system.reveal(item.path).catch(() => undefined)}>
+                <MenuItem icon={<FolderOpen16Regular />} onClick={() => reveal(item.path)}>
                   {t("common.showInFolder")}
                 </MenuItem>
                 <MenuItem icon={<Delete16Regular />} onClick={onTrash}>
@@ -203,6 +205,7 @@ function ItemCard({ item, isKeeper, selected, onToggle, onTrash }: { item: Media
 
 export default function DuplicatesPage() {
   const { t } = useTranslation();
+  const { reveal } = useOpenPath();
   const styles = useStyles();
   const notify = useNotify();
   const form = useForm();
@@ -276,7 +279,7 @@ export default function DuplicatesPage() {
     if (!out) return;
     try {
       const path = await api.duplicates.exportCsv(groups, out.toLowerCase().endsWith(".csv") ? out : `${out}.csv`);
-      notify.success(t("duplicates.toast.exported"), { action: { label: t("common.showInFolder"), onClick: () => api.system.reveal(path).catch(() => undefined) } });
+      notify.success(t("duplicates.toast.exported"), { action: { label: t("common.showInFolder"), onClick: () => reveal(path) } });
     } catch (err) {
       notify.error(errorMessage(t, err));
     }

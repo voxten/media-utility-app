@@ -12,7 +12,7 @@ import {
   FolderOpen16Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
-import { api } from "../lib/bridge";
+import { useOpenPath } from "../lib/useOpenPath";
 import { fileName, formatBytes } from "../lib/format";
 import { useTransferStore } from "../stores/transfer";
 import { FileThumbnail } from "./FileThumbnail";
@@ -109,6 +109,7 @@ const useStyles = makeStyles({
 
 export function AfterGallery({ title, items, files, outputDir, sourceToolId, summary }: AfterGalleryProps) {
   const { t } = useTranslation();
+  const { openPath, reveal } = useOpenPath();
   const styles = useStyles();
 
   const normalizedItems = useMemo<AfterGalleryItem[]>(() => {
@@ -138,7 +139,7 @@ export function AfterGallery({ title, items, files, outputDir, sourceToolId, sum
             <Button
               appearance="subtle"
               icon={<FolderOpen16Regular />}
-              onClick={() => api.system.openPath(outputDir).catch(() => undefined)}
+              onClick={() => openPath(outputDir)}
             >
               {t("transfer.openOutputFolder")}
             </Button>
@@ -178,7 +179,7 @@ export function AfterGallery({ title, items, files, outputDir, sourceToolId, sum
                     size="small"
                     appearance="subtle"
                     icon={<FolderOpen16Regular />}
-                    onClick={() => api.system.reveal(path).catch(() => undefined)}
+                    onClick={() => reveal(path)}
                   />
                 </Tooltip>
               </div>

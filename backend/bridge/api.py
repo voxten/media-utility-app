@@ -13,7 +13,7 @@ import platform
 import sys
 import threading
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 frontend_logger = logging.getLogger("backend.frontend")
@@ -161,24 +161,27 @@ class DialogsApi(_Namespace):
         return result if isinstance(result, str) else result[0]
 
 
+def _file_action(action: Callable[[str], None], path: str, failed_key: str) -> None:
+    """Runs an Explorer or Recycle Bin action; a failure reaches the window as a translatable reason."""
+    try:
+        action(path)
+    except FileNotFoundError:
+        logger.warning("%s: %s does not exist", action.__name__, path)
+        raise RuntimeError("errors.pathMissing") from None
+    except Exception as e:
+        logger.warning("%s failed for %s: %s", action.__name__, path, e)
+        raise RuntimeError(failed_key) from e
+
+
 class SystemApi(_Namespace):
     def open_path(self, path: str) -> None:
-        try:
-            system.open_path(path)
-        except Exception as e:
-            logger.warning("Could not open path %s: %s", path, e)
+        _file_action(system.open_path, path, "errors.openFailed")
 
     def reveal(self, path: str) -> None:
-        try:
-            system.reveal_in_folder(path)
-        except Exception as e:
-            logger.warning("Could not reveal path %s: %s", path, e)
+        _file_action(system.reveal_in_folder, path, "errors.openFailed")
 
     def trash(self, path: str) -> None:
-        try:
-            system.move_to_trash(path)
-        except Exception as e:
-            logger.warning("Could not move to trash %s: %s", path, e)
+        _file_action(system.move_to_trash, path, "errors.trashFailed")
 
     def dependencies(self) -> List[Dict[str, Any]]:
         custom_ffmpeg = self._ctx.settings.get("customFfmpegPath")

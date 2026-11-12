@@ -330,7 +330,9 @@
     "outputIsInput": "The result cannot replace the source file. Choose another name or folder.",
     "replaceTitle": "Replace the file?",
     "replaceBody": "{{name}} already exists in this folder.",
-    "replace": "Replace"
+    "replace": "Replace",
+    "increase": "Increase",
+    "decrease": "Decrease"
   },
   "fileTypes": {
     "images": "Images",
@@ -1374,6 +1376,9 @@
     "goHome": "Go to Home",
     "reload": "Reload window",
     "bootTimeout": "The app did not respond.",
-    "bootFailed": "The app could not start: {{error}}"
+    "bootFailed": "The app could not start: {{error}}",
+    "pathMissing": "The file or folder no longer exists.",
+    "openFailed": "Could not open it.",
+    "trashFailed": "Could not move it to the Recycle Bin."
   }
 }

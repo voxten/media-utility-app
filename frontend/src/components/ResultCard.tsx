@@ -12,7 +12,7 @@ import {
 } from "@fluentui/react-components";
 import { ArrowRight16Regular, FolderOpen16Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
-import { api } from "../lib/bridge";
+import { useOpenPath } from "../lib/useOpenPath";
 import { useTransferStore } from "../stores/transfer";
 
 const useStyles = makeStyles({
@@ -34,8 +34,9 @@ interface ResultCardProps {
 export function ResultCard({ title, path, folder, files, sourceToolId, detail }: ResultCardProps) {
   const styles = useStyles();
   const { t } = useTranslation();
+  const { openPath, reveal } = useOpenPath();
   const sendable = files ?? (folder ? [] : [path]);
-  const show = () => (folder ? api.system.openPath(path) : api.system.reveal(path)).catch(() => undefined);
+  const show = () => (folder ? openPath(path) : reveal(path));
 
   return (
     <MessageBar intent="success" layout="multiline">

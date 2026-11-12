@@ -107,6 +107,29 @@ def test_bridge_opens_a_document(tmp_path, opened):
     assert opened == [("open", str(target))]
 
 
+def test_bridge_reports_a_missing_file(tmp_path, opened):
+    bridge = api.SystemApi(SimpleNamespace())
+    with pytest.raises(RuntimeError, match="errors.pathMissing"):
+        bridge.open_path(str(tmp_path / "gone.mp4"))
+    with pytest.raises(RuntimeError, match="errors.pathMissing"):
+        bridge.reveal(str(tmp_path / "gone folder" / "gone.mp4"))
+    # A missing file whose folder is still there opens that folder instead.
+    bridge.reveal(str(tmp_path / "gone.mp4"))
+    assert opened == [("open", str(tmp_path))]
+
+
+def test_bridge_reports_a_failed_trash(tmp_path, monkeypatch):
+    target = tmp_path / "locked.jpg"
+    target.write_bytes(b"x")
+
+    def refuse(path):
+        raise OSError("in use")
+
+    monkeypatch.setattr(system, "move_to_trash", refuse)
+    with pytest.raises(RuntimeError, match="errors.trashFailed"):
+        api.SystemApi(SimpleNamespace()).trash(str(target))
+
+
 @pytest.fixture
 def polish_dir(tmp_path):
     folder = tmp_path / POLISH_DIR

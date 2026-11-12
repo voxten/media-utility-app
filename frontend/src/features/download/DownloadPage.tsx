@@ -107,7 +107,6 @@ export default function DownloadPage() {
   });
 
   const batch = useJobRunner<BatchResult>("download.batch", {
-    onDone: (result) => setLastBatch(result.items),
     onError: (error) => notify.error(t("download.toast.error"), { body: error }),
   });
 
@@ -132,6 +131,13 @@ export default function DownloadPage() {
 
   const failedItems = useMemo(() => queue.filter((i) => i.status === "error"), [queue]);
   const batchResult = batch.job?.result as Partial<BatchResult> | undefined;
+
+  // Copied when the queue ends, also if it ended while another page was open: the job itself is pruned later.
+  const endedItems =
+    batch.job && batch.job.status !== "running" ? (batchResult?.items ?? (batch.job.partials as BatchItem[])) : undefined;
+  useEffect(() => {
+    if (endedItems?.length) useDownloadForm.getState().set({ lastBatch: endedItems });
+  }, [endedItems]);
 
   useEffect(() => {
     if (batch.running) return;

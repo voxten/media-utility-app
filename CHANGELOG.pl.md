@@ -2,6 +2,19 @@
 
 Polskie tłumaczenie [CHANGELOG.md](CHANGELOG.md), pokazywane w aplikacji przy polskim języku. Każde wydanie trzeba dopisać w obu plikach.
 
+## [Unreleased]
+
+### Zmieniono
+
+- **Generator postępu** zapisuje kartę w folderze z pola „Folder zapisu”, zamiast za każdym razem pytać o nazwę pliku.
+
+### Naprawiono
+
+- Tekst na mowę i Generator postępu nie zastępują już wcześniejszego pliku o tej samej nazwie, tylko dodają „(1)”, „(2)”.
+- „Otwórz plik”, „Pokaż w folderze” i „Przenieś do kosza” mówią, dlaczego się nie udało (pliku już nie ma albo Windows odmówił), zamiast nic nie robić. Wyszukiwarka duplikatów nie usuwa już z listy plików, których nie udało się przenieść do kosza.
+- Wynik ostatniej kolejki w Pobieraniu wideo zostaje na stronie, nawet gdy kolejka skończyła się, kiedy otwarte było inne narzędzie.
+- Karta zadania pisze, że brakuje pliku, tylko przy zakończonych zadaniach.
+
 ## [0.14.0] - 2026-11-11
 
 ### Dodano
