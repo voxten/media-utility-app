@@ -212,6 +212,7 @@ def convert(ctx: JobContext, params: Dict[str, Any]) -> Dict[str, Any]:
 
     results: List[Dict[str, Any]] = []
     failed = 0
+    last_error: Optional[Exception] = None
     taken: set = set()
     span = 100 / len(paths)
     ctx.progress(0, "media_convert.status.converting")
@@ -233,10 +234,13 @@ def convert(ctx: JobContext, params: Dict[str, Any]) -> Dict[str, Any]:
             if ctx.cancelled:
                 raise
             failed += 1
+            last_error = exc
             ctx.log("media_convert.log.error", "error", file=source.name, error=describe(exc))
 
     ctx.progress(100, "media_convert.status.done")
     if not results and failed:
+        if len(paths) == 1 and last_error is not None:
+            raise last_error
         raise AppError("errors.allFilesFailed", count=failed)
     return {
         "total": len(paths),

@@ -192,7 +192,6 @@ export function createMockBackend(emit: Emit) {
     system: {
       open_path: () => ok(undefined),
       reveal: () => ok(undefined),
-      trash: () => ok(undefined),
       dependencies: () =>
         ok([
           { id: "ffmpeg", ok: true, detail: "C:\\ffmpeg\\bin\\ffmpeg.exe", usedBy: ["download", "tts"], required: true, installable: false, sizeEstimate: "" },
@@ -258,8 +257,6 @@ export function createMockBackend(emit: Emit) {
       path_info: (path: string) => ok({ exists: true, isDir: !path.includes("."), isFile: path.includes("."), name: path.split("\\").pop(), parent: "" }),
     },
     jobs: {
-      list: () => ok([]),
-      get: () => ok(null),
       cancel: (id: string) => {
         const timer = running.get(id);
         if (timer === undefined) return ok(false);
@@ -276,7 +273,6 @@ export function createMockBackend(emit: Emit) {
       },
     },
     converter: {
-      formats: () => ok(["PNG", "WEBP", "JPEG", "GIF", "TIFF", "BMP", "PDF"]),
       count_files: () => ok(12),
       start: () => simulateJob("converter", "WEBP", { total: 12, converted: 12, failed: 0, inputBytes: 9_000_000, outputBytes: 2_100_000, outputDir: "C:\\out" }),
     },

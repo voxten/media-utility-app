@@ -104,7 +104,7 @@ export const TOOLS: ToolDefinition[] = [
   { id: "upscale", category: "image", icon: bundleIcon(ArrowMaximize24Filled, ArrowMaximize24Regular), accent: CATEGORY_ACCENTS.image, accepts: { image: true } },
   { id: "watermark", category: "image", icon: bundleIcon(ImageEdit24Filled, ImageEdit24Regular), accent: CATEGORY_ACCENTS.image, accepts: { image: true } },
   { id: "tts", category: "text", icon: bundleIcon(PersonVoice24Filled, PersonVoice24Regular), accent: CATEGORY_ACCENTS.text },
-  { id: "transcribe", category: "text", icon: bundleIcon(ClosedCaption24Filled, ClosedCaption24Regular), accent: CATEGORY_ACCENTS.text, accepts: { video: true }, needsFfmpeg: true },
+  { id: "transcribe", category: "text", icon: bundleIcon(ClosedCaption24Filled, ClosedCaption24Regular), accent: CATEGORY_ACCENTS.text, accepts: { video: true, audio: true }, needsFfmpeg: true },
   { id: "pdf", category: "pdf", icon: bundleIcon(DocumentMultiple24Filled, DocumentMultiple24Regular), accent: CATEGORY_ACCENTS.pdf, accepts: { pdf: true } },
   { id: "pdf_compress", category: "pdf", icon: DocumentCompress24, accent: CATEGORY_ACCENTS.pdf, accepts: { pdf: true } },
   { id: "pdf_split", category: "pdf", icon: DocumentSplit24, accent: CATEGORY_ACCENTS.pdf, accepts: { pdf: true } },

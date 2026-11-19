@@ -21,7 +21,6 @@ import type {
   GifOutputOptions,
   HardwareInfo,
   HistoryEntry,
-  JobInfo,
   PendingQueue,
   RemBgOptions,
   RemBgPreview,
@@ -143,7 +142,6 @@ export const api = {
   system: {
     openPath: (path: string) => call<void>("system", "open_path", path),
     reveal: (path: string) => call<void>("system", "reveal", path),
-    trash: (path: string) => call<void>("system", "trash", path),
     dependencies: () => call<Dependency[]>("system", "dependencies"),
     installDependency: (id: string) => call<JobId>("system", "install_dependency", id),
     storageInfo: () => call<StorageInfo>("system", "storage_info"),
@@ -161,15 +159,12 @@ export const api = {
       call<{ exists: boolean; isDir: boolean; isFile: boolean; name: string; parent: string }>("system", "path_info", path),
   },
   jobs: {
-    list: () => call<JobInfo[]>("jobs", "list"),
-    get: (id: JobId) => call<JobInfo | null>("jobs", "get", id),
     cancel: (id: JobId) => call<boolean>("jobs", "cancel", id),
     retry: (id: JobId) => call<JobId | null>("jobs", "retry", id),
     history: () => call<HistoryEntry[]>("jobs", "history"),
     clearHistory: () => call<void>("jobs", "clear_history"),
   },
   converter: {
-    formats: () => call<string[]>("converter", "formats"),
     countFiles: (inputDir: string, inFormat: string) => call<number>("converter", "count_files", inputDir, inFormat),
     start: (options: {
       outputDir: string;

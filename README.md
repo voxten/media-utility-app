@@ -11,7 +11,7 @@ Windows desktop toolbox for media, documents and text. It is a native window (py
 | Video to GIF | A clip of a video as GIF, WebP or APNG: frame range, frame rate, width, speed, crop, reverse, size estimate |
 | GIF editor | Trim, crop, resize, rotate, speed, reverse and boomerang for GIF, WebP and APNG; colour count, dithering, lossy compression and a size limit (optional gifsicle) |
 | Transcription | Speech to SRT, VTT or TXT on this computer with Whisper (Base, Small, Turbo), optional translation into English |
-| Background remover | AI cutouts with BiRefNet (full and lite), IS-Net and U2Net; edge debleed, touch-up brush and split slider |
+| Background remover | AI cutouts with BiRefNet (full and lite), IS-Net and U2Net; edge debleed and split slider |
 | Image upscaler | AI 2× / 4× super-resolution via Real-ESRGAN (general and anime) with tiled inference for large images |
 | Watermark remover | Paint a mask, inpaint with OpenCV (Telea / Navier-Stokes) or the optional LaMa model |
 | Image compressor | Smaller PNG, JPEG and WebP files with adjustable quality and size caps |

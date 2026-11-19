@@ -16,7 +16,8 @@ import { useJobRunner } from "../../lib/useJobRunner";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { SinglePdfTool } from "./SinglePdfTool";
 import { errorMessage } from "../../lib/errors";
-import { OutputFolderField, useOutputDir } from "../../components/OutputFolderField";
+import { useOutputDir } from "../../components/OutputFolderField";
+import { PdfOutputFields, pdfName } from "./PdfOutputFields";
 import { addUnique } from "../../lib/fileList";
 import { useToolShortcuts } from "../../lib/useToolShortcuts";
 import { PDF_IMAGE_FORMATS, usePdfConvertForm } from "./store";
@@ -96,7 +97,7 @@ export default function PdfConvertPage() {
 
   const startFromImages = () => {
     if (!imageFiles.length) return;
-    const target = joinPath(outputDir, t("pdf.convert.defaultPdfName"));
+    const target = joinPath(outputDir, pdfName(form.pdfName, t("pdf.convert.defaultPdfName")));
     fromImages.start(() => api.pdf.fromImages(imageFiles, target)).catch((err) => notify.error(errorMessage(t, err)));
   };
 
@@ -181,7 +182,13 @@ export default function PdfConvertPage() {
             <Panel title={t("converter.filesSelected", { count: imageFiles.length })}>
               <FileList files={imageFiles} icon={<Image16Regular />} onChange={changeImages} sourceToolId="pdf_convert" sortable />
 
-              <OutputFolderField value={form.outputDir} onChange={setOutputDir} />
+              <PdfOutputFields
+                dir={form.outputDir}
+                onDirChange={setOutputDir}
+                name={form.pdfName}
+                onNameChange={(next) => form.set({ pdfName: next })}
+                defaultName={t("pdf.convert.defaultPdfName")}
+              />
 
               {fromImages.result && (
                 <ResultCard

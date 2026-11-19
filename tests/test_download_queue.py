@@ -1,8 +1,10 @@
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
+from backend.bridge import api
 from backend.core.jobs import JobCancelled
 from backend.core.settings import validate_patch
 from backend.services import download, download_queue
@@ -244,3 +246,19 @@ def test_download_settings_are_booleans():
     assert validate_patch({"downloadEmbedMeta": False, "downloadSkipArchived": True})
     with pytest.raises(ValueError):
         validate_patch({"downloadSkipArchived": "yes"})
+
+
+def test_resumed_queue_keeps_sponsorblock(monkeypatch, ctx, tmp_path, queue_file):
+    monkeypatch.setattr(download_queue, "_run_ydl", _fake_run({URLS[1]: "cancel"}))
+    with pytest.raises(JobCancelled):
+        download_queue.download_batch(ctx, URLS, str(tmp_path), persist=True, sponsorblock=True)
+    assert download_queue.load_queue()["options"]["sponsorblock"] is True
+
+    started = {}
+    monkeypatch.setattr(download_queue, "download_batch", lambda job_ctx, urls, *args, **kwargs: started.update(urls=urls, **kwargs))
+    settings = SimpleNamespace(cookie_files=lambda: {}, get=lambda key: False)
+    jobs = SimpleNamespace(submit=lambda kind, fn, title: fn(ctx))
+    api.DownloadApi(SimpleNamespace(settings=settings, jobs=jobs)).resume_queue()
+
+    assert started["urls"] == URLS[1:]
+    assert started["sponsorblock"] is True

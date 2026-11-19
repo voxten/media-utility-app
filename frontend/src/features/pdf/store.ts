@@ -15,6 +15,7 @@ interface ConvertForm {
   pageRange: string;
   imageFiles: string[];
   outputDir: string;
+  pdfName: string;
   set: (patch: Patch<ConvertForm>) => void;
 }
 
@@ -26,6 +27,7 @@ export const usePdfConvertForm = create<ConvertForm>((set) => ({
   pageRange: "",
   imageFiles: [],
   outputDir: "",
+  pdfName: "",
   set: (patch) => set(patch),
 }));
 

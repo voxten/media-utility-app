@@ -17,6 +17,7 @@ describe("fileExtension", () => {
 describe("mediaKind", () => {
   it("recognises every kind tools exchange", () => {
     expect(mediaKind("a.gif")).toBe("gif");
+    expect(mediaKind("a.APNG")).toBe("gif");
     expect(mediaKind("a.webp")).toBe("image");
     expect(mediaKind("a.PDF")).toBe("pdf");
     expect(mediaKind("a.mkv")).toBe("video");

@@ -102,7 +102,16 @@ def test_extract_audio_and_report_failures(tmp_path, ctx):
 
 @needs_ffmpeg
 def test_all_failed_raises(tmp_path, ctx):
+    first = _sample(tmp_path / "a.m4a", duration=2, video=False)
+    second = _sample(tmp_path / "b.m4a", duration=2, video=False)
+    with pytest.raises(AppError) as err:
+        media_convert.convert(ctx, {"paths": [str(first), str(second)], "outputDir": str(tmp_path), "format": "mp4"})
+    assert err.value.key == "errors.allFilesFailed"
+
+
+@needs_ffmpeg
+def test_single_failed_file_reports_its_own_error(tmp_path, ctx):
     audio = _sample(tmp_path / "a.m4a", duration=2, video=False)
     with pytest.raises(AppError) as err:
         media_convert.convert(ctx, {"paths": [str(audio)], "outputDir": str(tmp_path), "format": "mp4"})
-    assert err.value.key == "errors.allFilesFailed"
+    assert err.value.key == "errors.noVideo"

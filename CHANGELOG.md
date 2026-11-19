@@ -12,11 +12,14 @@ The app shows this file (and its Polish translation, [CHANGELOG.pl.md](CHANGELOG
 
 - **Video Downloader** and **Instagram** have a "Clear" button that empties the link, the preview and the last result; the folder and options stay.
 - The task history keeps the links a download came from: a queue lists every link with its title and outcome, the "⋯" menu copies the link or links, and the history search finds links too.
+- **PDF Merger** and **PDF ↔ Images** (images to PDF) have a file name field next to the output folder instead of always saving `merged.pdf` and `from_images.pdf`.
+- "Send to" and dropping a file anywhere offer **Transcription** for audio files, and **GIF Editor** for APNG animations.
 
 ### Changed
 
 - A download queue in the Tasks panel is called "3 links" instead of "3 URL".
 - Settings → Dependencies shows the whole download size of an AI tool, including PyTorch when it still has to be installed.
+- Settings labels use sentence case like the rest of the app.
 
 ### Fixed
 
@@ -24,6 +27,11 @@ The app shows this file (and its Polish translation, [CHANGELOG.pl.md](CHANGELOG
 - An add-on install cut off by closing the app is finished at the next start, and a package being replaced is never left half copied.
 - Moving the app's data to %LOCALAPPDATA% on another drive no longer leaves half-copied files when the app is closed during the move.
 - Opening Settings with a damaged PyTorch no longer keeps a reinstalled one from loading until the next start.
+- A resumed download queue keeps SponsorBlock on when it was on.
+- Tasks with several files in Image compressor, Image tools, Video & Audio Converter and GIF Editor are named in the app's language, e.g. "3 pliki" in Polish.
+- **Audio-Video Sync** exports an MP4 with subtitles to MKV instead of failing, and no longer overwrites an existing file with the same name.
+- **Video & Audio Converter** shows why a single file could not be converted instead of only "The file could not be converted".
+- The Image tools description no longer mentions folders, which the tool does not take.
 
 ## [0.15.0] - 2026-11-14
 

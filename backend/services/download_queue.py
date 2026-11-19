@@ -292,6 +292,7 @@ def download_batch(
         "mode": mode,
         "audioCodec": target_codec,
         "maxHeight": max_height,
+        "sponsorblock": sponsorblock,
     }
 
     batch_queue = ActiveBatchQueue(ctx, cookies, saved_options if persist else None)

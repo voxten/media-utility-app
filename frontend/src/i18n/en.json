@@ -56,7 +56,7 @@
     },
     "image_tools": {
       "name": "Image tools",
-      "description": "Resize, crop, rotate and mirror single images or entire folders."
+      "description": "Resize, crop, rotate and mirror one image or many at once."
     },
     "converter": {
       "name": "Image converter",
@@ -209,7 +209,7 @@
       "autoCheck": "Check for updates at start-up"
     },
     "storage": {
-      "title": "Storage & Cache",
+      "title": "Storage & cache",
       "cacheTitle": "Cache",
       "cacheDesc": "Temporary conversion files, downloaded archives and cached thumbnails.",
       "usage_one": "{{size}} · {{count}} file",
@@ -219,7 +219,7 @@
       "appDataDesc": "Primary Media Studio directory containing settings and app data.",
       "logsTitle": "Logs",
       "logsDesc": "Errors and app activity, useful when reporting a problem.",
-      "clearCache": "Clear Cache",
+      "clearCache": "Clear cache",
       "clearingCache": "Clearing…",
       "cacheCleared": "Cache cleared: freed {{size}}",
       "openFolder": "Open in Explorer",
@@ -230,7 +230,7 @@
       "archiveDesc_other": "{{count}} videos remembered; queues skip them when “Skip videos downloaded before” is on."
     },
     "hardware": {
-      "title": "Hardware & Performance",
+      "title": "Hardware & performance",
       "cpu": "Processor",
       "cpuDetails": "{{threads}} logical threads · {{arch}} architecture",
       "noGpu": "Integrated graphics or no dedicated GPU detected",
@@ -238,34 +238,34 @@
       "cudaInactive": "CUDA unavailable, running on CPU",
       "ram": "RAM",
       "ramDetails": "{{avail}} free of {{total}} total memory",
-      "concurrency": "Tasks at Once",
+      "concurrency": "Tasks at once",
       "concurrencyDesc": "Tasks beyond this number wait in the queue. Checking links and reading PDFs never waits.",
       "concurrencyTasks_one": "{{count}} task",
       "concurrencyTasks_other": "{{count}} tasks"
     },
     "notifications": {
-      "title": "Notifications & Feedback",
+      "title": "Notifications & feedback",
       "desktop": "Desktop notifications",
       "desktopDesc": "Displays system notifications in Windows Action Center when long-running background tasks finish.",
-      "sound": "Task Completion Sound",
+      "sound": "Task completion sound",
       "soundDesc": "Plays a subtle audio chime when a job finishes or encounters an error.",
-      "test": "Test Sound & Notification",
+      "test": "Test sound & notification",
       "testSent": "Test notification sent!"
     },
     "advanced": {
-      "title": "Advanced & System Tools",
-      "customFfmpeg": "Custom FFmpeg Executable",
+      "title": "Advanced & system tools",
+      "customFfmpeg": "Custom FFmpeg executable",
       "customFfmpegDesc": "Optionally pick your own ffmpeg.exe instead of the one found on PATH or installed in Dependencies.",
       "customFfmpegInvalid": "Choose ffmpeg.exe or the folder that contains it.",
-      "closeToTray": "Close to Tray",
+      "closeToTray": "Close to tray",
       "closeToTrayDesc": "The X button hides the window to the notification area and jobs keep running. Quit from the tray icon menu.",
-      "clipboardWatch": "Offer Copied Links",
+      "clipboardWatch": "Offer copied links",
       "clipboardWatchDesc": "When you return to the app with a new YouTube, TikTok, X or Instagram link in the clipboard, offer to download it.",
-      "confirmExit": "Confirm Exit on Active Jobs",
+      "confirmExit": "Confirm exit on active jobs",
       "confirmExitDesc": "Ask for confirmation before closing the application if background jobs are still running.",
-      "resetSettings": "Restore Default Settings",
+      "resetSettings": "Restore default settings",
       "resetSettingsDesc": "Resets all settings and preferences to default values.",
-      "resetBtn": "Restore Defaults",
+      "resetBtn": "Restore defaults",
       "resetConfirmTitle": "Are you sure you want to reset settings?",
       "resetConfirmBody": "All your preferences will be reset to defaults. Downloaded AI models and user data will not be deleted.",
       "resetConfirmAction": "Yes, reset all",
@@ -316,6 +316,8 @@
     "saveBtn": "Save",
     "outputFolder": "Output folder",
     "fileName": "File name",
+    "filesTitle_one": "{{count}} file",
+    "filesTitle_other": "{{count}} files",
     "savedSuccess": "File saved",
     "loading": "Loading…",
     "viewSplit": "Split slider",
@@ -570,7 +572,6 @@
     "images": "Images",
     "videos": "Videos",
     "folder": "Folder to scan",
-    "folderHint": "Subfolders are included.",
     "sensitivity": "Similarity tolerance",
     "sensitivityHint": "Lower = only near-identical files. Higher = also cropped or edited copies.",
     "results": "Results",

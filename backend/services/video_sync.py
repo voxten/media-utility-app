@@ -18,7 +18,7 @@ from backend.core.errors import AppError, MissingFile
 from backend.core.ffmpeg import NO_WINDOW, extract_frames, probe_media, resolve_binary, run_capture, run_ffmpeg
 from backend.core import media_server
 from backend.core.jobs import JobContext
-from backend.core.paths import cache_dir
+from backend.core.paths import cache_dir, unique_path
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,8 @@ MP4_CONTAINERS = {".mp4", ".m4v", ".mov"}
 def _subtitle_args(subtitles: List[Dict[str, Any]], out_suffix: str) -> Tuple[List[str], int]:
     """FFmpeg arguments that keep the video's subtitles ``out_suffix`` can hold, and how many are left out.
 
-    Matroska takes every track as is; MP4 takes text tracks only, converted to mov_text.
+    Matroska takes every track as is, except mov_text, which it cannot hold and gets as SRT; MP4 takes
+    text tracks only, converted to mov_text.
     """
     suffix = out_suffix.lower()
     if suffix == ".mkv":
@@ -47,6 +48,10 @@ def _subtitle_args(subtitles: List[Dict[str, Any]], out_suffix: str) -> Tuple[Li
     args = [arg for s in kept for arg in ("-map", f"0:{s['index']}")]
     if kept:
         args += ["-c:s", codec]
+    if codec == "copy":
+        for position, s in enumerate(kept):
+            if s["codec"] == "mov_text":
+                args += [f"-c:s:{position}", "srt"]
     return args, len(subtitles) - len(kept)
 
 
@@ -239,6 +244,7 @@ def sync_video(ctx: JobContext, params: Dict[str, Any]) -> Dict[str, Any]:
 
     out_path = Path(params["outputPath"])
     out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path = unique_path(out_path)
 
     offset_sec = float(params.get("offsetSec", 0.0))
     audio_track_idx = int(params.get("audioTrackIndex", 0))

@@ -23,7 +23,7 @@ export type MediaKind = "audio" | "gif" | "image" | "pdf" | "video";
 
 export function mediaKind(path: string): MediaKind | null {
   const ext = fileExtension(path);
-  if (GIF_EXTENSIONS.includes(ext)) return "gif";
+  if (GIF_EXTENSIONS.includes(ext) || ext === ".apng") return "gif";
   if (ALL_IMAGE_EXTENSIONS.includes(ext)) return "image";
   if (PDF_EXTENSIONS.includes(ext)) return "pdf";
   if (VIDEO_EXTENSIONS.includes(ext)) return "video";

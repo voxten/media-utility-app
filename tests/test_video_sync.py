@@ -123,3 +123,42 @@ def test_delayed_audio_keeps_the_video_length_subtitles_and_chapters(tmp_path, c
     assert [s["codec"] for s in meta["subtitles"]] == ["mov_text"]
     probe = subprocess.run(["ffprobe", "-v", "error", "-show_chapters", "-of", "csv", str(out)], capture_output=True, text=True)
     assert "Intro" in probe.stdout
+
+
+def test_mov_text_subtitles_become_srt_in_matroska():
+    subs = [{"index": 2, "codec": "subrip"}, {"index": 3, "codec": "mov_text"}]
+    assert video_sync._subtitle_args(subs, ".mkv") == (
+        ["-map", "0:2", "-map", "0:3", "-c:s", "copy", "-c:s:1", "srt"], 0
+    )
+
+
+def test_mp4_subtitles_export_to_matroska(tmp_path, ctx):
+    srt = tmp_path / "subs.srt"
+    srt.write_text("1\n00:00:00,500 --> 00:00:01,000\nHello\n", encoding="utf-8")
+    src = tmp_path / "clip.mp4"
+    subprocess.run([
+        "ffmpeg", "-y", "-v", "error",
+        "-f", "lavfi", "-i", "testsrc=duration=2:size=320x240:rate=15",
+        "-f", "lavfi", "-i", "sine=frequency=440:duration=2",
+        "-i", str(srt),
+        "-map", "0", "-map", "1", "-map", "2",
+        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "-c:s", "mov_text",
+        str(src),
+    ], check=True)
+
+    out = tmp_path / "clip.mkv"
+    video_sync.sync_video(ctx, {"videoPath": str(src), "offsetSec": 0.5, "outputPath": str(out), "mode": "fast_copy"})
+
+    assert [s["codec"] for s in video_sync.probe_media(str(out))["subtitles"]] == ["subrip"]
+
+
+def test_export_never_overwrites_an_existing_file(tmp_path, ctx):
+    vid = _create_sample_video(tmp_path / "src.mp4", duration=2)
+    out = tmp_path / "out.mp4"
+    out.write_bytes(b"keep")
+
+    res = video_sync.sync_video(ctx, {"videoPath": str(vid), "offsetSec": 0.0, "outputPath": str(out), "mode": "fast_copy"})
+
+    assert out.read_bytes() == b"keep"
+    assert res["fileName"] == "out (1).mp4"
+    assert (tmp_path / "out (1).mp4").is_file()

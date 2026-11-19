@@ -58,7 +58,7 @@
     },
     "image_tools": {
       "name": "Narzędzia obrazu",
-      "description": "Zmieniaj rozmiar, kadruj, obracaj i odbijaj lustrzanie pojedyncze zdjęcia oraz całe foldery."
+      "description": "Zmieniaj rozmiar, kadruj, obracaj i odbijaj lustrzanie jedno zdjęcie lub wiele naraz."
     },
     "converter": {
       "name": "Konwerter obrazów",
@@ -326,6 +326,10 @@
     "saveBtn": "Zapisz",
     "outputFolder": "Folder zapisu",
     "fileName": "Nazwa pliku",
+    "filesTitle_one": "{{count}} plik",
+    "filesTitle_few": "{{count}} pliki",
+    "filesTitle_many": "{{count}} plików",
+    "filesTitle_other": "{{count}} pliku",
     "savedSuccess": "Zapisano plik",
     "loading": "Ładowanie…",
     "viewSplit": "Suwak",
@@ -604,7 +608,6 @@
     "images": "Obrazy",
     "videos": "Wideo",
     "folder": "Folder do przeszukania",
-    "folderHint": "Przeszukiwane są również podfoldery.",
     "sensitivity": "Tolerancja podobieństwa",
     "sensitivityHint": "Mniej = tylko niemal identyczne pliki. Więcej = także przycięte i edytowane.",
     "results": "Wyniki",

@@ -181,9 +181,6 @@ class SystemApi(_Namespace):
     def reveal(self, path: str) -> None:
         _file_action(system.reveal_in_folder, path, "errors.openFailed")
 
-    def trash(self, path: str) -> None:
-        _file_action(system.move_to_trash, path, "errors.trashFailed")
-
     def dependencies(self) -> List[Dict[str, Any]]:
         custom_ffmpeg = self._ctx.settings.get("customFfmpegPath")
         return deps.check_dependencies(custom_ffmpeg=custom_ffmpeg)
@@ -261,12 +258,6 @@ class SystemApi(_Namespace):
 
 
 class JobsApi(_Namespace):
-    def list(self) -> List[Dict[str, Any]]:
-        return self._ctx.jobs.list()
-
-    def get(self, job_id: str) -> Optional[Dict[str, Any]]:
-        return self._ctx.jobs.get(job_id)
-
     def cancel(self, job_id: str) -> bool:
         return self._ctx.jobs.cancel(job_id)
 
@@ -281,9 +272,6 @@ class JobsApi(_Namespace):
 
 
 class ConverterApi(_Namespace):
-    def formats(self) -> List[str]:
-        return list(converter.SUPPORTED_FORMATS)
-
     def count_files(self, input_dir: str, in_format: str) -> int:
         if not input_dir or not Path(input_dir).is_dir():
             return 0
@@ -580,7 +568,7 @@ class CompressorApi(_Namespace):
 
     def start(self, params: Dict[str, Any]) -> str:
         files = params.get("files") or ([params["path"]] if params.get("path") else [])
-        title = Path(files[0]).name if len(files) == 1 else f"{len(files)} files"
+        title = Path(files[0]).name if len(files) == 1 else f'common.filesTitle|{{"count": {len(files)}}}'
         return self._ctx.jobs.submit(
             "compressor",
             lambda ctx: compressor.compress(ctx, params),
@@ -619,7 +607,7 @@ class ImageEditorApi(_Namespace):
         out_fmt: Optional[str] = None,
         quality: int = 90,
     ) -> str:
-        title = f"{len(files)} files"
+        title = f'common.filesTitle|{{"count": {len(files)}}}'
         return self._ctx.jobs.submit(
             "image_editor",
             lambda ctx: image_editor.batch_process(
@@ -699,7 +687,7 @@ class MediaConvertApi(_Namespace):
 
     def start(self, params: Dict[str, Any]) -> str:
         paths = params.get("paths") or []
-        title = Path(paths[0]).name if len(paths) == 1 else f"{len(paths)} files"
+        title = Path(paths[0]).name if len(paths) == 1 else f'common.filesTitle|{{"count": {len(paths)}}}'
         return self._ctx.jobs.submit(
             "media_convert",
             lambda ctx: media_convert.convert(ctx, params),
@@ -734,7 +722,7 @@ class GifEditorApi(_Namespace):
 
     def start(self, params: Dict[str, Any]) -> str:
         files = params.get("files") or [params["path"]]
-        title = Path(files[0]).name if len(files) == 1 else f"{len(files)} files"
+        title = Path(files[0]).name if len(files) == 1 else f'common.filesTitle|{{"count": {len(files)}}}'
         return self._ctx.jobs.submit(
             "gif_editor.render",
             lambda ctx: gif_editor.render(ctx, params),

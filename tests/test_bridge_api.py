@@ -118,18 +118,6 @@ def test_bridge_reports_a_missing_file(tmp_path, opened):
     assert opened == [("open", str(tmp_path))]
 
 
-def test_bridge_reports_a_failed_trash(tmp_path, monkeypatch):
-    target = tmp_path / "locked.jpg"
-    target.write_bytes(b"x")
-
-    def refuse(path):
-        raise OSError("in use")
-
-    monkeypatch.setattr(system, "move_to_trash", refuse)
-    with pytest.raises(RuntimeError, match="errors.trashFailed"):
-        api.SystemApi(SimpleNamespace()).trash(str(target))
-
-
 @pytest.fixture
 def polish_dir(tmp_path):
     folder = tmp_path / POLISH_DIR

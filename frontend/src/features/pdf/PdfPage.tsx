@@ -57,7 +57,8 @@ import { groupColor } from "./groupColors";
 import { usePdfPagePreview } from "./PdfPagePreview";
 import type { PdfPageInfo } from "./usePdfPages";
 import { errorMessage } from "../../lib/errors";
-import { OutputFolderField, useOutputDir } from "../../components/OutputFolderField";
+import { useOutputDir } from "../../components/OutputFolderField";
+import { PdfOutputFields, pdfName } from "./PdfOutputFields";
 import { ResultCard } from "../../components/ResultCard";
 import { useToolShortcuts } from "../../lib/useToolShortcuts";
 
@@ -83,13 +84,17 @@ const withKey = (p: PdfPageInfo): PdfPageItem => ({ ...p, key: `p${++keySeq}` })
 const useForm = create<{
   pages: PdfPageItem[];
   outputDir: string;
+  outputName: string;
   setPages: (pages: PdfPageItem[]) => void;
   setOutputDir: (outputDir: string) => void;
+  setOutputName: (outputName: string) => void;
 }>((set) => ({
   pages: [],
   outputDir: "",
+  outputName: "",
   setPages: (pages) => set({ pages }),
   setOutputDir: (outputDir) => set({ outputDir }),
+  setOutputName: (outputName) => set({ outputName }),
 }));
 
 const useStyles = makeStyles({
@@ -272,7 +277,7 @@ export default function PdfPage() {
   const styles = useStyles();
   const notify = useNotify();
 
-  const { pages, setPages, setOutputDir, outputDir: pickedDir } = useForm();
+  const { pages, setPages, setOutputDir, outputDir: pickedDir, outputName, setOutputName } = useForm();
   const outputDir = useOutputDir(pickedDir);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const preview = usePdfPagePreview();
@@ -324,7 +329,7 @@ export default function PdfPage() {
   };
 
   const startMerge = () => {
-    const target = joinPath(outputDir, t("pdf.defaultName"));
+    const target = joinPath(outputDir, pdfName(outputName, t("pdf.defaultName")));
     merge
       .start(() =>
         api.pdf.merge(
@@ -435,7 +440,13 @@ export default function PdfPage() {
 
       {pages.length > 0 && (
         <Panel>
-          <OutputFolderField value={pickedDir} onChange={setOutputDir} />
+          <PdfOutputFields
+            dir={pickedDir}
+            onDirChange={setOutputDir}
+            name={outputName}
+            onNameChange={setOutputName}
+            defaultName={t("pdf.defaultName")}
+          />
           {merge.result && (
             <ResultCard
               title={t("pdf.toast.merged", { count: merge.result.pageCount })}
