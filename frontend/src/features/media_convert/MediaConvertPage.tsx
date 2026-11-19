@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Button, Caption1, Field, Input, makeStyles, Switch, Tab, TabList, tokens } from "@fluentui/react-components";
+import { Button, Field, Input, Switch, Tab, TabList } from "@fluentui/react-components";
 import { MusicNote216Regular, Play16Filled, Video16Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { create } from "zustand";
@@ -15,11 +15,12 @@ import { Panel } from "../../components/Panel";
 import { ResultCard } from "../../components/ResultCard";
 import { Select, type SelectOption } from "../../components/Select";
 import { TrimTimeline } from "../../components/timeline/TrimTimeline";
+import { TrimFields } from "../../components/timeline/TrimFields";
 import { api } from "../../lib/bridge";
 import { errorMessage } from "../../lib/errors";
 import { addUnique } from "../../lib/fileList";
 import { AUDIO_EXTENSIONS, dialogFilter, formatList, formatOptions, VIDEO_EXTENSIONS } from "../../lib/fileTypes";
-import { formatBytes, formatDuration } from "../../lib/format";
+import { formatBytes } from "../../lib/format";
 import type { MediaConvertResult, VideoInfo } from "../../lib/types";
 import { useAcceptFiles } from "../../lib/useAcceptFiles";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
@@ -73,13 +74,8 @@ const useForm = create<MediaConvertForm>((set) => ({
   set: (patch) => set(patch),
 }));
 
-const useStyles = makeStyles({
-  muted: { color: tokens.colorNeutralForeground3 },
-});
-
 export default function MediaConvertPage() {
   const { t } = useTranslation();
-  const styles = useStyles();
   const notify = useNotify();
   const form = useForm();
   const outputDir = useOutputDir(form.outputDir);
@@ -245,9 +241,12 @@ export default function MediaConvertPage() {
               onChange={(start, end) => form.set({ range: { start, end } })}
               snap={0.01}
             />
-            <Caption1 className={styles.muted}>
-              {`${formatDuration(range.start)} – ${formatDuration(range.end)} · ${formatDuration(range.end - range.start)}`}
-            </Caption1>
+            <TrimFields
+              start={range.start}
+              end={range.end}
+              duration={duration}
+              onChange={(start, end) => form.set({ range: { start, end } })}
+            />
           </Panel>
         )}
 

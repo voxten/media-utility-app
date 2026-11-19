@@ -4,6 +4,7 @@ import {
   ArrowDownload16Filled,
   Camera24Regular,
   ClipboardPaste16Regular,
+  Dismiss16Regular,
   Image24Regular,
   ImageMultiple16Filled,
   Link24Regular,
@@ -158,6 +159,14 @@ export default function InstagramPage() {
   const canDownload = !running && !!post && selected.length > 0 && !!outdir;
   useToolShortcuts({ run: canDownload && startDownload });
 
+  const canClear = !running && !!(form.url || post || form.result || probe.job || download.job);
+  const clearAll = () => {
+    form.set({ url: "", post: null, selected: [], result: null });
+    probe.reset();
+    download.reset();
+    setStoppedJob(null);
+  };
+
   const resultDetail = form.result
     ? [formatBytes(form.result.size), form.result.failed > 0 && t("instagram.toast.failed", { count: form.result.failed })].filter(Boolean).join(" · ")
     : "";
@@ -301,6 +310,11 @@ export default function InstagramPage() {
               {t("instagram.stop")}
             </Button>
           </Tooltip>
+        )}
+        {canClear && (
+          <Button icon={<Dismiss16Regular />} onClick={clearAll}>
+            {t("common.clear")}
+          </Button>
         )}
         <Button
           appearance="primary"

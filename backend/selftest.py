@@ -60,10 +60,11 @@ def _check_pdf(tmp: Path) -> Any:
     doc.new_page()
     doc.save(str(path))
     doc.close()
-    pages = pdf.inspect(JobContext(), [str(path)])["pages"]
+    page_count = pdf.inspect(JobContext(), [str(path)])["pageCount"]
+    assert page_count == 2, page_count
     out = tmp / "merged.pdf"
     pdf.merge(JobContext(), [{"file": str(path), "page": 1}, {"file": str(path), "page": 0}], str(out))
-    return {"pages": len(pages), "merged": out.exists()}
+    return {"pages": page_count, "merged": out.exists()}
 
 
 def _check_duplicates(tmp: Path) -> Any:
@@ -115,6 +116,16 @@ def _check_streams(_: Path) -> Any:
     print("selftest stdout", flush=True)
     sys.stderr.flush()
     return True
+
+
+def _check_bridge(tmp: Path) -> Any:
+    """The object the window talks to can be built: what main.py does right before opening it."""
+    from backend.bridge.api import Api
+    from backend.bridge.events import EventBus
+    from backend.core.settings import Settings
+
+    bridge = Api(EventBus(), Settings(tmp / "settings.json"))
+    return sorted(name for name in vars(bridge) if not name.startswith("_"))
 
 
 def _check_frontend(_: Path) -> Any:
@@ -200,7 +211,7 @@ ADDON_PACKAGES = ["torch", "rembg", "onnxruntime", "ctranslate2", "faster_whispe
 
 def _check_addon_support(_: Path) -> Any:
     """pip and the stdlib parts add-ons need are bundled; add-ons already installed actually import."""
-    from backend.core.addons import activate_addons, addons_dir, run_pip_main
+    from backend.core.addons import activate_addons, addons_dir, is_damaged, run_pip_main
 
     for name in ADDON_STDLIB:
         importlib.import_module(name)
@@ -210,8 +221,13 @@ def _check_addon_support(_: Path) -> Any:
     folder = addons_dir()
     installed = {}
     for name in ADDON_PACKAGES:
-        if (folder / name).is_dir():
-            installed[name] = getattr(importlib.import_module(name), "__version__", "ok")
+        if not (folder / name).is_dir():
+            continue
+        # Files lost from this computer's install are not a fault of the bundle; Settings offers the repair.
+        if is_damaged(name):
+            installed[name] = "damaged"
+            continue
+        installed[name] = getattr(importlib.import_module(name), "__version__", "ok")
     return {"folder": str(folder), "installed": installed}
 
 
@@ -274,8 +290,12 @@ def _check_gif(tmp: Path) -> Any:
     return {"gifsicle": gif_render.gifsicle_available(), "ffmpeg": has_binary("ffmpeg")}
 
 
+# "addons" goes first: other checks import torch and swallow the error, and a second import of torch
+# only reports that it was already tried, hiding the real cause.
 CHECKS: Dict[str, Callable[[Path], Any]] = {
+    "addons": _check_addon_support,
     "streams": _check_streams,
+    "bridge": _check_bridge,
     "frontend": _check_frontend,
     "icon": _check_icon,
     "tray": _check_tray,
@@ -289,7 +309,6 @@ CHECKS: Dict[str, Callable[[Path], Any]] = {
     "system_info": _check_system_info,
     "video_sync": _check_video_sync,
     "gif": _check_gif,
-    "addons": _check_addon_support,
     "engines": _check_engines,
 }
 

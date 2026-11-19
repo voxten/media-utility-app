@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { JobState } from "../../stores/jobs";
-import { extractSubtasks, openTarget, revealTarget, transferTargets } from "./targets";
+import { extractSubtasks, jobLinks, openTarget, revealTarget, transferTargets } from "./targets";
 
 const job = (fields: Partial<JobState>): JobState => ({
   id: "j",
@@ -52,6 +52,41 @@ describe("extractSubtasks", () => {
     );
     expect(items[0]).toMatchObject({ status: "done", percent: 100, size: 7 });
     expect(items[1]).toMatchObject({ status: "error", error: "x", title: "#2" });
+  });
+
+  it("keeps each item's link next to its title", () => {
+    const items = extractSubtasks(
+      job({ partials: [{ index: 0, url: "https://a", status: "pending" }, { index: 0, title: "Clip A", status: "done" }] }),
+    );
+    expect(items[0]).toMatchObject({ title: "Clip A", url: "https://a" });
+  });
+
+  it("lists the saved links of a queue that left no items", () => {
+    const items = extractSubtasks(job({ status: "cancelled", meta: { urls: ["https://a", "https://b"] } }));
+    expect(items).toEqual([
+      { id: 0, title: "https://a", url: "https://a", status: "unknown" },
+      { id: 1, title: "https://b", url: "https://b", status: "unknown" },
+    ]);
+  });
+});
+
+describe("jobLinks", () => {
+  it("is the one link of a single download", () => {
+    const single = job({ kind: "download", status: "done", meta: { url: "https://a" } });
+    expect(jobLinks(single, extractSubtasks(single))).toEqual(["https://a"]);
+  });
+
+  it("is every distinct link of a queue", () => {
+    const queue = job({
+      status: "done",
+      result: { items: [{ index: 0, url: "https://a" }, { index: 1, url: "https://b" }, { index: 2, url: "https://a" }] },
+    });
+    expect(jobLinks(queue, extractSubtasks(queue))).toEqual(["https://a", "https://b"]);
+  });
+
+  it("is empty for a job without links", () => {
+    const plain = job({ kind: "converter", status: "done" });
+    expect(jobLinks(plain, [])).toEqual([]);
   });
 });
 

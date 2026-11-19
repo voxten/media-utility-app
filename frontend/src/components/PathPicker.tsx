@@ -53,6 +53,7 @@ interface PathPickerProps {
   /** Show a button that opens the selected folder in Explorer. */
   openable?: boolean;
   ariaLabel?: string;
+  disabled?: boolean;
 }
 
 export function PathPicker({
@@ -65,6 +66,7 @@ export function PathPicker({
   clearable,
   openable,
   ariaLabel,
+  disabled,
 }: PathPickerProps) {
   const styles = useStyles();
   const { t } = useTranslation();
@@ -87,9 +89,10 @@ export function PathPicker({
         onChange={(_, data) => onChange(data.value)}
         placeholder={placeholder ?? t("common.selectFolder")}
         aria-label={ariaLabel}
+        disabled={disabled}
         contentAfter={
           clearable && value ? (
-            <Button appearance="transparent" size="small" icon={<Dismiss16Regular />} aria-label={t("common.clear")} onClick={() => onChange("")} />
+            <Button appearance="transparent" size="small" icon={<Dismiss16Regular />} aria-label={t("common.clear")} disabled={disabled} onClick={() => onChange("")} />
           ) : undefined
         }
       />
@@ -100,10 +103,10 @@ export function PathPicker({
       )}
       {narrow ? (
         <Tooltip content={t("common.browse")} relationship="label">
-          <Button className={styles.actionBtn} icon={<FolderOpen20Regular />} onClick={browse} />
+          <Button className={styles.actionBtn} icon={<FolderOpen20Regular />} disabled={disabled} onClick={browse} />
         </Tooltip>
       ) : (
-        <Button className={styles.actionBtn} icon={<FolderOpen20Regular />} onClick={browse}>
+        <Button className={styles.actionBtn} icon={<FolderOpen20Regular />} disabled={disabled} onClick={browse}>
           {t("common.browse")}
         </Button>
       )}

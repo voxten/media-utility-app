@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
+from backend.core.addons import module_available
 from backend.core.paths import app_data_dir, bin_dir, cache_dir, local_data_dir, models_dir
 
 logger = logging.getLogger("media_studio.system_info")
@@ -176,15 +177,17 @@ def get_hardware_info() -> Dict[str, Any]:
     cuda_device_name = ""
     cuda_version = ""
 
-    try:
-        import torch
+    # Importing a damaged PyTorch leaves parts of it loaded, so even a reinstalled one would not load in this run.
+    if module_available("torch"):
+        try:
+            import torch
 
-        cuda_available = torch.cuda.is_available()
-        if cuda_available:
-            cuda_device_name = torch.cuda.get_device_name(0)
-            cuda_version = getattr(torch.version, "cuda", "") or ""
-    except Exception:
-        pass
+            cuda_available = torch.cuda.is_available()
+            if cuda_available:
+                cuda_device_name = torch.cuda.get_device_name(0)
+                cuda_version = getattr(torch.version, "cuda", "") or ""
+        except Exception:  # noqa: BLE001 - a broken install raises anything from ImportError to OSError
+            logger.warning("PyTorch is installed but does not load", exc_info=True)
 
     return {
         "cpuName": cpu_name,

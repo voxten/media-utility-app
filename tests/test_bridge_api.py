@@ -226,3 +226,10 @@ def test_installing_a_dependency_twice_follows_the_running_install(monkeypatch):
     finally:
         release.set()
         jobs.shutdown()
+
+
+def test_the_bridge_can_be_built(tmp_path):
+    from backend.bridge.events import EventBus
+
+    bridge = api.Api(EventBus(), Settings(tmp_path / "settings.json"))
+    assert set(_namespaces()) <= set(vars(bridge))

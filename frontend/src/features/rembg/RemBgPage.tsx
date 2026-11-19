@@ -182,8 +182,10 @@ export default function RemBgPage() {
     }
   };
 
+  const canRun = !!form.image && modelAvailable === true && !runner.running;
+
   const run = () => {
-    if (!form.image || runner.running) return;
+    if (!canRun) return;
     const opts: RemBgOptions = {
       path: form.sourcePath,
       model: form.model,
@@ -209,8 +211,37 @@ export default function RemBgPage() {
 
   const bgClass = (mode: BgMode) => (mode === "checker" ? styles.bgChecker : styles[mode]);
 
-  const toolbar = (
-    <Toolbar className={styles.toolbar}>
+  const bgSelector = (
+    <div className={styles.optionItem}>
+      <Text size={200} weight="semibold">
+        {t("rembg.options.previewBg")}
+      </Text>
+      <div className={styles.bgSelector}>
+        {BG_MODES.map(({ id, labelKey }) => (
+          <Tooltip key={id} content={t(labelKey)} relationship="label">
+            <button
+              type="button"
+              aria-label={t(labelKey)}
+              aria-pressed={form.bgMode === id}
+              className={mergeClasses(styles.bgBtn, bgClass(id), form.bgMode === id && styles.bgBtnActive)}
+              onClick={() => form.set({ bgMode: id })}
+            >
+              {form.bgMode === id && (
+                <Checkmark16Regular className={id === "black" || id === "green" ? styles.checkLight : styles.checkDark} />
+              )}
+            </button>
+          </Tooltip>
+        ))}
+      </div>
+    </div>
+  );
+
+  const toolbar = form.result ? (
+    <Toolbar className={styles.toolbar} aria-label={t("tools.rembg.name")}>
+      {bgSelector}
+    </Toolbar>
+  ) : (
+    <Toolbar className={styles.toolbar} aria-label={t("tools.rembg.name")}>
       <div className={styles.optionItem}>
         <Text size={200} weight="semibold">
           {t("rembg.options.model")}
@@ -237,28 +268,7 @@ export default function RemBgPage() {
         />
       </div>
 
-      <div className={styles.optionItem}>
-        <Text size={200} weight="semibold">
-          {t("rembg.options.previewBg")}
-        </Text>
-        <div className={styles.bgSelector}>
-          {BG_MODES.map(({ id, labelKey }) => (
-            <Tooltip key={id} content={t(labelKey)} relationship="label">
-              <button
-                type="button"
-                aria-label={t(labelKey)}
-                aria-pressed={form.bgMode === id}
-                className={mergeClasses(styles.bgBtn, bgClass(id), form.bgMode === id && styles.bgBtnActive)}
-                onClick={() => form.set({ bgMode: id })}
-              >
-                {form.bgMode === id && (
-                  <Checkmark16Regular className={id === "black" || id === "green" ? styles.checkLight : styles.checkDark} />
-                )}
-              </button>
-            </Tooltip>
-          ))}
-        </div>
-      </div>
+      {bgSelector}
 
       <Divider vertical className={styles.divider} />
 
@@ -320,17 +330,13 @@ export default function RemBgPage() {
             : t("rembg.idle.ready")
       }
       onCancel={runner.cancel}
-      onRun={!runner.running && run}
+      onRun={canRun && run}
       runAction={
-        <Button appearance="primary" icon={<Wand16Filled />} disabled={runner.running} onClick={run}>
+        <Button appearance="primary" icon={<Wand16Filled />} disabled={!canRun} onClick={run}>
           {t("rembg.actions.remove")}
         </Button>
       }
-      resultActions={
-        <Button icon={<Wand16Filled />} disabled={runner.running} onClick={run}>
-          {t("rembg.actions.remove")}
-        </Button>
-      }
+      resultActions={<Button onClick={() => form.set({ result: null })}>{t("common.backToOptions")}</Button>}
     />
   );
 }

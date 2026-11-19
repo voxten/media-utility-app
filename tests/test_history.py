@@ -1,6 +1,6 @@
 import json
 
-from backend.core.history import MAX_ENTRIES, JobHistory, result_outputs
+from backend.core.history import MAX_ENTRIES, MAX_ITEMS, JobHistory, result_outputs
 
 
 def job(job_id="a", kind="converter", status="done", **extra):
@@ -137,3 +137,40 @@ def test_record_drops_a_large_thumbnail_and_counts_groups(tmp_path):
 
     assert entry["meta"] == {}
     assert entry["stats"] == {"groups": 2, "scanned": 9}
+
+
+def test_record_keeps_the_links_and_outcomes_of_a_queue(tmp_path):
+    history = JobHistory(tmp_path / "history.json")
+    result = {
+        "outdir": "C:/dl",
+        "items": [
+            {"index": 0, "url": "https://a", "title": "Clip A", "status": "done", "path": "C:/dl/a.mp4", "size": 5, "formats": [1]},
+            {"index": 1, "url": "https://b", "title": "https://b", "status": "error", "error": "gone"},
+            {"url": "https://no-index"},
+        ],
+    }
+    entry = history.record(job(kind="download.batch", meta={"urls": ["https://a", "https://b"]}), result)
+
+    assert entry["items"] == [
+        {"index": 0, "url": "https://a", "title": "Clip A", "status": "done", "size": 5},
+        {"index": 1, "url": "https://b", "title": "https://b", "status": "error", "error": "gone"},
+    ]
+    assert "urls" not in entry["meta"]
+    assert JobHistory(tmp_path / "history.json").entries()[0]["items"] == entry["items"]
+
+
+def test_record_keeps_the_links_of_an_unfinished_queue(tmp_path):
+    history = JobHistory(tmp_path / "history.json")
+    urls = [f"https://example.com/{i}" for i in range(MAX_ITEMS + 5)]
+    entry = history.record(job(kind="download.batch", status="cancelled", meta={"urls": urls}), None)
+
+    assert "items" not in entry
+    assert entry["meta"]["urls"] == urls[:MAX_ITEMS]
+
+
+def test_record_limits_queue_items(tmp_path):
+    history = JobHistory(tmp_path / "history.json")
+    items = [{"index": i, "url": f"https://example.com/{i}", "status": "done"} for i in range(MAX_ITEMS + 5)]
+    entry = history.record(job(kind="download.batch"), {"items": items})
+
+    assert len(entry["items"]) == MAX_ITEMS

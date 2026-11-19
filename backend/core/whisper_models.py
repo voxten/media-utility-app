@@ -4,17 +4,18 @@ Each model is a Hugging Face repository pinned to a commit, so a renamed or upda
 never changes what gets installed. Downloads are checked by SHA-256, installed files by size.
 """
 
-import importlib.util
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, Optional
 
+from backend.core.addons import module_available
 from backend.core.paths import models_dir
 
 # faster-whisper 1.2.1 opens files with an argument PyAV 19 no longer has; the app decodes audio
 # with its own FFmpeg instead, but the import of faster_whisper still needs av.
 ENGINE_PACKAGES = ["faster-whisper==1.2.1"]
 ENGINE_SIZE_MB = 200
+ENGINE_MODULES = ("faster_whisper", "ctranslate2")
 
 HF_FILE_URL = "https://huggingface.co/{repo}/resolve/{revision}/{name}"
 
@@ -123,13 +124,7 @@ def is_model_downloaded(model_id: str) -> bool:
 
 
 def is_engine_installed() -> bool:
-    for name in ("faster_whisper", "ctranslate2"):
-        try:
-            if importlib.util.find_spec(name) is None:
-                return False
-        except (ImportError, ValueError):
-            return False
-    return True
+    return all(module_available(name) for name in ENGINE_MODULES)
 
 
 def is_ready(model_id: str) -> bool:

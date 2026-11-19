@@ -19,7 +19,7 @@ from webview.dom import DOMEventHandler
 from backend import APP_NAME, APP_VERSION
 from backend.bridge.events import EventBus
 from backend.core import logs, single_instance, win_theme
-from backend.core.addons import PIP_FLAG, activate_addons, run_pip_main
+from backend.core.addons import PIP_FLAG, activate_addons, finish_interrupted_install, run_pip_main
 from backend.core.engines import CHECK_FLAG, activate_engines, run_check_main
 from backend.core.paths import app_data_dir, clean_cache, migrate_to_local, resource_path
 from backend.core.settings import Settings
@@ -120,6 +120,7 @@ def main() -> None:
     if single_instance.notify_running(channel, launch_paths):
         return
     instance = single_instance.listen(channel)
+    finish_interrupted_install()  # only once no other instance can be installing an add-on
     cleanup_webview_cache()  # only once we know no other instance is using the cache
     clean_cache()
 

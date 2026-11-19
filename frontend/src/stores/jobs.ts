@@ -237,10 +237,10 @@ export function earlierJobs(history: HistoryEntry[], jobs: Record<string, JobSta
 
 /** The result shape of a history entry's outputs (one file, its output folder, or several files) with its saved numbers. */
 function historyResult(entry: HistoryEntry) {
-  const stats = entry.stats ?? {};
-  if (entry.singleFile) return { ...stats, path: entry.outputs[0] };
-  if (entry.outputs.length === 1) return { ...stats, outdir: entry.outputs[0] };
-  return { ...stats, files: entry.outputs };
+  const saved = { ...entry.stats, ...(entry.items?.length ? { items: entry.items } : {}) };
+  if (entry.singleFile) return { ...saved, path: entry.outputs[0] };
+  if (entry.outputs.length === 1) return { ...saved, outdir: entry.outputs[0] };
+  return { ...saved, files: entry.outputs };
 }
 
 /** A history entry in the shape JobCard renders. */

@@ -26,6 +26,7 @@ from backend.core.app_shell import AppShell
 from backend.core.history import JobHistory
 from backend.core.jobs import JobManager
 from backend.core.settings import Settings, validate_patch
+from backend.core.taskbar import TaskbarProgress
 from backend.core.lazy import lazy_import
 
 # Loaded on first use, so the window opens before cv2, yt-dlp and PyMuPDF are imported.
@@ -334,13 +335,6 @@ class PdfApi(_Namespace):
             title=Path(out_path).name,
         )
 
-    def rotate_pages(self, path: str, pages: List[int], angle: int, out_path: str) -> str:
-        return self._ctx.jobs.submit(
-            "pdf.rotate",
-            lambda ctx: pdf.rotate_pages(ctx, path, pages, angle, out_path),
-            title=Path(path).name,
-        )
-
     def extract_text(self, path: str, out_path: str) -> str:
         return self._ctx.jobs.submit(
             "pdf.extract_text",
@@ -359,6 +353,12 @@ class DuplicatesApi(_Namespace):
 
     def export_csv(self, groups: List[List[Dict[str, Any]]], out_path: str) -> str:
         return duplicates.export_csv(groups, out_path)
+
+    def trash(self, paths: List[str]) -> str:
+        title = Path(paths[0]).parent.name if paths else ""
+        return self._ctx.jobs.submit(
+            "duplicates.trash", lambda ctx: duplicates.trash(ctx, paths), title=title, retryable=False
+        )
 
 
 class TtsApi(_Namespace):
@@ -435,7 +435,7 @@ class DownloadApi(_Namespace):
                 replaces=replaces,
                 sponsorblock=bool(params.get("sponsorblock")),
             ),
-            title=f"{len(urls)} URL",
+            title=f'download.batchTitle|{{"count": {len(urls)}}}',
         )
 
     def batch(self, params: Dict[str, Any]) -> str:

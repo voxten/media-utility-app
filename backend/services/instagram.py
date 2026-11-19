@@ -397,6 +397,7 @@ def download(
     """
     t0 = time.monotonic()
     url = url.strip()
+    ctx.describe(url=url)
     ctx.progress(None, "instagram.status.probing")
     files: List[str] = []
     file_keys: List[str] = []

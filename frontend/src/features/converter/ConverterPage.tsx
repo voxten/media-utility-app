@@ -14,7 +14,6 @@ import {
   ArrowRight16Regular,
   ArrowSwap20Regular,
   Folder24Regular,
-  Image24Regular,
   FolderOpen16Regular,
   Image16Regular,
   ImageMultiple24Regular,
@@ -69,13 +68,11 @@ interface ConvertResult {
   }>;
 }
 
-type Source = "file" | "files" | "folder";
+type Source = "files" | "folder";
 
 interface ConverterForm {
   source: Source;
   inputDir: string;
-  /** Single-file source; its format is read from the file itself. */
-  file: string;
   files: string[];
   inFormat: Exclude<ImageFormat, "PDF">;
   outFormat: ImageFormat;
@@ -87,9 +84,8 @@ interface ConverterForm {
 }
 
 const useForm = create<ConverterForm>((set) => ({
-  source: "file",
+  source: "files",
   inputDir: "",
-  file: "",
   files: [],
   inFormat: "PNG",
   outFormat: "WEBP",
@@ -203,33 +199,26 @@ export default function ConverterPage() {
     return () => window.clearTimeout(timer);
   }, [source, inputDir, inFormat, setForm]);
 
-  const fileCount = form.source === "folder" ? form.matching ?? 0 : form.source === "file" ? Number(!!form.file) : form.files.length;
+  const fileCount = form.source === "folder" ? form.matching ?? 0 : form.files.length;
   const canStart = fileCount > 0 && !!outputDir && !runner.running;
 
   const idleText = useMemo(() => {
-    if (form.source === "file" && !form.file) return t("converter.idle.pickFile");
     if (form.source === "folder" && !form.inputDir) return t("converter.idle.pickFolder");
     if (form.source === "files" && !form.files.length) return t("converter.idle.pickFiles");
     return t("converter.idle.ready", { count: fileCount });
-  }, [form.source, form.file, form.inputDir, form.files.length, fileCount, t]);
+  }, [form.source, form.inputDir, form.files.length, fileCount, t]);
 
   const acceptFiles = useAcceptFiles(ALL_IMAGE_EXTENSIONS);
   const addFiles = (paths: string[]) => form.set({ files: addUnique(useForm.getState().files, acceptFiles(paths)) });
   const browseFiles = async () => addFiles(await api.dialogs.openFiles([dialogFilter(t, "images", ALL_IMAGE_EXTENSIONS)]));
   const browse = async () => {
     if (form.source === "files") return browseFiles();
-    if (form.source === "file") {
-      const [file] = await api.dialogs.openFiles([dialogFilter(t, "images", ALL_IMAGE_EXTENSIONS)], false);
-      if (file) form.set({ file });
-      return;
-    }
     const inputDir = await api.dialogs.openFolder(form.inputDir);
     if (inputDir) form.set({ inputDir });
   };
 
   useIncomingTransfer("converter", (files) => {
-    if (files.length === 1) form.set({ source: "file", file: files[0] });
-    else if (files.length > 1) form.set({ source: "files", files: addUnique(useForm.getState().files, files) });
+    if (files.length) form.set({ source: "files", files: addUnique(useForm.getState().files, files) });
   });
 
   const start = () =>
@@ -242,7 +231,7 @@ export default function ConverterPage() {
           method: form.method,
           ...(form.source === "folder"
             ? { inputDir: form.inputDir, inFormat: form.inFormat }
-            : { files: form.source === "file" ? [form.file] : form.files }),
+            : { files: form.files }),
         }),
       )
       .catch((err) => notify.error(t("converter.toast.error"), { body: errorMessage(t, err) }));
@@ -283,9 +272,6 @@ export default function ConverterPage() {
           title={t("converter.source")}
           actions={
             <TabList size="small" selectedValue={form.source} onTabSelect={(_, d) => form.set({ source: d.value as Source })}>
-              <Tab value="file" icon={<Image24Regular />}>
-                {t("converter.sourceFile")}
-              </Tab>
               <Tab value="files" icon={<ImageMultiple24Regular />}>
                 {t("converter.sourceFiles")}
               </Tab>
@@ -295,16 +281,7 @@ export default function ConverterPage() {
             </TabList>
           }
         >
-          {form.source === "file" ? (
-            <Field label={t("converter.inputFile")} hint={<DetectedFormat path={form.file} />}>
-              <PathPicker
-                mode="file"
-                value={form.file}
-                onChange={(file) => form.set({ file })}
-                fileTypes={[dialogFilter(t, "images", ALL_IMAGE_EXTENSIONS)]}
-              />
-            </Field>
-          ) : form.source === "folder" ? (
+          {form.source === "folder" ? (
             <>
               <Field label={t("converter.inputFolder")}>
                 <PathPicker value={form.inputDir} onChange={(inputDir) => form.set({ inputDir })} />
@@ -346,6 +323,11 @@ export default function ConverterPage() {
                 onChange={(files) => form.set({ files })}
                 sourceToolId="converter"
               />
+              {form.files.length === 1 && (
+                <Caption1 className={styles.muted}>
+                  <DetectedFormat path={form.files[0]} />
+                </Caption1>
+              )}
             </>
           )}
         </Panel>

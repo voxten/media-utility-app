@@ -18,10 +18,13 @@ SKIPPED_KINDS = frozenset({"download.probe", "instagram.probe", "pdf.inspect", "
 # Result fields the job card summarises (frontend/src/lib/jobSummary.ts), kept so earlier jobs show them too.
 STAT_KEYS = (
     "size", "totalSize", "bytes", "inBytes", "outBytes", "inputBytes", "outputBytes", "savedPercent",
-    "duration", "pageCount", "count", "charCount", "rotatedCount", "width", "height", "frames", "length", "ext",
+    "duration", "pageCount", "count", "charCount", "width", "height", "frames", "length", "ext",
     "language", "format", "offsetSec", "succeeded", "failed", "total", "processed", "converted", "scanned",
 )
 MAX_STAT_TEXT = 32
+# Queue items (link, title, outcome) kept so the history shows what a queue downloaded.
+MAX_ITEMS = 200
+MAX_ITEM_TEXT = 300
 # A larger thumbnail is left out so the history file stays small.
 MAX_THUMB_CHARS = 12_000
 
@@ -88,13 +91,40 @@ def result_stats(result: Any) -> Dict[str, Any]:
     return stats
 
 
-def _small_meta(meta: Any) -> Dict[str, Any]:
+def result_items(result: Any) -> List[Dict[str, Any]]:
+    """The queue items of a result with only what the job card lists: link, title, outcome, size, error."""
+    items = result.get("items") if isinstance(result, dict) else None
+    if not isinstance(items, list):
+        return []
+    kept: List[Dict[str, Any]] = []
+    for item in items[:MAX_ITEMS]:
+        if not isinstance(item, dict) or not isinstance(item.get("index"), int):
+            continue
+        entry: Dict[str, Any] = {"index": item["index"]}
+        for key in ("url", "title", "status", "error"):
+            value = item.get(key)
+            if isinstance(value, str) and value:
+                entry[key] = value[:MAX_ITEM_TEXT]
+        for key in ("size", "duration"):
+            value = item.get(key)
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                entry[key] = value
+        kept.append(entry)
+    return kept
+
+
+def _small_meta(meta: Any, has_items: bool = False) -> Dict[str, Any]:
     if not isinstance(meta, dict):
         return {}
     kept = dict(meta)
     thumb = kept.get("thumb")
     if not isinstance(thumb, str) or len(thumb) > MAX_THUMB_CHARS:
         kept.pop("thumb", None)
+    urls = kept.get("urls")
+    if has_items or not isinstance(urls, list):
+        kept.pop("urls", None)
+    else:
+        kept["urls"] = _strings(urls)[:MAX_ITEMS]
     return kept
 
 
@@ -131,6 +161,7 @@ class JobHistory:
         """Store a finished job (``JobInfo.to_dict()``) and return the entry, or None when skipped."""
         if job.get("kind") in SKIPPED_KINDS:
             return None
+        items = result_items(result)
         entry = {
             "id": job["id"],
             "kind": job.get("kind") or "",
@@ -141,8 +172,10 @@ class JobHistory:
             "error": job.get("error"),
             "outputs": result_outputs(result, self._temp_dir),
             "stats": result_stats(result),
-            "meta": _small_meta(job.get("meta")),
+            "meta": _small_meta(job.get("meta"), has_items=bool(items)),
         }
+        if items:
+            entry["items"] = items
         with self._lock:
             self._entries = [entry, *(e for e in self._entries if e.get("id") != entry["id"])][:MAX_ENTRIES]
             try:

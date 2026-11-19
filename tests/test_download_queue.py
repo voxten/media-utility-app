@@ -186,6 +186,7 @@ def test_cancelled_batch_keeps_the_unfinished_links(monkeypatch, ctx, tmp_path, 
     with pytest.raises(JobCancelled):
         download_queue.download_batch(ctx, URLS, str(tmp_path), mode="video", max_height=720, persist=True)
 
+    assert ctx.meta["urls"] == URLS
     saved = download_queue.load_queue()
     assert saved["urls"] == URLS[1:]
     assert saved["options"]["maxHeight"] == 720

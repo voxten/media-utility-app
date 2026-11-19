@@ -370,36 +370,6 @@ def images_to_pdf(ctx: JobContext, image_paths: List[str], out_path: str) -> Dic
     }
 
 
-def rotate_pages(ctx: JobContext, path: str, pages: List[int], angle: int, out_path: str) -> Dict[str, Any]:
-    """Rotate specified pages (0-indexed) by angle (e.g. 90, 180, 270) and save to out_path."""
-    if angle % 90:
-        raise ValueError(f"Rotation must be a multiple of 90 degrees, got {angle}")
-    src = Path(path)
-    if not src.is_file():
-        raise MissingFile(path)
-
-    target = Path(out_path)
-    target.parent.mkdir(parents=True, exist_ok=True)
-
-    with _open(src) as doc:
-        total = len(doc)
-        requested = set(pages) if pages else set(range(total))
-        pages_to_rotate = {p for p in requested if 0 <= p < total}
-        for p in pages_to_rotate:
-            doc[p].set_rotation((doc[p].rotation + angle) % 360)
-        write_path = _write_path(src, target)
-        doc.save(str(write_path), garbage=3, deflate=True)
-    if write_path != target:
-        write_path.replace(target)
-
-    ctx.progress(100, "pdf.status.done")
-    return {
-        "outPath": str(target),
-        "rotatedCount": len(pages_to_rotate),
-        "bytes": target.stat().st_size,
-    }
-
-
 def extract_text(ctx: JobContext, path: str, out_path: str) -> Dict[str, Any]:
     """Extract plain text from all pages of a PDF document to a text file."""
     src = Path(path)

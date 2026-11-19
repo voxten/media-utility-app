@@ -27,6 +27,7 @@ import { Panel } from "../../components/Panel";
 import { ResultCard } from "../../components/ResultCard";
 import { SliderField } from "../../components/SliderField";
 import { TrimTimeline } from "../../components/timeline/TrimTimeline";
+import { TrimFields } from "../../components/timeline/TrimFields";
 import { api } from "../../lib/bridge";
 import { ANIMATION_EXTENSIONS, dialogFilter, formatList, formatName } from "../../lib/fileTypes";
 import { fileName, formatBytes, formatDuration } from "../../lib/format";
@@ -317,16 +318,26 @@ export default function GifEditorPage() {
             </Caption1>
           )}
           {info && info.frames > 1 && (
-            <TrimTimeline
-              duration={info.duration}
-              frameAspect={info.height > 0 ? info.width / info.height : 0}
-              loadFrames={loadFrames}
-              start={trim.start}
-              end={trim.end}
-              onChange={changeTrim}
-              minLength={info.duration / info.frames}
-              snap={0.01}
-            />
+            <>
+              <TrimTimeline
+                duration={info.duration}
+                frameAspect={info.height > 0 ? info.width / info.height : 0}
+                loadFrames={loadFrames}
+                start={trim.start}
+                end={trim.end}
+                onChange={changeTrim}
+                minLength={info.duration / info.frames}
+                snap={0.01}
+              />
+              <TrimFields
+                start={trim.start}
+                end={trim.end}
+                duration={info.duration}
+                onChange={changeTrim}
+                minLength={info.duration / info.frames}
+                outputSeconds={((trim.end - trim.start) / edits.speed) * (edits.boomerang ? 2 : 1)}
+              />
+            </>
           )}
 
           {files.length > 1 && (

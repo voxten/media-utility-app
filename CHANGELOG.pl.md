@@ -6,6 +6,25 @@ Polskie tłumaczenie [CHANGELOG.md](CHANGELOG.md), pokazywane w aplikacji przy p
 
 ### Dodano
 
+- **Pobieranie wideo** i **Instagram** mają przycisk „Wyczyść”, który czyści link, podgląd i ostatni wynik; folder i opcje zostają.
+- Historia zadań pamięta linki, z których pobierano: kolejka pokazuje każdy link z tytułem i wynikiem, menu „⋯” kopiuje link lub linki, a wyszukiwarka historii znajduje też linki.
+
+### Zmieniono
+
+- Kolejka pobierania w panelu zadań nazywa się „3 linki” zamiast „3 URL”.
+- Ustawienia → Zależności pokazują pełny rozmiar pobierania narzędzia AI, razem z PyTorchem, jeśli trzeba go jeszcze zainstalować.
+
+### Naprawiono
+
+- Ustawienia → Zależności zauważają dodatek, któremu zginęły pliki, np. po przerwanej instalacji, i proponują ponowną instalację zamiast pokazywać go jako gotowy.
+- Instalacja dodatku przerwana zamknięciem aplikacji kończy się przy następnym uruchomieniu, a podmieniany pakiet nigdy nie zostaje skopiowany do połowy.
+- Przenoszenie danych aplikacji do %LOCALAPPDATA% na innym dysku nie zostawia już niepełnych plików, gdy aplikacja zostanie zamknięta w trakcie.
+- Otwarcie Ustawień przy uszkodzonym PyTorchu nie blokuje już wczytania ponownie zainstalowanego aż do restartu.
+
+## [0.15.0] - 2026-11-14
+
+### Dodano
+
 - **Pobieranie wideo** może pobrać tylko fragment filmu: wpisz zakres czasu albo wybierz rozdział.
 - **Pobieranie wideo** może wyciąć z filmów YouTube fragmenty sponsorowane, autopromocję i prośby o subskrypcję dzięki SponsorBlock, także w kolejkach.
 - Ustawienia → Pliki: ciasteczka mogą pochodzić prosto z Firefoksa, Chrome, Edge, Brave, Opery lub Vivaldi, gdy strona nie ma pliku cookies; działa w Pobieraniu wideo i Instagramie.
@@ -26,6 +45,14 @@ Polskie tłumaczenie [CHANGELOG.md](CHANGELOG.md), pokazywane w aplikacji przy p
 - Upuszczenie lub wybranie plików, których narzędzie nie otworzy, pokazuje, ile pominięto, zamiast pomijać je bez słowa.
 - Klawiatura i czytnik ekranu: okno zadań przejmuje fokus po otwarciu i oddaje go po zamknięciu, paleta poleceń ogłasza zaznaczone narzędzie, do paska miniatur da się dojść Tabem i przechodzić strzałkami (Delete usuwa plik), a przyciski widoku przed/po mówią, który jest włączony.
 - Tempo mowy i nazwy modeli w Powiększaniu obrazu są tłumaczone.
+- Media Studio jest udostępniane na licencji GNU Affero General Public License v3.0 lub nowszej (LICENSE); instalator kopiuje licencję obok aplikacji.
+- **Usuwanie tła** działa jak Powiększanie obrazu: przycisk jest nieaktywny, dopóki model AI nie jest zainstalowany, a przy wyniku jest przycisk „Zmień opcje”; tło podglądu nadal można przełączać przy wyniku.
+- **Edytor GIF** i **Konwerter wideo i audio** mają pola początku i końca w sekundach przy osi przycinania, tak jak Wideo do GIF.
+- **Konwerter PDF**: obrazy do PDF można przeciągać w kolejności stron.
+- **Konwerter obrazów**: zakładki „Plik” i „Pliki” to jedna lista; przy jednym pliku pokazuje jego format i rozmiar.
+- **Wyszukiwarka duplikatów** czyści stare wyniki po wybraniu innego folderu, oznacza grupy, w których zaznaczono wszystkie kopie, ostrzega przed nimi przed usunięciem i przenosi pliki do Kosza jako zadanie z postępem, które można anulować.
+- **Łączenie PDF** obraca stronę w lewo i w prawo oraz wszystkie strony naraz; przyciski strony pokazują się też, gdy strona ma fokus klawiatury.
+- **Pobieranie wideo** pokazuje prędkość i pozostały czas raz, w pasku na dole, także w kolejce.
 
 ### Usunięto
 

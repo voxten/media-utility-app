@@ -1,22 +1,9 @@
-import {
-  Button,
-  Caption1,
-  Field,
-  Input,
-  makeStyles,
-  Tab,
-  TabList,
-  tokens,
-} from "@fluentui/react-components";
-import {
-  ArrowRight16Regular,
-  Delete16Regular,
-  DocumentPdf24Regular,
-  ImageArrowForward24Regular,
-} from "@fluentui/react-icons";
+import { Button, Field, Input, makeStyles, Tab, TabList } from "@fluentui/react-components";
+import { DocumentPdf24Regular, Image16Regular, ImageArrowForward24Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { ActionBar } from "../../components/ActionBar";
 import { DropZone } from "../../components/DropZone";
+import { FileList } from "../../components/FileList";
 import { useNotify } from "../../components/notify";
 import { ToolPage } from "../../components/Page";
 import { Panel } from "../../components/Panel";
@@ -24,18 +11,15 @@ import { ResultCard } from "../../components/ResultCard";
 import { Select } from "../../components/Select";
 import { api } from "../../lib/bridge";
 import { ALL_IMAGE_EXTENSIONS, dialogFilter, formatList, formatOptions } from "../../lib/fileTypes";
-import { fileName, joinPath } from "../../lib/format";
+import { joinPath } from "../../lib/format";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
-import { useTransferStore } from "../../stores/transfer";
 import { SinglePdfTool } from "./SinglePdfTool";
 import { errorMessage } from "../../lib/errors";
 import { OutputFolderField, useOutputDir } from "../../components/OutputFolderField";
 import { addUnique } from "../../lib/fileList";
 import { useToolShortcuts } from "../../lib/useToolShortcuts";
 import { PDF_IMAGE_FORMATS, usePdfConvertForm } from "./store";
-
-const VISIBLE_IMAGES = 10;
 
 interface ConvertImagesResult {
   files: string[];
@@ -57,10 +41,6 @@ const useStyles = makeStyles({
     maxWidth: "520px",
   },
   rangeField: { maxWidth: "360px" },
-  imagesList: { display: "flex", flexDirection: "column", gap: "4px" },
-  imageItem: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" },
-  name: { flexGrow: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
-  muted: { color: tokens.colorNeutralForeground3 },
 });
 
 export default function PdfConvertPage() {
@@ -198,42 +178,8 @@ export default function PdfConvertPage() {
           />
 
           {imageFiles.length > 0 && (
-            <Panel
-              title={t("converter.filesSelected", { count: imageFiles.length })}
-              actions={
-                <>
-                  {!fromImages.result && (
-                    <Button
-                      appearance="subtle"
-                      icon={<ArrowRight16Regular />}
-                      onClick={() => useTransferStore.getState().openModal(imageFiles, "pdf_convert")}
-                    >
-                      {t("transfer.sendTo")}
-                    </Button>
-                  )}
-                  <Button appearance="subtle" icon={<Delete16Regular />} onClick={() => changeImages([])}>
-                    {t("common.clearAll")}
-                  </Button>
-                </>
-              }
-            >
-              <div className={styles.imagesList}>
-                {imageFiles.slice(0, VISIBLE_IMAGES).map((f) => (
-                  <div key={f} className={styles.imageItem}>
-                    <Caption1 className={styles.name}>{fileName(f)}</Caption1>
-                    <Button
-                      size="small"
-                      appearance="subtle"
-                      icon={<Delete16Regular />}
-                      aria-label={t("common.remove")}
-                      onClick={() => changeImages(imageFiles.filter((item) => item !== f))}
-                    />
-                  </div>
-                ))}
-                {imageFiles.length > VISIBLE_IMAGES && (
-                  <Caption1 className={styles.muted}>{t("common.andMore", { count: imageFiles.length - VISIBLE_IMAGES })}</Caption1>
-                )}
-              </div>
+            <Panel title={t("converter.filesSelected", { count: imageFiles.length })}>
+              <FileList files={imageFiles} icon={<Image16Regular />} onChange={changeImages} sourceToolId="pdf_convert" sortable />
 
               <OutputFolderField value={form.outputDir} onChange={setOutputDir} />
 

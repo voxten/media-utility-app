@@ -145,3 +145,29 @@ def test_numpy_grouping_matches_comparing_every_pair():
     expected_groups = sorted(sorted(g) for g in expected.values() if len(g) > 1)
 
     assert sorted(sorted(i.path for i in g) for g in group_similar(items)) == expected_groups
+
+
+def test_trash_reports_progress_and_keeps_going_after_a_failure(tmp_path, ctx, monkeypatch):
+    moved = []
+
+    def fake_trash(path):
+        if path.endswith("missing.png"):
+            raise FileNotFoundError(path)
+        moved.append(path)
+
+    monkeypatch.setattr(duplicates.system, "move_to_trash", fake_trash)
+    paths = [str(tmp_path / "a.png"), str(tmp_path / "missing.png"), str(tmp_path / "b.png")]
+    result = duplicates.trash(ctx, paths)
+    assert result["removed"] == [paths[0], paths[2]] == moved
+    assert result["failed"] == 1
+    assert result["errors"] == [{"path": paths[1], "error": "errors.pathMissing"}]
+    assert ctx.of("job:progress")[-1]["percent"] == 100
+
+
+def test_cancelled_trash_returns_what_was_already_moved(tmp_path, ctx, monkeypatch):
+    def fake_trash(path):
+        ctx.cancel()
+
+    monkeypatch.setattr(duplicates.system, "move_to_trash", fake_trash)
+    paths = [str(tmp_path / f"{i}.png") for i in range(3)]
+    assert duplicates.trash(ctx, paths)["removed"] == paths[:1]

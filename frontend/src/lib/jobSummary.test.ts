@@ -49,6 +49,7 @@ describe("jobSummary", () => {
     expect(summary("upscale", { width: 1920, height: 1080 })).toEqual(["1920×1080"]);
     expect(summary("duplicates.image", { groups: [[], []], scanned: 320 })).toEqual(["2 groups", "320 files scanned"]);
     expect(summary("duplicates.video", { groups: 5 })).toEqual(["5 groups"]);
+    expect(summary("duplicates.trash", { count: 2, failed: 1 })).toEqual(["2 files", "1 failed"]);
   });
 
   it("skips missing values and unknown kinds", () => {

@@ -1,5 +1,7 @@
 """Filesystem locations that must not depend on the current working directory."""
 
+import errno
+import filecmp
 import logging
 import os
 import shutil
@@ -9,6 +11,7 @@ from pathlib import Path
 from typing import List, Optional, Set
 
 APP_NAME = "MediaStudio"
+ERROR_NOT_SAME_DEVICE = 17
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +63,38 @@ def models_dir() -> Path:
     return path
 
 
+PARTIAL_SUFFIX = ".partial"
+
+
+def _move_item(item: Path, destination: Path) -> None:
+    """Moves ``item`` so that ``destination`` either does not exist or is complete.
+
+    On one drive that is a rename. Across drives (e.g. a redirected roaming profile) the copy is made
+    under a temporary name, renamed when complete, and only then is the original deleted: an app closed
+    half-way leaves the complete original, never a half-copied file or package that would win next time.
+    """
+    try:
+        os.replace(item, destination)
+        return
+    except OSError as exc:
+        if exc.errno != errno.EXDEV and getattr(exc, "winerror", None) != ERROR_NOT_SAME_DEVICE:
+            raise
+    partial = destination.with_name(destination.name + PARTIAL_SUFFIX)
+    if partial.is_dir():
+        shutil.rmtree(partial)
+    else:
+        partial.unlink(missing_ok=True)
+    if item.is_dir():
+        shutil.copytree(item, partial)
+    else:
+        shutil.copy2(item, partial)
+    os.replace(partial, destination)
+    if item.is_dir():
+        shutil.rmtree(item)
+    else:
+        item.unlink()
+
+
 def _move_tree(source: Path, target: Path) -> List[str]:
     """Move everything in ``source`` into ``target``; returns what could not be moved."""
     left: List[str] = []
@@ -67,10 +102,12 @@ def _move_tree(source: Path, target: Path) -> List[str]:
         destination = target / item.name
         try:
             if not destination.exists():
-                shutil.move(str(item), str(destination))  # a rename on the same drive
+                _move_item(item, destination)
             elif item.is_dir() and destination.is_dir():
                 left += _move_tree(item, destination)
                 item.rmdir()
+            elif item.is_file() and destination.is_file() and filecmp.cmp(item, destination, shallow=False):
+                item.unlink()  # the same file, copied before an earlier move was cut off
             else:
                 left.append(str(item))  # already there; the copy in the new place wins
         except OSError as exc:

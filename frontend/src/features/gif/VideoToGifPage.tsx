@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button, Caption1, Field, Input, makeStyles, Switch, tokens } from "@fluentui/react-components";
+import { Button, Caption1, Field, makeStyles, Switch, tokens } from "@fluentui/react-components";
 import { Crop16Regular, Eye16Regular, FilmstripImage24Regular, VideoSwitch20Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { ActionBar } from "../../components/ActionBar";
@@ -14,9 +14,10 @@ import { ResultCard } from "../../components/ResultCard";
 import { Select } from "../../components/Select";
 import { SliderField } from "../../components/SliderField";
 import { TrimTimeline } from "../../components/timeline/TrimTimeline";
+import { TrimFields } from "../../components/timeline/TrimFields";
 import { api } from "../../lib/bridge";
 import { allFilesFilter, dialogFilter, formatList, formatName, VIDEO_EXTENSIONS } from "../../lib/fileTypes";
-import { formatBytes, formatDuration } from "../../lib/format";
+import { formatBytes } from "../../lib/format";
 import { IMAGE_STAGE_HEIGHT } from "../../lib/imageStage";
 import type { GifFormat, VideoToGifPreview, VideoToGifResult } from "../../lib/types";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
@@ -41,12 +42,8 @@ const STILL_HEIGHT = 720;
 const useStyles = makeStyles({
   stage: { height: IMAGE_STAGE_HEIGHT, minHeight: "280px" },
   meta: { display: "flex", gap: "12px", flexWrap: "wrap", color: tokens.colorNeutralForeground3 },
-  times: { display: "flex", gap: "16px", alignItems: "flex-end", flexWrap: "wrap" },
-  time: { width: "130px" },
   grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "16px 24px", alignItems: "end" },
 });
-
-const round = (sec: number) => Math.round(sec * 100) / 100;
 
 export default function VideoToGifPage() {
   const { t } = useTranslation();
@@ -264,35 +261,13 @@ export default function VideoToGifPage() {
             onChange={(start, end) => setRange({ start, end })}
             snap={0.01}
           />
-          <div className={styles.times}>
-            <Field label={t("video_to_gif.start")} className={styles.time}>
-              <Input
-                type="number"
-                step={0.1}
-                min={0}
-                contentAfter="s"
-                value={String(round(range.start))}
-                onChange={(_, d) => {
-                  const start = Math.max(0, Math.min(range.end - 0.1, Number(d.value) || 0));
-                  setRange({ ...range, start });
-                }}
-              />
-            </Field>
-            <Field label={t("video_to_gif.end")} className={styles.time}>
-              <Input
-                type="number"
-                step={0.1}
-                min={0}
-                contentAfter="s"
-                value={String(round(range.end))}
-                onChange={(_, d) => {
-                  const end = Math.min(video.duration, Math.max(range.start + 0.1, Number(d.value) || 0));
-                  setRange({ ...range, end });
-                }}
-              />
-            </Field>
-            <Caption1 className={styles.meta}>{t("video_to_gif.length", { duration: formatDuration(clipSeconds) })}</Caption1>
-          </div>
+          <TrimFields
+            start={range.start}
+            end={range.end}
+            duration={video.duration}
+            onChange={(start, end) => setRange({ start, end })}
+            outputSeconds={clipSeconds}
+          />
         </Panel>
 
         {result && (

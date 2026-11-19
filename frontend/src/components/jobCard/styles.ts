@@ -152,6 +152,10 @@ export const useJobCardStyles = makeStyles({
     flexGrow: 1,
     minWidth: 0,
   },
+  subtaskUrl: {
+    paddingLeft: "24px",
+    marginTop: "-4px",
+  },
   subtaskError: {
     color: tokens.colorPaletteRedForeground1,
     wordBreak: "break-word",

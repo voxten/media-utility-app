@@ -182,7 +182,10 @@
       "detailUpscaleGenMissing": "Wymaga pobrania wag modelu realesr-general-x4v3.pth (~4.8 MB)",
       "detailUpscaleAnimeMissing": "Wymaga pobrania wag modelu RealESRGAN_x4plus_anime_6B.pth (~17.9 MB)",
       "detailWhisperModelOnly": "Wymaga pobrania modelu",
-      "detailWhisperFull": "Wymaga instalacji faster-whisper oraz modelu"
+      "detailWhisperFull": "Wymaga instalacji faster-whisper oraz modelu",
+      "detailTorchOnly": "Wymaga instalacji PyTorch",
+      "detailUpscaleFull": "Wymaga instalacji PyTorch oraz modelu",
+      "detailAddonDamaged": "Instalacja jest uszkodzona (brakuje plików). Zainstaluj ponownie, żeby ją naprawić."
     },
     "depOk": "Dostępne",
     "depMissing": "Brak",
@@ -332,7 +335,6 @@
     "before": "Przed",
     "after": "Po",
     "saveError": "Nie udało się zapisać pliku",
-    "andMore": "+ {{count}} więcej",
     "addFiles": "Dodaj pliki",
     "files": "Pliki",
     "eta": "zostało {{time}}",
@@ -368,7 +370,12 @@
     "skippedFiles_one": "Pominięto {{count}} plik: to narzędzie go nie otworzy",
     "skippedFiles_few": "Pominięto {{count}} pliki: to narzędzie ich nie otworzy",
     "skippedFiles_many": "Pominięto {{count}} plików: to narzędzie ich nie otworzy",
-    "skippedFiles_other": "Pominięto {{count}} pliku: to narzędzie ich nie otworzy"
+    "skippedFiles_other": "Pominięto {{count}} pliku: to narzędzie ich nie otworzy",
+    "backToOptions": "Zmień opcje",
+    "trimStart": "Początek",
+    "trimEnd": "Koniec",
+    "trimLength": "Długość {{duration}}",
+    "dragToReorder": "Przeciągnij, aby zmienić kolejność"
   },
   "fileTypes": {
     "images": "Obrazy",
@@ -394,10 +401,8 @@
       "failed": "Nie udało się przekonwertować {{src}}: {{error}}"
     },
     "source": "Źródło",
-    "sourceFile": "Plik",
     "sourceFolder": "Folder",
     "sourceFiles": "Pliki",
-    "inputFile": "Plik obrazu",
     "inputFolder": "Folder wejściowy",
     "fromFormat": "Format źródłowy",
     "swap": "Zamień formaty",
@@ -418,7 +423,6 @@
     "filesSelected_many": "Wybrano {{count}} plików",
     "filesSelected_other": "Wybrano {{count}} pliku",
     "idle": {
-      "pickFile": "Wybierz plik obrazu.",
       "pickFolder": "Wybierz folder z obrazami.",
       "pickFiles": "Dodaj obrazy do konwersji.",
       "ready_one": "{{count}} plik gotowy do konwersji",
@@ -578,7 +582,9 @@
       "fromImagesError": "Nie udało się utworzyć pliku PDF",
       "extractSuccess": "Wyodrębniono tekst do pliku",
       "extractError": "Nie udało się wyodrębnić tekstu"
-    }
+    },
+    "rotateLeft": "Obróć o 90° w lewo",
+    "rotateAll": "Obróć wszystkie strony o 90° w prawo"
   },
   "duplicates": {
     "status": {
@@ -587,7 +593,9 @@
       "scanning": "Analiza: {{file}}",
       "grouping": "Grupowanie podobnych plików…",
       "thumbnails": "Wczytywanie podglądów znalezionych plików…",
-      "done": "Gotowe. Znalezione grupy: {{groups}}"
+      "done": "Gotowe. Znalezione grupy: {{groups}}",
+      "trashing": "Przenoszenie do Kosza: {{file}}",
+      "trashed": "Przeniesiono do Kosza: {{count}}"
     },
     "log": {
       "corrupted": "Nie można odczytać (uszkodzony?): {{file}}"
@@ -656,7 +664,12 @@
     "groupTitle_one": "Grupa {{index}} · {{count}} plik",
     "groupTitle_few": "Grupa {{index}} · {{count}} pliki",
     "groupTitle_many": "Grupa {{index}} · {{count}} plików",
-    "groupTitle_other": "Grupa {{index}} · {{count}} pliku"
+    "groupTitle_other": "Grupa {{index}} · {{count}} pliku",
+    "allSelected": "Zaznaczono wszystkie kopie",
+    "confirmAllCopies_one": "W {{count}} grupie zaznaczono wszystkie kopie, więc nie zostanie żadna.",
+    "confirmAllCopies_few": "W {{count}} grupach zaznaczono wszystkie kopie, więc nie zostanie z nich żadna.",
+    "confirmAllCopies_many": "W {{count}} grupach zaznaczono wszystkie kopie, więc nie zostanie z nich żadna.",
+    "confirmAllCopies_other": "W {{count}} grupach zaznaczono wszystkie kopie, więc nie zostanie z nich żadna."
   },
   "tts": {
     "status": {
@@ -826,6 +839,10 @@
     "download": "Pobierz",
     "downloadAll": "Pobierz wszystkie",
     "addToBatch": "Dopisz do kolejki",
+    "batchTitle_one": "{{count}} link",
+    "batchTitle_few": "{{count}} linki",
+    "batchTitle_many": "{{count}} linków",
+    "batchTitle_other": "{{count}} linku",
     "batchPlaceholderRunning": "Wklej kolejne linki, jeden w wierszu, aby dopisać je do kolejki…",
     "summary": "Pobrano: {{done}}/{{total}}",
     "totalSize": "Łączny rozmiar: {{size}}",
@@ -925,7 +942,6 @@
       "needModel": "Pobierz wybrany model AI powyżej, aby rozpocząć."
     },
     "runBtn": "Powiększ",
-    "backToOptions": "Zmień opcje",
     "suffix": "_upscaled",
     "toast": {
       "loadError": "Nie udało się wczytać obrazu.",
@@ -1058,6 +1074,8 @@
     "historyCount": "{{shown}} z {{total}}",
     "copyPath": "Kopiuj ścieżkę",
     "copyError": "Kopiuj treść błędu",
+    "copyLink": "Kopiuj link",
+    "copyLinks": "Kopiuj linki",
     "copied": "Skopiowano",
     "progressBytes": "{{done}} z {{total}}",
     "summary": {
@@ -1074,10 +1092,6 @@
       "pages_few": "{{count}} strony",
       "pages_many": "{{count}} stron",
       "pages_other": "{{count}} strony",
-      "rotatedPages_one": "obrócono {{count}} stronę",
-      "rotatedPages_few": "obrócono {{count}} strony",
-      "rotatedPages_many": "obrócono {{count}} stron",
-      "rotatedPages_other": "obrócono {{count}} strony",
       "chars_one": "{{count}} znak",
       "chars_few": "{{count}} znaki",
       "chars_many": "{{count}} znaków",
@@ -1443,9 +1457,6 @@
     "dropHint": "Obsługiwane: {{formats}}",
     "changeVideo": "Zmień film",
     "crop": "Kadruj",
-    "start": "Początek",
-    "end": "Koniec",
-    "length": "Długość {{duration}}",
     "frameCount_one": "{{count}} klatka",
     "frameCount_few": "{{count}} klatki",
     "frameCount_many": "{{count}} klatek",
@@ -1542,6 +1553,7 @@
     "archiveIncomplete": "Pobrane archiwum nie zawiera: {{files}}.",
     "installFailed": "Instalacja nie powiodła się, kod {{code}}. Szczegóły są w logu.",
     "addonBroken": "Dodatek się zainstalował, ale nie daje się uruchomić. Szczegóły są w logu.",
+    "addonMoveInterrupted": "Nie udało się przenieść dodatku na miejsce. Uruchom Media Studio ponownie, żeby dokończyć instalację.",
     "addonMissing": "To narzędzie potrzebuje dodatku. Zainstaluj go w Ustawienia → Zależności.",
     "modelMissing": "Model nie jest zainstalowany. Zainstaluj go w Ustawienia → Zależności.",
     "nothingProcessed": "Nie udało się przetworzyć żadnego pliku. Szczegóły są w logu.",

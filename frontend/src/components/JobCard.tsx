@@ -23,7 +23,7 @@ import { JobMenu } from "./jobCard/JobMenu";
 import { useJobCardStyles } from "./jobCard/styles";
 import { SubtaskRow } from "./jobCard/SubtaskRow";
 import { jobInfoLine, SEPARATOR } from "./jobCard/summary";
-import { extractSubtasks, openTarget, revealTarget, transferTargets } from "./jobCard/targets";
+import { extractSubtasks, jobLinks, openTarget, revealTarget, transferTargets } from "./jobCard/targets";
 import { useLiveElapsed } from "./LiveElapsed";
 
 function StatusBadge({ status }: { status: JobState["status"] }) {
@@ -55,6 +55,7 @@ export const JobCard = memo(function JobCard({ job, onNavigate, saved, when = sa
   const tool = toolForJob(job.kind);
   const Icon = tool?.icon;
   const subtasks = useMemo(() => extractSubtasks(job), [job]);
+  const links = useMemo(() => jobLinks(job, subtasks), [job, subtasks]);
 
   const running = job.status === "running";
   const done = job.status === "done";
@@ -149,6 +150,7 @@ export const JobCard = memo(function JobCard({ job, onNavigate, saved, when = sa
               resultFiles={resultFiles}
               copyPath={copyPath}
               errorText={errorText}
+              links={links}
               onNavigate={onNavigate}
             />
           )}

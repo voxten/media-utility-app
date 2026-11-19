@@ -1,12 +1,12 @@
 """Health check of optional native/external dependencies shown on the Settings page."""
 
-import importlib.util
 import os
 import shutil
 from pathlib import Path
 from typing import Any, Dict, List, NamedTuple, Optional
 
 from backend.core import whisper_models
+from backend.core.addons import is_damaged, module_available
 from backend.core.paths import bin_dir, models_dir, project_root
 
 LAMA_EXPECTED_SIZE = 205669692
@@ -31,10 +31,18 @@ DEFAULT_REMBG_MODEL = "birefnet-general"
 
 
 def _has_module(name: str) -> bool:
-    try:
-        return importlib.util.find_spec(name) is not None
-    except (ImportError, ValueError):
-        return False
+    return module_available(name)
+
+
+DAMAGED_DETAIL = "settings.deps.detailAddonDamaged"
+# Download sizes shown before installing: the PyTorch CPU wheel and the weights each tool needs.
+TORCH_SIZE_MB = 124.0
+LAMA_SIZE_MB = 196.0
+UPSCALE_SIZE_MB = {"general": 4.8, "anime": 17.9}
+
+
+def _size_label(mb: float) -> str:
+    return f"~{mb:.1f} MB" if mb < 20 else f"~{round(mb)} MB"
 
 
 def ensure_app_paths(custom_ffmpeg: Optional[str] = None) -> None:
@@ -125,12 +133,15 @@ def _mediainfo_ok() -> bool:
 
 def _whisper_dependencies() -> List[Dict[str, Any]]:
     engine_ok = whisper_models.is_engine_installed()
+    engine_damaged = any(is_damaged(name) for name in whisper_models.ENGINE_MODULES)
     items = []
     for model in whisper_models.MODELS.values():
         ok = engine_ok and whisper_models.is_model_downloaded(model.id)
         size = model.size + (0 if engine_ok else whisper_models.ENGINE_SIZE_MB * 1_000_000)
         if ok:
             detail = f"faster-whisper · {model.repo.split('/')[-1]}"
+        elif engine_damaged:
+            detail = DAMAGED_DETAIL
         elif engine_ok:
             detail = "settings.deps.detailWhisperModelOnly"
         else:
@@ -157,26 +168,48 @@ def check_dependencies(custom_ffmpeg: Optional[str] = None) -> List[Dict[str, An
 
     lama_ok = is_lama_ready()
     has_torch = _has_module("torch")
+    # A package whose files went missing is offered for reinstall like a missing one, but says so.
+    torch_damaged = is_damaged("torch")
 
-    if lama_ok:
-        lama_detail = "Model AI LaMa (big-lama.pt)"
-        lama_size = ""
-    elif has_torch:
-        lama_detail = "settings.deps.detailLamaModelOnly"
-        lama_size = "~196 MB"
-    else:
-        lama_detail = "settings.deps.detailLamaFull"
-        lama_size = "~320 MB"
+    def torch_model_detail(ok: bool, name: str, has_model: bool, model_only_detail: str, full_detail: str) -> str:
+        if ok:
+            return name
+        if torch_damaged:
+            return DAMAGED_DETAIL
+        if has_torch:
+            return model_only_detail
+        return "settings.deps.detailTorchOnly" if has_model else full_detail
+
+    def torch_model_size(ok: bool, has_model: bool, model_mb: float) -> str:
+        if ok:
+            return ""
+        return _size_label((0 if has_torch else TORCH_SIZE_MB) + (0 if has_model else model_mb))
+
+    has_lama_model = lama_model_path() is not None
+    lama_detail = torch_model_detail(
+        lama_ok, "Model AI LaMa (big-lama.pt)", has_lama_model, "settings.deps.detailLamaModelOnly", "settings.deps.detailLamaFull"
+    )
+    lama_size = torch_model_size(lama_ok, has_lama_model, LAMA_SIZE_MB)
 
     upscale_gen_ok = is_upscale_ready("general")
     upscale_anime_ok = is_upscale_ready("anime")
     rembg_packages_ok = rembg_packages_ready()
     rembg_ok = rembg_packages_ok and rembg_model_path(DEFAULT_REMBG_MODEL) is not None
-    rembg_detail = (
-        "BiRefNet (rembg + onnxruntime)"
-        if rembg_ok
-        else "settings.deps.detailRembgModelOnly" if rembg_packages_ok else "settings.deps.detailRembgMissing"
-    )
+    if rembg_ok:
+        rembg_detail = "BiRefNet (rembg + onnxruntime)"
+    elif any(is_damaged(name) for name in ("rembg", "onnxruntime")):
+        rembg_detail = DAMAGED_DETAIL
+    elif rembg_packages_ok:
+        rembg_detail = "settings.deps.detailRembgModelOnly"
+    else:
+        rembg_detail = "settings.deps.detailRembgMissing"
+
+    def upscale_detail(ok: bool, model_id: str, name: str, model_only_detail: str) -> str:
+        has_model = upscale_model_path(model_id) is not None
+        return torch_model_detail(ok, name, has_model, model_only_detail, "settings.deps.detailUpscaleFull")
+
+    def upscale_size(ok: bool, model_id: str) -> str:
+        return torch_model_size(ok, upscale_model_path(model_id) is not None, UPSCALE_SIZE_MB[model_id])
 
     return [
         {
@@ -227,20 +260,20 @@ def check_dependencies(custom_ffmpeg: Optional[str] = None) -> List[Dict[str, An
         {
             "id": "upscale_general",
             "ok": upscale_gen_ok,
-            "detail": "Real-ESRGAN General (realesr-general-x4v3)" if upscale_gen_ok else "settings.deps.detailUpscaleGenMissing",
+            "detail": upscale_detail(upscale_gen_ok, "general", "Real-ESRGAN General (realesr-general-x4v3)", "settings.deps.detailUpscaleGenMissing"),
             "usedBy": ["upscale"],
             "required": False,
             "installable": not upscale_gen_ok,
-            "sizeEstimate": "~4.8 MB" if not upscale_gen_ok else "",
+            "sizeEstimate": upscale_size(upscale_gen_ok, "general"),
         },
         {
             "id": "upscale_anime",
             "ok": upscale_anime_ok,
-            "detail": "Real-ESRGAN Anime (anime_6B)" if upscale_anime_ok else "settings.deps.detailUpscaleAnimeMissing",
+            "detail": upscale_detail(upscale_anime_ok, "anime", "Real-ESRGAN Anime (anime_6B)", "settings.deps.detailUpscaleAnimeMissing"),
             "usedBy": ["upscale"],
             "required": False,
             "installable": not upscale_anime_ok,
-            "sizeEstimate": "~17.9 MB" if not upscale_anime_ok else "",
+            "sizeEstimate": upscale_size(upscale_anime_ok, "anime"),
         },
         *_whisper_dependencies(),
     ]

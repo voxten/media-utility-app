@@ -30,6 +30,7 @@ import {
   Search16Filled,
   SelectAllOn16Regular,
   Video24Regular,
+  Warning16Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { create } from "zustand";
@@ -68,6 +69,12 @@ interface ScanResult {
   scanned: number;
   failed: number;
   mode: Mode;
+}
+
+interface TrashResult {
+  removed: string[];
+  failed: number;
+  errors: { path: string; error: string }[];
 }
 
 interface DuplicatesState {
@@ -217,7 +224,24 @@ export default function DuplicatesPage() {
     onError: (error) => notify.error(t("duplicates.toast.error"), { body: error }),
   });
 
+  const trashRunner = useJobRunner<TrashResult>("duplicates.trash", {
+    onResult: (result) => removeFromResults(new Set(result.removed)),
+    onDone: (result) => {
+      if (result.removed.length) notify.success(t("duplicates.toast.trashed", { count: result.removed.length }));
+      if (result.failed) {
+        const body = result.errors
+          .slice(0, 3)
+          .map((e) => `${e.path}: ${errorMessage(t, e.error)}`)
+          .join("\n");
+        notify.error(t("duplicates.toast.trashError", { count: result.failed }), { body });
+      }
+    },
+    onError: (error) => notify.error(t("duplicates.toast.trashError", { count: 1 }), { body: error }),
+  });
+  const busy = runner.running || trashRunner.running;
+
   const groups = useMemo(() => form.groups ?? [], [form.groups]);
+  const fullySelected = useMemo(() => new Set(groups.filter((g) => g.every((i) => form.selected.has(i.path)))), [groups, form.selected]);
   const totals = useMemo(() => {
     const files = groups.reduce((n, g) => n + g.length, 0);
     const wasted = groups.reduce((n, g) => {
@@ -244,34 +268,26 @@ export default function DuplicatesPage() {
     form.set({ selected });
   };
 
-  const removeFromResults = (paths: Set<string>) => {
-    const next = groups.map((g) => g.filter((i) => !paths.has(i.path))).filter((g) => g.length > 1);
-    const selected = new Set([...form.selected].filter((p) => !paths.has(p)));
-    form.set({ groups: next, selected });
-  };
+  // Reads the store, not this render's state: the result can arrive after the page was left and reopened.
+  function removeFromResults(paths: Set<string>) {
+    const { groups: current, selected } = useForm.getState();
+    if (!current) return;
+    const next = current.map((g) => g.filter((i) => !paths.has(i.path))).filter((g) => g.length > 1);
+    form.set({ groups: next, selected: new Set([...selected].filter((p) => !paths.has(p))) });
+  }
 
   const trash = async (paths: string[]) => {
-    if (!paths.length) return;
+    if (!paths.length || busy) return;
+    const chosen = new Set(paths);
+    const emptied = groups.filter((g) => g.every((i) => chosen.has(i.path))).length;
     const ok = await confirm({
       title: t("duplicates.confirmTitle", { count: paths.length }),
-      body: t("duplicates.confirmBody"),
+      body: [emptied > 0 && t("duplicates.confirmAllCopies", { count: emptied }), t("duplicates.confirmBody")].filter(Boolean).join(" "),
       confirmLabel: t("duplicates.moveToTrash"),
       danger: true,
     });
     if (!ok) return;
-    const removed = new Set<string>();
-    const failures: string[] = [];
-    for (const path of paths) {
-      try {
-        await api.system.trash(path);
-        removed.add(path);
-      } catch (err) {
-        failures.push(`${path}: ${errorMessage(t, err)}`);
-      }
-    }
-    removeFromResults(removed);
-    if (removed.size) notify.success(t("duplicates.toast.trashed", { count: removed.size }));
-    if (failures.length) notify.error(t("duplicates.toast.trashError", { count: failures.length }), { body: failures.slice(0, 3).join("\n") });
+    trashRunner.start(() => api.duplicates.trash(paths)).catch((err) => notify.error(errorMessage(t, err)));
   };
 
   const exportCsv = async () => {
@@ -285,21 +301,27 @@ export default function DuplicatesPage() {
     }
   };
 
-  const canStart = !!form.folder && !runner.running;
+  const canStart = !!form.folder && !busy;
   const start = () =>
     runner.start(() => api.duplicates.scan(form.folder, form.mode, form.threshold)).catch((err) => notify.error(t("duplicates.toast.error"), { body: errorMessage(t, err) }));
 
+  const changeFolder = (folder: string) => {
+    if (folder === useForm.getState().folder) return;
+    runner.reset();
+    form.set({ folder, groups: null, selected: new Set() });
+  };
+
   const pickFolder = async () => {
+    if (busy) return;
     const folder = await api.dialogs.openFolder(form.folder);
-    if (folder) form.set({ folder });
+    if (folder) changeFolder(folder);
   };
 
   // A dropped file stands for the folder it is in.
   const dropFolder = async ([path]: string[]) => {
-    if (!path) return;
+    if (!path || busy) return;
     const info = await api.system.pathInfo(path).catch(() => null);
-    const folder = info && !info.isDir && info.parent ? info.parent : path;
-    form.set({ folder, groups: null, selected: new Set() });
+    changeFolder(info && !info.isDir && info.parent ? info.parent : path);
   };
 
   useToolShortcuts({ run: canStart && start, open: pickFolder });
@@ -309,7 +331,7 @@ export default function DuplicatesPage() {
       <Panel
         title={t("duplicates.setup")}
         actions={
-          <TabList size="small" selectedValue={form.mode} onTabSelect={(_, d) => form.set({ mode: d.value as Mode, groups: null, selected: new Set() })}>
+          <TabList size="small" disabled={busy} selectedValue={form.mode} onTabSelect={(_, d) => form.set({ mode: d.value as Mode, groups: null, selected: new Set() })}>
             <Tab value="image" icon={<Image24Regular />}>
               {t("duplicates.images")}
             </Tab>
@@ -337,7 +359,7 @@ export default function DuplicatesPage() {
           }}
         >
           <Field label={t("duplicates.folder")}>
-            <PathPicker value={form.folder} onChange={(folder) => form.set({ folder })} />
+            <PathPicker value={form.folder} onChange={changeFolder} disabled={busy} />
           </Field>
           <SliderField
             label={t("duplicates.sensitivity")}
@@ -390,6 +412,11 @@ export default function DuplicatesPage() {
                         <Text weight="semibold" className={styles.groupTitle}>
                           {t("duplicates.groupTitle", { index: gi + 1, count: group.length })}
                         </Text>
+                        {fullySelected.has(group) && (
+                          <Badge appearance="tint" color="danger" icon={<Warning16Regular />}>
+                            {t("duplicates.allSelected")}
+                          </Badge>
+                        )}
                         <Caption1 className={styles.muted}>{formatBytes(group.reduce((s, i) => s + i.size, 0))}</Caption1>
                       </div>
                       <div className={styles.items}>
@@ -416,7 +443,7 @@ export default function DuplicatesPage() {
       {runner.job && runner.job.logs.length > 0 && <LogPanel logs={runner.job.logs} title={t("duplicates.logTitle")} />}
 
       <ActionBar
-        job={runner.running ? runner.job : undefined}
+        job={trashRunner.running ? trashRunner.job : runner.running ? runner.job : undefined}
         idleText={
           form.selected.size
             ? t("duplicates.idle.selected", { count: form.selected.size, size: formatBytes(totals.selectedBytes) })
@@ -424,11 +451,11 @@ export default function DuplicatesPage() {
               ? t("duplicates.idle.ready")
               : t("duplicates.idle.pickFolder")
         }
-        onCancel={runner.cancel}
+        onCancel={trashRunner.running ? trashRunner.cancel : runner.cancel}
       >
         {form.selected.size > 0 && (
           <Tooltip content={t("duplicates.trashHint")} relationship="description">
-            <Button icon={<Delete16Regular />} onClick={() => trash([...form.selected])}>
+            <Button icon={<Delete16Regular />} disabled={busy} onClick={() => trash([...form.selected])}>
               {t("duplicates.trashSelected", { count: form.selected.size })}
             </Button>
           </Tooltip>

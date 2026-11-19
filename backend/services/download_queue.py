@@ -222,6 +222,9 @@ class ActiveBatchQueue:
                 self.items.append(entry)
                 self.ctx.partial({**entry, "status": "pending"})
                 added_count += 1
+            urls_now = [item["url"] for item in self.items]
+        # Kept in the job's history even when the queue never finishes and leaves no result.
+        self.ctx.describe(urls=urls_now)
         self.save()
         return added_count
 

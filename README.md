@@ -45,7 +45,7 @@ Other features:
 
 Uninstalling asks whether to remove the settings, history, cookies, models and add-ons as well. Files you saved are never removed.
 
-Third-party components and their licenses are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Media Studio is licensed under the [GNU Affero General Public License v3.0 or later](LICENSE). Third-party components and their licenses are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Requirements
 

@@ -253,7 +253,7 @@ export default function UpscalePage() {
           {t("upscale.runBtn")}
         </Button>
       }
-      resultActions={<Button onClick={() => form.set({ result: null })}>{t("upscale.backToOptions")}</Button>}
+      resultActions={<Button onClick={() => form.set({ result: null })}>{t("common.backToOptions")}</Button>}
       onContinue={() => form.result && load(form.result.resultPath, true)}
     />
   );

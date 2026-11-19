@@ -34,6 +34,18 @@ describe("filterHistory", () => {
     expect(ids(filterHistory(entries, { ...EMPTY_FILTER, query: "downloads" }, title))).toEqual([]);
   });
 
+  it("finds a download by its link or a queue item's title", () => {
+    const downloads = [
+      entry("single", { kind: "download", title: "Clip", meta: { url: "https://youtu.be/abc" } }),
+      entry("queue", { kind: "download.batch", items: [{ index: 0, url: "https://x.com/u/status/1", title: "Kot na rowerze" }] }),
+      entry("cancelled", { kind: "download.batch", status: "cancelled", meta: { urls: ["https://vimeo.com/42"] } }),
+    ];
+    expect(ids(filterHistory(downloads, { ...EMPTY_FILTER, query: "youtu.be" }, title))).toEqual(["single"]);
+    expect(ids(filterHistory(downloads, { ...EMPTY_FILTER, query: "x.com" }, title))).toEqual(["queue"]);
+    expect(ids(filterHistory(downloads, { ...EMPTY_FILTER, query: "kot" }, title))).toEqual(["queue"]);
+    expect(ids(filterHistory(downloads, { ...EMPTY_FILTER, query: "vimeo" }, title))).toEqual(["cancelled"]);
+  });
+
   it("filters by tool and status", () => {
     expect(ids(filterHistory(entries, { ...EMPTY_FILTER, tool: "pdf_split" }, title))).toEqual(["pdf"]);
     expect(ids(filterHistory(entries, { query: "", tool: ALL, status: "done" }, title))).toEqual(["webp", "clip"]);

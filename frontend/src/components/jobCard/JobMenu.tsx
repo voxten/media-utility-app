@@ -1,5 +1,5 @@
 import { Button, Menu, MenuItem, MenuList, MenuPopover, MenuTrigger, Tooltip } from "@fluentui/react-components";
-import { ArrowRight16Regular, Copy16Regular, MoreHorizontal16Regular } from "@fluentui/react-icons";
+import { ArrowRight16Regular, Copy16Regular, Link16Regular, MoreHorizontal16Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import type { ToolDefinition } from "../../app/tools";
 import { navigate } from "../../lib/router";
@@ -11,11 +11,13 @@ interface JobMenuProps {
   resultFiles: string[];
   copyPath: string | null;
   errorText: string;
+  /** Links the job downloaded from. */
+  links: string[];
   onNavigate?: () => void;
 }
 
-/** The card's "⋯" menu: "Send to", "Copy path", "Copy error" and "Open tool", each only when it applies. */
-export function JobMenu({ tool, resultFiles, copyPath, errorText, onNavigate }: JobMenuProps) {
+/** The card's "⋯" menu: "Send to", "Copy path", "Copy link(s)", "Copy error" and "Open tool", each only when it applies. */
+export function JobMenu({ tool, resultFiles, copyPath, errorText, links, onNavigate }: JobMenuProps) {
   const { t } = useTranslation();
   const notify = useNotify();
   const Icon = tool?.icon;
@@ -42,6 +44,11 @@ export function JobMenu({ tool, resultFiles, copyPath, errorText, onNavigate }: 
     copyPath && (
       <MenuItem key="path" icon={<Copy16Regular />} onClick={() => copy(copyPath)}>
         {t("jobs.copyPath")}
+      </MenuItem>
+    ),
+    links.length > 0 && (
+      <MenuItem key="links" icon={<Link16Regular />} onClick={() => copy(links.join("\n"))}>
+        {links.length === 1 ? t("jobs.copyLink") : t("jobs.copyLinks")}
       </MenuItem>
     ),
     errorText && (

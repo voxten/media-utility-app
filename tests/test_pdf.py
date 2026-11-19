@@ -120,17 +120,6 @@ def test_images_to_pdf(tmp_path, ctx):
     assert out_pdf.is_file()
 
 
-def test_rotate_pages(tmp_path, ctx):
-    src = tmp_path / "doc.pdf"
-    _make_pdf(src, ["P1", "P2"])
-    out = tmp_path / "rotated.pdf"
-    res = pdf.rotate_pages(ctx, str(src), [0], 90, str(out))
-    assert res["rotatedCount"] == 1
-    with fitz.open(str(out)) as doc:
-        assert doc[0].rotation == 90
-        assert doc[1].rotation == 0
-
-
 def test_extract_text(tmp_path, ctx):
     src = tmp_path / "doc.pdf"
     _make_pdf(src, ["Hello World", "Second Page Text"])
@@ -166,26 +155,14 @@ def test_pdf_to_images_does_not_overwrite(tmp_path, ctx):
     assert len(list(out.iterdir())) == 2
 
 
-def test_compress_keeps_the_source_and_rotate_can_replace_it(tmp_path, ctx):
+def test_compress_keeps_the_source(tmp_path, ctx):
     src = tmp_path / "doc.pdf"
     _make_pdf(src, ["P1", "P2"])
     res = pdf.compress(ctx, str(src), str(src))
     assert Path(res["outPath"]).name == "doc (1).pdf"
     assert _page_texts(res["outPath"]) == ["P1", "P2"]
     Path(res["outPath"]).unlink()
-
-    res = pdf.rotate_pages(ctx, str(src), [0, 7], 90, str(src))
-    assert res["rotatedCount"] == 1
-    with fitz.open(str(src)) as doc:
-        assert [page.rotation for page in doc] == [90, 0]
     assert sorted(p.name for p in tmp_path.iterdir()) == ["doc.pdf"]
-
-
-def test_rotate_rejects_angles_that_are_not_right_angles(tmp_path, ctx):
-    src = tmp_path / "doc.pdf"
-    _make_pdf(src, ["P1"])
-    with pytest.raises(ValueError):
-        pdf.rotate_pages(ctx, str(src), [0], 45, str(tmp_path / "out.pdf"))
 
 
 def test_extract_text_page_markers_are_language_neutral(tmp_path, ctx):

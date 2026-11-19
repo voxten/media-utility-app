@@ -211,9 +211,13 @@ export default function DownloadPage() {
   const extra = activeJob?.status === "running" ? activeJob.extra : {};
   const speed = typeof extra.speed === "number" ? extra.speed : undefined;
   const eta = typeof extra.eta === "number" ? extra.eta : undefined;
+  const sizes =
+    typeof extra.downloaded === "number" && typeof extra.total === "number" && extra.total > 0
+      ? `${formatBytes(extra.downloaded)} / ${formatBytes(extra.total)}`
+      : undefined;
   const detail =
     speed != null
-      ? `${formatBytes(Number(extra.downloaded))} / ${formatBytes(Number(extra.total))} · ${formatBytes(speed)}/s · ${t("common.eta", { time: formatDuration(Number(eta)) })}`
+      ? [sizes, `${formatBytes(speed)}/s`, eta != null && t("common.eta", { time: formatDuration(eta) })].filter(Boolean).join(" · ")
       : undefined;
 
   const runProbe = () => {
@@ -295,6 +299,26 @@ export default function DownloadPage() {
       ? urls.length > 0 && !!outdir
       : !running && !!outdir && !!form.probe && (form.probe.isPlaylist ? selectedUrls.length > 0 : !!form.formatId);
   const showBatchFormat = form.tab === "batch" || !!form.probe?.isPlaylist;
+
+  const canClear =
+    !running && !!(form.url || form.probe || form.batchText || lastBatch || download.job || batch.job || probe.job);
+
+  const clearAll = () => {
+    form.set({
+      url: "",
+      probe: null,
+      formatId: "",
+      selectedEntries: [],
+      clip: false,
+      clipStart: "",
+      clipEnd: "",
+      batchText: "",
+      lastBatch: null,
+    });
+    probe.reset();
+    download.reset();
+    batch.reset();
+  };
 
   useToolShortcuts({ run: canDownload && startDownload });
 
@@ -425,8 +449,6 @@ export default function DownloadPage() {
             <BatchQueue
             queue={queue}
             running={batch.running}
-            speed={speed}
-            eta={eta}
             totalSize={batchTotal(batchResult?.totalSize, queue, "size")}
             totalDuration={batchTotal(batchResult?.totalDuration, queue, "duration")}
             />
@@ -453,6 +475,11 @@ export default function DownloadPage() {
         {form.tab === "batch" && failedItems.length > 0 && !running && (
           <Button icon={<ArrowClockwise16Regular />} onClick={retryFailed}>
             {t("download.retryFailed", { count: failedItems.length })}
+          </Button>
+        )}
+        {canClear && (
+          <Button icon={<Dismiss16Regular />} onClick={clearAll}>
+            {t("common.clear")}
           </Button>
         )}
         <Button

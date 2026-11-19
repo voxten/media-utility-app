@@ -3,7 +3,10 @@ import type { JobState } from "../../stores/jobs";
 export interface SubtaskAction {
   id: string | number;
   title: string;
-  status: "pending" | "running" | "done" | "error" | "cancelled";
+  /** The item's link, when it came from one. */
+  url?: string;
+  /** "unknown" for a link of a queue that ended before reporting this item. */
+  status: "pending" | "running" | "done" | "error" | "cancelled" | "skipped" | "unknown";
   percent?: number;
   speed?: number;
   eta?: number;
@@ -27,6 +30,7 @@ export function extractSubtasks(job: JobState): SubtaskAction[] {
           items.set(idx, {
             id: idx,
             title: rawTitle,
+            url: typeof item.url === "string" && item.url ? item.url : existing?.url,
             status,
             error: item.error ? String(item.error) : existing?.error,
             percent: typeof item.percent === "number" ? item.percent : existing?.percent,
@@ -51,6 +55,7 @@ export function extractSubtasks(job: JobState): SubtaskAction[] {
             items.set(idx, {
               id: idx,
               title: rawTitle,
+              url: typeof p.url === "string" && p.url ? p.url : items.get(idx)?.url,
               status,
               percent: status === "done" ? 100 : undefined,
               error: p.error ? String(p.error) : undefined,
@@ -61,6 +66,10 @@ export function extractSubtasks(job: JobState): SubtaskAction[] {
         }
       }
     }
+  }
+
+  if (items.size === 0 && job.status !== "running") {
+    job.meta?.urls?.forEach((url, index) => items.set(index, { id: index, title: url, url, status: "unknown" }));
   }
 
   if (job.status === "running" && typeof job.extra?.item === "number") {
@@ -85,6 +94,13 @@ export function extractSubtasks(job: JobState): SubtaskAction[] {
   });
 
   return list;
+}
+
+/** The links a job downloaded from: its one link, or every link of its queue. */
+export function jobLinks(job: JobState, subtasks: SubtaskAction[]): string[] {
+  if (job.meta?.url) return [job.meta.url];
+  const fromItems = subtasks.map((s) => s.url).filter((url): url is string => !!url);
+  return [...new Set(fromItems.length > 0 ? fromItems : (job.meta?.urls ?? []))];
 }
 
 /** Where "Show in folder" points: a saved file or the output folder, never an unsaved preview (resultPath). */

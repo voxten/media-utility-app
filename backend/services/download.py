@@ -912,6 +912,7 @@ def download(
     """
     t0 = time.monotonic()
     url = sanitize_x_url(url)
+    ctx.describe(url=url)
     Path(outdir).expanduser().mkdir(parents=True, exist_ok=True)
     target_codec = audio_codec if audio_codec in AUDIO_CODECS else "mp3"
     share = SUBTITLE_SHARE if _wants_subtitles(subtitles) else 0.0

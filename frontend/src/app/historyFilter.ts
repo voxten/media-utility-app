@@ -20,14 +20,20 @@ export const EMPTY_FILTER: HistoryFilter = { query: "", tool: ALL, status: ALL }
 const normalize = (s: string) =>
   s.toLocaleLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "").replace(/ł/g, "l");
 
-/** Entries matching the filter; the query is looked up in the shown title and the output file names. */
+const searchedLinks = (entry: HistoryEntry) => [
+  entry.meta?.url ?? "",
+  ...(entry.meta?.urls ?? []),
+  ...(entry.items ?? []).flatMap((item) => [item.url ?? "", item.title ?? ""]),
+];
+
+/** Entries matching the filter; the query is looked up in the shown title, the output file names and the links. */
 export function filterHistory(entries: HistoryEntry[], filter: HistoryFilter, title: (entry: HistoryEntry) => string) {
   const query = normalize(filter.query.trim());
   return entries.filter((entry) => {
     if (filter.tool !== ALL && toolForJob(entry.kind)?.id !== filter.tool) return false;
     if (filter.status !== ALL && entry.status !== filter.status) return false;
     if (!query) return true;
-    return normalize([title(entry), ...entry.outputs.map(fileName)].join("\n")).includes(query);
+    return normalize([title(entry), ...entry.outputs.map(fileName), ...searchedLinks(entry)].join("\n")).includes(query);
   });
 }
 

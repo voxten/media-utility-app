@@ -155,6 +155,21 @@ export interface JobMeta {
   length?: number;
   uploader?: string;
   site?: string;
+  /** The link a download started from. */
+  url?: string;
+  /** The links of a download queue; kept in the history only while the queue left no items. */
+  urls?: string[];
+}
+
+/** One queue item kept in the history: its link, title and outcome. */
+export interface HistoryItem {
+  index: number;
+  url?: string;
+  title?: string;
+  status?: "done" | "error" | "skipped" | "cancelled";
+  error?: string;
+  size?: number;
+  duration?: number;
 }
 
 /** A finished job kept across restarts (backend/core/history.py). */
@@ -175,6 +190,8 @@ export interface HistoryEntry {
   /** Numbers from the result the job card summarises (backend/core/history.py STAT_KEYS). */
   stats?: Record<string, unknown>;
   meta?: JobMeta;
+  /** Items of a finished queue (backend/core/history.py result_items). */
+  items?: HistoryItem[];
 }
 
 export interface LogEntry {

@@ -180,7 +180,10 @@
       "detailUpscaleGenMissing": "Requires downloading realesr-general-x4v3.pth weights (~4.8 MB)",
       "detailUpscaleAnimeMissing": "Requires downloading RealESRGAN_x4plus_anime_6B.pth weights (~17.9 MB)",
       "detailWhisperModelOnly": "Requires downloading the model",
-      "detailWhisperFull": "Requires installing faster-whisper and the model"
+      "detailWhisperFull": "Requires installing faster-whisper and the model",
+      "detailTorchOnly": "Requires installing PyTorch",
+      "detailUpscaleFull": "Requires installing PyTorch and the model",
+      "detailAddonDamaged": "Installation is damaged (files missing). Install again to repair it."
     },
     "depOk": "Available",
     "depMissing": "Missing",
@@ -322,7 +325,6 @@
     "before": "Before",
     "after": "After",
     "saveError": "Could not save the file",
-    "andMore": "+ {{count}} more",
     "addFiles": "Add files",
     "files": "Files",
     "eta": "{{time}} left",
@@ -354,7 +356,12 @@
       "ready": "Ready to start."
     },
     "skippedFiles_one": "{{count}} file skipped: this tool cannot open it",
-    "skippedFiles_other": "{{count}} files skipped: this tool cannot open them"
+    "skippedFiles_other": "{{count}} files skipped: this tool cannot open them",
+    "backToOptions": "Change options",
+    "trimStart": "Start",
+    "trimEnd": "End",
+    "trimLength": "Length {{duration}}",
+    "dragToReorder": "Drag to reorder"
   },
   "fileTypes": {
     "images": "Images",
@@ -380,10 +387,8 @@
       "failed": "Failed to convert {{src}}: {{error}}"
     },
     "source": "Source",
-    "sourceFile": "File",
     "sourceFolder": "Folder",
     "sourceFiles": "Files",
-    "inputFile": "Image file",
     "inputFolder": "Input folder",
     "fromFormat": "Source format",
     "swap": "Swap formats",
@@ -400,7 +405,6 @@
     "filesSelected_one": "{{count}} file selected",
     "filesSelected_other": "{{count}} files selected",
     "idle": {
-      "pickFile": "Choose an image file.",
       "pickFolder": "Choose a folder with images.",
       "pickFiles": "Add images to convert.",
       "ready_one": "{{count}} file ready to convert",
@@ -544,7 +548,9 @@
       "fromImagesError": "Could not create PDF from images",
       "extractSuccess": "Extracted text to file",
       "extractError": "Could not extract text"
-    }
+    },
+    "rotateLeft": "Rotate 90° counter-clockwise",
+    "rotateAll": "Rotate all pages 90° clockwise"
   },
   "duplicates": {
     "status": {
@@ -553,7 +559,9 @@
       "scanning": "Analysing: {{file}}",
       "grouping": "Grouping similar files…",
       "thumbnails": "Loading previews of the found files…",
-      "done": "Done. Groups found: {{groups}}"
+      "done": "Done. Groups found: {{groups}}",
+      "trashing": "Moving to the Recycle Bin: {{file}}",
+      "trashed": "Moved to the Recycle Bin: {{count}}"
     },
     "log": {
       "corrupted": "Cannot read (corrupted?): {{file}}"
@@ -604,7 +612,10 @@
       "trashError_other": "Could not move {{count}} files"
     },
     "groupTitle_one": "Group {{index}} · {{count}} file",
-    "groupTitle_other": "Group {{index}} · {{count}} files"
+    "groupTitle_other": "Group {{index}} · {{count}} files",
+    "allSelected": "All copies selected",
+    "confirmAllCopies_one": "In {{count}} group every copy is selected, so no copy of it will be left.",
+    "confirmAllCopies_other": "In {{count}} groups every copy is selected, so no copy of them will be left."
   },
   "tts": {
     "status": {
@@ -764,6 +775,8 @@
     "download": "Download",
     "downloadAll": "Download all",
     "addToBatch": "Add to queue",
+    "batchTitle_one": "{{count}} link",
+    "batchTitle_other": "{{count}} links",
     "batchPlaceholderRunning": "Paste more links, one per line, to add them to the queue…",
     "summary": "Downloaded: {{done}}/{{total}}",
     "totalSize": "Total size: {{size}}",
@@ -855,7 +868,6 @@
       "needModel": "Download the selected AI model above to begin."
     },
     "runBtn": "Upscale",
-    "backToOptions": "Change options",
     "suffix": "_upscaled",
     "toast": {
       "loadError": "Could not load image.",
@@ -986,6 +998,8 @@
     "historyCount": "{{shown}} of {{total}}",
     "copyPath": "Copy path",
     "copyError": "Copy error",
+    "copyLink": "Copy link",
+    "copyLinks": "Copy links",
     "copied": "Copied",
     "progressBytes": "{{done}} of {{total}}",
     "summary": {
@@ -996,8 +1010,6 @@
       "files_other": "{{count}} files",
       "pages_one": "{{count}} page",
       "pages_other": "{{count}} pages",
-      "rotatedPages_one": "{{count}} page rotated",
-      "rotatedPages_other": "{{count}} pages rotated",
       "chars_one": "{{count}} character",
       "chars_other": "{{count}} characters",
       "frames_one": "{{count}} frame",
@@ -1345,9 +1357,6 @@
     "dropHint": "Supported: {{formats}}",
     "changeVideo": "Change video",
     "crop": "Crop",
-    "start": "Start",
-    "end": "End",
-    "length": "Length {{duration}}",
     "frameCount_one": "{{count}} frame",
     "frameCount_other": "{{count}} frames",
     "estimatedSize": "≈ {{size}}",
@@ -1438,6 +1447,7 @@
     "archiveIncomplete": "The downloaded archive does not contain {{files}}.",
     "installFailed": "Installation failed with code {{code}}. Details are in the log.",
     "addonBroken": "The add-on was installed but does not start. Details are in the log.",
+    "addonMoveInterrupted": "The add-on could not be moved into place. Restart Media Studio to finish the installation.",
     "addonMissing": "This tool needs an add-on. Install it in Settings → Dependencies.",
     "modelMissing": "The model is not installed. Install it in Settings → Dependencies.",
     "nothingProcessed": "None of the files could be processed. Details are in the log.",

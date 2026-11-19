@@ -1,6 +1,6 @@
 // Batch tab: the link list and the per-link queue with progress and totals.
 
-import { Badge, Caption1, makeStyles, mergeClasses, ProgressBar, Spinner, Text, Textarea, tokens } from "@fluentui/react-components";
+import { Badge, Caption1, makeStyles, ProgressBar, Spinner, Text, Textarea, tokens } from "@fluentui/react-components";
 import { CheckmarkCircle16Filled, CheckmarkCircle16Regular, Clock16Regular, DismissCircle16Filled } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { Panel } from "../../components/Panel";
@@ -64,21 +64,17 @@ const useStyles = makeStyles({
   ok: { color: tokens.colorPaletteGreenForeground1 },
   bad: { color: tokens.colorPaletteRedForeground1 },
   muted: { color: tokens.colorNeutralForeground3 },
-  alignRight: { textAlign: "right" },
   smallIcon: { fontSize: "12px" },
 });
 
 interface BatchQueueProps {
   queue: BatchItem[];
   running: boolean;
-  /** Live speed (bytes/s) and ETA (s) of the item being downloaded. */
-  speed?: number;
-  eta?: number;
   totalSize?: number;
   totalDuration?: number;
 }
 
-export function BatchQueue({ queue, running, speed, eta, totalSize, totalDuration }: BatchQueueProps) {
+export function BatchQueue({ queue, running, totalSize, totalDuration }: BatchQueueProps) {
   const { t } = useTranslation();
   const styles = useStyles();
   const batchText = useDownloadForm((s) => s.batchText);
@@ -130,11 +126,6 @@ export function BatchQueue({ queue, running, speed, eta, totalSize, totalDuratio
                   {isRunning ? (
                     <div className={styles.progress}>
                       <ProgressBar value={(item.percent ?? 0) / 100} thickness="medium" />
-                      {speed != null && (
-                        <Caption1 className={mergeClasses(styles.muted, styles.alignRight)}>
-                          {formatBytes(speed)}/s · {t("common.eta", { time: formatDuration(Number(eta)) })}
-                        </Caption1>
-                      )}
                     </div>
                   ) : isDone ? (
                     <div className={styles.meta}>

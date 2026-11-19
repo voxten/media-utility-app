@@ -10,6 +10,25 @@ The app shows this file (and its Polish translation, [CHANGELOG.pl.md](CHANGELOG
 
 ### Added
 
+- **Video Downloader** and **Instagram** have a "Clear" button that empties the link, the preview and the last result; the folder and options stay.
+- The task history keeps the links a download came from: a queue lists every link with its title and outcome, the "⋯" menu copies the link or links, and the history search finds links too.
+
+### Changed
+
+- A download queue in the Tasks panel is called "3 links" instead of "3 URL".
+- Settings → Dependencies shows the whole download size of an AI tool, including PyTorch when it still has to be installed.
+
+### Fixed
+
+- Settings → Dependencies notices an add-on whose files went missing, for example after an install was cut off, and offers to install it again instead of reporting it as ready.
+- An add-on install cut off by closing the app is finished at the next start, and a package being replaced is never left half copied.
+- Moving the app's data to %LOCALAPPDATA% on another drive no longer leaves half-copied files when the app is closed during the move.
+- Opening Settings with a damaged PyTorch no longer keeps a reinstalled one from loading until the next start.
+
+## [0.15.0] - 2026-11-14
+
+### Added
+
 - **Video Downloader** can download only part of a video: type a time range or pick one of its chapters.
 - **Video Downloader** can cut sponsor segments, self-promotion and subscribe reminders out of YouTube videos with SponsorBlock, also in queues.
 - Settings → Files: cookies can come straight from Firefox, Chrome, Edge, Brave, Opera or Vivaldi when a site has no cookie file, for Video Downloader and Instagram.
@@ -30,6 +49,14 @@ The app shows this file (and its Polish translation, [CHANGELOG.pl.md](CHANGELOG
 - Dropping or choosing files a tool cannot open shows how many were skipped instead of ignoring them silently.
 - Keyboard and screen reader: the jobs popup takes focus when it opens and gives it back when it closes, the command palette announces the highlighted tool, the thumbnail strip can be reached with Tab and browsed with arrow keys (Delete removes a file), and the before/after view buttons say which one is on.
 - Speech rate and Image Upscaler model names are translated.
+- Media Studio is licensed under the GNU Affero General Public License v3.0 or later (LICENSE); the installer copies the license next to the app.
+- **Background Remover** works like Image Upscaler: the button stays off until the AI model is installed, and the result has a "Change options" button; the preview background can still be switched on the result.
+- **GIF Editor** and **Video & Audio Converter** have start and end fields in seconds next to the trim timeline, like Video to GIF.
+- **PDF Converter**: images for a PDF can be dragged into the order of the pages.
+- **Image Converter**: the "File" and "Files" tabs are one list; with one file it shows its format and size.
+- **Duplicate Finder** clears old results when another folder is chosen, marks groups where every copy is selected and warns about them before deleting, and moves files to the Recycle Bin as a task with progress that can be cancelled.
+- **PDF Merger** can rotate a page left as well as right and rotate all pages at once; the page buttons also show when a page has keyboard focus.
+- **Video Downloader** shows speed and time left once, in the bar at the bottom, also for queues.
 
 ### Removed
 

@@ -1,5 +1,5 @@
 import { Caption1, mergeClasses, ProgressBar, Spinner, Text } from "@fluentui/react-components";
-import { CheckmarkCircle16Filled, Clock16Regular, DismissCircle16Filled } from "@fluentui/react-icons";
+import { CheckmarkCircle16Filled, Clock16Regular, DismissCircle16Filled, Link16Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { formatBytes, formatDuration } from "../../lib/format";
 import { translateMessage } from "../../lib/jobMessage";
@@ -32,10 +32,15 @@ export function SubtaskRow({ item }: { item: SubtaskAction }) {
         ? t("common.jobStatus.error")
         : item.status === "pending"
           ? t("jobs.pending")
-          : t(`common.jobStatus.${item.status}`);
+          : item.status === "skipped"
+            ? t("download.itemStatus.skipped")
+            : item.status === "unknown"
+              ? ""
+              : t(`common.jobStatus.${item.status}`);
+  const showUrl = !!item.url && item.url !== item.title;
 
   return (
-    <div className={styles.subtaskItem} title={displayTitle}>
+    <div className={styles.subtaskItem} title={showUrl ? `${displayTitle}\n${item.url}` : displayTitle}>
       <div className={styles.subtaskRow}>
         <div className={styles.subtaskIcon}>
           {isRunning ? (
@@ -44,6 +49,8 @@ export function SubtaskRow({ item }: { item: SubtaskAction }) {
             <CheckmarkCircle16Filled className={styles.okIcon} />
           ) : isError ? (
             <DismissCircle16Filled className={styles.badIcon} />
+          ) : item.status === "unknown" ? (
+            <Link16Regular className={styles.muted} />
           ) : (
             <Clock16Regular className={styles.muted} />
           )}
@@ -51,8 +58,9 @@ export function SubtaskRow({ item }: { item: SubtaskAction }) {
         <Text size={200} weight={isRunning ? "semibold" : "regular"} className={mergeClasses(styles.subtaskTitle, styles.ellipsis)}>
           {displayTitle}
         </Text>
-        <Caption1 className={mergeClasses(styles.infoSide, isError ? styles.badIcon : styles.muted)}>{side}</Caption1>
+        {side && <Caption1 className={mergeClasses(styles.infoSide, isError ? styles.badIcon : styles.muted)}>{side}</Caption1>}
       </div>
+      {showUrl && <Caption1 className={mergeClasses(styles.subtaskUrl, styles.ellipsis, styles.muted)}>{item.url}</Caption1>}
       {isRunning && <ProgressBar value={item.percent == null ? undefined : item.percent / 100} thickness="medium" />}
       {isError && item.error && <Caption1 className={styles.subtaskError}>{translateMessage(t, item.error)}</Caption1>}
     </div>

@@ -5,6 +5,7 @@ identical Qt tabs).
 """
 
 import csv
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -14,8 +15,10 @@ import imagehash
 import numpy as np
 from PIL import Image
 
-from backend.core import thumbs
+from backend.core import system, thumbs
 from backend.core.jobs import JobContext
+
+logger = logging.getLogger(__name__)
 
 VIDEO_EXTENSIONS = (".mp4", ".mkv", ".avi", ".mov", ".flv", ".wmv", ".m4v", ".webm")
 IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tiff", ".tif", ".gif")
@@ -304,3 +307,24 @@ def export_csv(groups: List[List[Dict[str, Any]]], out_path: str) -> str:
                     ]
                 )
     return out_path
+
+
+def trash(ctx: JobContext, paths: List[str]) -> Dict[str, Any]:
+    """Move files to the Recycle Bin one by one; a failed file is reported and the rest go on.
+
+    Cancelling stops before the next file and still returns what was moved, so the results stay true.
+    """
+    removed: List[str] = []
+    errors: List[Dict[str, str]] = []
+    for idx, path in enumerate(paths):
+        if ctx.cancelled:
+            break
+        ctx.progress(idx / len(paths) * 100, "duplicates.status.trashing", {"file": Path(path).name})
+        try:
+            system.move_to_trash(path)
+            removed.append(path)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Moving %s to the Recycle Bin failed: %s", path, exc)
+            errors.append({"path": path, "error": "errors.pathMissing" if isinstance(exc, FileNotFoundError) else "errors.trashFailed"})
+    ctx.progress(100, "duplicates.status.trashed", {"count": len(removed)})
+    return {"removed": removed, "count": len(removed), "failed": len(errors), "errors": errors}

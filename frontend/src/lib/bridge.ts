@@ -193,14 +193,13 @@ export const api = {
     toImages: (path: string, outDir: string, fmt: "png" | "jpeg" | "webp", dpi: number, rangeSpec = "") =>
       call<JobId>("pdf", "pdf_to_images", path, outDir, fmt, dpi, rangeSpec),
     fromImages: (paths: string[], outPath: string) => call<JobId>("pdf", "images_to_pdf", paths, outPath),
-    rotate: (path: string, pages: number[], angle: number, outPath: string) =>
-      call<JobId>("pdf", "rotate_pages", path, pages, angle, outPath),
     extractText: (path: string, outPath: string) => call<JobId>("pdf", "extract_text", path, outPath),
   },
   duplicates: {
     scan: (folder: string, mode: "video" | "image", threshold?: number) =>
       call<JobId>("duplicates", "scan", folder, mode, threshold ?? 12),
     exportCsv: (groups: unknown[][], outPath: string) => call<string>("duplicates", "export_csv", groups, outPath),
+    trash: (paths: string[]) => call<JobId>("duplicates", "trash", paths),
   },
   tts: {
     voices: (engine: "edge" | "pyttsx3") =>

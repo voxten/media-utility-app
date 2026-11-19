@@ -42,6 +42,23 @@ const mockHistory = (now: number): HistoryEntry[] => [
   {
     id: "hist2", kind: "download", title: "Big Buck Bunny", status: "done", startedAt: now - 26 * HOUR - 95, finishedAt: now - 26 * HOUR,
     error: null, outputs: ["C:\\Users\\demo\\Downloads\\Big Buck Bunny.mp4"], available: false,
+    meta: { url: "https://www.youtube.com/watch?v=aqz-KE-bpKQ" },
+  },
+  {
+    id: "hist4", kind: "download.batch", title: 'download.batchTitle|{"count":3}', status: "done",
+    startedAt: now - 27 * HOUR - 300, finishedAt: now - 27 * HOUR, error: null,
+    outputs: ["C:\\Users\\demo\\Downloads\\Sintel.mp4", "C:\\Users\\demo\\Downloads\\Tears of Steel.mp4"], available: true,
+    stats: { succeeded: 2, failed: 1, total: 3 },
+    items: [
+      { index: 0, url: "https://www.youtube.com/watch?v=eRsGyueVLvQ", title: "Sintel", status: "done", size: 182_000_000 },
+      { index: 1, url: "https://www.youtube.com/watch?v=R6MlUcmOul8", title: "Tears of Steel", status: "done", size: 240_000_000 },
+      { index: 2, url: "https://x.com/demo/status/1", status: "error", error: "Video unavailable" },
+    ],
+  },
+  {
+    id: "hist5", kind: "download.batch", title: 'download.batchTitle|{"count":2}', status: "cancelled",
+    startedAt: now - 28 * HOUR - 60, finishedAt: now - 28 * HOUR, error: null, outputs: [], available: false,
+    meta: { urls: ["https://www.youtube.com/watch?v=demo1", "https://www.youtube.com/watch?v=demo2"] },
   },
   {
     id: "hist3", kind: "compressor", title: "", status: "error", startedAt: now - 50 * HOUR - 5, finishedAt: now - 50 * HOUR,
@@ -101,7 +118,7 @@ export function createMockBackend(emit: Emit) {
   let history = mockHistory(Date.now() / 1000);
   let mockPendingQueue = ["https://youtube.com/watch?v=left1", "https://youtube.com/watch?v=left2", "https://youtube.com/watch?v=left3"];
   let mockArchiveCount = 42;
-  const NOT_RETRYABLE = ["download.probe", "instagram.probe", "pdf.inspect"];
+  const NOT_RETRYABLE = ["download.probe", "instagram.probe", "pdf.inspect", "duplicates.trash"];
   const NOT_IN_HISTORY = [...NOT_RETRYABLE, "download.engines"];
 
   const simulateJob = (kind: string, title: string, result: unknown, durationMs = 2500): Promise<string> => {
@@ -289,8 +306,6 @@ export function createMockBackend(emit: Emit) {
         simulateJob("pdf.to_images", "images", { files: [`${outDir}\\page_001.png`, `${outDir}\\page_002.png`], count: 2, outDir }),
       images_to_pdf: (_paths: string[], outPath: string) =>
         simulateJob("pdf.from_images", "doc.pdf", { outPath, pageCount: 2, bytes: 500_000 }),
-      rotate_pages: (_path: string, _pages: number[], _angle: number, outPath: string) =>
-        simulateJob("pdf.rotate", "rotated.pdf", { outPath, rotatedCount: 1, bytes: 200_000 }),
       extract_text: (_path: string, outPath: string) =>
         simulateJob("pdf.extract_text", "text.txt", { outPath, charCount: 1200, bytes: 1200 }),
     },
@@ -310,6 +325,7 @@ export function createMockBackend(emit: Emit) {
         return simulateJob(`duplicates.${mode}`, "Pictures", { groups, scanned: 148, failed: 1, mode }, 1500);
       },
       export_csv: (_groups: unknown, outPath: string) => ok(outPath),
+      trash: (paths: string[]) => simulateJob("duplicates.trash", "Pictures", { removed: paths, count: paths.length, failed: 0, errors: [] }, 1500),
     },
     tts: {
       voices: () =>
@@ -374,7 +390,7 @@ export function createMockBackend(emit: Emit) {
         emit("job:started", {
           id: jobId,
           kind: "download.batch",
-          title: `${total} URL`,
+          title: `download.batchTitle|{"count":${total}}`,
           status: "running",
           startedAt: started / 1000,
           finishedAt: null,

@@ -93,8 +93,6 @@ function summarise(t: TFunction, kind: string, r: Result): (string | undefined)[
     case "pdf.split":
     case "pdf.to_images":
       return [countParts(t, "jobs.summary.files", positive(r.count))];
-    case "pdf.rotate":
-      return [countParts(t, "jobs.summary.rotatedPages", positive(r.rotatedCount)), bytes(r.bytes)];
     case "pdf.extract_text":
       return [countParts(t, "jobs.summary.chars", num(r.charCount), 0), bytes(r.bytes)];
     case "media_convert":
@@ -128,6 +126,8 @@ function summarise(t: TFunction, kind: string, r: Result): (string | undefined)[
         countParts(t, "jobs.summary.scanned", positive(r.scanned)),
       ];
     }
+    case "duplicates.trash":
+      return [countParts(t, "jobs.summary.files", positive(r.count)), failedPart(t, r)];
     case "tts":
       return [bytes(r.bytes)];
     default:

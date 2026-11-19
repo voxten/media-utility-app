@@ -28,6 +28,7 @@ import {
 } from "@fluentui/react-components";
 import {
   ArrowRotateClockwise16Regular,
+  ArrowRotateCounterclockwise16Regular,
   ArrowSortDown16Regular,
   Delete16Regular,
   DocumentPdf24Regular,
@@ -113,6 +114,7 @@ const useStyles = makeStyles({
     transitionDuration: tokens.durationFast,
     ":hover": { boxShadow: tokens.shadow8 },
     ":hover .page-actions": { opacity: 1 },
+    ":focus-within .page-actions": { opacity: 1 },
   },
   dragging: { opacity: 0.35 },
   overlay: { cursor: "grabbing", boxShadow: tokens.shadow28, transform: "rotate(2deg)" },
@@ -178,7 +180,7 @@ interface CardProps {
   color: string;
   onRemove?: () => void;
   onPreview?: () => void;
-  onRotate?: () => void;
+  onRotate?: (degrees: number) => void;
   overlay?: boolean;
 }
 
@@ -200,13 +202,22 @@ function PageCardView({ item, index, color, onRemove, onPreview, onRotate, overl
       <span className={styles.index}>{index + 1}</span>
       {!overlay && (
         <div className={`${styles.actions} page-actions`}>
+          <Tooltip content={t("pdf.rotateLeft")} relationship="label">
+            <Button
+              size="small"
+              className={styles.actionButton}
+              icon={<ArrowRotateCounterclockwise16Regular />}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={() => onRotate?.(270)}
+            />
+          </Tooltip>
           <Tooltip content={t("pdf.rotateRight")} relationship="label">
             <Button
               size="small"
               className={styles.actionButton}
               icon={<ArrowRotateClockwise16Regular />}
               onPointerDown={(e) => e.stopPropagation()}
-              onClick={onRotate}
+              onClick={() => onRotate?.(90)}
             />
           </Tooltip>
           <Tooltip content={t("pdf.preview")} relationship="label">
@@ -308,8 +319,8 @@ export default function PdfPage() {
     setPages(arrayMove(pages, from, to));
   };
 
-  const rotatePage = (key: string) => {
-    setPages(pages.map((p) => (p.key === key ? { ...p, rotation: ((p.rotation ?? 0) + 90) % 360 } : p)));
+  const rotate = (degrees: number, key?: string) => {
+    setPages(pages.map((p) => (key === undefined || p.key === key ? { ...p, rotation: ((p.rotation ?? 0) + degrees) % 360 } : p)));
   };
 
   const startMerge = () => {
@@ -351,6 +362,9 @@ export default function PdfPage() {
           actions={
             <div className={styles.toolbar}>
               {inspect.running && <Spinner size="tiny" label={t("pdf.loading")} />}
+              <Tooltip content={t("pdf.rotateAll")} relationship="label">
+                <Button appearance="subtle" icon={<ArrowRotateClockwise16Regular />} disabled={busy || pages.length === 0} onClick={() => rotate(90)} />
+              </Tooltip>
               <Tooltip content={t("pdf.sortByFile")} relationship="label">
                 <Button
                   appearance="subtle"
@@ -390,7 +404,7 @@ export default function PdfPage() {
                     color={colorOf(item.file)}
                     onRemove={() => setPages(pages.filter((p) => p.key !== item.key))}
                     onPreview={() => preview.show(item)}
-                    onRotate={() => rotatePage(item.key)}
+                    onRotate={(degrees) => rotate(degrees, item.key)}
                   />
                 ))}
                 {streaming.map((item, i) => (

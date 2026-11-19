@@ -16,7 +16,15 @@ from typing import Any, Dict, List, Optional, Sequence
 
 from backend.core.errors import AppError
 from backend.core import engines, whisper_models
-from backend.core.addons import activate_addons, addons_dir, is_frozen, merge_staged, pip_install_command, staging_dir
+from backend.core.addons import (
+    activate_addons,
+    addons_dir,
+    is_frozen,
+    is_merge_pending,
+    merge_staged,
+    pip_install_command,
+    staging_dir,
+)
 from backend.core.deps import (
     DEFAULT_REMBG_MODEL,
     LAMA_EXPECTED_SHA256,
@@ -149,6 +157,7 @@ def _run_pip(ctx: JobContext, packages: Sequence[str], target: Optional[Path] = 
 
     The packaged app installs add-ons into a staging folder and moves them into place only when pip
     succeeds, so a cancelled or failed install never leaves a half-copied PyTorch that looks installed.
+    A move that fails half-way keeps the staging folder, and the next start finishes it.
     """
     staged = None
     if target is None and is_frozen():
@@ -157,9 +166,13 @@ def _run_pip(ctx: JobContext, packages: Sequence[str], target: Optional[Path] = 
     try:
         _pip(ctx, pip_install_command(packages, target=target, no_deps=no_deps))
         if staged is not None:
-            merge_staged(staged, addons_dir())
+            try:
+                merge_staged(staged, addons_dir())
+            except OSError as exc:
+                logger.exception("Moving the add-on into place failed")
+                raise AppError("errors.addonMoveInterrupted") from exc
     finally:
-        if staged is not None:
+        if staged is not None and not is_merge_pending(staged):
             shutil.rmtree(staged, ignore_errors=True)
 
     # New packages must be importable in this process without restarting the app.
