@@ -11,6 +11,7 @@ from PIL import Image
 
 from backend.bridge import api
 from backend.core import system
+from backend.core.errors import AppError
 from backend.core.settings import Settings
 from backend.services import compressor, pdf
 from backend.services.converter import ConvertOptions, convert
@@ -55,10 +56,35 @@ class _Jobs:
         self.limits.append(limit)
 
 
+class _Hotkey:
+    def __init__(self, taken=()):
+        self.taken = set(taken)
+        self.combo = ""
+
+    def set(self, combo):
+        if combo in self.taken:
+            raise AppError("errors.hotkeyTaken")
+        self.combo = combo
+
+
 @pytest.fixture
 def settings_api(tmp_path):
-    ctx = SimpleNamespace(settings=Settings(tmp_path / "settings.json"), jobs=_Jobs())
+    ctx = SimpleNamespace(
+        settings=Settings(tmp_path / "settings.json"), jobs=_Jobs(), hotkey=_Hotkey({"ctrl+alt+y"}), hotkey_taken=True
+    )
     return api.SettingsApi(ctx)
+
+
+def test_taken_hotkey_is_not_saved(settings_api):
+    assert settings_api.update({"globalHotkey": "ctrl+alt+d"})["globalHotkey"] == "ctrl+alt+d"
+    assert settings_api._ctx.hotkey_taken is False
+    with pytest.raises(AppError):
+        settings_api.update({"globalHotkey": "ctrl+alt+y", "theme": "dark"})
+    assert settings_api.get()["globalHotkey"] == "ctrl+alt+d"
+    assert settings_api.get()["theme"] != "dark"
+    assert settings_api._ctx.hotkey.combo == "ctrl+alt+d"
+    assert settings_api.reset()["globalHotkey"] == ""
+    assert settings_api._ctx.hotkey.combo == ""
 
 
 def test_settings_update_applies_known_keys(settings_api):

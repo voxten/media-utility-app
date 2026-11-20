@@ -48,3 +48,10 @@ def test_unsupported_text(text):
 
 def test_read_text_never_raises():
     assert isinstance(clipboard.read_text(), str)
+
+
+def test_opened_link_checks_only_known_sites():
+    assert clipboard.opened_link("https://youtu.be/a") == {"url": "https://youtu.be/a", "target": "download", "probe": True}
+    assert clipboard.opened_link("https://vimeo.com/1") == {"url": "https://vimeo.com/1", "target": "download", "probe": False}
+    assert clipboard.link_target("https://www.instagram.com/reel/x/") == "instagram"
+    assert clipboard.link_target("https://notyoutube.com/x") is None

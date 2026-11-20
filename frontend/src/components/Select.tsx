@@ -67,8 +67,8 @@ export function Select<T extends string>({
         aria-label={ariaLabel}
         placeholder={placeholder}
         value={selected?.label ?? ""}
-        selectedOptions={value ? [value] : []}
-        onOptionSelect={(_, d) => d.optionValue && onChange(d.optionValue as T)}
+        selectedOptions={value != null ? [value] : []}
+        onOptionSelect={(_, d) => d.optionValue !== undefined && onChange(d.optionValue as T)}
       >
         {items}
       </Dropdown>

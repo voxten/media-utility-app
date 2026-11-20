@@ -5,6 +5,7 @@
     MediaStudio.exe --selftest report.json   # bundle smoke test (used by scripts/build.py)
     MediaStudio.exe --pip install …          # pip inside the bundle, used to install optional AI packages
     MediaStudio.exe --check-engines ID DIR REPORT  # imports a freshly installed yt-dlp/gallery-dl before it is used
+    MediaStudio.exe "mediastudio://open?url=…"     # a link from the browser bookmark (see backend/core/protocol.py)
 """
 
 import argparse
@@ -18,7 +19,7 @@ from webview.dom import DOMEventHandler
 
 from backend import APP_NAME, APP_VERSION
 from backend.bridge.events import EventBus
-from backend.core import logs, single_instance, win_theme
+from backend.core import logs, protocol, single_instance, win_theme
 from backend.core.addons import PIP_FLAG, activate_addons, finish_interrupted_install, run_pip_main
 from backend.core.engines import CHECK_FLAG, activate_engines, run_check_main
 from backend.core.paths import app_data_dir, clean_cache, migrate_to_local, resource_path
@@ -88,6 +89,10 @@ def resolve_dark(theme: str) -> bool:
 
 
 def main() -> None:
+    # Any web page can start a mediastudio: link, so it never reaches argparse, --dev/--url or a restart.
+    link = protocol.link_from_argv(sys.argv)
+    if link is not None:
+        sys.argv = sys.argv[:1]
     if len(sys.argv) > 1 and sys.argv[1] == PIP_FLAG:
         sys.exit(run_pip_main(sys.argv[2:]))
     if len(sys.argv) > 1 and sys.argv[1] == CHECK_FLAG:
@@ -117,7 +122,7 @@ def main() -> None:
     # A second launch only brings the running (possibly hidden) window back.
     channel = "dev" if args.dev else "app"
     launch_paths = [os.path.abspath(p) for p in args.files if os.path.exists(p)]
-    if single_instance.notify_running(channel, launch_paths):
+    if single_instance.notify_running(channel, launch_paths, link):
         return
     instance = single_instance.listen(channel)
     finish_interrupted_install()  # only once no other instance can be installing an add-on
@@ -157,10 +162,12 @@ def main() -> None:
     # Queued until the frontend is ready, then offered in the "Open in tool" dialog.
     open_files = single_instance.PathBatcher(lambda paths: bus.emit("files:dropped", {"paths": paths}))
     open_files.add(launch_paths)
+    api._open_link(link)  # the event bus holds it until the window is ready
 
-    def on_launch(paths: list) -> None:
+    def on_launch(message: single_instance.Message) -> None:
         api._show_window()
-        open_files.add(paths)
+        open_files.add(message.paths)
+        api._open_link(message.link)
 
     def on_drop(event: dict) -> None:
         files = (event.get("dataTransfer") or {}).get("files") or []

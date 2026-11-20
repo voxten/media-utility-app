@@ -10,7 +10,7 @@ import sys
 import threading
 from typing import Any, Callable, Dict, Optional
 
-from backend.core import clipboard, win_theme
+from backend.core import clipboard, protocol, win_theme
 from backend.core.paths import resource_path
 from backend.core.settings import Settings
 from backend.core.tray import DEFAULT_LABELS as TRAY_LABELS
@@ -120,6 +120,14 @@ class AppShell:
             return
         self.show()
         self._emit("clipboard:link", link)
+
+    def open_link(self, uri: str) -> bool:
+        """A ``mediastudio://`` link from the browser bookmark, sent to the window as ``clipboard:link``."""
+        url = protocol.parse_link(uri)
+        if url is None:
+            return False
+        self._emit("clipboard:link", clipboard.opened_link(url))
+        return True
 
     def quit(self) -> None:
         if self._window is None or self._quitting:

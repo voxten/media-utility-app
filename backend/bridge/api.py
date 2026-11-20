@@ -24,6 +24,7 @@ from backend.bridge.events import EventBus
 from backend.core import clipboard, deps, engines, ffmpeg, logs, media_server, paths, system, win_theme
 from backend.core.app_shell import AppShell
 from backend.core.history import JobHistory
+from backend.core.hotkey import GlobalHotkey
 from backend.core.jobs import JobManager
 from backend.core.settings import Settings, validate_patch
 from backend.core.taskbar import TaskbarProgress
@@ -62,10 +63,18 @@ class _Context:
         self.history = JobHistory(temp_dir=paths.cache_dir())
         self.jobs = JobManager(bus.emit, max_workers=settings.get("maxConcurrency", 4), history=self.history)
         self.shell = AppShell(APP_NAME, settings, self.jobs.active_count, bus.emit)
+        self.hotkey = GlobalHotkey(self.shell.download_clipboard_link)
+        self.hotkey_taken = False  # the saved shortcut could not be registered at start-up
         self.window: Any = None
         self.taskbar = TaskbarProgress(lambda: win_theme.window_handle(self.window) if self.window else None)
         self.mica = False  # set by main.py once the backdrop is active
-        self.engine_check_started = False
+        self.started = False
+
+    def apply_saved_hotkey(self) -> None:
+        try:
+            self.hotkey.set(self.settings.get("globalHotkey", ""))
+        except (AppError, ValueError):
+            self.hotkey_taken = True
 
 
 class _Namespace:
@@ -77,10 +86,11 @@ class AppApi(_Namespace):
     def ready(self) -> Dict[str, Any]:
         """Frontend finished booting; start delivering events."""
         self._ctx.bus.mark_ready()
-        if not self._ctx.engine_check_started:
-            self._ctx.engine_check_started = True
+        if not self._ctx.started:
+            self._ctx.started = True
+            self._ctx.apply_saved_hotkey()
             threading.Thread(target=self._check_engines, name="engine-check", daemon=True).start()
-        return self.info()
+        return {**self.info(), "hotkeyTaken": self._ctx.hotkey_taken}
 
     def _check_engines(self) -> None:
         settings = self._ctx.settings
@@ -129,13 +139,19 @@ class SettingsApi(_Namespace):
         return self._ctx.settings.all()
 
     def update(self, patch: Dict[str, Any]) -> Dict[str, Any]:
-        updated = self._ctx.settings.update(validate_patch(patch or {}))
+        patch = validate_patch(patch or {})
+        if "globalHotkey" in patch:
+            self._ctx.hotkey.set(patch["globalHotkey"])  # a shortcut owned by another program is not saved
+            self._ctx.hotkey_taken = False
+        updated = self._ctx.settings.update(patch)
         self._ctx.jobs.set_limit(updated.get("maxConcurrency"))
         return updated
 
     def reset(self) -> Dict[str, Any]:
         updated = self._ctx.settings.reset()
         self._ctx.jobs.set_limit(updated.get("maxConcurrency"))
+        self._ctx.hotkey.set(updated.get("globalHotkey", ""))
+        self._ctx.hotkey_taken = False
         return updated
 
 
@@ -769,6 +785,10 @@ class Api:
     def _show_window(self) -> None:
         self._ctx.shell.show()
 
+    def _open_link(self, uri: Optional[str]) -> None:
+        if uri:
+            self._ctx.shell.open_link(uri)
+
     def _set_mica(self, active: bool) -> None:
         self._ctx.mica = active
 
@@ -779,6 +799,7 @@ class Api:
         return None
 
     def _shutdown(self) -> None:
+        self._ctx.hotkey.stop()
         self._ctx.shell.stop()
         self._ctx.bus.detach()
         if not self._ctx.jobs.shutdown(timeout=SHUTDOWN_WAIT_S):

@@ -60,16 +60,29 @@ def _target(host: str) -> Optional[str]:
     return None
 
 
+def link_target(url: str) -> Optional[str]:
+    """The tool a link from one of the TARGETS sites opens in, or None for any other site."""
+    try:
+        return _target(urlparse(url).hostname or "")
+    except ValueError:
+        return None
+
+
+def opened_link(url: str) -> Dict[str, Any]:
+    """``clipboard:link`` payload for a link the user sent on purpose (browser bookmark).
+
+    Any site goes to the download tool, but only the TARGETS sites are checked right away.
+    """
+    target = link_target(url)
+    return {"url": url, "target": target or "download", "probe": target is not None}
+
+
 def find_links(text: str) -> List[Dict[str, str]]:
     """Supported links in ``text``, in order and without repeats, as ``{"url", "target"}``."""
     links: List[Dict[str, str]] = []
     for match in URL_PATTERN.finditer((text or "")[:MAX_SCAN_CHARS]):
         url = match.group(0).rstrip(".,;:!?)]}")
-        try:
-            host = urlparse(url).hostname or ""
-        except ValueError:
-            continue
-        target = _target(host)
+        target = link_target(url)
         if target and all(link["url"] != url for link in links):
             links.append({"url": url, "target": target})
     return links

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { api } from "../lib/bridge";
 import type { Settings } from "../lib/types";
+import { useUi } from "./ui";
 
 interface SettingsState {
   settings: Settings | null;
@@ -30,5 +31,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
   reset: async () => {
     const settings = await api.settings.reset();
     set({ settings });
+    useUi.setState({ hotkeyTaken: "" });
   },
 }));

@@ -66,6 +66,7 @@ def default_settings() -> Dict[str, Any]:
         "trayHintShown": False,  # the one-time "still running in the background" notification
         "clipboardWatch": False,  # offer a copied video link when the window is activated
         "clipboardLastLink": "",  # the last link offered, so it is not offered again
+        "globalHotkey": "",  # "" (off) or a hotkey.COMBOS key that opens the copied link from anywhere
         "lastSeenVersion": "",  # app version whose release notes the user was pointed to
         "downloadEmbedMeta": True,  # cover image, title and artist written into downloaded files
         "downloadSkipArchived": False,  # queued links already downloaded once are skipped
@@ -84,6 +85,7 @@ CHOICES: Dict[str, frozenset] = {
     "theme": frozenset({"system", "light", "dark"}),
     "language": frozenset({"pl", "en"}),
     "downloadSubtitles": frozenset({"off", "site", "auto"}),
+    "globalHotkey": frozenset({"", "ctrl+alt+d", "ctrl+alt+shift+d", "ctrl+alt+y", "ctrl+alt+shift+y"}),
 }
 MAX_CONCURRENCY = 16
 

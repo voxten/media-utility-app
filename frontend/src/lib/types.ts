@@ -21,6 +21,8 @@ export interface Settings {
   clipboardWatch: boolean;
   /** The last link offered, so the same one is not offered twice. */
   clipboardLastLink: string;
+  /** Shortcut that opens the copied link from anywhere in Windows; "" when off. */
+  globalHotkey: GlobalHotkey;
   /** App version whose release notes the user was last pointed to; empty on a fresh install. */
   lastSeenVersion: string;
   /** Look for newer download engines at start-up, at most once a day. */
@@ -81,6 +83,8 @@ export interface AppInfo {
   platform: string;
   mica?: boolean;
   micaSupported?: boolean;
+  /** Only from app.ready: the saved global shortcut is owned by another program. */
+  hotkeyTaken?: boolean;
 }
 
 /** Translated texts for the tray menu and native prompts, which the backend cannot translate. */
@@ -96,9 +100,13 @@ export interface ShellLabels {
 }
 
 /** A copied link and the download tool that handles it (backend/core/clipboard.py). */
+export type GlobalHotkey = "" | "ctrl+alt+d" | "ctrl+alt+shift+d" | "ctrl+alt+y" | "ctrl+alt+shift+y";
+
 export interface ClipboardLink {
   url: string;
   target: "download" | "instagram";
+  /** False for a link from a site the clipboard watcher does not know: it only fills the field. */
+  probe?: boolean;
   /** Every copied video link when there are several; they go to the download queue together. */
   urls?: string[];
 }

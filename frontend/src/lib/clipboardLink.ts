@@ -1,5 +1,6 @@
-// Copied video links: the tray's "Download link from clipboard" item (clipboard:link event) and,
-// with the clipboardWatch setting, an offer to download a newly copied link when the window gets focus.
+// Video links sent to the window (clipboard:link event: the tray's "Download link from clipboard" item,
+// the global shortcut and the browser bookmark) and, with the clipboardWatch setting, an offer to
+// download a newly copied link when the window gets focus.
 
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -7,7 +8,7 @@ import { useNotify } from "../components/notify";
 import { useDownloadForm } from "../features/download/store";
 import { useInstagramForm } from "../features/instagram/store";
 import { useSettings } from "../stores/settings";
-import { api, on } from "./bridge";
+import { api } from "./bridge";
 import { navigate } from "./router";
 import type { ClipboardLink } from "./types";
 
@@ -40,7 +41,7 @@ function remember(link: ClipboardLink) {
   useSettings.getState().update({ clipboardLastLink: key }).catch(() => undefined);
 }
 
-/** Opens the link in its download tool: several video links go to the queue, a single one is checked right away. */
+/** Opens the link in its download tool: several video links go to the queue, a single one is checked right away unless `probe` is false. */
 export function openClipboardLink(link: ClipboardLink) {
   remember(link);
   if (isQueue(link)) {
@@ -48,10 +49,10 @@ export function openClipboardLink(link: ClipboardLink) {
     form.set({ tab: "batch", batchText: appendToQueue(form.batchText, link.urls) });
     navigate("download");
   } else if (link.target === "instagram") {
-    useInstagramForm.getState().set({ url: link.url, post: null, selected: [], result: null, autoProbe: true });
+    useInstagramForm.getState().set({ url: link.url, post: null, selected: [], result: null, autoProbe: link.probe !== false });
     navigate("instagram");
   } else {
-    useDownloadForm.getState().set({ tab: "single", url: link.url, probe: null, formatId: "", autoProbe: true });
+    useDownloadForm.getState().set({ tab: "single", url: link.url, probe: null, formatId: "", autoProbe: link.probe !== false });
     navigate("download");
   }
 }
@@ -81,8 +82,6 @@ export function useClipboardLinks() {
   const { t } = useTranslation();
   const notify = useNotify();
   const watch = useSettings((s) => s.settings?.clipboardWatch ?? false);
-
-  useEffect(() => on("clipboard:link", openClipboardLink), []);
 
   useEffect(() => {
     if (!watch) return;

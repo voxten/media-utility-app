@@ -10,6 +10,8 @@ Polskie tłumaczenie [CHANGELOG.md](CHANGELOG.md), pokazywane w aplikacji przy p
 - Historia zadań pamięta linki, z których pobierano: kolejka pokazuje każdy link z tytułem i wynikiem, menu „⋯” kopiuje link lub linki, a wyszukiwarka historii znajduje też linki.
 - **Łączenie PDF** i **PDF ↔ Obrazy** (obrazy do PDF) mają pole nazwy pliku obok folderu zapisu, zamiast zawsze zapisywać `polaczony.pdf` i `z_obrazow.pdf`.
 - „Wyślij do” i upuszczenie pliku w dowolnym miejscu proponują **Transkrypcję** dla plików audio, a **Edytor GIF** dla animacji APNG.
+- Zakładka „Pobierz w Media Studio” do przeglądarki (Ustawienia → Przeglądarka): jedno kliknięcie otwiera bieżącą stronę w **Pobieraniu wideo**, a linki z Instagrama w **Instagramie**, także gdy aplikacja jest zamknięta albo schowana w zasobniku. Linki z YouTube, TikToka, X i Instagrama są od razu sprawdzane, z innych stron tylko trafiają do pola; pobieranie i tak czeka na Twoje kliknięcie. Instalator ma do tego nową opcję, domyślnie zaznaczoną.
+- Opcjonalny skrót klawiszowy w całym Windows (Ustawienia → Przeglądarka, domyślnie wyłączony) otwiera skopiowany link w aplikacji. Skrót zajęty przez inny program zostaje odrzucony z komunikatem.
 
 ### Zmieniono
 
@@ -24,6 +26,7 @@ Polskie tłumaczenie [CHANGELOG.md](CHANGELOG.md), pokazywane w aplikacji przy p
 - Przenoszenie danych aplikacji do %LOCALAPPDATA% na innym dysku nie zostawia już niepełnych plików, gdy aplikacja zostanie zamknięta w trakcie.
 - Otwarcie Ustawień przy uszkodzonym PyTorchu nie blokuje już wczytania ponownie zainstalowanego aż do restartu.
 - Wznowiona kolejka pobierania zachowuje włączony SponsorBlock.
+- Na listach takich jak Ustawienia → Pliki → Ciasteczka z przeglądarki znowu da się wybrać „Wyłączone”.
 - Zadania z kilkoma plikami w Kompresorze obrazów, Narzędziach obrazu, Konwerterze wideo i audio oraz Edytorze GIF mają nazwę po polsku, np. „3 pliki” zamiast „3 files”.
 - **Synchronizacja audio-wideo** eksportuje MP4 z napisami do MKV zamiast kończyć się błędem i nie nadpisuje już istniejącego pliku o tej samej nazwie.
 - **Konwerter wideo i audio** pokazuje, dlaczego nie udało się przekonwertować pojedynczego pliku, zamiast samego „Nie udało się przekonwertować pliku”.

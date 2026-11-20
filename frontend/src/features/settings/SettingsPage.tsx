@@ -5,6 +5,7 @@ import { Page } from "../../components/Page";
 import { AboutSection } from "./sections/AboutSection";
 import { AdvancedSection } from "./sections/AdvancedSection";
 import { AppearanceSection } from "./sections/AppearanceSection";
+import { BrowserSection } from "./sections/BrowserSection";
 import { DependenciesSection } from "./sections/DependenciesSection";
 import { EnginesSection } from "./sections/EnginesSection";
 import { FilesSection } from "./sections/FilesSection";
@@ -22,6 +23,7 @@ export default function SettingsPage() {
       <StorageSection />
       <HardwareSection />
       <NotificationsSection />
+      <BrowserSection />
       <DependenciesSection />
       <EnginesSection />
       <AdvancedSection />

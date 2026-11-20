@@ -23,6 +23,12 @@ describe("openClipboardLink", () => {
     expect(window.location.hash).toBe("#/download");
   });
 
+  it("only fills in a link from a site it does not know", () => {
+    openClipboardLink({ url: "https://vimeo.com/1", target: "download", probe: false });
+    expect(useDownloadForm.getState()).toMatchObject({ url: "https://vimeo.com/1", tab: "single", autoProbe: false });
+    expect(window.location.hash).toBe("#/download");
+  });
+
   it("fills Instagram links into the Instagram tool", () => {
     openClipboardLink(instagram);
     expect(useInstagramForm.getState()).toMatchObject({ url: instagram.url, autoProbe: true });

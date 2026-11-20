@@ -2,7 +2,8 @@
 
 With close-to-tray the app often keeps running hidden, so starting it again from the Start
 menu must bring that window back instead of opening a second copy. Files passed to the second
-launch (Open with, Send to, the Explorer menu) travel along and open in the running window.
+launch (Open with, Send to, the Explorer menu) and a link from the browser bookmark travel along
+and open in the running window.
 """
 
 import ctypes
@@ -13,7 +14,7 @@ import threading
 import time
 from multiprocessing import AuthenticationError
 from multiprocessing.connection import Client, Listener
-from typing import Callable, List, Optional, Sequence
+from typing import Callable, List, NamedTuple, Optional, Sequence
 
 AUTHKEY = b"media-studio-instance"
 MAX_MESSAGE = 1 << 20
@@ -30,14 +31,19 @@ def _address(channel: str) -> str:
     return rf"\\.\pipe\MediaStudio-{channel}-{safe}"
 
 
-def notify_running(channel: str, paths: Sequence[str] = ()) -> bool:
-    """Ask an already running instance to show itself and open ``paths``; True when one answered."""
+class Message(NamedTuple):
+    paths: List[str]
+    link: Optional[str]
+
+
+def notify_running(channel: str, paths: Sequence[str] = (), link: Optional[str] = None) -> bool:
+    """Ask an already running instance to show itself and open ``paths`` or ``link``; True when one answered."""
     if sys.platform == "win32":
         ASFW_ANY = -1  # this fresh launch owns the foreground; let the running window take it
         ctypes.windll.user32.AllowSetForegroundWindow(ASFW_ANY)
     try:
         with Client(_address(channel), family="AF_PIPE", authkey=AUTHKEY) as conn:
-            conn.send_bytes(json.dumps({"paths": list(paths)}).encode("utf-8"))
+            conn.send_bytes(json.dumps({"paths": list(paths), "link": link}).encode("utf-8"))
         return True
     except (OSError, EOFError, ValueError, AuthenticationError):
         return False
@@ -46,10 +52,10 @@ def notify_running(channel: str, paths: Sequence[str] = ()) -> bool:
 class InstanceListener:
     def __init__(self, channel: str) -> None:
         self._listener: Optional[Listener] = Listener(_address(channel), family="AF_PIPE", authkey=AUTHKEY)
-        self._on_message: Callable[[List[str]], None] = lambda paths: None
+        self._on_message: Callable[[Message], None] = lambda message: None
 
-    def serve(self, on_message: Callable[[List[str]], None]) -> None:
-        """``on_message`` gets the paths a later launch passed (often none) on the listener thread."""
+    def serve(self, on_message: Callable[[Message], None]) -> None:
+        """``on_message`` gets what a later launch passed (often nothing) on the listener thread."""
         self._on_message = on_message
         threading.Thread(target=self._loop, name="single-instance", daemon=True).start()
 
@@ -57,7 +63,7 @@ class InstanceListener:
         while self._listener is not None:
             try:
                 with self._listener.accept() as conn:
-                    self._on_message(parse_paths(conn.recv_bytes(MAX_MESSAGE)))
+                    self._on_message(parse_message(conn.recv_bytes(MAX_MESSAGE)))
             except (AuthenticationError, EOFError):
                 continue  # a foreign or dropped client must not stop the listener
             except OSError:
@@ -72,13 +78,18 @@ class InstanceListener:
                 pass
 
 
-def parse_paths(message: bytes) -> List[str]:
+def parse_message(message: bytes) -> Message:
     try:
         data = json.loads(message.decode("utf-8"))
     except (UnicodeDecodeError, ValueError):
-        return []
-    paths = data.get("paths") if isinstance(data, dict) else None
-    return [p for p in paths if isinstance(p, str)] if isinstance(paths, list) else []
+        data = None
+    if not isinstance(data, dict):
+        return Message([], None)
+    paths, link = data.get("paths"), data.get("link")
+    return Message(
+        [p for p in paths if isinstance(p, str)] if isinstance(paths, list) else [],
+        link if isinstance(link, str) else None,
+    )
 
 
 class PathBatcher:

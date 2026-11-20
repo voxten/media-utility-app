@@ -85,6 +85,8 @@ polish.ShellIntegration=Dodaj „Otwórz w Media Studio” do menu plików, „O
 polish.OpenInApp=Otwórz w Media Studio
 english.ShellIntegration=Add "Open in Media Studio" to the file menu, "Open with" and "Send to"
 english.OpenInApp=Open in Media Studio
+polish.BrowserButton=Pozwól zakładce „Pobierz w Media Studio” otwierać linki z przeglądarki
+english.BrowserButton=Let the "Download in Media Studio" bookmark open links from the browser
 polish.RemoveDataConfirm=Usunąć też ustawienia, historię, ciasteczka, modele AI, dodatki i FFmpeg pobrane przez Media Studio?%n%nPliki zapisane w folderach wyników zostaną.
 english.RemoveDataConfirm=Also remove the settings, history, cookies, AI models, add-ons and FFmpeg downloaded by Media Studio?%n%nFiles saved in your output folders are kept.
 english.DowngradeConfirm=A newer version (%1) is installed than the one in this installer (%2).%n%nInstall the older version anyway?
@@ -92,6 +94,7 @@ english.DowngradeConfirm=A newer version (%1) is installed than the one in this 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 Name: "shellintegration"; Description: "{cm:ShellIntegration}"; GroupDescription: "{cm:AdditionalIcons}"
+Name: "browserbutton"; Description: "{cm:BrowserButton}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [InstallDelete]
 ; The PyInstaller bundle is replaced as a whole so DLLs and modules dropped from a newer build don't linger.
@@ -125,6 +128,11 @@ Root: HKA; Subkey: "Software\Classes\SystemFileAssociations\{#FileTypes[I]}\shel
 Root: HKA; Subkey: "Software\Classes\SystemFileAssociations\{#FileTypes[I]}\shell\MediaStudio\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#MyAppExeName}"" ""%1"""; Tasks: shellintegration
 #endsub
 #for {I = 0; I < DimOf(FileTypes); I++} FileTypeEntries
+; mediastudio:// links from the browser bookmark (checked by backend/core/protocol.py).
+Root: HKA; Subkey: "Software\Classes\mediastudio"; ValueType: string; ValueName: ""; ValueData: "URL:{#MyAppName}"; Flags: uninsdeletekey; Tasks: browserbutton
+Root: HKA; Subkey: "Software\Classes\mediastudio"; ValueType: string; ValueName: "URL Protocol"; ValueData: ""; Tasks: browserbutton
+Root: HKA; Subkey: "Software\Classes\mediastudio\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\{#MyAppExeName}"",0"; Tasks: browserbutton
+Root: HKA; Subkey: "Software\Classes\mediastudio\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#MyAppExeName}"" ""%1"""; Tasks: browserbutton
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent

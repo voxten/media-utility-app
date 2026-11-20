@@ -14,6 +14,8 @@ The app shows this file (and its Polish translation, [CHANGELOG.pl.md](CHANGELOG
 - The task history keeps the links a download came from: a queue lists every link with its title and outcome, the "⋯" menu copies the link or links, and the history search finds links too.
 - **PDF Merger** and **PDF ↔ Images** (images to PDF) have a file name field next to the output folder instead of always saving `merged.pdf` and `from_images.pdf`.
 - "Send to" and dropping a file anywhere offer **Transcription** for audio files, and **GIF Editor** for APNG animations.
+- A "Download in Media Studio" bookmark for the browser (Settings → Browser): one click opens the current page in **Video Downloader**, or in **Instagram** for Instagram links, also when the app is closed or hidden in the tray. YouTube, TikTok, X and Instagram links are checked right away, other sites only fill the field; downloading still waits for your click. The installer has a new option for it, on by default.
+- An optional global shortcut (Settings → Browser, off by default) opens the copied link in the app from anywhere in Windows. A shortcut another program already uses is refused with a message.
 
 ### Changed
 
@@ -28,6 +30,7 @@ The app shows this file (and its Polish translation, [CHANGELOG.pl.md](CHANGELOG
 - Moving the app's data to %LOCALAPPDATA% on another drive no longer leaves half-copied files when the app is closed during the move.
 - Opening Settings with a damaged PyTorch no longer keeps a reinstalled one from loading until the next start.
 - A resumed download queue keeps SponsorBlock on when it was on.
+- "Off" can be chosen again in lists such as Settings → Files → Cookies from browser.
 - Tasks with several files in Image compressor, Image tools, Video & Audio Converter and GIF Editor are named in the app's language, e.g. "3 pliki" in Polish.
 - **Audio-Video Sync** exports an MP4 with subtitles to MKV instead of failing, and no longer overwrites an existing file with the same name.
 - **Video & Audio Converter** shows why a single file could not be converted instead of only "The file could not be converted".

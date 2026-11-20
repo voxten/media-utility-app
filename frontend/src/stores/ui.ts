@@ -10,6 +10,8 @@ interface UiState {
   /** Windows 11 Mica backdrop is active (window base must stay transparent). */
   mica: boolean;
   micaSupported: boolean;
+  /** The global shortcut another program owns ("" when none): the saved one at start-up or a refused choice. */
+  hotkeyTaken: string;
   setJobsPopupOpen: (open: boolean) => void;
   setJobsTab: (tab: JobsTab) => void;
   toggleJobsPopup: () => void;
@@ -22,6 +24,7 @@ export const useUi = create<UiState>((set) => ({
   paletteOpen: false,
   mica: false,
   micaSupported: false,
+  hotkeyTaken: "",
   setJobsPopupOpen: (jobsPopupOpen) => set({ jobsPopupOpen }),
   setJobsTab: (jobsTab) => set({ jobsTab }),
   toggleJobsPopup: () => set((s) => ({ jobsPopupOpen: !s.jobsPopupOpen })),

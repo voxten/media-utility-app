@@ -252,6 +252,18 @@
       "test": "Test sound & notification",
       "testSent": "Test notification sent!"
     },
+    "browser": {
+      "title": "Browser",
+      "bookmark": "Download button",
+      "bookmarkDesc": "Drag the button to your browser's bookmarks bar. Clicking it opens the current page in Media Studio.",
+      "bookmarkName": "Download in Media Studio",
+      "copyHint": "If dragging does not work, add a new bookmark and paste the copied code as its address.",
+      "copied": "Bookmark code copied",
+      "hotkey": "Global shortcut",
+      "hotkeyDesc": "Opens the copied link in Media Studio, also when the window is hidden.",
+      "hotkeyOff": "Off",
+      "hotkeyTaken": "{{hotkey}} is used by another program. Pick a different shortcut."
+    },
     "advanced": {
       "title": "Advanced & system tools",
       "customFfmpeg": "Custom FFmpeg executable",
@@ -1444,6 +1456,7 @@
     "noAudio": "The file has no audio track.",
     "outputMissing": "FFmpeg finished without creating the file. Details are in the log.",
     "ffmpegPathInvalid": "The chosen path does not point to ffmpeg.",
+    "hotkeyTaken": "Another program already uses this shortcut.",
     "downloadCorrupted": "{{file}} arrived damaged or changed on the server. Try again later.",
     "archiveIncomplete": "The downloaded archive does not contain {{files}}.",
     "installFailed": "Installation failed with code {{code}}. Details are in the log.",

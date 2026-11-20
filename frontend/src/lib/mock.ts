@@ -21,12 +21,16 @@ const DEFAULT_SETTINGS: Settings = {
   closeToTray: true,
   clipboardWatch: false,
   clipboardLastLink: "",
+  globalHotkey: "",
   lastSeenVersion: "",
   engineUpdateCheck: true,
   downloadEmbedMeta: true,
   downloadSkipArchived: false,
   engineLastCheck: 0,
 };
+
+/** Lets the browser mock show what happens when another program owns the chosen shortcut. */
+const MOCK_TAKEN_HOTKEY = "ctrl+alt+shift+y";
 
 const MOCK_ENGINES: EngineInfo[] = [
   { id: "yt-dlp", version: "2026.8.19", latest: "2026.10.26", updateAvailable: true, restartRequired: false, downloaded: false },
@@ -161,6 +165,7 @@ export function createMockBackend(emit: Emit) {
     settings: {
       get: () => ok(settings),
       update: (patch: Partial<Settings>) => {
+        if (patch.globalHotkey === MOCK_TAKEN_HOTKEY) return Promise.reject(new Error("errors.hotkeyTaken"));
         settings = { ...settings, ...patch, cookies: { ...settings.cookies, ...(patch.cookies ?? {}) } };
         saveSettings(settings);
         return ok(settings);

@@ -124,19 +124,50 @@ def test_second_launch_reaches_running_instance():
     assert listener is not None
     received = []
     shown = threading.Event()
-    listener.serve(lambda paths: (received.append(paths), shown.set()))
+    listener.serve(lambda message: (received.append(message), shown.set()))
     try:
         assert single_instance.notify_running(channel, ["C:\\a.mp4", "C:\\b.mp3"]) is True
         assert shown.wait(2)
-        assert received == [["C:\\a.mp4", "C:\\b.mp3"]]
+        assert received == [(["C:\\a.mp4", "C:\\b.mp3"], None)]
     finally:
         listener.close()
 
 
-def test_parse_paths_ignores_garbage():
-    assert single_instance.parse_paths(b"show") == []
-    assert single_instance.parse_paths(b'{"paths": ["a", 3]}') == ["a"]
-    assert single_instance.parse_paths(b'{"paths": "a"}') == []
+def test_instance_message_carries_the_link():
+    channel = f"test-{uuid.uuid4().hex[:8]}"
+    listener = single_instance.listen(channel)
+    assert listener is not None
+    received = []
+    shown = threading.Event()
+    listener.serve(lambda message: (received.append(message), shown.set()))
+    link = "mediastudio://open?url=https%3A%2F%2Fyoutu.be%2Fabc"
+    try:
+        assert single_instance.notify_running(channel, [], link) is True
+        assert shown.wait(2)
+        assert received == [single_instance.Message([], link)]
+    finally:
+        listener.close()
+
+
+def test_parse_message_ignores_garbage():
+    assert single_instance.parse_message(b"show") == ([], None)
+    assert single_instance.parse_message(b'{"paths": ["a", 3]}') == (["a"], None)
+    assert single_instance.parse_message(b'{"paths": "a", "link": 5}') == ([], None)
+    assert single_instance.parse_message(b'{"paths": [], "link": "mediastudio:x"}') == ([], "mediastudio:x")
+
+
+def test_link_opens_in_the_matching_tool(make_shell):
+    shell, *_ = make_shell()
+    events = []
+    shell._emit = lambda event, payload: events.append((event, payload))
+
+    assert shell.open_link("mediastudio://open?url=https%3A%2F%2Fwww.instagram.com%2Fp%2Fabc%2F") is True
+    assert shell.open_link("mediastudio://open?url=https%3A%2F%2Fvimeo.com%2F1") is True
+    assert shell.open_link("mediastudio://open?url=file%3A%2F%2F%2FC%3A%2Fa.txt") is False
+    assert events == [
+        ("clipboard:link", {"url": "https://www.instagram.com/p/abc/", "target": "instagram", "probe": True}),
+        ("clipboard:link", {"url": "https://vimeo.com/1", "target": "download", "probe": False}),
+    ]
 
 
 def test_path_batcher_merges_close_launches():

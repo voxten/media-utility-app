@@ -251,6 +251,18 @@
       "concurrencyTasks_many": "{{count}} zadań",
       "concurrencyTasks_other": "{{count}} zadania"
     },
+    "browser": {
+      "title": "Przeglądarka",
+      "bookmark": "Przycisk pobierania",
+      "bookmarkDesc": "Przeciągnij przycisk na pasek zakładek przeglądarki. Kliknięcie otworzy bieżącą stronę w Media Studio.",
+      "bookmarkName": "Pobierz w Media Studio",
+      "copyHint": "Jeśli przeciąganie nie działa, dodaj nową zakładkę i wklej skopiowany kod jako jej adres.",
+      "copied": "Skopiowano kod zakładki",
+      "hotkey": "Skrót w całym systemie",
+      "hotkeyDesc": "Otwiera skopiowany link w Media Studio, także gdy okno jest schowane.",
+      "hotkeyOff": "Wyłączony",
+      "hotkeyTaken": "{{hotkey}} zajmuje inny program. Wybierz inny skrót."
+    },
     "notifications": {
       "title": "Powiadomienia i dźwięki",
       "desktop": "Powiadomienia systemowe",
@@ -1552,6 +1564,7 @@
     "noAudio": "Plik nie ma ścieżki dźwiękowej.",
     "outputMissing": "FFmpeg zakończył pracę, ale nie utworzył pliku. Szczegóły są w logu.",
     "ffmpegPathInvalid": "Wybrana ścieżka nie wskazuje programu ffmpeg.",
+    "hotkeyTaken": "Ten skrót zajmuje już inny program.",
     "downloadCorrupted": "Plik {{file}} dotarł uszkodzony albo zmienił się na serwerze. Spróbuj ponownie później.",
     "archiveIncomplete": "Pobrane archiwum nie zawiera: {{files}}.",
     "installFailed": "Instalacja nie powiodła się, kod {{code}}. Szczegóły są w logu.",

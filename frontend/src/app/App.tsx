@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { ErrorBoundary, ErrorScreen } from "../components/ErrorBoundary";
 import i18n from "../i18n";
 import { api, on, ready } from "../lib/bridge";
+import { openClipboardLink } from "../lib/clipboardLink";
 import { errorMessage, installGlobalErrorReporting } from "../lib/errors";
 import { initJobEvents, useJobs } from "../stores/jobs";
 import { useSettings } from "../stores/settings";
@@ -30,11 +31,16 @@ async function boot(load: () => Promise<unknown>) {
   const mode = await ready;
   initJobEvents(); // subscribe before the backend starts delivering events
   on("app:mica", ({ active }) => useUi.setState({ mica: active }));
+  on("clipboard:link", openClipboardLink); // a link that started the app arrives right after ready()
   useJobs.getState().loadHistory().catch(() => undefined);
   await load();
   if (mode === "native") {
     const info = await api.app.ready();
-    useUi.setState({ mica: !!info.mica, micaSupported: !!info.micaSupported });
+    useUi.setState({
+      mica: !!info.mica,
+      micaSupported: !!info.micaSupported,
+      hotkeyTaken: info.hotkeyTaken ? (useSettings.getState().settings?.globalHotkey ?? "") : "",
+    });
   }
 }
 
