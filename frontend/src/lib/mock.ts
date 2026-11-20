@@ -26,6 +26,8 @@ const DEFAULT_SETTINGS: Settings = {
   engineUpdateCheck: true,
   downloadEmbedMeta: true,
   downloadSkipArchived: false,
+  downloadParallel: 1,
+  downloadRateLimit: 0,
   engineLastCheck: 0,
 };
 
@@ -151,6 +153,113 @@ export function createMockBackend(emit: Emit) {
   };
 
   const ok = <T>(value: T) => Promise.resolve(value);
+
+  interface MockQueueItem {
+    index: number;
+    url: string;
+    title: string;
+    status: "pending" | "running" | "done" | "error" | "cancelled";
+    percent: number;
+    size?: number;
+  }
+  interface MockQueue {
+    items: MockQueueItem[];
+    order: number[];
+    outdir: string;
+    closed: boolean;
+  }
+  const mockQueues = new Map<string, MockQueue>();
+  const MOCK_ITEM_SPEED = 2_600_000;
+
+  const reportBatch = (jobId: string, queue: MockQueue) => {
+    const runningItems = queue.order.map((index) => queue.items[index]).filter((item) => item.status === "running");
+    const finished = queue.items.filter((item) => item.status !== "pending" && item.status !== "running").length;
+    const percent = (finished * 100 + runningItems.reduce((acc, item) => acc + item.percent, 0)) / Math.max(1, queue.items.length);
+    emit("job:progress", {
+      jobId,
+      percent,
+      message: runningItems.length > 1 ? "download.status.downloadingMany" : "download.status.downloading",
+      params: runningItems.length > 1 ? { count: runningItems.length } : {},
+      running: runningItems.map((item) => ({ index: item.index, percent: item.percent, speed: MOCK_ITEM_SPEED, total: 24_500_000 })),
+      order: [...queue.order],
+      speed: runningItems.length ? runningItems.length * MOCK_ITEM_SPEED : undefined,
+    });
+  };
+
+  /** A queue of links downloaded `downloadParallel` at a time; links containing "fail" fail. */
+  const simulateBatch = (urls: string[], outdir: string): string => {
+    const jobId = `mock${++counter}`;
+    const queue: MockQueue = {
+      items: urls.map((url, index) => ({ index, url, title: url, status: "pending", percent: 0 })),
+      order: urls.map((_, index) => index),
+      outdir,
+      closed: false,
+    };
+    mockQueues.set(jobId, queue);
+    emit("job:started", {
+      id: jobId,
+      kind: "download.batch",
+      title: `download.batchTitle|{"count":${urls.length}}`,
+      status: "running",
+      startedAt: Date.now() / 1000,
+      finishedAt: null,
+      error: null,
+      percent: 0,
+      message: null,
+      params: {},
+    });
+    queue.items.forEach((item) => emit("job:partial", { jobId, data: { index: item.index, url: item.url, status: "pending" } }));
+    const timer = window.setInterval(() => {
+      for (const item of queue.items) {
+        if (item.status !== "running") continue;
+        item.percent = Math.min(100, item.percent + 4 + (item.index % 3) * 2);
+        if (item.percent < 100) continue;
+        const failed = item.url.includes("fail");
+        item.status = failed ? "error" : "done";
+        item.title = failed ? item.url : `Film #${item.index + 1}`;
+        item.size = failed ? undefined : 24_500_000 + item.index * 5_000_000;
+        emit("job:partial", {
+          jobId,
+          data: failed
+            ? { index: item.index, url: item.url, title: item.title, status: "error", error: "Video unavailable" }
+            : { index: item.index, url: item.url, title: item.title, status: "done", size: item.size, duration: 2.5 },
+        });
+      }
+      let busy = queue.items.filter((item) => item.status === "running").length;
+      for (const index of queue.order) {
+        const item = queue.items[index];
+        if (busy >= settings.downloadParallel) break;
+        if (item.status !== "pending") continue;
+        item.status = "running";
+        busy += 1;
+        emit("job:partial", { jobId, data: { index, url: item.url, title: item.title, status: "running" } });
+      }
+      reportBatch(jobId, queue);
+      if (busy > 0 || queue.items.some((item) => item.status === "pending")) return;
+      window.clearInterval(timer);
+      running.delete(jobId);
+      queue.closed = true;
+      const items = queue.order.map((index) => {
+        const { url, title, status, size } = queue.items[index];
+        const base = { index, url, title, status, size };
+        return status === "done" ? { ...base, duration: 2.5 } : status === "error" ? { ...base, error: "Video unavailable" } : base;
+      });
+      const done = items.filter((item) => item.status === "done");
+      emit("job:done", {
+        jobId,
+        result: {
+          items,
+          succeeded: done.length,
+          failed: items.filter((item) => item.status === "error").length,
+          totalSize: done.reduce((acc, item) => acc + (item.size ?? 0), 0),
+          totalDuration: done.length * 2.5,
+          outdir,
+        },
+      });
+    }, 150);
+    running.set(jobId, timer);
+    return jobId;
+  };
 
   const backend = {
     app: {
@@ -384,70 +493,7 @@ export function createMockBackend(emit: Emit) {
           "https://youtube.com/watch?v=demo1",
           "https://youtube.com/watch?v=demo2",
         ];
-        const total = urls.length;
-        const jobId = `mock${++counter}`;
-        const started = Date.now();
-        const durationMs = 4500;
-        emit("job:started", {
-          id: jobId,
-          kind: "download.batch",
-          title: `download.batchTitle|{"count":${total}}`,
-          status: "running",
-          startedAt: started / 1000,
-          finishedAt: null,
-          error: null,
-          percent: 0,
-          message: null,
-          params: {},
-        });
-        urls.forEach((url, i) => {
-          emit("job:partial", { jobId, data: { index: i, url, status: "pending" } });
-        });
-        const timer = window.setInterval(() => {
-          const elapsed = Date.now() - started;
-          const overallPercent = Math.min(100, (elapsed / durationMs) * 100);
-          const currentItem = Math.min(total - 1, Math.floor((overallPercent / 100) * total));
-          const itemPercent = Math.min(100, ((overallPercent % (100 / total)) / (100 / total)) * 100);
-
-          for (let i = 0; i < currentItem; i++) {
-            emit("job:partial", { jobId, data: { index: i, url: urls[i], status: "done", title: `Film #${i + 1}` } });
-          }
-          emit("job:partial", {
-            jobId,
-            data: { index: currentItem, url: urls[currentItem], status: "running", title: `Film #${currentItem + 1}` },
-          });
-
-          emit("job:progress", {
-            jobId,
-            percent: overallPercent,
-            message: "download.status.downloading",
-            params: {},
-            item: currentItem,
-            itemPercent,
-            speed: 5_200_000,
-            eta: Math.max(0, Math.round((durationMs - elapsed) / 1000)),
-          });
-
-          if (overallPercent >= 100) {
-            window.clearInterval(timer);
-            running.delete(jobId);
-            const items = urls.map((u, i) => ({
-              index: i,
-              url: u,
-              status: "done",
-              title: `Film #${i + 1}`,
-              size: 24_500_000 + i * 5_000_000,
-              duration: 2.5,
-            }));
-            const totalSize = items.reduce((acc, it) => acc + it.size, 0);
-            emit("job:done", {
-              jobId,
-              result: { items, succeeded: total, failed: 0, totalSize, totalDuration: 4.5, outdir: params?.outdir || "C:\\Downloads" },
-            });
-          }
-        }, 150);
-        running.set(jobId, timer);
-        return Promise.resolve(jobId);
+        return ok(simulateBatch(urls, params?.outdir || "C:\\Downloads"));
       },
       pending_queue: () =>
         ok(
@@ -470,14 +516,48 @@ export function createMockBackend(emit: Emit) {
         return ok(true);
       },
       add_to_batch: (params: { jobId?: string; urls: string[] }) => {
-        const newUrls = params?.urls || [];
-        newUrls.forEach((u, i) => {
-          emit("job:partial", {
-            jobId: params?.jobId || "mock",
-            data: { index: 100 + i, url: u, status: "pending", title: u },
-          });
-        });
+        const queue = params?.jobId ? mockQueues.get(params.jobId) : undefined;
+        if (!queue || queue.closed) return ok({ success: false });
+        for (const url of params.urls) {
+          const index = queue.items.length;
+          queue.items.push({ index, url, title: url, status: "pending", percent: 0 });
+          queue.order.push(index);
+          emit("job:partial", { jobId: params.jobId, data: { index, url, title: url, status: "pending" } });
+        }
         return ok({ success: true });
+      },
+      reorder_batch: (params: { jobId: string; order: number[] }) => {
+        const queue = mockQueues.get(params.jobId);
+        if (!queue || queue.closed) return ok(false);
+        const known = params.order.filter((index) => index >= 0 && index < queue.items.length);
+        queue.order = [...known, ...queue.order.filter((index) => !known.includes(index))];
+        reportBatch(params.jobId, queue);
+        return ok(true);
+      },
+      skip_batch_item: (params: { jobId: string; index: number }) => {
+        const queue = mockQueues.get(params.jobId);
+        const item = queue?.items[params.index];
+        if (!queue || queue.closed || !item || (item.status !== "pending" && item.status !== "running")) return ok(false);
+        item.status = "cancelled";
+        emit("job:partial", { jobId: params.jobId, data: { index: item.index, url: item.url, title: item.title, status: "cancelled" } });
+        reportBatch(params.jobId, queue);
+        return ok(true);
+      },
+      retry_failed: (jobId: string): Promise<string> => {
+        const queue = mockQueues.get(jobId);
+        const failed = queue?.items.filter((item) => item.status === "error") ?? [];
+        if (!queue || failed.length === 0) return Promise.reject(new Error("errors.nothingToRetry"));
+        if (queue.closed) {
+          mockQueues.delete(jobId);
+          return ok(simulateBatch(failed.map((item) => item.url.replace("fail", "ok")), queue.outdir));
+        }
+        for (const item of failed) {
+          item.status = "pending";
+          item.percent = 0;
+          queue.order = [...queue.order.filter((index) => index !== item.index), item.index];
+          emit("job:partial", { jobId, data: { index: item.index, url: item.url, title: item.title, status: "pending", error: null } });
+        }
+        return ok(jobId);
       },
     },
     watermark: {

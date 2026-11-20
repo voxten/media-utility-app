@@ -342,3 +342,41 @@ def test_parse_section():
     assert dl.parse_section({"start": 5, "end": 2}) is None
     assert dl.parse_section({"start": "1.5", "end": 9}) == (1.5, 9.0)
     assert dl.parse_section({"start": "x", "end": 9}) is None
+
+
+def test_unique_youtube_dl_parallel_downloads_get_different_names(tmp_path):
+    opts = {"outtmpl": str(Path(tmp_path) / "%(title)s.%(ext)s")}
+    first = download.UniqueYoutubeDL(opts, target_ext="mp4")
+    second = download.UniqueYoutubeDL(opts, target_ext="mp4")
+    with first, second:
+        a = first.prepare_filename({"id": "1", "title": "clip", "ext": "mp4"})
+        b = second.prepare_filename({"id": "2", "title": "clip", "ext": "mp4"})
+        again = first.prepare_filename({"id": "1", "title": "clip", "ext": "webm"})
+    assert a == str(Path(tmp_path) / "clip.mp4")
+    assert b == str(Path(tmp_path) / "clip (1).mp4")
+    assert again == str(Path(tmp_path) / "clip.webm")
+
+    with download.UniqueYoutubeDL(opts, target_ext="mp4") as later:
+        assert later.prepare_filename({"id": "3", "title": "clip", "ext": "mp4"}) == a
+
+
+def test_unique_youtube_dl_reserves_names_across_threads(tmp_path):
+    import threading
+
+    opts = {"outtmpl": str(Path(tmp_path) / "%(title)s.%(ext)s")}
+    names = []
+    barrier = threading.Barrier(3)
+    instances = [download.UniqueYoutubeDL(opts, target_ext="mp4") for _ in range(3)]
+
+    def pick(ydl):
+        barrier.wait()
+        names.append(ydl.prepare_filename({"id": "x", "title": "same", "ext": "mp4"}))
+
+    threads = [threading.Thread(target=pick, args=(ydl,)) for ydl in instances]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    for ydl in instances:
+        ydl.close()
+    assert len(set(names)) == 3

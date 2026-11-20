@@ -1,9 +1,10 @@
-// What queued links and playlists download: video up to a quality, or audio in a chosen format.
+// What queued links and playlists download (video up to a quality, or audio in a chosen format) and how fast.
 
 import { Field, Switch } from "@fluentui/react-components";
 import { useTranslation } from "react-i18next";
 import { Select } from "../../components/Select";
 import { formatOptions } from "../../lib/fileTypes";
+import { DOWNLOAD_PARALLEL, DOWNLOAD_RATE_LIMITS } from "../../lib/types";
 import { useSettings } from "../../stores/settings";
 import { useDownloadForm } from "./store";
 import { AUDIO_CODECS, type BatchMode } from "./types";
@@ -17,6 +18,8 @@ export function BatchFormatField() {
   const audioCodec = useDownloadForm((s) => s.audioCodec);
   const set = useDownloadForm((s) => s.set);
   const skipArchived = useSettings((s) => s.settings?.downloadSkipArchived ?? false);
+  const parallel = useSettings((s) => s.settings?.downloadParallel ?? 1);
+  const rateLimit = useSettings((s) => s.settings?.downloadRateLimit ?? 0);
   const updateSettings = useSettings((s) => s.update);
 
   return (
@@ -49,6 +52,26 @@ export function BatchFormatField() {
         label={t("download.skipArchived")}
         onChange={(_, d) => updateSettings({ downloadSkipArchived: d.checked }).catch(() => undefined)}
       />
+      <Field label={t("download.batchFormat.parallel")}>
+        <Select
+          options={DOWNLOAD_PARALLEL.map((n) => ({ value: String(n), label: String(n) }))}
+          value={String(parallel)}
+          onChange={(next) => {
+            const value = DOWNLOAD_PARALLEL.find((n) => String(n) === next);
+            if (value) updateSettings({ downloadParallel: value }).catch(() => undefined);
+          }}
+        />
+      </Field>
+      <Field label={t("download.batchFormat.rateLimit")}>
+        <Select
+          options={DOWNLOAD_RATE_LIMITS.map((mb) => ({ value: String(mb), label: mb ? `${mb} MB/s` : t("download.batchFormat.noLimit") }))}
+          value={String(rateLimit)}
+          onChange={(next) => {
+            const value = DOWNLOAD_RATE_LIMITS.find((mb) => String(mb) === next);
+            if (value != null) updateSettings({ downloadRateLimit: value }).catch(() => undefined);
+          }}
+        />
+      </Field>
     </>
   );
 }

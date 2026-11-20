@@ -781,7 +781,11 @@
       "done": "Pobieranie zakończone.",
       "batchDone": "Kolejka zakończona.",
       "subtitles": "Pobieranie napisów…",
-      "probingLinks": "Sprawdzanie linków: {{current}}/{{total}}"
+      "probingLinks": "Sprawdzanie linków: {{current}}/{{total}}",
+      "downloadingMany_one": "Pobieranie {{count}} linku…",
+      "downloadingMany_few": "Pobieranie {{count}} linków…",
+      "downloadingMany_many": "Pobieranie {{count}} linków…",
+      "downloadingMany_other": "Pobieranie {{count}} linku…"
     },
     "log": {
       "itemFailed": "Nie udało się pobrać {{url}}: {{error}}",
@@ -792,7 +796,8 @@
       "whisperStarted": "Strona nie ma napisów, transkrypcja modelem Whisper {{model}}…",
       "whisperFailed": "Whisper nie zadziałał: {{error}}",
       "itemSkipped": "Pominięto, pobrany wcześniej: {{url}}",
-      "queueNotSaved": "Nie udało się zapisać kolejki na później: {{error}}"
+      "queueNotSaved": "Nie udało się zapisać kolejki na później: {{error}}",
+      "itemCancelled": "Pominięto: {{url}}"
     },
     "error": {
       "xLoginRequired": "X udostępnia filmy tylko zalogowanym. Dodaj plik cookies X w Ustawieniach → Pliki cookies i spróbuj ponownie.",
@@ -882,7 +887,10 @@
     "batchFormat": {
       "mode": "Pobieraj",
       "quality": "Maksymalna jakość",
-      "best": "Najlepsza dostępna"
+      "best": "Najlepsza dostępna",
+      "parallel": "Pobrania naraz",
+      "rateLimit": "Limit prędkości",
+      "noLimit": "Bez limitu"
     },
     "skipArchived": "Pomijaj pobrane wcześniej",
     "embedMeta": "Okładka i metadane w pliku",
@@ -914,7 +922,8 @@
       "pickChapter": "Wybierz rozdział",
       "start": "Od",
       "end": "Do"
-    }
+    },
+    "skip": "Pomiń"
   },
   "upscale": {
     "status": {
@@ -1585,7 +1594,8 @@
     "allFilesFailed_one": "Nie udało się przekonwertować pliku. Szczegóły są w logu.",
     "allFilesFailed_few": "Nie udało się przekonwertować żadnego z {{count}} plików. Szczegóły są w logu.",
     "allFilesFailed_many": "Nie udało się przekonwertować żadnego z {{count}} plików. Szczegóły są w logu.",
-    "allFilesFailed_other": "Nie udało się przekonwertować żadnego z {{count}} plików. Szczegóły są w logu."
+    "allFilesFailed_other": "Nie udało się przekonwertować żadnego z {{count}} plików. Szczegóły są w logu.",
+    "nothingToRetry": "Nie ma nieudanych linków do ponowienia."
   },
   "media_convert": {
     "output": "Wynik",

@@ -723,7 +723,9 @@
       "done": "Download finished.",
       "batchDone": "Queue finished.",
       "subtitles": "Fetching subtitles…",
-      "probingLinks": "Checking links: {{current}}/{{total}}"
+      "probingLinks": "Checking links: {{current}}/{{total}}",
+      "downloadingMany_one": "Downloading {{count}} link…",
+      "downloadingMany_other": "Downloading {{count}} links…"
     },
     "log": {
       "itemFailed": "Failed to download {{url}}: {{error}}",
@@ -734,7 +736,8 @@
       "whisperStarted": "No subtitles on the site, transcribing with Whisper {{model}}…",
       "whisperFailed": "Whisper failed: {{error}}",
       "itemSkipped": "Skipped, downloaded before: {{url}}",
-      "queueNotSaved": "Could not save the queue for later: {{error}}"
+      "queueNotSaved": "Could not save the queue for later: {{error}}",
+      "itemCancelled": "Skipped: {{url}}"
     },
     "error": {
       "xLoginRequired": "X shares videos only with signed-in users. Add an X cookie file in Settings → Cookie files and try again.",
@@ -812,7 +815,10 @@
     "batchFormat": {
       "mode": "Download",
       "quality": "Maximum quality",
-      "best": "Best available"
+      "best": "Best available",
+      "parallel": "Downloads at once",
+      "rateLimit": "Speed limit",
+      "noLimit": "No limit"
     },
     "skipArchived": "Skip videos downloaded before",
     "embedMeta": "Cover and metadata in the file",
@@ -838,7 +844,8 @@
       "pickChapter": "Pick a chapter",
       "start": "From",
       "end": "To"
-    }
+    },
+    "skip": "Skip"
   },
   "upscale": {
     "status": {
@@ -1475,7 +1482,8 @@
     "pdfEncrypted": "{{file}} is protected with a password.",
     "noVideo": "{{file}} has no video track.",
     "allFilesFailed_one": "The file could not be converted. Details are in the log.",
-    "allFilesFailed_other": "None of the {{count}} files could be converted. Details are in the log."
+    "allFilesFailed_other": "None of the {{count}} files could be converted. Details are in the log.",
+    "nothingToRetry": "There are no failed links to retry."
   },
   "media_convert": {
     "output": "Output",

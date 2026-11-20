@@ -386,6 +386,11 @@ class TtsApi(_Namespace):
         return media_server.file_url(path) if Path(path).is_file() else ""
 
 
+def _int_setting(settings: Settings, key: str, default: int) -> int:
+    value = settings.get(key)
+    return value if isinstance(value, int) and not isinstance(value, bool) else default
+
+
 class DownloadApi(_Namespace):
     def probe(self, url: str) -> str:
         cookies = self._ctx.settings.cookie_files()
@@ -420,6 +425,8 @@ class DownloadApi(_Namespace):
         cookies = self._ctx.settings.cookie_files()
         settings = self._ctx.settings
         max_height = params.get("maxHeight") or 0
+        parallel = _int_setting(settings, "downloadParallel", 1)
+        rate_limit = _int_setting(settings, "downloadRateLimit", 0) * download_queue.MEGABYTE
         return self._ctx.jobs.submit(
             "download.batch",
             lambda ctx: download_queue.download_batch(
@@ -438,6 +445,8 @@ class DownloadApi(_Namespace):
                 persist=True,
                 replaces=replaces,
                 sponsorblock=bool(params.get("sponsorblock")),
+                parallel=parallel,
+                rate_limit=rate_limit,
             ),
             title=f'download.batchTitle|{{"count": {len(urls)}}}',
         )
@@ -474,6 +483,29 @@ class DownloadApi(_Namespace):
         job_id = params.get("jobId")
         success = download_queue.add_to_batch(job_id, urls)
         return {"success": success}
+
+    def reorder_batch(self, params: Dict[str, Any]) -> bool:
+        """``order`` lists the queue's item indexes as the window shows them after dragging."""
+        order = params.get("order")
+        return download_queue.reorder_batch(params.get("jobId", ""), order if isinstance(order, list) else [])
+
+    def skip_batch_item(self, params: Dict[str, Any]) -> bool:
+        index = params.get("index")
+        if not isinstance(index, int) or isinstance(index, bool):
+            return False
+        return download_queue.skip_batch_item(params.get("jobId", ""), index)
+
+    def retry_failed(self, job_id: str) -> str:
+        """Retry a queue's failed links with its own options: in the queue itself while it runs, else in a new one.
+
+        The id of the job that downloads them.
+        """
+        retry = download_queue.retry_failed(job_id)
+        if retry is None:
+            raise AppError("errors.nothingToRetry")
+        if "requeued" in retry:
+            return job_id
+        return self._submit_batch(retry["urls"], retry["options"], None)
 
 
 class InstagramApi(_Namespace):

@@ -33,6 +33,10 @@ export interface Settings {
   downloadEmbedMeta: boolean;
   /** Queued links already downloaded once (listed in the download archive) are skipped. */
   downloadSkipArchived: boolean;
+  /** Links of a queue downloaded at once (1–3). */
+  downloadParallel: DownloadParallel;
+  /** MB/s shared by a queue's downloads; 0 is no limit. */
+  downloadRateLimit: DownloadRateLimit;
   /** Last output settings used by the GIF tools. */
   gifOutput?: GifOutputOptions;
   /** Last options used by the Transcription tool. */
@@ -101,6 +105,11 @@ export interface ShellLabels {
 
 /** A copied link and the download tool that handles it (backend/core/clipboard.py). */
 export type GlobalHotkey = "" | "ctrl+alt+d" | "ctrl+alt+shift+d" | "ctrl+alt+y" | "ctrl+alt+shift+y";
+
+export const DOWNLOAD_PARALLEL = [1, 2, 3] as const;
+export type DownloadParallel = (typeof DOWNLOAD_PARALLEL)[number];
+export const DOWNLOAD_RATE_LIMITS = [0, 1, 2, 5, 10, 20] as const;
+export type DownloadRateLimit = (typeof DOWNLOAD_RATE_LIMITS)[number];
 
 export interface ClipboardLink {
   url: string;

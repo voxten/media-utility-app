@@ -70,6 +70,8 @@ def default_settings() -> Dict[str, Any]:
         "lastSeenVersion": "",  # app version whose release notes the user was pointed to
         "downloadEmbedMeta": True,  # cover image, title and artist written into downloaded files
         "downloadSkipArchived": False,  # queued links already downloaded once are skipped
+        "downloadParallel": 1,  # links of a queue downloaded at once
+        "downloadRateLimit": 0,  # MB/s shared by a queue's downloads; 0 is no limit
         "engineUpdateCheck": True,  # look for newer yt-dlp / gallery-dl at start-up, at most daily
         "engineLastCheck": 0,  # time.time() of the last look
         "engineLatest": {},  # {"yt-dlp": {"version": …, "pins": {"yt-dlp-ejs": …}}, …}
@@ -86,6 +88,8 @@ CHOICES: Dict[str, frozenset] = {
     "language": frozenset({"pl", "en"}),
     "downloadSubtitles": frozenset({"off", "site", "auto"}),
     "globalHotkey": frozenset({"", "ctrl+alt+d", "ctrl+alt+shift+d", "ctrl+alt+y", "ctrl+alt+shift+y"}),
+    "downloadParallel": frozenset({1, 2, 3}),
+    "downloadRateLimit": frozenset({0, 1, 2, 5, 10, 20}),
 }
 MAX_CONCURRENCY = 16
 

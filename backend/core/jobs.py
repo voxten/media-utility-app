@@ -66,9 +66,10 @@ class JobContext:
         percent: Optional[float] = None,
         message: Optional[str] = None,
         params: Optional[Dict[str, Any]] = None,
+        force: bool = False,
         **extra: Any,
     ) -> None:
-        """Report progress (0-100, or None for indeterminate). Throttled to ~10 events/s.
+        """Report progress (0-100, or None for indeterminate). Throttled to ~10 events/s unless ``force``.
 
         ``message`` is an i18n key (e.g. ``"converter.status.converting"``) and ``params``
         its interpolation values, so the UI can render it in the user's language.
@@ -84,7 +85,7 @@ class JobContext:
 
         now = time.monotonic()
         final = self.percent is not None and self.percent >= 100
-        if not (changed_message or final) and now - self._last_progress < PROGRESS_INTERVAL_S:
+        if not (changed_message or final or force) and now - self._last_progress < PROGRESS_INTERVAL_S:
             return
         self._last_progress = now
         self._send(

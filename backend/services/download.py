@@ -505,10 +505,13 @@ def _download_opts(
     archive: Optional[str] = None,
     sponsorblock: bool = False,
     section: Optional[Tuple[float, float]] = None,
+    ratelimit: Optional[int] = None,
 ) -> Dict[str, Any]:
     """yt-dlp options for one download; ``archive`` is the file that records every finished download.
 
     ``sponsorblock`` cuts sponsor segments out of YouTube videos; ``section`` keeps only (start, end) seconds.
+    ``ratelimit`` caps the speed in bytes/s. yt-dlp applies it to every fragment it fetches at once, so a
+    limited download fetches one fragment at a time.
     """
     opts = _base_opts(url, cookies)
     opts.update({
@@ -535,6 +538,9 @@ def _download_opts(
         opts["writethumbnail"] = mode != "audio" or audio_codec in COVER_CODECS
     if archive:
         opts["download_archive"] = archive
+    if ratelimit:
+        opts["ratelimit"] = ratelimit
+        opts["concurrent_fragment_downloads"] = 1
     return opts
 
 
@@ -660,13 +666,34 @@ def _ffmpeg_stops_with(ctx: JobContext) -> Iterator[None]:
         _running_job.ctx = previous
 
 
+# Names taken by downloads that have not written their file yet, so two downloads of the same title
+# running at once never pick the same name.
+_reserved_names: Set[str] = set()
+_reserved_lock = threading.Lock()
+
+
 class UniqueYoutubeDL(yt_dlp.YoutubeDL):
     """YoutubeDL subclass that prevents overwriting / skipping by appending (1), (2), etc.
-    when the target destination file already exists."""
+    when the target destination file already exists or another running download has chosen it."""
 
     def __init__(self, *args: Any, target_ext: Optional[str] = None, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.target_ext = target_ext.lower().lstrip(".") if target_ext else None
+        self._reserved: Set[str] = set()
+
+    def _taken(self, parent: Path, stem: str, suffixes: Tuple[str, ...]) -> bool:
+        key = str(parent / stem).lower()
+        if key in _reserved_names and key not in self._reserved:
+            return True
+        return any((parent / f"{stem}{suffix}").exists() for suffix in suffixes)
+
+    def close(self) -> None:
+        try:
+            super().close()
+        finally:
+            with _reserved_lock:
+                _reserved_names.difference_update(self._reserved)
+            self._reserved.clear()
 
     def _prepare_filename(
         self, info_dict: Dict[str, Any], *, outtmpl: Optional[str] = None, tmpl_type: Optional[str] = None
@@ -680,9 +707,13 @@ class UniqueYoutubeDL(yt_dlp.YoutubeDL):
             target_ext = f".{self.target_ext}" if self.target_ext else p.suffix
             stem = fit_stem(p.parent, p.stem, max(target_ext, p.suffix, key=len))
             unique, counter = stem, 1
-            while (p.parent / f"{unique}{target_ext}").exists() or (p.parent / f"{unique}{p.suffix}").exists():
-                unique = f"{stem} ({counter})"
-                counter += 1
+            with _reserved_lock:
+                while self._taken(p.parent, unique, (target_ext, p.suffix)):
+                    unique = f"{stem} ({counter})"
+                    counter += 1
+                key = str(p.parent / unique).lower()
+                _reserved_names.add(key)
+                self._reserved.add(key)
             info_dict["_unique_stem"] = unique
 
         unique_stem = info_dict["_unique_stem"]

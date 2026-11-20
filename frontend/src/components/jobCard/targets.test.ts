@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { JobState } from "../../stores/jobs";
-import { extractSubtasks, jobLinks, openTarget, revealTarget, transferTargets } from "./targets";
+import { extractSubtasks, jobLinks, openTarget, queueOrder, revealTarget, runningItems, transferTargets } from "./targets";
 
 const job = (fields: Partial<JobState>): JobState => ({
   id: "j",
@@ -39,11 +39,43 @@ describe("extractSubtasks", () => {
     expect(items[1]).toMatchObject({ title: "https://b", status: "pending" });
   });
 
-  it("marks the current item as running with live speed", () => {
+  it("marks every running item with its own progress", () => {
     const items = extractSubtasks(
-      job({ partials: [{ index: 0, url: "https://a" }], extra: { item: 0, itemPercent: 30, speed: 500 } }),
+      job({
+        partials: [
+          { index: 0, url: "https://a", status: "pending" },
+          { index: 1, url: "https://b", status: "pending" },
+          { index: 2, url: "https://c", status: "pending" },
+        ],
+        extra: {
+          running: [
+            { index: 0, percent: 30, speed: 500, total: 1000 },
+            { index: 2, percent: 70, speed: 200, eta: 4 },
+          ],
+        },
+      }),
     );
-    expect(items[0]).toMatchObject({ status: "running", percent: 30, speed: 500 });
+    expect(items[0]).toMatchObject({ status: "running", percent: 30, speed: 500, size: 1000 });
+    expect(items[1]).toMatchObject({ status: "pending" });
+    expect(items[2]).toMatchObject({ status: "running", percent: 70, speed: 200, eta: 4 });
+  });
+
+  it("ignores running items once the job has ended", () => {
+    const items = extractSubtasks(
+      job({ status: "cancelled", partials: [{ index: 0, url: "https://a", status: "pending" }], extra: { running: [{ index: 0, percent: 50 }] } }),
+    );
+    expect(items[0]).toMatchObject({ status: "pending" });
+    expect(items[0].percent).toBeUndefined();
+  });
+
+  it("lists the items in the order the queue reported", () => {
+    const items = extractSubtasks(
+      job({
+        partials: [0, 1, 2].map((index) => ({ index, url: `https://${index}`, status: "pending" })),
+        extra: { order: [2, 0, 1] },
+      }),
+    );
+    expect(items.map((i) => i.id)).toEqual([2, 0, 1]);
   });
 
   it("takes final items from the result", () => {
@@ -67,6 +99,16 @@ describe("extractSubtasks", () => {
       { id: 0, title: "https://a", url: "https://a", status: "unknown" },
       { id: 1, title: "https://b", url: "https://b", status: "unknown" },
     ]);
+  });
+});
+
+describe("runningItems and queueOrder", () => {
+  it("skip malformed entries", () => {
+    const running = runningItems(job({ extra: { running: [null, { percent: 5 }, { index: 1, percent: "x" }] } }));
+    expect([...running.values()]).toEqual([{ index: 1, percent: 0, speed: undefined, eta: undefined, downloaded: undefined, total: undefined }]);
+    expect(queueOrder(job({ extra: { order: [1, "a"] } }))).toBeUndefined();
+    expect(queueOrder(job({ extra: { order: [1, 0] } }))).toEqual([1, 0]);
+    expect(queueOrder(null)).toBeUndefined();
   });
 });
 

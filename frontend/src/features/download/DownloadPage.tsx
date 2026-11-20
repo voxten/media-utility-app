@@ -53,6 +53,7 @@ import type { PendingQueue } from "../../lib/types";
 import { errorMessage } from "../../lib/errors";
 import { ResultCard } from "../../components/ResultCard";
 import { useToolShortcuts } from "../../lib/useToolShortcuts";
+import { queueOrder, runningItems } from "../../components/jobCard/targets";
 
 const TEMPLATE_TOKENS = ["{title}", "{id}", "{ext}"];
 
@@ -121,7 +122,12 @@ export default function DownloadPage() {
 
   const urls = useMemo(() => form.batchText.split(/\r?\n/).map((u) => u.trim()).filter(Boolean), [form.batchText]);
 
-  // Batch queue view: merge streamed per-item partials with the per-item progress.
+  const serverOrder = queueOrder(batch.job);
+  // A dragged order shows at once and gives way to the next order the queue reports.
+  const [dragged, setDragged] = useState<{ order: number[]; base: number[] | undefined } | null>(null);
+  const order = dragged && dragged.base === serverOrder ? dragged.order : serverOrder;
+
+  // Batch queue view: merge streamed per-item partials with the progress of the running items.
   const queue = useMemo<BatchItem[]>(() => {
     const items = new Map<number, BatchItem>();
     const source = (batch.job?.partials && batch.job.partials.length > 0 ? (batch.job.partials as BatchItem[]) : lastBatch) ?? [];
@@ -130,13 +136,15 @@ export default function DownloadPage() {
       return Array.from(items.values());
     }
     source.forEach((p) => items.set(p.index, { ...items.get(p.index), ...p }));
-    const extra = batch.job?.status === "running" ? batch.job.extra : {};
-    if (typeof extra.item === "number") {
-      const cur = items.get(extra.item);
-      if (cur) items.set(extra.item, { ...cur, percent: Number(extra.itemPercent ?? 0) });
-    }
-    return Array.from(items.values()).sort((a, b) => a.index - b.index);
-  }, [batch.job, lastBatch, urls]);
+    runningItems(batch.job).forEach((run, index) => {
+      const cur = items.get(index);
+      if (cur) items.set(index, { ...cur, status: "running", percent: run.percent });
+    });
+    const list = Array.from(items.values());
+    if (!order) return list;
+    const position = new Map(order.map((index, at) => [index, at]));
+    return list.sort((a, b) => (position.get(a.index) ?? Infinity) - (position.get(b.index) ?? Infinity) || a.index - b.index);
+  }, [batch.job, lastBatch, urls, order]);
 
   const failedItems = useMemo(() => queue.filter((i) => i.status === "error"), [queue]);
   const batchResult = batch.job?.result as Partial<BatchResult> | undefined;
@@ -187,10 +195,30 @@ export default function DownloadPage() {
     );
   };
 
+  /** The queue's own options are used: the running queue takes the links again, a finished one starts a new queue. */
   const retryFailed = () => {
-    const targetUrls = failedItems.length > 0 ? failedItems.map((i) => i.url) : urls;
-    if (targetUrls.length === 0) return;
-    runBatch(targetUrls).catch((err) => notify.error(errorMessage(t, err)));
+    const jobId = batch.jobId;
+    if (!jobId) return;
+    batch
+      .start(async () => {
+        const id = await api.download.retryFailed(jobId);
+        if (id !== jobId) setLastBatch(null);
+        return id;
+      })
+      .catch((err) => notify.error(errorMessage(t, err)));
+  };
+
+  const queueJobId = batch.job?.status === "running" ? batch.job.id : null;
+
+  const reorderQueue = (next: number[]) => {
+    if (!queueJobId) return;
+    setDragged({ order: next, base: serverOrder });
+    api.download.reorderBatch({ jobId: queueJobId, order: next }).catch((err) => notify.error(errorMessage(t, err)));
+  };
+
+  const skipItem = (index: number) => {
+    if (!queueJobId) return;
+    api.download.skipBatchItem({ jobId: queueJobId, index }).catch((err) => notify.error(errorMessage(t, err)));
   };
 
   const resumeQueue = () => {
@@ -447,10 +475,12 @@ export default function DownloadPage() {
               />
             )}
             <BatchQueue
-            queue={queue}
-            running={batch.running}
-            totalSize={batchTotal(batchResult?.totalSize, queue, "size")}
-            totalDuration={batchTotal(batchResult?.totalDuration, queue, "duration")}
+              queue={queue}
+              running={batch.running}
+              totalSize={batchTotal(batchResult?.totalSize, queue, "size")}
+              totalDuration={batchTotal(batchResult?.totalDuration, queue, "duration")}
+              onReorder={queueJobId ? reorderQueue : undefined}
+              onSkip={queueJobId ? skipItem : undefined}
             />
           </>
         )}
@@ -472,7 +502,7 @@ export default function DownloadPage() {
         }
         onCancel={() => (batch.running ? batch.cancel() : download.running ? download.cancel() : probe.cancel())}
       >
-        {form.tab === "batch" && failedItems.length > 0 && !running && (
+        {form.tab === "batch" && failedItems.length > 0 && !!batch.jobId && !probe.running && !download.running && (
           <Button icon={<ArrowClockwise16Regular />} onClick={retryFailed}>
             {t("download.retryFailed", { count: failedItems.length })}
           </Button>

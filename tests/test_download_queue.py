@@ -1,10 +1,13 @@
 import json
+import threading
+import time
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
 from backend.bridge import api
+from backend.core.errors import AppError
 from backend.core.jobs import JobCancelled
 from backend.core.settings import validate_patch
 from backend.services import download, download_queue
@@ -262,3 +265,304 @@ def test_resumed_queue_keeps_sponsorblock(monkeypatch, ctx, tmp_path, queue_file
 
     assert started["urls"] == URLS[1:]
     assert started["sponsorblock"] is True
+
+
+class _Gate:
+    """A _run_ydl replacement whose downloads wait until the test lets them finish.
+
+    ``outcomes`` answers per URL: "done" (default) or "error"; ``started`` records the URLs in the
+    order they began, ``live`` how many run at the same moment.
+    """
+
+    def __init__(self, outcomes=None):
+        self.outcomes = outcomes or {}
+        self.lock = threading.Lock()
+        self.started = []
+        self.opts = {}
+        self.release = {}
+        self.live = 0
+        self.most_live = 0
+
+    def __call__(self, ctx, url, opts, target_ext=None, photos=False, skip_archived=False):
+        event = threading.Event()
+        with self.lock:
+            self.started.append(url)
+            self.opts[url] = opts
+            self.release[url] = event
+            self.live += 1
+            self.most_live = max(self.most_live, self.live)
+        try:
+            while not event.wait(0.01):
+                ctx.check_cancelled()
+            outcome = self.outcomes.get(url, "done")
+            if outcome == "error":
+                raise RuntimeError("broken link")
+            return {"title": url, "path": f"{url}.mp4", "size": 10}
+        finally:
+            with self.lock:
+                self.live -= 1
+
+    def wait_started(self, count, timeout=5.0):
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            with self.lock:
+                if len(self.started) >= count:
+                    return
+            threading.Event().wait(0.005)
+        raise AssertionError(f"only {self.started} started")
+
+    def finish(self, url):
+        self.wait_for(url)
+        self.release[url].set()
+
+    def wait_for(self, url, timeout=5.0):
+        deadline = time.monotonic() + timeout
+        while url not in self.release:
+            assert time.monotonic() < deadline, f"{url} never started"
+            threading.Event().wait(0.005)
+
+
+class _BatchThread:
+    """Runs download_batch in the background and keeps its result or error."""
+
+    def __init__(self, ctx, urls, outdir, **kwargs):
+        self.result = None
+        self.error = None
+        self.thread = threading.Thread(target=self._run, args=(ctx, urls, outdir), kwargs=kwargs, daemon=True)
+        self.thread.start()
+
+    def _run(self, ctx, urls, outdir, **kwargs):
+        try:
+            self.result = download_queue.download_batch(ctx, urls, outdir, **kwargs)
+        except BaseException as exc:  # noqa: BLE001 - checked by the test
+            self.error = exc
+
+    def join(self):
+        self.thread.join(10)
+        assert not self.thread.is_alive()
+        return self.result
+
+
+def _queue(job_id):
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline:
+        with download_queue._active_batches_lock:
+            queue = download_queue._active_batches.get(job_id)
+        if queue:
+            return queue
+        threading.Event().wait(0.005)
+    raise AssertionError("the queue never started")
+
+
+def _statuses(ctx):
+    last = {}
+    for payload in ctx.of("job:partial"):
+        last[payload["data"]["index"]] = payload["data"]["status"]
+    return last
+
+
+def test_two_links_download_at_once(monkeypatch, ctx, tmp_path, queue_file):
+    gate = _Gate()
+    monkeypatch.setattr(download_queue, "_run_ydl", gate)
+    batch = _BatchThread(ctx, URLS, str(tmp_path), parallel=2)
+
+    gate.wait_started(2)
+    assert gate.started == URLS[:2]
+    gate.finish(URLS[1])
+    gate.wait_started(3)
+    gate.finish(URLS[0])
+    gate.finish(URLS[2])
+    result = batch.join()
+
+    assert gate.most_live == 2
+    assert result["succeeded"] == 3
+    running = [p["running"] for p in ctx.of("job:progress") if p.get("running")]
+    assert any(len(items) == 2 for items in running)
+
+
+def test_parallel_is_capped(ctx):
+    assert download_queue.ActiveBatchQueue(ctx, {}, parallel=9).parallel == download_queue.MAX_PARALLEL
+    assert download_queue.ActiveBatchQueue(ctx, {}, parallel=0).parallel == 1
+
+
+def test_reorder_changes_the_download_order_and_the_resume_file(monkeypatch, ctx, tmp_path, queue_file):
+    urls = URLS + ["https://example.com/d"]
+    gate = _Gate()
+    monkeypatch.setattr(download_queue, "_run_ydl", gate)
+    batch = _BatchThread(ctx, urls, str(tmp_path), persist=True)
+
+    gate.wait_started(1)
+    queue = _queue(ctx.job_id)
+    assert download_queue.reorder_batch(ctx.job_id, [0, 3, "x", 2, 99, True])
+    assert queue.order == [0, 3, 2, 1]
+    assert download_queue.load_queue()["urls"] == [urls[0], urls[3], urls[2], urls[1]]
+    assert ctx.of("job:progress")[-1]["order"] == [0, 3, 2, 1]
+
+    for url in (urls[0], urls[3], urls[2], urls[1]):
+        gate.finish(url)
+    result = batch.join()
+
+    assert gate.started == [urls[0], urls[3], urls[2], urls[1]]
+    assert [item["index"] for item in result["items"]] == [0, 3, 2, 1]
+
+
+def test_cancelled_queue_resumes_in_the_new_order(monkeypatch, ctx, tmp_path, queue_file):
+    gate = _Gate()
+    monkeypatch.setattr(download_queue, "_run_ydl", gate)
+    batch = _BatchThread(ctx, URLS, str(tmp_path), persist=True)
+
+    gate.wait_started(1)
+    download_queue.reorder_batch(ctx.job_id, [2, 1])
+    ctx.cancel()
+    batch.join()
+
+    assert isinstance(batch.error, JobCancelled)
+    assert download_queue.load_queue()["urls"] == [URLS[2], URLS[1], URLS[0]]
+
+
+def test_skipping_a_waiting_link_leaves_it_out(monkeypatch, ctx, tmp_path, queue_file):
+    gate = _Gate()
+    monkeypatch.setattr(download_queue, "_run_ydl", gate)
+    batch = _BatchThread(ctx, URLS, str(tmp_path), persist=True)
+
+    gate.wait_started(1)
+    assert download_queue.skip_batch_item(ctx.job_id, 1)
+    assert not download_queue.skip_batch_item(ctx.job_id, 1)
+    assert download_queue.load_queue()["urls"] == [URLS[0], URLS[2]]
+    gate.finish(URLS[0])
+    gate.finish(URLS[2])
+    result = batch.join()
+
+    assert gate.started == [URLS[0], URLS[2]]
+    assert [item["status"] for item in result["items"]] == ["done", "cancelled", "done"]
+
+
+def test_skipping_a_running_link_stops_only_that_link(monkeypatch, ctx, tmp_path, queue_file):
+    gate = _Gate()
+    monkeypatch.setattr(download_queue, "_run_ydl", gate)
+    batch = _BatchThread(ctx, URLS, str(tmp_path), parallel=2, persist=True)
+
+    gate.wait_started(2)
+    assert download_queue.skip_batch_item(ctx.job_id, 0)
+    gate.wait_started(3)
+    gate.finish(URLS[1])
+    gate.finish(URLS[2])
+    result = batch.join()
+
+    assert batch.error is None
+    assert not ctx.cancelled
+    assert [item["status"] for item in result["items"]] == ["cancelled", "done", "done"]
+    assert not queue_file.exists()
+
+
+def test_retry_failed_requeues_failed_links_of_a_running_queue(monkeypatch, ctx, tmp_path, queue_file):
+    gate = _Gate({URLS[0]: "error"})
+    monkeypatch.setattr(download_queue, "_run_ydl", gate)
+    batch = _BatchThread(ctx, URLS, str(tmp_path))
+
+    gate.finish(URLS[0])
+    gate.wait_started(2)
+    queue = _queue(ctx.job_id)
+    while queue.results.get(0, {}).get("status") != "error":
+        threading.Event().wait(0.005)
+    gate.outcomes.clear()
+    assert download_queue.retry_failed(ctx.job_id) == {"requeued": 1}
+    assert _statuses(ctx)[0] == "pending"
+
+    gate.finish(URLS[1])
+    gate.finish(URLS[2])
+    gate.wait_started(4)
+    gate.release[URLS[0]].set()
+    result = batch.join()
+
+    assert gate.started == [URLS[0], URLS[1], URLS[2], URLS[0]]
+    assert result["succeeded"] == 3 and result["failed"] == 0
+
+
+def test_retry_failed_after_the_queue_uses_its_own_options(monkeypatch, ctx, tmp_path, queue_file):
+    failing = _fake_run({})
+
+    def run(job_ctx, url, opts, **kwargs):
+        if url == URLS[1]:
+            raise RuntimeError("broken link")
+        return failing(job_ctx, url, opts, **kwargs)
+
+    monkeypatch.setattr(download_queue, "_run_ydl", run)
+    download_queue.download_batch(ctx, URLS, str(tmp_path), mode="audio", audio_codec="m4a", max_height=720, sponsorblock=True)
+
+    started = {}
+    monkeypatch.setattr(
+        download_queue, "download_batch", lambda job_ctx, urls, outdir, *args, **kwargs: started.update(urls=urls, outdir=outdir, **kwargs)
+    )
+    settings = SimpleNamespace(cookie_files=lambda: {}, get=lambda key: {"downloadParallel": 2, "downloadRateLimit": 5}.get(key))
+    jobs = SimpleNamespace(submit=lambda kind, fn, title: fn(ctx) or "new-job")
+    bridge = api.DownloadApi(SimpleNamespace(settings=settings, jobs=jobs))
+
+    assert bridge.retry_failed(ctx.job_id) == "new-job"
+    assert started["urls"] == [URLS[1]]
+    assert started["outdir"] == str(tmp_path)
+    assert (started["mode"], started["audio_codec"], started["max_height"], started["sponsorblock"]) == ("audio", "m4a", 720, True)
+    assert (started["parallel"], started["rate_limit"]) == (2, 5 * download_queue.MEGABYTE)
+    assert started["replaces"] is None
+
+    with pytest.raises(AppError):
+        bridge.retry_failed(ctx.job_id)
+
+
+def test_link_added_while_the_last_one_downloads_is_downloaded(monkeypatch, ctx, tmp_path, queue_file):
+    gate = _Gate()
+    monkeypatch.setattr(download_queue, "_run_ydl", gate)
+    batch = _BatchThread(ctx, URLS[:1], str(tmp_path))
+
+    gate.wait_started(1)
+    assert download_queue.add_to_batch(ctx.job_id, [URLS[1]])
+    gate.finish(URLS[0])
+    gate.finish(URLS[1])
+    result = batch.join()
+
+    assert result["succeeded"] == 2
+    assert not download_queue.add_to_batch(ctx.job_id, [URLS[2]])
+
+
+def test_rate_limit_is_shared_and_fetches_one_fragment_at_a_time(monkeypatch, ctx, tmp_path, queue_file):
+    gate = _Gate()
+    monkeypatch.setattr(download_queue, "_run_ydl", gate)
+    batch = _BatchThread(ctx, URLS[:2], str(tmp_path), parallel=2, rate_limit=4 * download_queue.MEGABYTE)
+
+    gate.wait_started(2)
+    for url in URLS[:2]:
+        gate.finish(url)
+    batch.join()
+
+    for url in URLS[:2]:
+        assert gate.opts[url]["ratelimit"] == 2 * download_queue.MEGABYTE
+        assert gate.opts[url]["concurrent_fragment_downloads"] == 1
+
+
+def test_without_a_rate_limit_fragments_stay_parallel(monkeypatch, ctx, tmp_path, queue_file):
+    run = _fake_run({})
+    seen = []
+    monkeypatch.setattr(download_queue, "_run_ydl", lambda c, url, opts, **kw: seen.append(opts) or run(c, url, opts, **kw))
+    download_queue.download_batch(ctx, URLS[:1], str(tmp_path), parallel=3)
+    assert "ratelimit" not in seen[0]
+    assert seen[0]["concurrent_fragment_downloads"] == download.FRAGMENT_WORKERS
+
+
+def test_progress_reports_are_throttled(ctx):
+    queue = download_queue.ActiveBatchQueue(ctx, {})
+    queue.items = [{"index": 0, "url": "u", "title": "u"}]
+    queue.order = [0]
+    item = download_queue._ItemContext(queue, 0)
+    queue.running[0] = item
+    for percent in range(50):
+        item.progress(percent, "download.status.downloading", speed=100)
+    reports = ctx.of("job:progress")
+    assert 1 <= len(reports) <= 2
+    assert reports[0]["running"] == [{"index": 0, "percent": 0.0, "speed": 100}]
+
+
+def test_parallel_and_rate_limit_settings():
+    assert validate_patch({"downloadParallel": 3, "downloadRateLimit": 20})
+    for bad in ({"downloadParallel": 4}, {"downloadParallel": True}, {"downloadRateLimit": 3}, {"downloadRateLimit": 2.0}):
+        with pytest.raises(ValueError):
+            validate_patch(bad)

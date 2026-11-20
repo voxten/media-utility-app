@@ -12,12 +12,14 @@ Polskie tłumaczenie [CHANGELOG.md](CHANGELOG.md), pokazywane w aplikacji przy p
 - „Wyślij do” i upuszczenie pliku w dowolnym miejscu proponują **Transkrypcję** dla plików audio, a **Edytor GIF** dla animacji APNG.
 - Zakładka „Pobierz w Media Studio” do przeglądarki (Ustawienia → Przeglądarka): jedno kliknięcie otwiera bieżącą stronę w **Pobieraniu wideo**, a linki z Instagrama w **Instagramie**, także gdy aplikacja jest zamknięta albo schowana w zasobniku. Linki z YouTube, TikToka, X i Instagrama są od razu sprawdzane, z innych stron tylko trafiają do pola; pobieranie i tak czeka na Twoje kliknięcie. Instalator ma do tego nową opcję, domyślnie zaznaczoną.
 - Opcjonalny skrót klawiszowy w całym Windows (Ustawienia → Przeglądarka, domyślnie wyłączony) otwiera skopiowany link w aplikacji. Skrót zajęty przez inny program zostaje odrzucony z komunikatem.
+- Trwającą kolejkę pobierania można przeciąganiem ułożyć w innej kolejności i pomijać w niej linki; pominięcie pobieranego linku przerywa tylko ten link. „Ponów niepobrane” działa też w trakcie kolejki i po jej zakończeniu, z jej własnymi opcjami zamiast tych, które są teraz w formularzu. Dwie nowe opcje obok „Pomijaj pobrane wcześniej”: 1–3 pobrania naraz i limit prędkości (1–20 MB/s) wspólny dla całej kolejki.
 
 ### Zmieniono
 
 - Kolejka pobierania w panelu zadań nazywa się „3 linki” zamiast „3 URL”.
 - Ustawienia → Zależności pokazują pełny rozmiar pobierania narzędzia AI, razem z PyTorchem, jeśli trzeba go jeszcze zainstalować.
 - Angielskie etykiety Ustawień piszą wielką literą tylko pierwsze słowo, jak reszta aplikacji.
+- Kolejka wznowiona po anulowaniu albo zamknięciu aplikacji zachowuje kolejność ustawioną przeciąganiem.
 
 ### Naprawiono
 

@@ -235,6 +235,11 @@ export const api = {
     clearArchive: () => call<boolean>("download", "clear_archive"),
     addToBatch: (params: { jobId?: string; urls: string[] }) =>
       call<{ success: boolean }>("download", "add_to_batch", params),
+    /** `order` lists the queue's item indexes as shown after dragging. */
+    reorderBatch: (params: { jobId: string; order: number[] }) => call<boolean>("download", "reorder_batch", params),
+    skipBatchItem: (params: { jobId: string; index: number }) => call<boolean>("download", "skip_batch_item", params),
+    /** The job that downloads the failed links again: the queue itself while it runs, else a new one. */
+    retryFailed: (jobId: string) => call<JobId>("download", "retry_failed", jobId),
   },
   instagram: {
     probe: (url: string) => call<JobId>("instagram", "probe", url),

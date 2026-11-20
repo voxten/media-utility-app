@@ -72,28 +72,68 @@ export function extractSubtasks(job: JobState): SubtaskAction[] {
     job.meta?.urls?.forEach((url, index) => items.set(index, { id: index, title: url, url, status: "unknown" }));
   }
 
-  if (job.status === "running" && typeof job.extra?.item === "number") {
-    const curIdx = job.extra.item;
-    const cur = items.get(curIdx);
-    if (cur) {
-      items.set(curIdx, {
-        ...cur,
-        status: "running",
-        percent: typeof job.extra.itemPercent === "number" ? job.extra.itemPercent : cur.percent,
-        speed: typeof job.extra.speed === "number" ? job.extra.speed : undefined,
-        eta: typeof job.extra.eta === "number" ? job.extra.eta : undefined,
-        size: typeof job.extra.total === "number" && job.extra.total > 0 ? job.extra.total : (typeof job.extra.downloaded === "number" ? job.extra.downloaded : cur.size),
-      });
-    }
-  }
+  runningItems(job).forEach((run, index) => {
+    const cur = items.get(index);
+    if (!cur) return;
+    items.set(index, {
+      ...cur,
+      status: "running",
+      percent: run.percent,
+      speed: run.speed,
+      eta: run.eta,
+      size: run.total && run.total > 0 ? run.total : (run.downloaded ?? cur.size),
+    });
+  });
 
+  const position = new Map(queueOrder(job)?.map((index, at) => [index, at]));
   const list = Array.from(items.values());
   list.sort((a, b) => {
+    const pa = typeof a.id === "number" ? (position.get(a.id) ?? Infinity) : Infinity;
+    const pb = typeof b.id === "number" ? (position.get(b.id) ?? Infinity) : Infinity;
+    if (pa !== pb) return pa - pb;
     if (typeof a.id === "number" && typeof b.id === "number") return a.id - b.id;
     return String(a.id).localeCompare(String(b.id));
   });
 
   return list;
+}
+
+export interface RunningItem {
+  index: number;
+  percent: number;
+  speed?: number;
+  eta?: number;
+  downloaded?: number;
+  total?: number;
+}
+
+const num = (value: unknown) => (typeof value === "number" && Number.isFinite(value) ? value : undefined);
+
+/** The links a running queue downloads right now, by index, from its last progress event. */
+export function runningItems(job: JobState | null | undefined): Map<number, RunningItem> {
+  const running = new Map<number, RunningItem>();
+  if (job?.status !== "running" || !Array.isArray(job.extra?.running)) return running;
+  for (const raw of job.extra.running as unknown[]) {
+    if (!raw || typeof raw !== "object") continue;
+    const item = raw as Record<string, unknown>;
+    const index = num(item.index);
+    if (index == null) continue;
+    running.set(index, {
+      index,
+      percent: num(item.percent) ?? 0,
+      speed: num(item.speed),
+      eta: num(item.eta),
+      downloaded: num(item.downloaded),
+      total: num(item.total),
+    });
+  }
+  return running;
+}
+
+/** The order (item indexes) a queue shows its links in, once it has reported one. */
+export function queueOrder(job: JobState | null | undefined): number[] | undefined {
+  const order = job?.extra?.order;
+  return Array.isArray(order) && order.every((index) => typeof index === "number") ? order : undefined;
 }
 
 /** The links a job downloaded from: its one link, or every link of its queue. */

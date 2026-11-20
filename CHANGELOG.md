@@ -16,12 +16,14 @@ The app shows this file (and its Polish translation, [CHANGELOG.pl.md](CHANGELOG
 - "Send to" and dropping a file anywhere offer **Transcription** for audio files, and **GIF Editor** for APNG animations.
 - A "Download in Media Studio" bookmark for the browser (Settings → Browser): one click opens the current page in **Video Downloader**, or in **Instagram** for Instagram links, also when the app is closed or hidden in the tray. YouTube, TikTok, X and Instagram links are checked right away, other sites only fill the field; downloading still waits for your click. The installer has a new option for it, on by default.
 - An optional global shortcut (Settings → Browser, off by default) opens the copied link in the app from anywhere in Windows. A shortcut another program already uses is refused with a message.
+- A running download queue can be reordered by dragging and links can be skipped; skipping a link that is downloading stops only that link. "Retry failed" also works while the queue runs and after it ends, and uses the queue's own options instead of the ones now in the form. Two new options next to "Skip videos downloaded before": 1–3 downloads at once and a speed limit (1–20 MB/s) shared by the whole queue.
 
 ### Changed
 
 - A download queue in the Tasks panel is called "3 links" instead of "3 URL".
 - Settings → Dependencies shows the whole download size of an AI tool, including PyTorch when it still has to be installed.
 - Settings labels use sentence case like the rest of the app.
+- A queue resumed after a cancel or a closed app keeps the order it was dragged into.
 
 ### Fixed
 
