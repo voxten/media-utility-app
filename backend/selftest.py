@@ -290,6 +290,15 @@ def _check_gif(tmp: Path) -> Any:
     return {"gifsicle": gif_render.gifsicle_available(), "ffmpeg": has_binary("ffmpeg")}
 
 
+def _check_ocr(_: Path) -> Any:
+    """The Windows text recognizer is reachable from the bundle and has at least one language."""
+    from backend.services import ocr
+
+    languages = ocr.languages()
+    assert languages, "no text recognition language installed"
+    return [lang["tag"] for lang in languages]
+
+
 # "addons" goes first: other checks import torch and swallow the error, and a second import of torch
 # only reports that it was already tried, hiding the real cause.
 CHECKS: Dict[str, Callable[[Path], Any]] = {
@@ -309,6 +318,7 @@ CHECKS: Dict[str, Callable[[Path], Any]] = {
     "system_info": _check_system_info,
     "video_sync": _check_video_sync,
     "gif": _check_gif,
+    "ocr": _check_ocr,
     "engines": _check_engines,
 }
 

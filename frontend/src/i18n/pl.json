@@ -84,6 +84,10 @@
       "name": "Transkrypcja",
       "description": "Zamieniaj mowę z filmów i nagrań na napisy lub tekst."
     },
+    "ocr": {
+      "name": "Tekst z obrazu",
+      "description": "Odczytuj tekst ze zrzutów ekranu, zdjęć i zeskanowanych PDF."
+    },
     "pdf": {
       "name": "Łączenie PDF",
       "description": "Układaj i łącz strony z wielu plików PDF w jeden dokument."
@@ -401,6 +405,7 @@
     "animations": "Animacje",
     "audio": "Audio",
     "pdf": "Dokumenty PDF",
+    "imagesAndPdf": "Obrazy i PDF",
     "text": "Pliki tekstowe",
     "csv": "CSV",
     "executables": "Programy",
@@ -768,6 +773,35 @@
       "decoding": "Odczytywanie dźwięku…",
       "loadingModel": "Wczytywanie modelu…",
       "transcribing": "Transkrypcja ({{percent}}%)…",
+      "done": "Gotowe"
+    }
+  },
+  "ocr": {
+    "dropTitle": "Upuść tutaj obrazy lub PDF",
+    "dropHint": "Albo wklej zrzut ekranu przez Ctrl+V. Obsługiwane: {{formats}}",
+    "paste": "Wklej",
+    "change": "Zmień pliki",
+    "noClipboardImage": "Schowek nie zawiera obrazu.",
+    "language": "Język",
+    "searchablePdf": "Zapisz PDF z zaznaczalnym tekstem",
+    "start": "Rozpoznaj tekst",
+    "text": "Tekst",
+    "saveTxt": "Zapisz TXT",
+    "copied": "Skopiowano tekst",
+    "saved": "Zapisano tekst",
+    "noText": "Nie znaleziono tekstu.",
+    "pdfDone": "Zapisano PDF z tekstem",
+    "pdfDetail": "Tekst dodany na {{recognized}} z {{total}} stron",
+    "pdfHadText": "Każda strona ma już tekst, więc kopia nie została zapisana.",
+    "errors": {
+      "languages": "Rozpoznawanie tekstu jest niedostępne",
+      "run": "Rozpoznawanie tekstu nie powiodło się",
+      "save": "Nie udało się zapisać tekstu"
+    },
+    "status": {
+      "image": "Odczytywanie obrazu {{current}} z {{total}}…",
+      "page": "Odczytywanie strony {{current}} z {{total}}…",
+      "saving": "Zapisywanie PDF…",
       "done": "Gotowe"
     }
   },
@@ -1605,7 +1639,9 @@
     "allFilesFailed_few": "Nie udało się przekonwertować żadnego z {{count}} plików. Szczegóły są w logu.",
     "allFilesFailed_many": "Nie udało się przekonwertować żadnego z {{count}} plików. Szczegóły są w logu.",
     "allFilesFailed_other": "Nie udało się przekonwertować żadnego z {{count}} plików. Szczegóły są w logu.",
-    "nothingToRetry": "Nie ma nieudanych linków do ponowienia."
+    "nothingToRetry": "Nie ma nieudanych linków do ponowienia.",
+    "ocrNoLanguage": "Windows nie rozpoznaje tekstu w tym języku. Dodaj język z funkcją optycznego rozpoznawania znaków w Ustawieniach Windows → Czas i język → Język i region.",
+    "ocrUnavailable": "Rozpoznawanie tekstu wbudowane w Windows nie jest dostępne na tym komputerze."
   },
   "media_convert": {
     "output": "Wynik",

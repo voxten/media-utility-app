@@ -82,6 +82,10 @@
       "name": "Transcription",
       "description": "Turn speech in videos and recordings into subtitles or text."
     },
+    "ocr": {
+      "name": "Text from image",
+      "description": "Read text from screenshots, photos and scanned PDFs."
+    },
     "pdf": {
       "name": "PDF Merger",
       "description": "Arrange pages from several PDFs and merge them into one."
@@ -385,6 +389,7 @@
     "animations": "Animations",
     "audio": "Audio",
     "pdf": "PDF documents",
+    "imagesAndPdf": "Images and PDF",
     "text": "Text files",
     "csv": "CSV",
     "executables": "Programs",
@@ -710,6 +715,35 @@
       "decoding": "Reading audio…",
       "loadingModel": "Loading the model…",
       "transcribing": "Transcribing ({{percent}}%)…",
+      "done": "Done"
+    }
+  },
+  "ocr": {
+    "dropTitle": "Drop images or a PDF here",
+    "dropHint": "Or paste a screenshot with Ctrl+V. Supported: {{formats}}",
+    "paste": "Paste",
+    "change": "Change files",
+    "noClipboardImage": "The clipboard has no image.",
+    "language": "Language",
+    "searchablePdf": "Save PDF with selectable text",
+    "start": "Recognize text",
+    "text": "Text",
+    "saveTxt": "Save TXT",
+    "copied": "Text copied",
+    "saved": "Text saved",
+    "noText": "No text found.",
+    "pdfDone": "PDF with text saved",
+    "pdfDetail": "Text added to {{recognized}} of {{total}} pages",
+    "pdfHadText": "Every page already has text, so no copy was saved.",
+    "errors": {
+      "languages": "Text recognition is not available",
+      "run": "Text recognition failed",
+      "save": "Could not save the text"
+    },
+    "status": {
+      "image": "Reading image {{current}} of {{total}}…",
+      "page": "Reading page {{current}} of {{total}}…",
+      "saving": "Saving the PDF…",
       "done": "Done"
     }
   },
@@ -1491,7 +1525,9 @@
     "copyUnsupported": "The picture of {{file}} cannot go into {{format}} without encoding.",
     "allFilesFailed_one": "The file could not be converted. Details are in the log.",
     "allFilesFailed_other": "None of the {{count}} files could be converted. Details are in the log.",
-    "nothingToRetry": "There are no failed links to retry."
+    "nothingToRetry": "There are no failed links to retry.",
+    "ocrNoLanguage": "Windows cannot recognize text in this language. Add the language with optical character recognition in Windows Settings → Time & language → Language & region.",
+    "ocrUnavailable": "Text recognition built into Windows is not available on this computer."
   },
   "media_convert": {
     "output": "Output",

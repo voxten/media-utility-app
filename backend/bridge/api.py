@@ -41,6 +41,7 @@ gif_editor = lazy_import("backend.services.gif_editor")
 gif_render = lazy_import("backend.services.gif_render")
 image_editor = lazy_import("backend.services.image_editor")
 instagram = lazy_import("backend.services.instagram")
+ocr = lazy_import("backend.services.ocr")
 pdf = lazy_import("backend.services.pdf")
 progress_image = lazy_import("backend.services.progress_image")
 rembg_service = lazy_import("backend.services.rembg_service")
@@ -765,6 +766,26 @@ class TranscribeApi(_Namespace):
         )
 
 
+class OcrApi(_Namespace):
+    def languages(self) -> List[Dict[str, str]]:
+        return ocr.languages()
+
+    def images(self, params: Dict[str, Any]) -> str:
+        paths = [str(p) for p in params.get("paths") or []]
+        title = Path(paths[0]).name if len(paths) == 1 else f'common.filesTitle|{{"count": {len(paths)}}}'
+        return self._ctx.jobs.submit("ocr.images", lambda ctx: ocr.images(ctx, params), title=title)
+
+    def pdf(self, params: Dict[str, Any]) -> str:
+        return self._ctx.jobs.submit("ocr.pdf", lambda ctx: ocr.pdf(ctx, params), title=Path(str(params["path"])).name)
+
+    def clipboard_image(self) -> List[str]:
+        """Files for what is on the clipboard: a copied picture (saved as PNG) or copied image / PDF files."""
+        return ocr.clipboard_image()
+
+    def save_text(self, text: str, out_path: str) -> str:
+        return ocr.save_text(text, out_path)
+
+
 class GifEditorApi(_Namespace):
     def load(self, path: str) -> Dict[str, Any]:
         return {**gif_editor.load(path), "gifsicle": gif_render.gifsicle_available()}
@@ -811,6 +832,7 @@ class Api:
         self.media_convert = MediaConvertApi(self._ctx)
         self.gif_editor = GifEditorApi(self._ctx)
         self.transcribe = TranscribeApi(self._ctx)
+        self.ocr = OcrApi(self._ctx)
 
     def _attach_window(self, window: Any) -> None:
         self._ctx.window = window

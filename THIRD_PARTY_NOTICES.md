@@ -30,6 +30,7 @@ and are not part of the installer.
 | Send2Trash | BSD-3-Clause | https://github.com/arsenetar/send2trash |
 | pywin32 | PSF-2.0 | https://github.com/mhammond/pywin32 |
 | audioop-lts | PSF-2.0 | https://github.com/AbstractUmbra/audioop |
+| PyWinRT (winrt-runtime and Windows.* projections) | MIT | https://github.com/pywinrt/pywinrt |
 | React, Fluent UI, zustand, i18next | MIT | https://react.dev, https://react.fluentui.dev |
 | PyInstaller bootloader | GPL-2.0-or-later with the bootloader exception | https://pyinstaller.org |
 

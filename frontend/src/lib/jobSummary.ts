@@ -125,6 +125,14 @@ function summarise(t: TFunction, kind: string, r: Result): (string | undefined)[
       ];
     case "video_to_gif.render":
       return [dimensions(r), countParts(t, "jobs.summary.frames", positive(r.frames)), bytes(r.size)];
+    case "ocr.images":
+      return [
+        countParts(t, "jobs.summary.files", num(r.count), 2),
+        text(r.language)?.toUpperCase(),
+        countParts(t, "jobs.summary.chars", num(r.charCount), 0),
+      ];
+    case "ocr.pdf":
+      return [countParts(t, "jobs.summary.pages", positive(r.pageCount)), text(r.language)?.toUpperCase(), bytes(r.bytes)];
     case "transcribe": {
       const length = positive(r.duration);
       return [

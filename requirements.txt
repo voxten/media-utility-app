@@ -15,6 +15,12 @@ audioop-lts; python_version >= "3.13"
 pywin32; sys_platform == "win32"
 pystray  # tray icon (close-to-tray) and system notifications
 send2trash
+# Windows text recognition (OCR tool). Runtime and projections are released together and must match.
+winrt-runtime==4.2.0; sys_platform == "win32"
+winrt-Windows.Media.Ocr==4!10.0.28000.2957; sys_platform == "win32"
+winrt-Windows.Graphics.Imaging==4!10.0.28000.2957; sys_platform == "win32"
+winrt-Windows.Storage.Streams==4!10.0.28000.2957; sys_platform == "win32"
+winrt-Windows.Globalization==4!10.0.28000.2957; sys_platform == "win32"
 
 # Optional: AI watermark removal (LaMa) – large download, install only if needed:
 #   pip install iopaint torch torchvision

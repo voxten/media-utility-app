@@ -55,6 +55,8 @@ describe("jobSummary", () => {
       "1.0 KB",
     ]);
     expect(summary("transcribe", { language: "pl", duration: 192, format: "srt" })).toEqual(["PL", "3:12", "SRT"]);
+    expect(summary("ocr.images", { count: 1, language: "pl", charCount: 42 })).toEqual(["PL", "42 characters"]);
+    expect(summary("ocr.pdf", { pageCount: 3, language: "pl", bytes: 2048 })).toEqual(["3 pages", "PL", "2.0 KB"]);
     expect(summary("video_sync", { offsetSec: 0.35, bytes: 1024 })).toEqual(["offset +0.35 s", "1.0 KB"]);
     expect(summary("upscale", { width: 1920, height: 1080 })).toEqual(["1920×1080"]);
     expect(summary("duplicates.image", { groups: [[], []], scanned: 320 })).toEqual(["2 groups", "320 files scanned"]);

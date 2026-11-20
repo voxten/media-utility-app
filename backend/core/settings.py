@@ -83,7 +83,7 @@ def default_settings() -> Dict[str, Any]:
 # which engine version pip installs, so a forged one could install an old or vulnerable release.
 INTERNAL_KEYS = frozenset({"trayHintShown", "engineLastCheck", "engineLatest"})
 # Options the tools remember between runs; they have no default and only the window reads them.
-TOOL_OPTION_TYPES: Dict[str, type] = {"gifOutput": dict, "transcribe": dict, "downloadSubtitles": str}
+TOOL_OPTION_TYPES: Dict[str, type] = {"gifOutput": dict, "transcribe": dict, "downloadSubtitles": str, "ocrLanguage": str}
 CHOICES: Dict[str, frozenset] = {
     "theme": frozenset({"system", "light", "dark"}),
     "language": frozenset({"pl", "en"}),

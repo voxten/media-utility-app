@@ -45,6 +45,8 @@ export interface Settings {
   transcribe?: TranscribeOptions;
   /** Subtitles saved next to downloads. */
   downloadSubtitles?: SubtitleMode;
+  /** Language last picked in Text from image. */
+  ocrLanguage?: string;
 }
 
 export interface StorageInfo {
@@ -508,6 +510,34 @@ export interface TranscribeResult {
   duration: number;
   elapsed: number;
   segments: TranscriptSegment[];
+}
+
+/** A language Windows can recognize, e.g. { tag: "pl", name: "Polski" }. */
+export interface OcrLanguage {
+  tag: string;
+  name: string;
+}
+
+export interface OcrImagesResult {
+  text: string;
+  count: number;
+  charCount: number;
+  lines: number;
+  language: string;
+  elapsed: number;
+}
+
+export interface OcrPdfResult {
+  text: string;
+  charCount: number;
+  pageCount: number;
+  recognized: number;
+  skipped: number;
+  language: string;
+  /** The copy with a text layer; null when none was asked for or every page already had text. */
+  outPath: string | null;
+  bytes: number | null;
+  elapsed: number;
 }
 
 export interface AnimationInfo {

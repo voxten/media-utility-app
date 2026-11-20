@@ -37,6 +37,7 @@ export const FILE_TYPES = {
   animations: ANIMATION_EXTENSIONS,
   audio: AUDIO_EXTENSIONS,
   pdf: PDF_EXTENSIONS,
+  imagesAndPdf: [...ALL_IMAGE_EXTENSIONS, ...PDF_EXTENSIONS],
   text: [".txt"],
   csv: [".csv"],
   executables: [".exe"],

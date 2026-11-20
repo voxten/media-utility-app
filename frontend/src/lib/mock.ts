@@ -928,6 +928,42 @@ export function createMockBackend(emit: Emit) {
           ],
         }, 2500),
     },
+    ocr: {
+      languages: () => ok([{ tag: "pl", name: "Polski" }, { tag: "en-US", name: "English (United States)" }]),
+      images: (params: { paths: string[]; language: string }) =>
+        simulateJob(
+          "ocr.images",
+          params.paths.length === 1 ? params.paths[0].split(/[\\/]/).pop() || "" : `${params.paths.length} files`,
+          {
+            text: "Zażółć gęślą jaźń.\nFaktura nr 12/2026, Łódź, ul. Piękna 5",
+            count: params.paths.length,
+            charCount: 56,
+            lines: 2,
+            language: params.language || "pl",
+            elapsed: 0.4,
+          },
+          900,
+        ),
+      pdf: (params: { path: string; language: string; outPath?: string }) =>
+        simulateJob(
+          "ocr.pdf",
+          params.path.split(/[\\/]/).pop() || "scan.pdf",
+          {
+            text: "Umowa najmu\n\nStrona 2: Łódź, 20 listopada 2026",
+            charCount: 45,
+            pageCount: 3,
+            recognized: 2,
+            skipped: 1,
+            language: params.language || "pl",
+            outPath: params.outPath ?? null,
+            bytes: params.outPath ? 1_240_000 : null,
+            elapsed: 2.1,
+          },
+          2400,
+        ),
+      clipboard_image: () => ok(["C:\\Users\\me\\AppData\\Local\\MediaStudio\\cache\\ocr\\clipboard-20261120-101500.png"]),
+      save_text: (_text: string, outPath: string) => ok(outPath),
+    },
     gif_editor: {
       load: (path: string) =>
         ok({

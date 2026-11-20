@@ -37,6 +37,7 @@ import type {
   VideoSyncParams,
   VideoToGifParams,
   MediaConvertParams,
+  OcrLanguage,
   VideoToGifPreview,
   WaveformData,
   WhisperModelInfo,
@@ -389,6 +390,14 @@ export const api = {
     models: () => call<WhisperModelInfo[]>("transcribe", "models"),
     probe: (path: string) => call<VideoInfo>("transcribe", "probe", path),
     start: (params: TranscribeParams) => call<JobId>("transcribe", "start", params),
+  },
+  ocr: {
+    languages: () => call<OcrLanguage[]>("ocr", "languages"),
+    images: (params: { paths: string[]; language: string }) => call<JobId>("ocr", "images", params),
+    /** Without `outPath` only the text is read; with it, a copy with an invisible text layer is saved too. */
+    pdf: (params: { path: string; language: string; outPath?: string }) => call<JobId>("ocr", "pdf", params),
+    clipboardImage: () => call<string[]>("ocr", "clipboard_image"),
+    saveText: (text: string, outPath: string) => call<string>("ocr", "save_text", text, outPath),
   },
   gif_editor: {
     load: (path: string) => call<AnimationInfo>("gif_editor", "load", path),

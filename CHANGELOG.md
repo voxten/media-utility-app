@@ -20,6 +20,7 @@ The app shows this file (and its Polish translation, [CHANGELOG.pl.md](CHANGELOG
 - **Video & Audio Converter** encodes video on the graphics card: NVENC (NVIDIA), else Quick Sync (Intel) or AMF (AMD), else the processor. A file the card fails on is encoded again on the processor. Settings → Hardware lists the encoders found and can turn this off.
 - **Video & Audio Converter** offers H.264, H.265 and AV1 (AV1 only when the graphics card can encode it). H.265 in MP4 and MOV plays on iPhones.
 - **Video & Audio Converter** has a "Container only" mode that changes e.g. MKV to MP4 in seconds without encoding the picture; only sound the new container cannot hold is encoded. Containers the picture cannot go into are not offered, and trimming is off in this mode.
+- New tool **Text from image** (Text category): paste a screenshot with Ctrl+V or drop photos or a PDF, and get the text to correct, copy or save as TXT. It uses the text recognition built into Windows, so nothing is downloaded; the language list shows the languages installed in Windows. A scanned PDF can be saved as a copy with an invisible text layer, so its text can be selected and found with Ctrl+F; pages that already have text stay as they are.
 
 ### Changed
 

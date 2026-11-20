@@ -37,6 +37,7 @@ const TOOL_PAGES: Record<string, LazyExoticComponent<ComponentType>> = {
   duplicates: lazy(() => import("../features/duplicates/DuplicatesPage")),
   tts: lazy(() => import("../features/tts/TtsPage")),
   transcribe: lazy(() => import("../features/transcribe/TranscribePage")),
+  ocr: lazy(() => import("../features/ocr/OcrPage")),
   download: lazy(() => import("../features/download/DownloadPage")),
   instagram: lazy(() => import("../features/instagram/InstagramPage")),
   video_sync: lazy(() => import("../features/video_sync/VideoSyncPage")),

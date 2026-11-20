@@ -16,6 +16,7 @@ Polskie tłumaczenie [CHANGELOG.md](CHANGELOG.md), pokazywane w aplikacji przy p
 - **Konwerter wideo i audio** koduje obraz na karcie graficznej: NVENC (NVIDIA), a gdy go nie ma, Quick Sync (Intel) albo AMF (AMD), na końcu procesor. Plik, na którym karta zawiedzie, jest kodowany od nowa na procesorze. Ustawienia → Sprzęt pokazują wykryte kodery i pozwalają to wyłączyć.
 - **Konwerter wideo i audio** daje do wyboru H.264, H.265 i AV1 (AV1 tylko wtedy, gdy karta graficzna go koduje). H.265 w MP4 i MOV odtwarza się na iPhonie.
 - **Konwerter wideo i audio** ma tryb „Tylko kontener”, który w kilka sekund zmienia np. MKV na MP4 bez kodowania obrazu; kodowany jest tylko dźwięk, którego nowy kontener nie przyjmie. Kontenery, do których nie da się przenieść obrazu, nie są proponowane, a przycinanie jest w tym trybie wyłączone.
+- Nowe narzędzie **Tekst z obrazu** (kategoria Tekst): wklej zrzut ekranu przez Ctrl+V albo upuść zdjęcia lub PDF i dostajesz tekst do poprawienia, skopiowania albo zapisania jako TXT. Korzysta z rozpoznawania tekstu wbudowanego w Windows, więc niczego nie trzeba pobierać; lista języków pokazuje języki zainstalowane w Windows. Zeskanowany PDF można zapisać jako kopię z niewidoczną warstwą tekstu, w której tekst da się zaznaczać i znaleźć przez Ctrl+F; strony, które już mają tekst, zostają bez zmian.
 
 ### Zmieniono
 
