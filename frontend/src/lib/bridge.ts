@@ -31,6 +31,7 @@ import type {
   SyncPreviewResult,
   UpscaleOptions,
   UpscalePreview,
+  VideoEncoders,
   VideoFrame,
   VideoInfo,
   VideoSyncParams,
@@ -373,6 +374,8 @@ export const api = {
     probe: (path: string) => call<VideoInfo>("media_convert", "probe", path),
     frames: (path: string, startSec: number, duration: number, count: number, height: number) =>
       call<{ frames: VideoFrame[] }>("media_convert", "frames", path, startSec, duration, count, height),
+    encoders: () => call<VideoEncoders>("media_convert", "encoders"),
+    copyFormats: (paths: string[]) => call<string[]>("media_convert", "copy_formats", paths),
     start: (params: MediaConvertParams) => call<JobId>("media_convert", "start", params),
   },
   video_to_gif: {

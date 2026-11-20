@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import i18n from "../i18n";
-import { jobSummary, sizeChange } from "./jobSummary";
+import { encoderLabel, jobSummary, sizeChange } from "./jobSummary";
 
 beforeAll(() => i18n.changeLanguage("en"));
 
@@ -34,6 +34,16 @@ describe("jobSummary", () => {
       "12 files",
       "2.0 KB → 4.0 KB (+100%)",
     ]);
+  });
+
+  it("says how converted videos were encoded", () => {
+    expect(
+      summary("media_convert", { converted: 1, encoders: ["hevc_nvenc"], inBytes: 4096, outBytes: 1024, subtitlesSkipped: 2 }),
+    ).toEqual(["H.265, NVENC", "4.0 KB → 1.0 KB (−75%)", "2 subtitle tracks skipped"]);
+    expect(encoderLabel(i18n.t, "libx264")).toBe("H.264, CPU");
+    expect(encoderLabel(i18n.t, "av1_qsv")).toBe("AV1, Quick Sync");
+    expect(encoderLabel(i18n.t, "copy")).toBe("Not re-encoded");
+    expect(encoderLabel(i18n.t, "libmp3lame")).toBeUndefined();
   });
 
   it("covers PDF, GIF, transcription, sync, images and duplicates", () => {

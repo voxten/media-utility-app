@@ -15,7 +15,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 
 from backend.core.errors import AppError, MissingFile
-from backend.core.ffmpeg import NO_WINDOW, extract_frames, probe_media, resolve_binary, run_capture, run_ffmpeg
+from backend.core.ffmpeg import NO_WINDOW, extract_frames, probe_media, resolve_binary, run_capture, run_ffmpeg, subtitle_args
 from backend.core import media_server
 from backend.core.jobs import JobContext
 from backend.core.paths import cache_dir, unique_path
@@ -28,33 +28,6 @@ SUPPORTED_VIDEO_FORMATS = {
 SUPPORTED_AUDIO_FORMATS = {
     ".mp3", ".wav", ".aac", ".m4a", ".flac", ".ogg", ".opus", ".wma", ".aiff"
 }
-TEXT_SUBTITLE_CODECS = {"subrip", "ass", "ssa", "mov_text", "webvtt", "text"}
-MP4_CONTAINERS = {".mp4", ".m4v", ".mov"}
-
-
-def _subtitle_args(subtitles: List[Dict[str, Any]], out_suffix: str) -> Tuple[List[str], int]:
-    """FFmpeg arguments that keep the video's subtitles ``out_suffix`` can hold, and how many are left out.
-
-    Matroska takes every track as is, except mov_text, which it cannot hold and gets as SRT; MP4 takes
-    text tracks only, converted to mov_text.
-    """
-    suffix = out_suffix.lower()
-    if suffix == ".mkv":
-        kept, codec = subtitles, "copy"
-    elif suffix in MP4_CONTAINERS:
-        kept, codec = [s for s in subtitles if s["codec"] in TEXT_SUBTITLE_CODECS], "mov_text"
-    else:
-        kept, codec = [], ""
-    args = [arg for s in kept for arg in ("-map", f"0:{s['index']}")]
-    if kept:
-        args += ["-c:s", codec]
-    if codec == "copy":
-        for position, s in enumerate(kept):
-            if s["codec"] == "mov_text":
-                args += [f"-c:s:{position}", "srt"]
-    return args, len(subtitles) - len(kept)
-
-
 def _peaks(raw: bytes, target_points: int) -> Tuple[List[float], float]:
     """Normalized peak level per point, and the loudest sample.
 
@@ -273,8 +246,8 @@ def sync_video(ctx: JobContext, params: Dict[str, Any]) -> Dict[str, Any]:
 
     cmd.extend(["-filter_complex", filter_str])
     cmd.extend(["-map", "0:v:0", "-map", "[aout]"])
-    subtitle_args, skipped = _subtitle_args(info.get("subtitles", []), out_path.suffix)
-    cmd.extend(subtitle_args)
+    sub_args, skipped = subtitle_args(info.get("subtitles", []), out_path.suffix)
+    cmd.extend(sub_args)
     if skipped:
         ctx.log("video_sync.log.subtitlesSkipped", "warning", count=skipped, format=out_path.suffix.lstrip(".").upper())
     cmd.extend(["-map_chapters", "0"])

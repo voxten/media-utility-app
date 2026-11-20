@@ -28,6 +28,7 @@ const DEFAULT_SETTINGS: Settings = {
   downloadSkipArchived: false,
   downloadParallel: 1,
   downloadRateLimit: 0,
+  videoHardwareEncoding: true,
   engineLastCheck: 0,
 };
 
@@ -728,6 +729,10 @@ export function createMockBackend(emit: Emit) {
           height: 1080,
           fps: 60.0,
           videoCodec: "h264",
+          videoIndex: 0,
+          hdr: false,
+          hasCover: false,
+          subtitles: [],
           audioTracks: [
             {
               index: 1,
@@ -794,6 +799,10 @@ export function createMockBackend(emit: Emit) {
           height: 720,
           fps: 30,
           videoCodec: "h264",
+          videoIndex: 0,
+          hdr: false,
+          hasCover: false,
+          subtitles: [],
           audioTracks: [],
           thumbnail: fakePhoto(3),
         }),
@@ -804,7 +813,10 @@ export function createMockBackend(emit: Emit) {
             return { time, dataUrl: fakePhoto(Math.floor(time / 5)) };
           }),
         }),
-      start: (params: { paths: string[]; outputDir: string; format: string }) => {
+      encoders: () => ok({ version: "ffmpeg version 9.0.2-essentials_build-www.gyan.dev", devices: [{ id: "nvenc", codecs: ["h264", "hevc", "av1"] }] }),
+      copy_formats: (paths: string[]) => ok(paths.some((p) => /\.(mp3|wav|m4a|flac|ogg|opus|aac)$/i.test(p)) ? []: ["mp4", "mkv", "mov"]),
+      start: (params: { paths: string[]; outputDir: string; format: string; codec: string; copy: boolean }) => {
+        const encoder = params.copy ? "copy" : params.codec === "vp9" ? "libvpx-vp9" : `${params.codec}_nvenc`;
         const files = params.paths.map((p) => `${params.outputDir}\\${(p.split(/[\\/]/).pop() || "clip").replace(/\.[^.]+$/, "")}.${params.format}`);
         return simulateJob(
           "media_convert",
@@ -818,7 +830,9 @@ export function createMockBackend(emit: Emit) {
             outputDir: params.outputDir,
             outPath: files.length === 1 ? files[0] : null,
             files,
-            results: files.map((dest, i) => ({ file: params.paths[i], dest, inBytes: 18_000_000, outBytes: 7_400_000 })),
+            encoders: [encoder],
+            subtitlesSkipped: 0,
+            results: files.map((dest, i) => ({ file: params.paths[i], dest, inBytes: 18_000_000, outBytes: 7_400_000, encoder, subtitlesSkipped: 0 })),
           },
           2200,
         );
@@ -838,6 +852,10 @@ export function createMockBackend(emit: Emit) {
           height: 720,
           fps: 30,
           videoCodec: "h264",
+          videoIndex: 0,
+          hdr: false,
+          hasCover: false,
+          subtitles: [],
           audioTracks: [],
           thumbnail: fakePhoto(3),
           gifsicle: false,
@@ -889,6 +907,10 @@ export function createMockBackend(emit: Emit) {
           height: 720,
           fps: 30,
           videoCodec: "h264",
+          videoIndex: 0,
+          hdr: false,
+          hasCover: false,
+          subtitles: [],
           audioTracks: [],
           thumbnail: fakePhoto(5),
         }),

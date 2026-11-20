@@ -14,7 +14,7 @@ import subprocess
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Sequence, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 from backend.core.errors import AppError, MissingFile
 from backend.core import deps
@@ -23,6 +23,9 @@ from backend.core.jobs import JobContext
 logger = logging.getLogger(__name__)
 
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+HDR_TRANSFERS = {"smpte2084", "arib-std-b67"}
+TEXT_SUBTITLE_CODECS = {"subrip", "srt", "ass", "ssa", "mov_text", "webvtt", "text"}
+MP4_CONTAINERS = {".mp4", ".m4v", ".mov"}
 
 
 def resolve_binary(name: str) -> str:
@@ -128,6 +131,32 @@ def run_process(
         raise RuntimeError(f"{Path(cmd[0]).stem} failed: {tail or proc.returncode}")
 
 
+def subtitle_args(subtitles: List[Dict[str, Any]], out_suffix: str) -> Tuple[List[str], int]:
+    """FFmpeg arguments that keep the subtitles ``out_suffix`` can hold, and how many are left out.
+
+    Matroska takes every track as is, except mov_text, which it cannot hold and gets as SRT. MP4 and
+    MOV take text tracks only, as mov_text, and WebM as WebVTT; picture subtitles (PGS, VobSub) fit
+    only in Matroska.
+    """
+    suffix = out_suffix.lower()
+    if suffix == ".mkv":
+        kept, codec = subtitles, "copy"
+    elif suffix in MP4_CONTAINERS:
+        kept, codec = [s for s in subtitles if s["codec"] in TEXT_SUBTITLE_CODECS], "mov_text"
+    elif suffix == ".webm":
+        kept, codec = [s for s in subtitles if s["codec"] in TEXT_SUBTITLE_CODECS], "webvtt"
+    else:
+        kept, codec = [], ""
+    args = [arg for s in kept for arg in ("-map", f"0:{s['index']}")]
+    if kept:
+        args += ["-c:s", codec]
+    if codec == "copy":
+        for position, s in enumerate(kept):
+            if s["codec"] == "mov_text":
+                args += [f"-c:s:{position}", "srt"]
+    return args, len(subtitles) - len(kept)
+
+
 def same_file(a: Union[str, Path], b: Union[str, Path]) -> bool:
     """Whether two paths name the same file (case-insensitive on Windows)."""
     return os.path.normcase(os.path.abspath(a)) == os.path.normcase(os.path.abspath(b))
@@ -184,8 +213,11 @@ def _stream_duration(stream: Dict[str, Any]) -> float:
         return 0.0
 
 
-def probe_media(file_path: str) -> Dict[str, Any]:
-    """Inspects a video or audio file with ffprobe and extracts stream metadata and a thumbnail."""
+def probe_media(file_path: str, thumbnail: bool = True) -> Dict[str, Any]:
+    """Inspects a video or audio file with ffprobe and extracts stream metadata and a thumbnail.
+
+    The picture is the first video stream that is not a cover image (``attached_pic``).
+    """
     p = Path(file_path)
     if not p.is_file():
         raise MissingFile(file_path)
@@ -213,12 +245,15 @@ def probe_media(file_path: str) -> Dict[str, Any]:
     format_name = format_info.get("format_name", p.suffix.lstrip("."))
 
     video_stream: Optional[Dict[str, Any]] = None
+    has_cover = False
     audio_tracks: List[Dict[str, Any]] = []
     subtitles: List[Dict[str, Any]] = []
 
     for s in streams:
         c_type = s.get("codec_type")
-        if c_type == "video" and video_stream is None:
+        if c_type == "video" and (s.get("disposition") or {}).get("attached_pic"):
+            has_cover = True
+        elif c_type == "video" and video_stream is None:
             fps = _parse_rate(s.get("avg_frame_rate", "")) or _parse_rate(s.get("r_frame_rate", "")) or 30.0
 
             s_dur = float(s.get("duration") or duration)
@@ -233,6 +268,7 @@ def probe_media(file_path: str) -> Dict[str, Any]:
                 "fps": fps,
                 "bitrate": int(s.get("bit_rate") or 0),
                 "duration": _stream_duration(s),
+                "hdr": s.get("color_transfer") in HDR_TRANSFERS,
             }
         elif c_type == "audio":
             tags = s.get("tags") or {}
@@ -251,11 +287,11 @@ def probe_media(file_path: str) -> Dict[str, Any]:
         elif c_type == "subtitle":
             subtitles.append({"index": int(s.get("index", 0)), "codec": s.get("codec_name", "")})
 
-    thumbnail = ""
-    if video_stream and video_stream.get("width", 0) > 0 and duration > 0:
+    thumb = ""
+    if thumbnail and video_stream and video_stream.get("width", 0) > 0 and duration > 0:
         thumb_time = min(1.0, max(0.0, duration * 0.1))
         try:
-            thumbnail = grab_frame(ffmpeg, p, thumb_time, width=360)
+            thumb = grab_frame(ffmpeg, p, thumb_time, width=360)
         except Exception as e:
             logger.debug("Thumbnail generation skipped: %s", e)
 
@@ -271,10 +307,13 @@ def probe_media(file_path: str) -> Dict[str, Any]:
         "height": video_stream["height"] if video_stream else 0,
         "fps": video_stream["fps"] if video_stream else 0.0,
         "videoCodec": video_stream["codec"] if video_stream else "",
+        "videoIndex": video_stream["index"] if video_stream else -1,
+        "hdr": bool(video_stream and video_stream["hdr"]),
+        "hasCover": has_cover,
         "audioTracks": audio_tracks,
         "subtitles": subtitles,
         "videoDuration": round((video_stream["duration"] or duration) if video_stream else 0.0, 3),
-        "thumbnail": thumbnail,
+        "thumbnail": thumb,
     }
 
 

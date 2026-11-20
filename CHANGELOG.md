@@ -17,6 +17,9 @@ The app shows this file (and its Polish translation, [CHANGELOG.pl.md](CHANGELOG
 - A "Download in Media Studio" bookmark for the browser (Settings → Browser): one click opens the current page in **Video Downloader**, or in **Instagram** for Instagram links, also when the app is closed or hidden in the tray. YouTube, TikTok, X and Instagram links are checked right away, other sites only fill the field; downloading still waits for your click. The installer has a new option for it, on by default.
 - An optional global shortcut (Settings → Browser, off by default) opens the copied link in the app from anywhere in Windows. A shortcut another program already uses is refused with a message.
 - A running download queue can be reordered by dragging and links can be skipped; skipping a link that is downloading stops only that link. "Retry failed" also works while the queue runs and after it ends, and uses the queue's own options instead of the ones now in the form. Two new options next to "Skip videos downloaded before": 1–3 downloads at once and a speed limit (1–20 MB/s) shared by the whole queue.
+- **Video & Audio Converter** encodes video on the graphics card: NVENC (NVIDIA), else Quick Sync (Intel) or AMF (AMD), else the processor. A file the card fails on is encoded again on the processor. Settings → Hardware lists the encoders found and can turn this off.
+- **Video & Audio Converter** offers H.264, H.265 and AV1 (AV1 only when the graphics card can encode it). H.265 in MP4 and MOV plays on iPhones.
+- **Video & Audio Converter** has a "Container only" mode that changes e.g. MKV to MP4 in seconds without encoding the picture; only sound the new container cannot hold is encoded. Containers the picture cannot go into are not offered, and trimming is off in this mode.
 
 ### Changed
 
@@ -24,6 +27,8 @@ The app shows this file (and its Polish translation, [CHANGELOG.pl.md](CHANGELOG
 - Settings → Dependencies shows the whole download size of an AI tool, including PyTorch when it still has to be installed.
 - Settings labels use sentence case like the rest of the app.
 - A queue resumed after a cancel or a closed app keeps the order it was dragged into.
+- **Video & Audio Converter** keeps every sound track and the subtitles: copied in MKV, as text in MP4, MOV and WebM. Picture subtitles (PGS, VobSub) fit only in MKV; the result says how many were left out. A cover image is not kept, and neither is HDR.
+- A target size on the graphics card takes one encode, and at most one more at a lower bitrate; a file that is still too big is encoded on the processor in two passes as before.
 
 ### Fixed
 

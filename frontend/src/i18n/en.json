@@ -236,6 +236,8 @@
       "noGpu": "Integrated graphics or no dedicated GPU detected",
       "cudaActive": "PyTorch CUDA acceleration active (v{{version}})",
       "cudaInactive": "CUDA unavailable, running on CPU",
+      "videoEncoding": "Encode video on the graphics card",
+      "noVideoEncoder": "No hardware encoder found, video is encoded on the processor",
       "ram": "RAM",
       "ramDetails": "{{avail}} free of {{total}} total memory",
       "concurrency": "Tasks at once",
@@ -1038,7 +1040,12 @@
       "groups_other": "{{count}} groups",
       "scanned_one": "{{count}} file scanned",
       "scanned_other": "{{count}} files scanned",
-      "offset": "offset {{value}} s"
+      "offset": "offset {{value}} s",
+      "encoder": "{{codec}}, {{device}}",
+      "cpu": "CPU",
+      "notEncoded": "Not re-encoded",
+      "subtitlesSkipped_one": "{{count}} subtitle track skipped",
+      "subtitlesSkipped_other": "{{count}} subtitle tracks skipped"
     },
     "tabNow": "Now",
     "tabHistory": "History",
@@ -1481,6 +1488,7 @@
     "pdfUnreadable": "{{file}} is not a valid PDF or is damaged.",
     "pdfEncrypted": "{{file}} is protected with a password.",
     "noVideo": "{{file}} has no video track.",
+    "copyUnsupported": "The picture of {{file}} cannot go into {{format}} without encoding.",
     "allFilesFailed_one": "The file could not be converted. Details are in the log.",
     "allFilesFailed_other": "None of the {{count}} files could be converted. Details are in the log.",
     "nothingToRetry": "There are no failed links to retry."
@@ -1493,6 +1501,8 @@
     "audioOnly": "sound only",
     "byQuality": "Quality",
     "bySize": "File size",
+    "copyOnly": "Container only",
+    "codec": "Codec",
     "qualityLabel": "Quality",
     "quality": {
       "high": "High",
@@ -1519,12 +1529,20 @@
     "status": {
       "converting": "Converting…",
       "analyzing": "Analyzing the video…",
-      "done": "Done"
+      "done": "Done",
+      "refitting": "Fitting the size…"
     },
     "log": {
       "starting": "Converting {{file}} to {{format}}",
       "done": "Saved {{file}}",
-      "error": "{{file}}: {{error}}"
+      "error": "{{file}}: {{error}}",
+      "encoder": "{{file}}: encoding with {{encoder}}",
+      "cardFailed": "{{file}}: {{encoder}} failed, encoding on the processor instead ({{error}})",
+      "refit": "{{file}}: the file came out too big, encoding again at a lower bitrate",
+      "sizeFallback": "{{file}}: still too big, encoding on the processor in two passes",
+      "subtitlesSkipped": "Picture subtitles fit only in MKV, skipped in {{format}}: {{count}}",
+      "audioReencoded": "Sound tracks {{format}} cannot hold were encoded: {{count}}",
+      "hdrLost": "{{file}}: HDR is not kept, colors may look flatter"
     }
   },
   "ffmpegBanner": {

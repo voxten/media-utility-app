@@ -242,6 +242,8 @@
       "noGpu": "Zintegrowana grafika lub brak dedykowanego GPU",
       "cudaActive": "Akceleracja PyTorch CUDA aktywna (v{{version}})",
       "cudaInactive": "CUDA niedostępna, praca na CPU",
+      "videoEncoding": "Koduj wideo na karcie graficznej",
+      "noVideoEncoder": "Nie znaleziono kodera sprzętowego, wideo koduje procesor",
       "ram": "Pamięć RAM",
       "ramDetails": "{{avail}} wolne z {{total}} całkowitej pamięci",
       "concurrency": "Zadania naraz",
@@ -1132,7 +1134,14 @@
       "scanned_few": "{{count}} sprawdzone pliki",
       "scanned_many": "{{count}} sprawdzonych plików",
       "scanned_other": "{{count}} sprawdzone pliki",
-      "offset": "przesunięcie {{value}} s"
+      "offset": "przesunięcie {{value}} s",
+      "encoder": "{{codec}}, {{device}}",
+      "cpu": "procesor",
+      "notEncoded": "Bez kodowania",
+      "subtitlesSkipped_one": "pominięto {{count}} ścieżkę napisów",
+      "subtitlesSkipped_few": "pominięto {{count}} ścieżki napisów",
+      "subtitlesSkipped_many": "pominięto {{count}} ścieżek napisów",
+      "subtitlesSkipped_other": "pominięto {{count}} ścieżki napisów"
     },
     "tabNow": "Teraz",
     "tabHistory": "Historia",
@@ -1591,6 +1600,7 @@
     "pdfUnreadable": "Plik {{file}} nie jest poprawnym PDF-em albo jest uszkodzony.",
     "pdfEncrypted": "Plik {{file}} jest chroniony hasłem.",
     "noVideo": "{{file}} nie ma ścieżki wideo.",
+    "copyUnsupported": "Obrazu z {{file}} nie da się zapisać w {{format}} bez kodowania.",
     "allFilesFailed_one": "Nie udało się przekonwertować pliku. Szczegóły są w logu.",
     "allFilesFailed_few": "Nie udało się przekonwertować żadnego z {{count}} plików. Szczegóły są w logu.",
     "allFilesFailed_many": "Nie udało się przekonwertować żadnego z {{count}} plików. Szczegóły są w logu.",
@@ -1605,6 +1615,8 @@
     "audioOnly": "sam dźwięk",
     "byQuality": "Jakość",
     "bySize": "Rozmiar pliku",
+    "copyOnly": "Tylko kontener",
+    "codec": "Kodek",
     "qualityLabel": "Jakość",
     "quality": {
       "high": "Wysoka",
@@ -1633,12 +1645,20 @@
     "status": {
       "converting": "Konwertowanie…",
       "analyzing": "Analiza filmu…",
-      "done": "Gotowe"
+      "done": "Gotowe",
+      "refitting": "Dopasowanie rozmiaru…"
     },
     "log": {
       "starting": "Konwersja {{file}} do {{format}}",
       "done": "Zapisano {{file}}",
-      "error": "{{file}}: {{error}}"
+      "error": "{{file}}: {{error}}",
+      "encoder": "{{file}}: kodowanie przez {{encoder}}",
+      "cardFailed": "{{file}}: {{encoder}} zawiódł, kodowanie na procesorze ({{error}})",
+      "refit": "{{file}}: plik wyszedł za duży, ponowne kodowanie z mniejszą przepływnością",
+      "sizeFallback": "{{file}}: nadal za duży, kodowanie na procesorze w dwóch przebiegach",
+      "subtitlesSkipped": "Napisy obrazkowe mieszczą się tylko w MKV, pominięte w {{format}}: {{count}}",
+      "audioReencoded": "Zakodowano ścieżki dźwięku, których nie przyjmuje {{format}}: {{count}}",
+      "hdrLost": "{{file}}: HDR nie jest zachowywany, kolory mogą wyglądać bladziej"
     }
   },
   "ffmpegBanner": {

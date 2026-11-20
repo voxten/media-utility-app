@@ -1,6 +1,7 @@
 import subprocess
 import pytest
 from pathlib import Path
+from backend.core.ffmpeg import subtitle_args
 from backend.services import video_sync
 from tests.conftest import served
 
@@ -92,10 +93,11 @@ def test_waveform_points_cover_every_sample_evenly():
 
 def test_subtitles_are_kept_where_the_container_can_hold_them():
     subs = [{"index": 2, "codec": "subrip"}, {"index": 3, "codec": "hdmv_pgs_subtitle"}]
-    assert video_sync._subtitle_args(subs, ".mp4") == (["-map", "0:2", "-c:s", "mov_text"], 1)
-    assert video_sync._subtitle_args(subs, ".MKV") == (["-map", "0:2", "-map", "0:3", "-c:s", "copy"], 0)
-    assert video_sync._subtitle_args(subs, ".avi") == ([], 2)
-    assert video_sync._subtitle_args([], ".mp4") == ([], 0)
+    assert subtitle_args(subs, ".mp4") == (["-map", "0:2", "-c:s", "mov_text"], 1)
+    assert subtitle_args(subs, ".MKV") == (["-map", "0:2", "-map", "0:3", "-c:s", "copy"], 0)
+    assert subtitle_args(subs, ".avi") == ([], 2)
+    assert subtitle_args([], ".mp4") == ([], 0)
+    assert subtitle_args(subs, ".webm") == (["-map", "0:2", "-c:s", "webvtt"], 1)
 
 
 def test_delayed_audio_keeps_the_video_length_subtitles_and_chapters(tmp_path, ctx):
@@ -127,7 +129,7 @@ def test_delayed_audio_keeps_the_video_length_subtitles_and_chapters(tmp_path, c
 
 def test_mov_text_subtitles_become_srt_in_matroska():
     subs = [{"index": 2, "codec": "subrip"}, {"index": 3, "codec": "mov_text"}]
-    assert video_sync._subtitle_args(subs, ".mkv") == (
+    assert subtitle_args(subs, ".mkv") == (
         ["-map", "0:2", "-map", "0:3", "-c:s", "copy", "-c:s:1", "srt"], 0
     )
 

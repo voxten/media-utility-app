@@ -72,6 +72,7 @@ def default_settings() -> Dict[str, Any]:
         "downloadSkipArchived": False,  # queued links already downloaded once are skipped
         "downloadParallel": 1,  # links of a queue downloaded at once
         "downloadRateLimit": 0,  # MB/s shared by a queue's downloads; 0 is no limit
+        "videoHardwareEncoding": True,  # the video converter encodes on the graphics card when one works
         "engineUpdateCheck": True,  # look for newer yt-dlp / gallery-dl at start-up, at most daily
         "engineLastCheck": 0,  # time.time() of the last look
         "engineLatest": {},  # {"yt-dlp": {"version": …, "pins": {"yt-dlp-ejs": …}}, …}

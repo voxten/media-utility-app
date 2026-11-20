@@ -37,6 +37,8 @@ export interface Settings {
   downloadParallel: DownloadParallel;
   /** MB/s shared by a queue's downloads; 0 is no limit. */
   downloadRateLimit: DownloadRateLimit;
+  /** The video converter encodes on the graphics card when one works. */
+  videoHardwareEncoding: boolean;
   /** Last output settings used by the GIF tools. */
   gifOutput?: GifOutputOptions;
   /** Last options used by the Transcription tool. */
@@ -317,7 +319,12 @@ export interface VideoInfo {
   height: number;
   fps: number;
   videoCodec: string;
+  /** Stream index of the picture (not a cover image); -1 without video. */
+  videoIndex: number;
+  hdr: boolean;
+  hasCover: boolean;
   audioTracks: AudioTrackInfo[];
+  subtitles: { index: number; codec: string }[];
   thumbnail: string;
 }
 
@@ -399,10 +406,22 @@ export interface VideoToGifPreview {
   estimatedSize: number;
 }
 
+export type VideoCodec = "h264" | "hevc" | "av1" | "vp9";
+export type EncoderDevice = "nvenc" | "qsv" | "amf";
+
+export interface VideoEncoders {
+  version: string;
+  /** Working hardware encoders, best first. */
+  devices: { id: EncoderDevice; codecs: VideoCodec[] }[];
+}
+
 export interface MediaConvertParams {
   paths: string[];
   outputDir: string;
   format: string;
+  codec: VideoCodec;
+  /** Only change the container: the picture is copied, incompatible sound is encoded. */
+  copy: boolean;
   quality: string;
   targetMb: number;
   height: number;
@@ -422,7 +441,10 @@ export interface MediaConvertResult {
   outputDir: string;
   outPath: string | null;
   files: string[];
-  results: Array<{ file: string; dest: string; inBytes: number; outBytes: number }>;
+  /** FFmpeg encoders used ("hevc_nvenc", "libx264", "copy"), in order of first use. */
+  encoders: string[];
+  subtitlesSkipped: number;
+  results: Array<{ file: string; dest: string; inBytes: number; outBytes: number; encoder: string; subtitlesSkipped: number }>;
 }
 
 export interface VideoToGifResult {

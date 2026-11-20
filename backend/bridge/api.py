@@ -21,7 +21,7 @@ SHUTDOWN_WAIT_S = 3.0
 from backend import APP_NAME, APP_VERSION
 from backend.core.errors import AppError
 from backend.bridge.events import EventBus
-from backend.core import clipboard, deps, engines, ffmpeg, logs, media_server, paths, system, win_theme
+from backend.core import clipboard, deps, encoders, engines, ffmpeg, logs, media_server, paths, system, win_theme
 from backend.core.app_shell import AppShell
 from backend.core.history import JobHistory
 from backend.core.hotkey import GlobalHotkey
@@ -730,15 +730,22 @@ class MediaConvertApi(_Namespace):
     def probe(self, path: str) -> Dict[str, Any]:
         return ffmpeg.probe_media(path)
 
+    def encoders(self) -> Dict[str, Any]:
+        return encoders.summary()
+
+    def copy_formats(self, paths: List[str]) -> List[str]:
+        return media_convert.copy_formats([str(p) for p in paths or []])
+
     def frames(self, path: str, start_sec: float, duration: float, count: int, height: int = 96) -> Dict[str, Any]:
         return ffmpeg.extract_frames(path, float(start_sec), float(duration), int(count), int(height))
 
     def start(self, params: Dict[str, Any]) -> str:
         paths = params.get("paths") or []
         title = Path(paths[0]).name if len(paths) == 1 else f'common.filesTitle|{{"count": {len(paths)}}}'
+        hardware = bool(self._ctx.settings.get("videoHardwareEncoding", True))
         return self._ctx.jobs.submit(
             "media_convert",
-            lambda ctx: media_convert.convert(ctx, params),
+            lambda ctx: media_convert.convert(ctx, params, hardware=hardware),
             title=title,
         )
 

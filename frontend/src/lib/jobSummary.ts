@@ -43,6 +43,26 @@ function countParts(t: TFunction, key: string, count: number | undefined, min = 
   return count != null && count >= min ? t(key, { count }) : undefined;
 }
 
+const CODEC_LABELS: Record<string, string> = { h264: "H.264", hevc: "H.265", av1: "AV1", vp9: "VP9" };
+const CPU_CODECS: Record<string, string> = { libx264: "h264", libx265: "hevc", "libaom-av1": "av1", "libvpx-vp9": "vp9" };
+const DEVICE_LABELS: Record<string, string> = { nvenc: "NVENC", qsv: "Quick Sync", amf: "AMF" };
+
+/** "H.265, NVENC" for an FFmpeg encoder name; "copy" means the picture was not encoded. */
+export function encoderLabel(t: TFunction, encoder: string): string | undefined {
+  if (encoder === "copy") return t("jobs.summary.notEncoded");
+  const cpuCodec = CPU_CODECS[encoder];
+  const [codec, device] = cpuCodec ? [cpuCodec, ""] : encoder.split("_");
+  const codecLabel = CODEC_LABELS[codec];
+  if (!codecLabel) return undefined;
+  return t("jobs.summary.encoder", { codec: codecLabel, device: device ? (DEVICE_LABELS[device] ?? device) : t("jobs.summary.cpu") });
+}
+
+function encodersPart(t: TFunction, r: Result) {
+  if (!Array.isArray(r.encoders)) return undefined;
+  const labels = r.encoders.map((name) => (typeof name === "string" ? encoderLabel(t, name) : undefined)).filter(Boolean);
+  return labels.length ? labels.join(" / ") : undefined;
+}
+
 function failedPart(t: TFunction, r: Result) {
   return countParts(t, "jobs.summary.failed", positive(r.failed));
 }
@@ -96,7 +116,13 @@ function summarise(t: TFunction, kind: string, r: Result): (string | undefined)[
     case "pdf.extract_text":
       return [countParts(t, "jobs.summary.chars", num(r.charCount), 0), bytes(r.bytes)];
     case "media_convert":
-      return [countParts(t, "jobs.summary.files", num(r.converted), 2), sizeChange(r.inBytes, r.outBytes), failedPart(t, r)];
+      return [
+        countParts(t, "jobs.summary.files", num(r.converted), 2),
+        encodersPart(t, r),
+        sizeChange(r.inBytes, r.outBytes),
+        countParts(t, "jobs.summary.subtitlesSkipped", positive(r.subtitlesSkipped)),
+        failedPart(t, r),
+      ];
     case "video_to_gif.render":
       return [dimensions(r), countParts(t, "jobs.summary.frames", positive(r.frames)), bytes(r.size)];
     case "transcribe": {
