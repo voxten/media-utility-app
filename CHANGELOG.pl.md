@@ -2,7 +2,7 @@
 
 Polskie tłumaczenie [CHANGELOG.md](CHANGELOG.md), pokazywane w aplikacji przy polskim języku. Każde wydanie trzeba dopisać w obu plikach.
 
-## [Unreleased]
+## [0.16.0] - 2026-11-21
 
 ### Dodano
 
@@ -12,7 +12,7 @@ Polskie tłumaczenie [CHANGELOG.md](CHANGELOG.md), pokazywane w aplikacji przy p
 - „Wyślij do” i upuszczenie pliku w dowolnym miejscu proponują **Transkrypcję** dla plików audio, a **Edytor GIF** dla animacji APNG.
 - Zakładka „Pobierz w Media Studio” do przeglądarki (Ustawienia → Przeglądarka): jedno kliknięcie otwiera bieżącą stronę w **Pobieraniu wideo**, a linki z Instagrama w **Instagramie**, także gdy aplikacja jest zamknięta albo schowana w zasobniku. Linki z YouTube, TikToka, X i Instagrama są od razu sprawdzane, z innych stron tylko trafiają do pola; pobieranie i tak czeka na Twoje kliknięcie. Instalator ma do tego nową opcję, domyślnie zaznaczoną.
 - Opcjonalny skrót klawiszowy w całym Windows (Ustawienia → Przeglądarka, domyślnie wyłączony) otwiera skopiowany link w aplikacji. Skrót zajęty przez inny program zostaje odrzucony z komunikatem.
-- Trwającą kolejkę pobierania można przeciąganiem ułożyć w innej kolejności i pomijać w niej linki; pominięcie pobieranego linku przerywa tylko ten link. „Ponów niepobrane” działa też w trakcie kolejki i po jej zakończeniu, z jej własnymi opcjami zamiast tych, które są teraz w formularzu. Dwie nowe opcje obok „Pomijaj pobrane wcześniej”: 1–3 pobrania naraz i limit prędkości (1–20 MB/s) wspólny dla całej kolejki.
+- Trwającą kolejkę pobierania można przeciąganiem ułożyć w innej kolejności i pomijać w niej linki; pominięcie pobieranego linku przerywa tylko ten link, a wznowiona kolejka zachowuje nową kolejność. „Ponów niepobrane” działa też w trakcie kolejki, po jej zakończeniu i po restarcie (z menu „⋯” kolejki w historii zadań), z jej własnymi opcjami zamiast tych, które są teraz w formularzu. Dwie nowe opcje obok „Pomijaj pobrane wcześniej”: 1–3 pobrania naraz i limit prędkości (1–20 MB/s) wspólny dla całej kolejki.
 - **Konwerter wideo i audio** koduje obraz na karcie graficznej: NVENC (NVIDIA), a gdy go nie ma, Quick Sync (Intel) albo AMF (AMD), na końcu procesor. Plik, na którym karta zawiedzie, jest kodowany od nowa na procesorze. Ustawienia → Sprzęt pokazują wykryte kodery i pozwalają to wyłączyć.
 - **Konwerter wideo i audio** daje do wyboru H.264, H.265 i AV1 (AV1 tylko wtedy, gdy karta graficzna go koduje). H.265 w MP4 i MOV odtwarza się na iPhonie.
 - **Konwerter wideo i audio** ma tryb „Tylko kontener”, który w kilka sekund zmienia np. MKV na MP4 bez kodowania obrazu; kodowany jest tylko dźwięk, którego nowy kontener nie przyjmie. Kontenery, do których nie da się przenieść obrazu, nie są proponowane, a przycinanie jest w tym trybie wyłączone.
@@ -24,7 +24,6 @@ Polskie tłumaczenie [CHANGELOG.md](CHANGELOG.md), pokazywane w aplikacji przy p
 - Kolejka pobierania w panelu zadań nazywa się „3 linki” zamiast „3 URL”.
 - Ustawienia → Zależności pokazują pełny rozmiar pobierania narzędzia AI, razem z PyTorchem, jeśli trzeba go jeszcze zainstalować.
 - Angielskie etykiety Ustawień piszą wielką literą tylko pierwsze słowo, jak reszta aplikacji.
-- Kolejka wznowiona po anulowaniu albo zamknięciu aplikacji zachowuje kolejność ustawioną przeciąganiem.
 - **Konwerter wideo i audio** zachowuje wszystkie ścieżki dźwięku i napisy: w MKV kopiowane, w MP4, MOV i WebM jako tekst. Napisy obrazkowe (PGS, VobSub) mieszczą się tylko w MKV; wynik mówi, ile ich pominięto. Okładka nie jest zachowywana, HDR też nie.
 - Docelowy rozmiar na karcie graficznej to jedno kodowanie i najwyżej jedno ponowne z mniejszą przepływnością; plik nadal za duży jest kodowany na procesorze w dwóch przebiegach, jak dotąd.
 
@@ -44,10 +43,8 @@ Polskie tłumaczenie [CHANGELOG.md](CHANGELOG.md), pokazywane w aplikacji przy p
 - Nazwa narzędzia **Synchronizacja audio-wideo** pisze się małą literą w środku, a angielskie nazwy narzędzi wielką literą tylko na początku, jak reszta aplikacji.
 - Komunikat po zakończeniu kolejki pobierania i „Dopisano … linków do kolejki” mają poprawne formy liczby mnogiej, np. „1 błąd” zamiast „1 błędów”.
 - Czytnik ekranu ogłasza przeciąganie w kolejce pobierania, listach plików, stronach PDF i paskach postępu po polsku, z nazwą elementu i jego pozycją.
-- „Ponów niepobrane” dla zakończonej kolejki pobierania działa też po restarcie: oferuje je menu „⋯” kolejki w historii zadań.
 - „Wyrównaj głośność” przy zapisie tylko dźwięku, np. do FLAC albo WAV, nie daje już plików 192 kHz: zostaje częstotliwość źródła, a 48 kHz, gdy format jej nie przyjmuje.
 - Nieudane zadanie widoczne jednocześnie na stronie Start i w panelu zadań przestaje proponować „Ponów” na obu kartach, gdy zostanie ponowione na jednej, więc nie uruchomi się dwa razy.
-- „Otwórz z tymi ustawieniami” dla pojedynczego pobrania przywraca wybór napisów, wybrany format (jeśli link nadal go oferuje) i fragment filmu.
 
 ## [0.15.0] - 2026-11-14
 

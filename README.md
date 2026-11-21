@@ -4,8 +4,8 @@ Windows desktop toolbox for media, documents and text. It is a native window (py
 
 | Tool | What it does |
 |---|---|
-| Video downloader | YouTube, TikTok, X and other sites via yt-dlp: format table, audio only, subtitles, cover art and metadata, playlists with per-entry picks, a batch queue with a quality or audio format for every link, a download archive that skips links saved before, a queue that resumes after a restart, part of a video by time range or chapter, SponsorBlock for YouTube and cookies from a cookie file or straight from a browser |
-| Video & audio converter | MP4, MKV, MOV, WebM and MP3, M4A, OGG, Opus, WAV, FLAC: quality presets or a target file size (two-pass), trim on a timeline, scale down, remove or extract the sound, loudness normalization, several files at once |
+| Video downloader | YouTube, TikTok, X and other sites via yt-dlp: format table, audio only, subtitles, cover art and metadata, playlists with per-entry picks, a batch queue with a quality or audio format for every link, a download archive that skips links saved before, a queue that resumes after a restart, can be reordered and downloads 1–3 links at once with a speed limit, part of a video by time range or chapter, SponsorBlock for YouTube and cookies from a cookie file or straight from a browser |
+| Video & audio converter | MP4, MKV, MOV, WebM and MP3, M4A, OGG, Opus, WAV, FLAC: H.264, H.265 and AV1 encoded on the graphics card (NVENC, Quick Sync, AMF) or the processor, a container-only change without re-encoding, every sound track and subtitles kept, quality presets or a target file size (two-pass), trim on a timeline, scale down, remove or extract the sound, loudness normalization, several files at once |
 | Instagram downloader | Posts, carousels, reels, stories, highlights and whole profiles in full quality, picked from a preview grid (yt-dlp for posts, gallery-dl for stories and profiles) |
 | Audio-video sync | Waveform and frame timeline for fixing out-of-sync audio, short preview clips, export by stream copy or re-encode |
 | Video to GIF | A clip of a video as GIF, WebP or APNG: frame range, frame rate, width, speed, crop, reverse, size estimate |
@@ -28,10 +28,10 @@ Windows desktop toolbox for media, documents and text. It is a native window (py
 | Progress generator | Progress-bar graphics exported as PNG |
 
 Other features:
-- **Tasks panel:** "Now" and "History" tabs, history from earlier runs with search and filters, "Open file", "Show in folder", "Retry" and "Send to" on every task; tasks run in a queue with an adjustable number at once;
+- **Tasks panel:** "Now" and "History" tabs, history from earlier runs with search and filters, "Open file", "Show in folder", "Retry" and "Send to" on every task, "Run again" and "Open with these settings" for tasks in the history; tasks run in a queue with an adjustable number at once;
 - **Tray icon:** closing the window hides it to the notification area while jobs keep running; "Download link from clipboard" opens a copied link in the matching download tool;
 - **Drop anywhere:** files dropped outside a drop area open "Open in a tool";
-- **Windows integration:** the installer can add "Open in Media Studio" to the Explorer menu, "Open with" and "Send to"; the taskbar button shows task progress;
+- **Windows integration:** the installer can add "Open in Media Studio" to the Explorer menu, "Open with" and "Send to", and a `mediastudio://` link for a browser bookmark that opens the current page in the app; an optional global shortcut opens a copied link; the taskbar button shows task progress;
 - **Download engine updates:** newer yt-dlp and gallery-dl install from Settings, are checked before use and can be rolled back;
 - **Add-ons:** PyTorch, rembg, model weights (BiRefNet, Real-ESRGAN, LaMa, Whisper), FFmpeg and gifsicle install from Settings; model weights, FFmpeg and gifsicle are checked against pinned SHA-256 checksums and Python add-ons install at pinned versions;
 - `Ctrl+K` command palette; `Ctrl+Enter` runs, `Esc` cancels and `Ctrl+O` adds files in every tool;
