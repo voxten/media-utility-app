@@ -36,13 +36,13 @@ pythonnet==3.2.0
 pyttsx3==2.99
 PyWavelets==1.9.0
 pywebview==6.2.1
-pywin32==312; sys_platform == "win32"
+pywin32==312
 requests==2.34.2
 scipy==1.17.1
 Send2Trash==2.1.0
 six==1.17.0
 tabulate==0.10.0
-typing_extensions==4.15.0; sys_platform == "win32"
+typing_extensions==4.15.0
 urllib3==2.7.0
 websockets==17.1
 winrt-runtime==4.2.0; sys_platform == "win32"

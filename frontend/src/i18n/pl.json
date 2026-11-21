@@ -41,7 +41,7 @@
       "description": "Zapisuj zdjęcia i filmy z postów, karuzel, relacji i całych profili na Instagramie."
     },
     "video_sync": {
-      "name": "Synchronizacja Audio-Wideo",
+      "name": "Synchronizacja audio-wideo",
       "description": "Synchronizuj rozjechane ścieżki dźwiękowe z obrazem, dopasowuj po amplitudzie i twórz podgląd."
     },
     "video_to_gif": {
@@ -101,7 +101,7 @@
       "description": "Podziel dokument na pojedyncze strony lub wybrane grupy stron."
     },
     "pdf_convert": {
-      "name": "PDF ↔ Obrazy",
+      "name": "PDF ↔ obrazy",
       "description": "Konwertuj strony PDF na grafiki lub twórz PDF z kolekcji zdjęć."
     },
     "pdf_extract": {
@@ -397,7 +397,15 @@
     "trimStart": "Początek",
     "trimEnd": "Koniec",
     "trimLength": "Długość {{duration}}",
-    "dragToReorder": "Przeciągnij, aby zmienić kolejność"
+    "dragToReorder": "Przeciągnij, aby zmienić kolejność",
+    "sortable": {
+      "instructions": "Aby podnieść element, naciśnij Spację lub Enter. Przesuń go strzałkami, a potem naciśnij Spację lub Enter, żeby go upuścić, albo Escape, żeby anulować.",
+      "pickedUp": "Podniesiono: {{name}}, pozycja {{position}} z {{total}}.",
+      "moved": "{{name}}: pozycja {{position}} z {{total}}.",
+      "outside": "{{name}}: poza listą.",
+      "dropped": "Upuszczono: {{name}}, pozycja {{position}} z {{total}}.",
+      "cancelled": "Anulowano przenoszenie: {{name}}."
+    }
   },
   "fileTypes": {
     "images": "Obrazy",
@@ -517,6 +525,7 @@
     "dropSingleTitle": "Upuść dokument PDF tutaj",
     "dropSingleHint": "lub kliknij, aby wybrać pojedynczy plik PDF",
     "dropImagesTitle": "Upuść pliki graficzne tutaj",
+    "dropMoreImages": "Dodaj kolejne obrazy",
     "dropImagesHint": "lub kliknij, aby wybrać obrazy ({{formats}})",
     "dropChange": "Zmień plik PDF",
     "pagesTitle": "Strony",
@@ -916,9 +925,18 @@
       "done": "Pobieranie zakończone",
       "error": "Pobieranie nie powiodło się",
       "probeError": "Nie udało się odczytać linku",
-      "batchDone": "Kolejka zakończona: {{ok}} pobrano, {{failed}} błędów",
-      "addedToBatch": "Dopisano {{count}} linków do kolejki",
-      "batchDoneSkipped": "Kolejka zakończona: {{ok}} pobrano, {{failed}} błędów, {{skipped}} pominięto"
+      "batchDone_one": "Kolejka zakończona: {{ok}} pobrano, {{count}} błąd",
+      "batchDone_few": "Kolejka zakończona: {{ok}} pobrano, {{count}} błędy",
+      "batchDone_many": "Kolejka zakończona: {{ok}} pobrano, {{count}} błędów",
+      "batchDone_other": "Kolejka zakończona: {{ok}} pobrano, {{count}} błędu",
+      "addedToBatch_one": "Dopisano {{count}} link do kolejki",
+      "addedToBatch_few": "Dopisano {{count}} linki do kolejki",
+      "addedToBatch_many": "Dopisano {{count}} linków do kolejki",
+      "addedToBatch_other": "Dopisano {{count}} linku do kolejki",
+      "batchDoneSkipped_one": "Kolejka zakończona: {{ok}} pobrano, {{count}} błąd, {{skipped}} pominięto",
+      "batchDoneSkipped_few": "Kolejka zakończona: {{ok}} pobrano, {{count}} błędy, {{skipped}} pominięto",
+      "batchDoneSkipped_many": "Kolejka zakończona: {{ok}} pobrano, {{count}} błędów, {{skipped}} pominięto",
+      "batchDoneSkipped_other": "Kolejka zakończona: {{ok}} pobrano, {{count}} błędu, {{skipped}} pominięto"
     },
     "batchFormat": {
       "mode": "Pobieraj",

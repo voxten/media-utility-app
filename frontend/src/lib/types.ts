@@ -107,7 +107,7 @@ export interface ShellLabels {
   clipboardEmpty: string;
 }
 
-/** A copied link and the download tool that handles it (backend/core/clipboard.py). */
+/** Shortcuts that open the copied link from anywhere in Windows (backend/core/hotkey.py); "" when off. */
 export type GlobalHotkey = "" | "ctrl+alt+d" | "ctrl+alt+shift+d" | "ctrl+alt+y" | "ctrl+alt+shift+y";
 
 export const DOWNLOAD_PARALLEL = [1, 2, 3] as const;
@@ -115,6 +115,7 @@ export type DownloadParallel = (typeof DOWNLOAD_PARALLEL)[number];
 export const DOWNLOAD_RATE_LIMITS = [0, 1, 2, 5, 10, 20] as const;
 export type DownloadRateLimit = (typeof DOWNLOAD_RATE_LIMITS)[number];
 
+/** A copied link and the download tool that handles it (backend/core/clipboard.py). */
 export interface ClipboardLink {
   url: string;
   target: "download" | "instagram";

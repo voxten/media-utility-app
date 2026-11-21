@@ -1,13 +1,14 @@
 // Compact list of chosen files with remove, clear all and "Send to"; optionally reordered by dragging.
 
 import type { ReactElement } from "react";
-import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent, type UniqueIdentifier } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Button, makeStyles, mergeClasses, Text, tokens } from "@fluentui/react-components";
 import { ArrowRight16Regular, Delete16Regular, ReOrderDotsVertical16Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { fileName } from "../lib/format";
+import { useSortableAccessibility } from "../lib/sortableAccessibility";
 import { useTransferStore } from "../stores/transfer";
 
 const useStyles = makeStyles({
@@ -33,6 +34,8 @@ const useStyles = makeStyles({
   name: { flexGrow: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
   actions: { display: "flex", gap: "8px" },
 });
+
+const fileLabel = (id: UniqueIdentifier) => fileName(String(id));
 
 interface FileListProps {
   files: string[];
@@ -81,6 +84,7 @@ export function FileList({ files, icon, onChange, sourceToolId, sortable = false
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
+  const accessibility = useSortableAccessibility(files, fileLabel);
   if (!files.length) return null;
 
   const onDragEnd = ({ active, over }: DragEndEvent) => {
@@ -90,7 +94,7 @@ export function FileList({ files, icon, onChange, sourceToolId, sortable = false
 
   return (
     <>
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd} accessibility={accessibility}>
         <SortableContext items={files} strategy={verticalListSortingStrategy}>
           <div className={styles.list}>
             {files.map((file) => (

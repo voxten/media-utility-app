@@ -242,8 +242,9 @@ def test_installing_a_dependency_twice_follows_the_running_install(monkeypatch):
         jobs.shutdown()
 
 
-def test_the_bridge_can_be_built(tmp_path):
+def test_the_bridge_can_be_built(app_dirs):
     from backend.bridge.events import EventBus
 
-    bridge = api.Api(EventBus(), Settings(tmp_path / "settings.json"))
+    bridge = api.Api(EventBus(), Settings(app_dirs / "settings.json"))
     assert set(_namespaces()) <= set(vars(bridge))
+    assert bridge._ctx.history.path.is_relative_to(app_dirs)

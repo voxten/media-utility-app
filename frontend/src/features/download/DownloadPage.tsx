@@ -47,13 +47,14 @@ import { BatchQueue } from "./BatchQueue";
 import { ProbeResultPanel } from "./ProbeResultPanel";
 import { ClipField, clipSection } from "./ClipField";
 import { SubtitlesField, useDownloadSubtitles } from "./SubtitlesField";
-import { useDownloadForm } from "./store";
+import { probedForm, useDownloadForm } from "./store";
 import type { BatchItem, ProbeResult } from "./types";
 import type { PendingQueue } from "../../lib/types";
 import { errorMessage } from "../../lib/errors";
 import { ResultCard } from "../../components/ResultCard";
 import { useToolShortcuts } from "../../lib/useToolShortcuts";
 import { queueOrder, runningItems } from "../../components/jobCard/targets";
+import { retryFailedLinks } from "../../stores/jobs";
 
 const TEMPLATE_TOKENS = ["{title}", "{id}", "{ext}"];
 
@@ -97,19 +98,11 @@ export default function DownloadPage() {
   const updateSettings = useSettings((s) => s.update);
 
   const probe = useJobRunner<ProbeResult>("download.probe", {
-    onResult: (result) => {
-      const first = result.formats.video[0]?.id ?? "";
-      form.set({
-        probe: result,
-        mode: "video",
-        formatId: first,
-        selectedEntries: (result.entries ?? []).map((_, i) => i),
-        clip: false,
-        clipStart: "",
-        clipEnd: "",
-      });
+    onResult: (result) => form.set(probedForm(result, useDownloadForm.getState().restore)),
+    onError: (error) => {
+      form.set({ restore: null });
+      notify.error(t("download.toast.probeError"), { body: error });
     },
-    onError: (error) => notify.error(t("download.toast.probeError"), { body: error }),
   });
 
   const download = useJobRunner<{ title: string; path: string; size: number; outdir: string }>("download", {
@@ -201,7 +194,7 @@ export default function DownloadPage() {
     if (!jobId) return;
     batch
       .start(async () => {
-        const id = await api.download.retryFailed(jobId);
+        const id = await retryFailedLinks(jobId);
         if (id !== jobId) setLastBatch(null);
         return id;
       })
@@ -466,8 +459,8 @@ export default function DownloadPage() {
               <ResultCard
                 title={
                   batch.result.skipped
-                    ? t("download.toast.batchDoneSkipped", { ok: batch.result.succeeded, failed: batch.result.failed, skipped: batch.result.skipped })
-                    : t("download.toast.batchDone", { ok: batch.result.succeeded, failed: batch.result.failed })
+                    ? t("download.toast.batchDoneSkipped", { ok: batch.result.succeeded, count: batch.result.failed, skipped: batch.result.skipped })
+                    : t("download.toast.batchDone", { ok: batch.result.succeeded, count: batch.result.failed })
                 }
                 path={batch.result.outdir}
                 folder

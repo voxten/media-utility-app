@@ -464,6 +464,8 @@ class ActiveBatchQueue:
 _active_batches: Dict[str, ActiveBatchQueue] = {}
 _active_batches_lock = threading.Lock()
 _finished_batches: Dict[str, Dict[str, Any]] = {}
+# Finished queues whose failed links were handed out for a retry in this run of the app.
+_retried_batches: Set[str] = set()
 
 
 def _active(job_id: Optional[str]) -> Optional[ActiveBatchQueue]:
@@ -502,11 +504,29 @@ def skip_batch_item(job_id: str, index: int) -> bool:
     return bool(queue and queue.skip(index))
 
 
-def retry_failed(job_id: str) -> Optional[Dict[str, Any]]:
+def saved_failures(entry: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """``{"urls", "options"}`` of a finished queue's failed links from its job history entry, or None."""
+    replay = (entry or {}).get("replay") or {}
+    args = replay.get("args") or []
+    if replay.get("method") != "download.batch" or not args or not isinstance(args[0], dict):
+        return None
+    urls = [
+        item["url"]
+        for item in entry.get("items") or []
+        if isinstance(item, dict) and item.get("status") == "error" and isinstance(item.get("url"), str)
+    ]
+    options = {key: value for key, value in args[0].items() if key != "urls"}
+    return {"urls": urls, "options": options} if urls else None
+
+
+def retry_failed(
+    job_id: str, saved: Optional[Callable[[], Optional[Dict[str, Any]]]] = None
+) -> Optional[Dict[str, Any]]:
     """Retry the failed links of a queue.
 
     A running queue takes them again itself and the result is ``{"requeued": n}``; a finished one gives
-    ``{"urls", "options"}`` to start a new queue with (handed out once). None when there is nothing to retry.
+    ``{"urls", "options"}`` to start a new queue with, handed out once. A queue from before a restart is
+    read from its job history entry, which ``saved`` returns. None when there is nothing to retry.
     """
     queue = _active(job_id)
     if queue:
@@ -515,13 +535,24 @@ def retry_failed(job_id: str) -> Optional[Dict[str, Any]]:
             return {"requeued": count}
     with _active_batches_lock:
         finished = _finished_batches.pop(job_id, None)
-    return finished if finished and finished["urls"] else None
+        if job_id in _retried_batches:
+            return None
+        if finished and finished["urls"]:
+            _retried_batches.add(job_id)
+            return finished
+    found = saved_failures(saved()) if saved else None
+    with _active_batches_lock:
+        if not found or job_id in _retried_batches:
+            return None
+        _retried_batches.add(job_id)
+    return found
 
 
 def _remember_failures(job_id: str, queue: ActiveBatchQueue, options: Dict[str, Any]) -> None:
     urls = queue.failed_urls()
     with _active_batches_lock:
         _finished_batches.pop(job_id, None)
+        _retried_batches.discard(job_id)
         if urls:
             _finished_batches[job_id] = {"urls": urls, "options": options}
         while len(_finished_batches) > MAX_FINISHED_BATCHES:

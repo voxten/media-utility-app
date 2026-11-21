@@ -331,16 +331,20 @@ const TARGETS: Record<string, Target> = {
         tab: "single",
         url: text(o.url),
         probe: null,
-        mode: pick(o.mode, ["video", "audio", "muxed"] as const, "video"),
+        formatId: "",
         audioCodec: text(o.audioCodec, form.audioCodec),
         outdir: text(o.outdir),
         template: text(o.template, form.template),
         sponsorblock: o.sponsorblock === true,
-        clip,
-        clipStart: clip ? formatDuration(num(section.start, 0)) : "",
-        clipEnd: clip ? formatDuration(num(section.end, 0)) : "",
+        restore: {
+          mode: pick(o.mode, ["video", "audio", "muxed"] as const, "video"),
+          formatId: text(o.formatId),
+          clipStart: clip ? formatDuration(num(section.start, 0)) : "",
+          clipEnd: clip ? formatDuration(num(section.end, 0)) : "",
+        },
         autoProbe: true,
       });
+      rememberSubtitles(o.subtitles);
     },
   },
   "download.batch": {
@@ -359,6 +363,7 @@ const TARGETS: Record<string, Target> = {
         sponsorblock: o.sponsorblock === true,
         lastBatch: null,
       });
+      rememberSubtitles(o.subtitles);
     },
   },
   "instagram.start": {
@@ -393,6 +398,11 @@ const TARGETS: Record<string, Target> = {
 };
 
 /** The OCR tool keeps its language as a setting, so opening a job with another language changes it there. */
+function rememberSubtitles(subtitles: unknown) {
+  const mode = pick(params(subtitles).mode, ["off", "site", "auto"] as const, "off");
+  useSettings.getState().update({ downloadSubtitles: mode }).catch(() => undefined);
+}
+
 function rememberOcrLanguage(language: unknown) {
   const tag = text(language);
   if (tag) useSettings.getState().update({ ocrLanguage: tag }).catch(() => undefined);

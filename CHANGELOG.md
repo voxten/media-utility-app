@@ -10,18 +10,18 @@ The app shows this file (and its Polish translation, [CHANGELOG.pl.md](CHANGELOG
 
 ### Added
 
-- **Video Downloader** and **Instagram** have a "Clear" button that empties the link, the preview and the last result; the folder and options stay.
+- **Video downloader** and **Instagram** have a "Clear" button that empties the link, the preview and the last result; the folder and options stay.
 - The task history keeps the links a download came from: a queue lists every link with its title and outcome, the "⋯" menu copies the link or links, and the history search finds links too.
-- **PDF Merger** and **PDF ↔ Images** (images to PDF) have a file name field next to the output folder instead of always saving `merged.pdf` and `from_images.pdf`.
-- "Send to" and dropping a file anywhere offer **Transcription** for audio files, and **GIF Editor** for APNG animations.
-- A "Download in Media Studio" bookmark for the browser (Settings → Browser): one click opens the current page in **Video Downloader**, or in **Instagram** for Instagram links, also when the app is closed or hidden in the tray. YouTube, TikTok, X and Instagram links are checked right away, other sites only fill the field; downloading still waits for your click. The installer has a new option for it, on by default.
+- **PDF merger** and **PDF ↔ images** (images to PDF) have a file name field next to the output folder instead of always saving `merged.pdf` and `from_images.pdf`.
+- "Send to" and dropping a file anywhere offer **Transcription** for audio files, and **GIF editor** for APNG animations.
+- A "Download in Media Studio" bookmark for the browser (Settings → Browser): one click opens the current page in **Video downloader**, or in **Instagram** for Instagram links, also when the app is closed or hidden in the tray. YouTube, TikTok, X and Instagram links are checked right away, other sites only fill the field; downloading still waits for your click. The installer has a new option for it, on by default.
 - An optional global shortcut (Settings → Browser, off by default) opens the copied link in the app from anywhere in Windows. A shortcut another program already uses is refused with a message.
 - A running download queue can be reordered by dragging and links can be skipped; skipping a link that is downloading stops only that link. "Retry failed" also works while the queue runs and after it ends, and uses the queue's own options instead of the ones now in the form. Two new options next to "Skip videos downloaded before": 1–3 downloads at once and a speed limit (1–20 MB/s) shared by the whole queue.
-- **Video & Audio Converter** encodes video on the graphics card: NVENC (NVIDIA), else Quick Sync (Intel) or AMF (AMD), else the processor. A file the card fails on is encoded again on the processor. Settings → Hardware lists the encoders found and can turn this off.
-- **Video & Audio Converter** offers H.264, H.265 and AV1 (AV1 only when the graphics card can encode it). H.265 in MP4 and MOV plays on iPhones.
-- **Video & Audio Converter** has a "Container only" mode that changes e.g. MKV to MP4 in seconds without encoding the picture; only sound the new container cannot hold is encoded. Containers the picture cannot go into are not offered, and trimming is off in this mode.
+- **Video & audio converter** encodes video on the graphics card: NVENC (NVIDIA), else Quick Sync (Intel) or AMF (AMD), else the processor. A file the card fails on is encoded again on the processor. Settings → Hardware lists the encoders found and can turn this off.
+- **Video & audio converter** offers H.264, H.265 and AV1 (AV1 only when the graphics card can encode it). H.265 in MP4 and MOV plays on iPhones.
+- **Video & audio converter** has a "Container only" mode that changes e.g. MKV to MP4 in seconds without encoding the picture; only sound the new container cannot hold is encoded. Containers the picture cannot go into are not offered, and trimming is off in this mode.
 - New tool **Text from image** (Text category): paste a screenshot with Ctrl+V or drop photos or a PDF, and get the text to correct, copy or save as TXT. It uses the text recognition built into Windows, so nothing is downloaded; the language list shows the languages installed in Windows. A scanned PDF can be saved as a copy with an invisible text layer, so its text can be selected and found with Ctrl+F; pages that already have text stay as they are.
-- The "⋯" menu of a task in the history has "Run again" (the same files and settings, also after a restart), "Open with these settings" (the tool opens with its form filled in, to change something first) and "Remove from history". "Retry" on a failed task now works for tasks from earlier runs too. A task whose files are gone says which file is missing. Tasks that delete files (Duplicates), use a painted mask (Watermark remover, AI Background Remover with touch-ups) or only check links and install add-ons are not repeated; a repeated download queue starts as a new queue and leaves the unfinished one alone.
+- The "⋯" menu of a task in the history has "Run again" (the same files and settings, also after a restart), "Open with these settings" (the tool opens with its form filled in, to change something first) and "Remove from history". "Retry" on a failed task now works for tasks from earlier runs too. A task whose files are gone says which file is missing. Tasks that delete files (Duplicates), use a painted mask (Watermark remover, AI background remover with touch-ups) or only check links and install add-ons are not repeated; a repeated download queue starts as a new queue and leaves the unfinished one alone.
 
 ### Changed
 
@@ -29,7 +29,7 @@ The app shows this file (and its Polish translation, [CHANGELOG.pl.md](CHANGELOG
 - Settings → Dependencies shows the whole download size of an AI tool, including PyTorch when it still has to be installed.
 - Settings labels use sentence case like the rest of the app.
 - A queue resumed after a cancel or a closed app keeps the order it was dragged into.
-- **Video & Audio Converter** keeps every sound track and the subtitles: copied in MKV, as text in MP4, MOV and WebM. Picture subtitles (PGS, VobSub) fit only in MKV; the result says how many were left out. A cover image is not kept, and neither is HDR.
+- **Video & audio converter** keeps every sound track and the subtitles: copied in MKV, as text in MP4, MOV and WebM. Picture subtitles (PGS, VobSub) fit only in MKV; the result says how many were left out. A cover image is not kept, and neither is HDR.
 - A target size on the graphics card takes one encode, and at most one more at a lower bitrate; a file that is still too big is encoded on the processor in two passes as before.
 
 ### Fixed
@@ -40,10 +40,18 @@ The app shows this file (and its Polish translation, [CHANGELOG.pl.md](CHANGELOG
 - Opening Settings with a damaged PyTorch no longer keeps a reinstalled one from loading until the next start.
 - A resumed download queue keeps SponsorBlock on when it was on.
 - "Off" can be chosen again in lists such as Settings → Files → Cookies from browser.
-- Tasks with several files in Image compressor, Image tools, Video & Audio Converter and GIF Editor are named in the app's language, e.g. "3 pliki" in Polish.
-- **Audio-Video Sync** exports an MP4 with subtitles to MKV instead of failing, and no longer overwrites an existing file with the same name.
-- **Video & Audio Converter** shows why a single file could not be converted instead of only "The file could not be converted".
+- Tasks with several files in Image compressor, Image tools, Video & audio converter and GIF editor are named in the app's language, e.g. "3 pliki" in Polish.
+- **Audio-video sync** exports an MP4 with subtitles to MKV instead of failing, and no longer overwrites an existing file with the same name.
+- **Video & audio converter** shows why a single file could not be converted instead of only "The file could not be converted".
 - The Image tools description no longer mentions folders, which the tool does not take.
+- **PDF ↔ images** (images to PDF) says "Add more images" once images are added, instead of "Add more PDF files".
+- Tool names use sentence case like the rest of the app, e.g. "PDF merger", "GIF editor", "AI background remover".
+- The message after a download queue and "Added … links to queue" use the right Polish plural forms, e.g. "1 błąd" instead of "1 błędów".
+- Screen readers announce dragging in the download queue, file lists, PDF pages and progress bars in the app's language, with the item's name and position.
+- "Retry failed" for a finished download queue also works after a restart: the "⋯" menu of the queue in the task history offers it.
+- "Even out loudness" with an audio-only output such as FLAC or WAV no longer gives 192 kHz files: the source's sample rate is kept, or 48 kHz when the format cannot take it.
+- A failed task shown both on the Home page and in the Tasks panel stops offering "Retry" on both cards once it has been retried on one, so it cannot start twice.
+- "Open with these settings" for a single download brings back the subtitles choice, the picked format (when the link still offers it) and the part of the video.
 
 ## [0.15.0] - 2026-11-14
 

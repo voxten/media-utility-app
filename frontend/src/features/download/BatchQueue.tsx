@@ -17,6 +17,7 @@ import { useTranslation } from "react-i18next";
 import { Panel } from "../../components/Panel";
 import { formatBytes, formatDuration } from "../../lib/format";
 import { translateMessage } from "../../lib/jobMessage";
+import { useSortableAccessibility } from "../../lib/sortableAccessibility";
 import { useDownloadForm } from "./store";
 import type { BatchItem } from "./types";
 
@@ -219,6 +220,10 @@ export function BatchQueue({ queue, running, totalSize, totalDuration, onReorder
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
+  const accessibility = useSortableAccessibility(ids, (id) => {
+    const item = queue.find((i) => i.index === id);
+    return item?.title || item?.url || String(id);
+  });
 
   const onDragEnd = ({ active, over }: DragEndEvent) => {
     if (!over || active.id === over.id || !onReorder) return;
@@ -237,7 +242,7 @@ export function BatchQueue({ queue, running, totalSize, totalDuration, onReorder
         onChange={(_, d) => set({ batchText: d.value })}
       />
       {queue.length > 0 && (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd} accessibility={accessibility}>
           <SortableContext items={ids} strategy={verticalListSortingStrategy}>
             <div className={styles.queue}>
               {queue.map((item) => (

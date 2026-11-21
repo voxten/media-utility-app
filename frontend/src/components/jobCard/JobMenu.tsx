@@ -1,5 +1,6 @@
 import { Button, Menu, MenuDivider, MenuItem, MenuList, MenuPopover, MenuTrigger, Tooltip } from "@fluentui/react-components";
 import {
+  ArrowClockwise16Regular,
   ArrowRepeatAll16Regular,
   ArrowRight16Regular,
   Copy16Regular,
@@ -30,14 +31,28 @@ interface JobMenuProps {
   entry?: Pick<HistoryEntry, "id" | "replay">;
   /** The card already offers "Retry", which runs the job again too. */
   retryShown: boolean;
+  /** Failed links of a finished queue that can be downloaded again. */
+  failedLinks?: number;
+  onRetryFailedLinks?: () => void;
   onNavigate?: () => void;
 }
 
 /**
  * The card's "⋯" menu: "Send to", "Copy path", "Copy link(s)", "Copy error", "Open tool" and, in the history,
- * "Open with these settings", "Run again" and "Remove from history", each only when it applies.
+ * "Open with these settings", "Retry failed", "Run again" and "Remove from history", each only when it applies.
  */
-export function JobMenu({ tool, resultFiles, copyPath, errorText, links, entry, retryShown, onNavigate }: JobMenuProps) {
+export function JobMenu({
+  tool,
+  resultFiles,
+  copyPath,
+  errorText,
+  links,
+  entry,
+  retryShown,
+  failedLinks = 0,
+  onRetryFailedLinks,
+  onNavigate,
+}: JobMenuProps) {
   const { t } = useTranslation();
   const notify = useNotify();
   const Icon = tool?.icon;
@@ -111,6 +126,11 @@ export function JobMenu({ tool, resultFiles, copyPath, errorText, links, entry, 
     replayTool(replay) && (
       <MenuItem key="settings" icon={<Edit16Regular />} onClick={openSettings}>
         {t("jobs.openWithSettings")}
+      </MenuItem>
+    ),
+    failedLinks > 0 && onRetryFailedLinks && (
+      <MenuItem key="retryFailed" icon={<ArrowClockwise16Regular />} onClick={onRetryFailedLinks}>
+        {t("download.retryFailed", { count: failedLinks })}
       </MenuItem>
     ),
     entry && replay && !retryShown && (

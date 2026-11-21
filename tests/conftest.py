@@ -27,6 +27,14 @@ def ctx() -> RecordingContext:
     return RecordingContext()
 
 
+@pytest.fixture
+def app_dirs(tmp_path, monkeypatch):
+    """%APPDATA% and %LOCALAPPDATA% inside tmp_path, so the user's real settings, history and cache stay untouched."""
+    monkeypatch.setenv("APPDATA", str(tmp_path / "roaming"))
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "local"))
+    return tmp_path
+
+
 def served(url: str) -> bytes:
     """What the window gets from a media server URL."""
     import urllib.request

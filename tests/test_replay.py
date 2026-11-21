@@ -15,13 +15,6 @@ from backend.core.settings import Settings
 from backend.services import download_queue
 
 
-@pytest.fixture
-def app_dirs(tmp_path, monkeypatch):
-    monkeypatch.setenv("APPDATA", str(tmp_path / "roaming"))
-    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "local"))
-    return tmp_path
-
-
 def _bridge(app_dirs):
     return api.Api(EventBus(), Settings(app_dirs / "settings.json"))
 

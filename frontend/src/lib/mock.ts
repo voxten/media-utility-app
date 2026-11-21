@@ -65,6 +65,10 @@ const mockHistory = (now: number): HistoryEntry[] => [
       { index: 1, url: "https://www.youtube.com/watch?v=R6MlUcmOul8", title: "Tears of Steel", status: "done", size: 240_000_000 },
       { index: 2, url: "https://x.com/demo/status/1", status: "error", error: "Video unavailable" },
     ],
+    replay: {
+      method: "download.batch",
+      args: [{ urls: ["https://www.youtube.com/watch?v=eRsGyueVLvQ", "https://www.youtube.com/watch?v=R6MlUcmOul8", "https://x.com/demo/status/1"], outdir: "C:\\Users\\demo\\Downloads", mode: "video", maxHeight: 0 }],
+    },
   },
   {
     id: "hist5", kind: "download.batch", title: 'download.batchTitle|{"count":2}', status: "cancelled",
@@ -142,6 +146,7 @@ export function createMockBackend(emit: Emit) {
   let history = mockHistory(Date.now() / 1000);
   let mockPendingQueue = ["https://youtube.com/watch?v=left1", "https://youtube.com/watch?v=left2", "https://youtube.com/watch?v=left3"];
   let mockArchiveCount = 42;
+  const retriedQueues = new Set<string>();
   const NOT_RETRYABLE = ["download.probe", "instagram.probe", "pdf.inspect", "duplicates.trash"];
   const NOT_IN_HISTORY = [...NOT_RETRYABLE, "download.engines"];
 
@@ -527,6 +532,7 @@ export function createMockBackend(emit: Emit) {
           "https://youtube.com/watch?v=demo1",
           "https://youtube.com/watch?v=demo2",
         ];
+        mockPendingQueue = [];
         return ok(simulateBatch(urls, params?.outdir || "C:\\Downloads"));
       },
       pending_queue: () =>
@@ -580,6 +586,15 @@ export function createMockBackend(emit: Emit) {
       retry_failed: (jobId: string): Promise<string> => {
         const queue = mockQueues.get(jobId);
         const failed = queue?.items.filter((item) => item.status === "error") ?? [];
+        if (!queue && !retriedQueues.has(jobId)) {
+          const entry = history.find((e) => e.id === jobId);
+          const [params] = (entry?.replay?.method === "download.batch" ? entry.replay.args : []) as [{ outdir?: string }?];
+          const urls = (entry?.items ?? []).filter((item) => item.status === "error" && item.url).map((item) => item.url as string);
+          if (params && urls.length) {
+            retriedQueues.add(jobId);
+            return ok(simulateBatch(urls.map((url) => url.replace("fail", "ok")), params.outdir || "C:\\Downloads"));
+          }
+        }
         if (!queue || failed.length === 0) return Promise.reject(new Error("errors.nothingToRetry"));
         if (queue.closed) {
           mockQueues.delete(jobId);
@@ -1068,6 +1083,10 @@ export function createMockBackend(emit: Emit) {
   }
   function rerun(replay: JobReplay): Promise<unknown> {
     const [ns, name] = replay.method.split(".");
+    if (replay.method === "download.batch") {
+      const [params] = replay.args as [{ urls?: string[]; outdir?: string }];
+      return ok(simulateBatch(params?.urls ?? [], params?.outdir || "C:\\Downloads"));
+    }
     const fn = namespaces[ns]?.[name];
     return fn ? fn(...replay.args) : Promise.reject(new Error("errors.rerunUnsupported"));
   }

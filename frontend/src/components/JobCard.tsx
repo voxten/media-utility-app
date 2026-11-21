@@ -19,7 +19,7 @@ import { errorMessage } from "../lib/errors";
 import { useOpenPath } from "../lib/useOpenPath";
 import { jobMessage, translateMessage } from "../lib/jobMessage";
 import type { HistoryEntry } from "../lib/types";
-import { historyJob, retryJob, useJobs, type JobState } from "../stores/jobs";
+import { historyJob, retryFailedLinks, retryJob, useJobs, type JobState } from "../stores/jobs";
 import { JobMenu } from "./jobCard/JobMenu";
 import { useJobCardStyles } from "./jobCard/styles";
 import { SubtaskRow } from "./jobCard/SubtaskRow";
@@ -80,9 +80,12 @@ export const JobCard = memo(function JobCard({ job, onNavigate, saved, entry, wh
   );
   const revealPath = done ? revealTarget(job.result) : null;
   const openPath = done && !outputMissing ? openTarget(job.result) : null;
-  // A saved card stays after its retry starts (only this session's card gives way), so it stops offering it.
-  const [retried, setRetried] = useState(false);
+  const retried = useJobs((state) => !!state.retried[job.id]);
   const canRetry = failed && !retried && (saved ? !!entry?.replay : !!job.retryable);
+  const failedLinks =
+    done && job.kind === "download.batch" && !retried && (!saved || !!entry?.replay)
+      ? subtasks.filter((s) => s.status === "error").length
+      : 0;
   const message = jobMessage(t, job);
   const errorText = failed ? message : "";
 
@@ -142,9 +145,7 @@ export const JobCard = memo(function JobCard({ job, onNavigate, saved, entry, wh
           {running && iconButton(t("common.cancel"), <Dismiss16Regular />, () => api.jobs.cancel(job.id))}
           {canRetry &&
             iconButton(t("jobs.retry"), <ArrowClockwise16Regular />, () =>
-              retryJob(job.id)
-                .then((newId) => setRetried(!!newId))
-                .catch((err) => notify.error(t("jobs.rerunFailed"), { body: errorMessage(t, err) })),
+              retryJob(job.id).catch((err) => notify.error(t("jobs.rerunFailed"), { body: errorMessage(t, err) })),
             )}
           {openPath &&
             iconButton(t("jobs.openFile"), <Open16Regular />, () => files.openPath(openPath))}
@@ -164,6 +165,12 @@ export const JobCard = memo(function JobCard({ job, onNavigate, saved, entry, wh
               links={links}
               entry={entry}
               retryShown={canRetry}
+              failedLinks={failedLinks}
+              onRetryFailedLinks={() =>
+                retryFailedLinks(job.id)
+                  .then(() => notify.success(t("jobs.rerunStarted")))
+                  .catch((err) => notify.error(t("jobs.rerunFailed"), { body: errorMessage(t, err) }))
+              }
               onNavigate={onNavigate}
             />
           )}

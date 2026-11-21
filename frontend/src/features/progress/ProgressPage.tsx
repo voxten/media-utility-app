@@ -47,6 +47,7 @@ import { useOpenPath } from "../../lib/useOpenPath";
 import { ProgressCard, rowPercent, type CardOptions, type ProgressRow, type ValueMode } from "./ProgressCard";
 import { errorMessage } from "../../lib/errors";
 import { useToolShortcuts } from "../../lib/useToolShortcuts";
+import { useSortableAccessibility } from "../../lib/sortableAccessibility";
 
 // Gradients from the original style.css plus a few extras.
 const PRESETS: { name: string; colors: { from: string; to: string } }[] = [
@@ -294,6 +295,8 @@ export default function ProgressPage() {
   const [cardHeight, setCardHeight] = useState(0);
   const [exporting, setExporting] = useState(false);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+  const rowIds = form.rows.map((r) => r.id);
+  const accessibility = useSortableAccessibility(rowIds, (id) => form.rows.find((r) => r.id === id)?.name || String(id));
 
   // Scale the live preview down to the panel width.
   useEffect(() => {
@@ -380,8 +383,8 @@ export default function ProgressPage() {
               </>
             }
           >
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-              <SortableContext items={form.rows.map((r) => r.id)} strategy={verticalListSortingStrategy}>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd} accessibility={accessibility}>
+              <SortableContext items={rowIds} strategy={verticalListSortingStrategy}>
                 <div className={styles.rows}>
                   {form.rows.map((r) => (
                     <SortableRow key={r.id} row={r} mode={form.options.valueMode} onChange={(patch) => updateRow(r.id, patch)} onRemove={() => form.set({ rows: form.rows.filter((x) => x.id !== r.id) })} />

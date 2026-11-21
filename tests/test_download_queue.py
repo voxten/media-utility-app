@@ -11,6 +11,7 @@ from backend.core.errors import AppError
 from backend.core.jobs import JobCancelled
 from backend.core.settings import validate_patch
 from backend.services import download, download_queue
+from tests.conftest import RecordingContext
 
 URLS = ["https://example.com/a", "https://example.com/b", "https://example.com/c"]
 
@@ -507,6 +508,36 @@ def test_retry_failed_after_the_queue_uses_its_own_options(monkeypatch, ctx, tmp
 
     with pytest.raises(AppError):
         bridge.retry_failed(ctx.job_id)
+
+
+def test_failed_links_of_a_queue_from_before_a_restart_come_from_its_history_entry(monkeypatch):
+    entry = {
+        "id": "earlier-queue",
+        "kind": "download.batch",
+        "status": "done",
+        "items": [
+            {"index": 0, "url": URLS[0], "status": "done"},
+            {"index": 1, "url": URLS[1], "status": "error", "error": "broken link"},
+            {"index": 2, "url": URLS[2], "status": "cancelled"},
+        ],
+        "replay": {"method": "download.batch", "args": [{"urls": URLS, "outdir": "D:/Pobrane", "mode": "audio", "audioCodec": "opus"}]},
+    }
+    started = {}
+    monkeypatch.setattr(
+        download_queue, "download_batch", lambda job_ctx, urls, outdir, *args, **kwargs: started.update(urls=urls, outdir=outdir, **kwargs)
+    )
+    settings = SimpleNamespace(cookie_files=lambda: {}, get=lambda key: None)
+    jobs = SimpleNamespace(submit=lambda kind, fn, title, **_: fn(RecordingContext("retry")) or "new-job")
+    history = SimpleNamespace(get=lambda job_id: entry if job_id == entry["id"] else None)
+    bridge = api.DownloadApi(SimpleNamespace(settings=settings, jobs=jobs, history=history))
+
+    assert bridge.retry_failed("earlier-queue") == "new-job"
+    assert started["urls"] == [URLS[1]]
+    assert (started["outdir"], started["mode"], started["audio_codec"]) == ("D:/Pobrane", "audio", "opus")
+    with pytest.raises(AppError):
+        bridge.retry_failed("earlier-queue")
+    with pytest.raises(AppError):
+        bridge.retry_failed("unknown")
 
 
 def test_link_added_while_the_last_one_downloads_is_downloaded(monkeypatch, ctx, tmp_path, queue_file):

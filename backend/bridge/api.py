@@ -545,7 +545,7 @@ class DownloadApi(_Namespace):
 
         The id of the job that downloads them.
         """
-        retry = download_queue.retry_failed(job_id)
+        retry = download_queue.retry_failed(job_id, lambda: self._ctx.history.get(job_id))
         if retry is None:
             raise AppError("errors.nothingToRetry")
         if "requeued" in retry:

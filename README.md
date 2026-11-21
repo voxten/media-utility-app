@@ -6,23 +6,24 @@ Windows desktop toolbox for media, documents and text. It is a native window (py
 |---|---|
 | Video downloader | YouTube, TikTok, X and other sites via yt-dlp: format table, audio only, subtitles, cover art and metadata, playlists with per-entry picks, a batch queue with a quality or audio format for every link, a download archive that skips links saved before, a queue that resumes after a restart, part of a video by time range or chapter, SponsorBlock for YouTube and cookies from a cookie file or straight from a browser |
 | Video & audio converter | MP4, MKV, MOV, WebM and MP3, M4A, OGG, Opus, WAV, FLAC: quality presets or a target file size (two-pass), trim on a timeline, scale down, remove or extract the sound, loudness normalization, several files at once |
-| Instagram download | Posts, carousels, reels, stories, highlights and whole profiles in full quality, picked from a preview grid (yt-dlp for posts, gallery-dl for stories and profiles) |
+| Instagram downloader | Posts, carousels, reels, stories, highlights and whole profiles in full quality, picked from a preview grid (yt-dlp for posts, gallery-dl for stories and profiles) |
 | Audio-video sync | Waveform and frame timeline for fixing out-of-sync audio, short preview clips, export by stream copy or re-encode |
 | Video to GIF | A clip of a video as GIF, WebP or APNG: frame range, frame rate, width, speed, crop, reverse, size estimate |
 | GIF editor | Trim, crop, resize, rotate, speed, reverse and boomerang for GIF, WebP and APNG; colour count, dithering, lossy compression and a size limit (optional gifsicle) |
 | Transcription | Speech to SRT, VTT or TXT on this computer with Whisper (Base, Small, Turbo), optional translation into English |
-| Background remover | AI cutouts with BiRefNet (full and lite), IS-Net and U2Net; edge debleed and split slider |
-| Image upscaler | AI 2× / 4× super-resolution via Real-ESRGAN (general and anime) with tiled inference for large images |
+| AI background remover | AI cutouts with BiRefNet (full and lite), IS-Net and U2Net; edge debleed and split slider |
+| AI image upscaler | AI 2× / 4× super-resolution via Real-ESRGAN (general and anime) with tiled inference for large images |
 | Watermark remover | Paint a mask, inpaint with OpenCV (Telea / Navier-Stokes) or the optional LaMa model |
 | Image compressor | Smaller PNG, JPEG and WebP files with adjustable quality and size caps |
 | Image tools | Crop, rotate, flip and resize, one file or a batch |
 | Image converter | File or folder conversion (PNG, WebP, JPEG, GIF, TIFF, BMP, PDF) with per-file status |
 | Text to speech | Edge neural voices (online) or Windows voices (offline), with an in-app player |
+| Text from image | Windows OCR for screenshots, photos and scanned PDFs, with a searchable PDF copy |
 | PDF merger | Drag-to-reorder pages from several PDFs and merge them into one document |
 | PDF compressor | Smaller PDFs with DPI and quality presets |
 | PDF splitter | Click pages into coloured groups, each saved as its own PDF |
-| PDF converter | PDF pages to PNG, JPEG or WebP, or images to a PDF |
-| PDF extractor | Text from PDF documents, saved as a TXT file |
+| PDF ↔ images | PDF pages to PNG, JPEG or WebP, or images to a PDF |
+| PDF text extractor | Text from PDF documents, saved as a TXT file |
 | Duplicate finder | Perceptual-hash search for similar images and videos; moves duplicates to the Recycle Bin, exports CSV |
 | Progress generator | Progress-bar graphics exported as PNG |
 

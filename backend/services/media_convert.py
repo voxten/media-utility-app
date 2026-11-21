@@ -88,6 +88,13 @@ AUDIO_CODECS = {
     "wav": ["-c:a", "pcm_s16le"],
     "flac": ["-c:a", "flac"],
 }
+NORMALIZED_RATE = 48000
+# Sample rates the encoders take; formats left out take any.
+AUDIO_RATES: Dict[str, FrozenSet[int]] = {
+    "mp3": frozenset({8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000}),
+    "m4a": frozenset({8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000, 64000, 88200, 96000}),
+    "opus": frozenset({NORMALIZED_RATE}),
+}
 
 
 @dataclass(frozen=True)
@@ -215,12 +222,19 @@ def _scale_filter(height: int, source_height: int) -> Optional[str]:
     return f"scale=-2:{height}:flags=lanczos"
 
 
-def _audio_args(opts: Options, has_audio: bool) -> List[str]:
+def normalized_rate(fmt: str, source_rate: int) -> int:
+    """Output sample rate after loudnorm, which works at 192 kHz: the source's, when the encoder takes it."""
+    allowed = AUDIO_RATES.get(fmt)
+    rate = source_rate if source_rate > 0 else NORMALIZED_RATE
+    return rate if allowed is None or rate in allowed else NORMALIZED_RATE
+
+
+def _audio_args(opts: Options, has_audio: bool, source_rate: int = 0) -> List[str]:
     if not has_audio:
         return ["-an"]
     args: List[str] = []
     if opts.normalize:
-        args += ["-af", LOUDNORM]
+        args += ["-af", LOUDNORM, "-ar", str(normalized_rate(opts.format, source_rate))]
     args += AUDIO_CODECS[opts.format]
     if opts.format not in LOSSLESS_AUDIO:
         args += ["-b:a", f"{opts.audio_kbps}k"]
@@ -305,7 +319,8 @@ def build_args(
     args += ["-i", source]
     if not opts.is_video:
         args += ["-map", "0:a:0", "-map_metadata", "0", "-vn"]
-        args += _audio_args(opts, bool(info.get("hasAudio")))
+        tracks = info.get("audioTracks") or [{}]
+        args += _audio_args(opts, bool(info.get("hasAudio")), int(tracks[0].get("sampleRate") or 0))
         return args + _container_args(opts.format) + [str(out_path)]
 
     video_index = int(info.get("videoIndex", -1))

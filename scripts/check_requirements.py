@@ -75,16 +75,17 @@ def resolved(requirements_file: Path) -> Dict[str, str]:
     pins: Dict[str, str] = {}
     markers: Dict[str, Optional[Marker]] = {}
     pending = [(req, req.marker) for req in _requirements(requirements_file)]
-    seen: Set[tuple] = set()
+    unmarked_seen: Dict[tuple, bool] = {}
     while pending:
         req, marker = pending.pop()
         if marker is not None and not marker.evaluate({"extra": ""}):
             continue
         key = canonicalize_name(req.name)
         extras = frozenset(req.extras)
-        if (key, extras) in seen:
+        node = (key, extras)
+        if node in unmarked_seen and (unmarked_seen[node] or marker is not None):
             continue
-        seen.add((key, extras))
+        unmarked_seen[node] = marker is None
         try:
             dist = distribution(req.name)
         except PackageNotFoundError:

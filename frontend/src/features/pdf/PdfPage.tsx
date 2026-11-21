@@ -38,6 +38,7 @@ import {
   ArrowRight16Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
+import { useSortableAccessibility } from "../../lib/sortableAccessibility";
 import { ActionBar } from "../../components/ActionBar";
 import { DropZone } from "../../components/DropZone";
 import { LogPanel } from "../../components/LogPanel";
@@ -298,6 +299,11 @@ export default function PdfPage() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
+  const pageKeys = useMemo(() => pages.map((p) => p.key), [pages]);
+  const accessibility = useSortableAccessibility(pageKeys, (id) => {
+    const item = pages.find((p) => p.key === id);
+    return item ? `${item.fileName} · ${t("pdf.pageShort", { page: item.page + 1 })}` : String(id);
+  });
   const files = useMemo(() => Array.from(new Set(pages.map((p) => p.file))), [pages]);
   const colorOf = (file: string) => groupColor(Math.max(0, files.indexOf(file)));
   const streaming = (inspect.job?.status === "running" ? inspect.job.partials : []) as PdfPageInfo[];
@@ -400,8 +406,9 @@ export default function PdfPage() {
             onDragStart={(e) => setActiveKey(String(e.active.id))}
             onDragEnd={onDragEnd}
             onDragCancel={() => setActiveKey(null)}
+            accessibility={accessibility}
           >
-            <SortableContext items={pages.map((p) => p.key)} strategy={rectSortingStrategy}>
+            <SortableContext items={pageKeys} strategy={rectSortingStrategy}>
               <div className={styles.grid}>
                 {pages.map((item, index) => (
                   <SortablePageCard

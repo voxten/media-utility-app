@@ -92,6 +92,8 @@ interface JobsStore {
   order: string[];
   /** Finished jobs saved by the backend, newest first (this session's included). */
   history: HistoryEntry[];
+  /** Jobs whose retry already started, so every card of the same job (Home, Tasks) stops offering it. */
+  retried: Record<string, true>;
   clearFinished: () => void;
   loadHistory: () => Promise<void>;
   /** Forgets one finished job; this session's card of it stays. */
@@ -103,6 +105,7 @@ export const useJobs = create<JobsStore>((set) => ({
   jobs: {},
   order: [],
   history: [],
+  retried: {},
   loadHistory: async () => set({ history: await api.jobs.history() }),
   removeHistory: async (id) => {
     await api.jobs.removeHistory(id);
@@ -157,10 +160,22 @@ function patch(jobId: string, fn: (job: JobState) => Partial<JobState>) {
   });
 }
 
+function markRetried(jobId: string) {
+  useJobs.setState((state) => ({ retried: { ...state.retried, [jobId]: true } }));
+}
+
 /** Runs a failed job again with the same settings; the failed card gives way to the new job. */
 export async function retryJob(jobId: string) {
   const newId = await api.jobs.retry(jobId);
+  if (newId) markRetried(jobId);
   patch(jobId, () => (newId ? { dismissed: true } : { retryable: false }));
+  return newId;
+}
+
+/** Downloads the failed links of a queue again: in the queue while it runs, else in a new one. */
+export async function retryFailedLinks(jobId: string) {
+  const newId = await api.download.retryFailed(jobId);
+  if (newId !== jobId) markRetried(jobId);
   return newId;
 }
 

@@ -1,8 +1,10 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useConverterForm } from "../features/converter/store";
-import { useDownloadForm } from "../features/download/store";
+import { probedForm, useDownloadForm } from "../features/download/store";
+import type { ProbeResult } from "../features/download/types";
 import { useMediaConvertForm } from "../features/media_convert/store";
 import { usePdfMergeForm } from "../features/pdf/store";
+import { useSettings } from "../stores/settings";
 import { openWithSettings, replayTool } from "./replay";
 
 const converter = useConverterForm.getState();
@@ -17,6 +19,8 @@ beforeEach(() => {
   usePdfMergeForm.setState(merge, true);
   window.location.hash = "";
 });
+
+afterEach(() => vi.restoreAllMocks());
 
 describe("open with these settings", () => {
   it("fills the image converter and opens it", async () => {
@@ -79,6 +83,24 @@ describe("open with these settings", () => {
       outdir: "C:\\dl",
     });
     expect(window.location.hash).toBe("#/download");
+  });
+
+  it("brings back a single download's subtitles, format and part once the link is checked", async () => {
+    const update = vi.spyOn(useSettings.getState(), "update").mockResolvedValue();
+    await openWithSettings({
+      method: "download.start",
+      args: [{ url: "https://youtu.be/a", formatId: "251", mode: "audio", outdir: "C:\\dl", subtitles: { mode: "site", languages: ["pl"] }, section: { start: 5, end: 65 } }],
+    });
+    expect(update).toHaveBeenCalledWith({ downloadSubtitles: "site" });
+    const form = useDownloadForm.getState();
+    expect(form).toMatchObject({ tab: "single", url: "https://youtu.be/a", autoProbe: true, restore: { mode: "audio", formatId: "251" } });
+
+    const format = (id: string) => ({ id }) as ProbeResult["formats"]["video"][number];
+    const result = { formats: { video: [format("137")], audio: [format("140"), format("251")], muxed: [] } } as unknown as ProbeResult;
+    expect(probedForm(result, form.restore)).toMatchObject({ mode: "audio", formatId: "251", clip: true, clipStart: form.restore?.clipStart, restore: null });
+    expect(probedForm(result, { mode: "audio", formatId: "gone", clipStart: "", clipEnd: "" })).toMatchObject({ mode: "audio", formatId: "140", clip: false });
+    expect(probedForm(result, { mode: "muxed", formatId: "18", clipStart: "", clipEnd: "" })).toMatchObject({ mode: "video", formatId: "137" });
+    expect(probedForm(result, null)).toMatchObject({ mode: "video", formatId: "137", clip: false });
   });
 
   it("asks the merge page to read the pages again in their order", async () => {

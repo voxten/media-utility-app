@@ -164,3 +164,31 @@ def test_export_never_overwrites_an_existing_file(tmp_path, ctx):
     assert out.read_bytes() == b"keep"
     assert res["fileName"] == "out (1).mp4"
     assert (tmp_path / "out (1).mp4").is_file()
+
+
+def test_thumbnail_shows_the_picture_not_a_bigger_cover(tmp_path):
+    import base64
+    import io
+
+    from PIL import Image
+
+    cover = tmp_path / "cover.png"
+    Image.new("RGB", (1280, 960), (255, 0, 0)).save(cover)
+    film = tmp_path / "film.mp4"
+    subprocess.run(
+        [
+            "ffmpeg", "-y",
+            "-f", "lavfi", "-i", "color=c=blue:size=320x240:rate=15:duration=2",
+            "-i", str(cover),
+            "-map", "1", "-map", "0",
+            "-c:v:0", "png", "-disposition:v:0", "attached_pic",
+            "-c:v:1", "libx264", "-pix_fmt", "yuv420p",
+            str(film),
+        ],
+        check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+    meta = video_sync.probe_media(str(film))
+    assert meta["hasCover"] and meta["width"] == 320
+    data = base64.b64decode(meta["thumbnail"].split(",", 1)[1])
+    red, _, blue = Image.open(io.BytesIO(data)).convert("RGB").getpixel((10, 10))
+    assert blue > 200 and red < 60

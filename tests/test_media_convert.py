@@ -62,6 +62,30 @@ def test_build_args_audio_only_drops_video():
     assert media_convert.LOUDNORM in args
 
 
+@pytest.mark.parametrize(
+    "fmt, source_rate, expected",
+    [("flac", 44100, "44100"), ("wav", 96000, "96000"), ("mp3", 96000, "48000"), ("opus", 44100, "48000"), ("m4a", 0, "48000")],
+)
+def test_loudness_keeps_the_source_sample_rate_the_encoder_takes(fmt, source_rate, expected):
+    opts = Options(fmt, normalize=True)
+    info = {"hasAudio": True, "audioTracks": [{"sampleRate": source_rate}] if source_rate else []}
+    args = media_convert.build_args("in.mp4", Path(f"out.{fmt}"), opts, info, (0.0, 0.0))
+    assert _value(args, "-ar") == expected
+
+
+def test_audio_without_loudness_keeps_the_rate_as_is():
+    args = media_convert.build_args("in.mp4", Path("out.flac"), Options("flac"), {"hasAudio": True}, (0.0, 0.0))
+    assert "-ar" not in args
+
+
+@needs_ffmpeg
+def test_even_out_loudness_does_not_give_192_khz_audio(tmp_path, ctx):
+    source = _sample(tmp_path / "a.mp4", duration=2, video=False)
+    rate = ffmpeg.probe_media(str(source))["audioTracks"][0]["sampleRate"]
+    result = media_convert.convert(ctx, {"paths": [str(source)], "outputDir": str(tmp_path), "format": "flac", "normalize": True})
+    assert ffmpeg.probe_media(result["files"][0])["audioTracks"][0]["sampleRate"] == rate
+
+
 def test_build_args_does_not_upscale():
     info = {"hasAudio": False, "height": 480}
     args = media_convert.build_args("in.mp4", Path("o.mp4"), Options("mp4", height=1080), info, (0.0, 0.0))

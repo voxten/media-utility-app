@@ -35,11 +35,11 @@
       "description": "Download video and audio from YouTube, X and more."
     },
     "instagram": {
-      "name": "Instagram Download",
+      "name": "Instagram downloader",
       "description": "Save photos and videos from Instagram posts, carousels, stories and whole profiles."
     },
     "video_sync": {
-      "name": "Audio-Video Sync",
+      "name": "Audio-video sync",
       "description": "Align out-of-sync audio tracks with video, preview with waveforms and export."
     },
     "video_to_gif": {
@@ -47,7 +47,7 @@
       "description": "Turn a clip of a video into an animated GIF, WebP or APNG."
     },
     "gif_editor": {
-      "name": "GIF Editor",
+      "name": "GIF editor",
       "description": "Optimize, resize, crop, speed up or reverse animated GIFs."
     },
     "compressor": {
@@ -63,11 +63,11 @@
       "description": "Convert whole folders of images between formats."
     },
     "rembg": {
-      "name": "AI Background Remover",
+      "name": "AI background remover",
       "description": "Remove backgrounds with sub-pixel edge matting and anti-halo debleeding."
     },
     "upscale": {
-      "name": "AI Image Upscaler",
+      "name": "AI image upscaler",
       "description": "Enlarge photos and graphics 2x or 4x with full transparency support."
     },
     "watermark": {
@@ -87,23 +87,23 @@
       "description": "Read text from screenshots, photos and scanned PDFs."
     },
     "pdf": {
-      "name": "PDF Merger",
+      "name": "PDF merger",
       "description": "Arrange pages from several PDFs and merge them into one."
     },
     "pdf_compress": {
-      "name": "PDF Compressor",
+      "name": "PDF compressor",
       "description": "Reduce PDF file size by optimizing embedded images and structure."
     },
     "pdf_split": {
-      "name": "PDF Splitter",
+      "name": "PDF splitter",
       "description": "Split document into single pages or chosen groups of pages."
     },
     "pdf_convert": {
-      "name": "PDF ↔ Images",
+      "name": "PDF ↔ images",
       "description": "Convert PDF pages to image files or create a PDF from images."
     },
     "pdf_extract": {
-      "name": "PDF Text Extractor",
+      "name": "PDF text extractor",
       "description": "Extract plain text from PDF document pages into a .txt file."
     },
     "duplicates": {
@@ -115,7 +115,7 @@
       "description": "Create project progress-bar graphics."
     },
     "media_convert": {
-      "name": "Video & Audio Converter",
+      "name": "Video & audio converter",
       "description": "Change the format, shrink to a size, trim, scale down, extract the sound or even out the loudness."
     }
   },
@@ -381,7 +381,15 @@
     "trimStart": "Start",
     "trimEnd": "End",
     "trimLength": "Length {{duration}}",
-    "dragToReorder": "Drag to reorder"
+    "dragToReorder": "Drag to reorder",
+    "sortable": {
+      "instructions": "To pick up an item, press Space or Enter. Move it with the arrow keys, then press Space or Enter to drop it, or Escape to cancel.",
+      "pickedUp": "Picked up {{name}}, position {{position}} of {{total}}.",
+      "moved": "{{name}} moved to position {{position}} of {{total}}.",
+      "outside": "{{name}} is outside the list.",
+      "dropped": "{{name}} dropped at position {{position}} of {{total}}.",
+      "cancelled": "Moving {{name}} cancelled."
+    }
   },
   "fileTypes": {
     "images": "Images",
@@ -495,6 +503,7 @@
     "dropSingleTitle": "Drop a PDF file here",
     "dropSingleHint": "or click to select a single PDF",
     "dropImagesTitle": "Drop image files here",
+    "dropMoreImages": "Add more images",
     "dropImagesHint": "or click to select images ({{formats}})",
     "dropChange": "Change PDF file",
     "pagesTitle": "Pages",
@@ -844,9 +853,12 @@
       "done": "Download finished",
       "error": "Download failed",
       "probeError": "Could not read the link",
-      "batchDone": "Queue finished: {{ok}} downloaded, {{failed}} failed",
-      "addedToBatch": "Added {{count}} links to queue",
-      "batchDoneSkipped": "Queue finished: {{ok}} downloaded, {{failed}} failed, {{skipped}} skipped"
+      "batchDone_one": "Queue finished: {{ok}} downloaded, {{count}} failed",
+      "batchDone_other": "Queue finished: {{ok}} downloaded, {{count}} failed",
+      "addedToBatch_one": "Added {{count}} link to queue",
+      "addedToBatch_other": "Added {{count}} links to queue",
+      "batchDoneSkipped_one": "Queue finished: {{ok}} downloaded, {{count}} failed, {{skipped}} skipped",
+      "batchDoneSkipped_other": "Queue finished: {{ok}} downloaded, {{count}} failed, {{skipped}} skipped"
     },
     "batchFormat": {
       "mode": "Download",

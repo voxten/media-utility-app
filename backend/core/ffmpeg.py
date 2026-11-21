@@ -291,7 +291,7 @@ def probe_media(file_path: str, thumbnail: bool = True) -> Dict[str, Any]:
     if thumbnail and video_stream and video_stream.get("width", 0) > 0 and duration > 0:
         thumb_time = min(1.0, max(0.0, duration * 0.1))
         try:
-            thumb = grab_frame(ffmpeg, p, thumb_time, width=360)
+            thumb = grab_frame(ffmpeg, p, thumb_time, width=360, stream=video_stream["index"])
         except Exception as e:
             logger.debug("Thumbnail generation skipped: %s", e)
 
@@ -317,14 +317,20 @@ def probe_media(file_path: str, thumbnail: bool = True) -> Dict[str, Any]:
     }
 
 
-def grab_frame(ffmpeg: str, path: Path, time_sec: float, height: int = 0, width: int = 0) -> str:
-    """One JPEG frame at ``time_sec`` scaled to ``height`` (or ``width``), as a data URL."""
+def grab_frame(
+    ffmpeg: str, path: Path, time_sec: float, height: int = 0, width: int = 0, stream: Optional[int] = None
+) -> str:
+    """One JPEG frame at ``time_sec`` scaled to ``height`` (or ``width``), as a data URL.
+
+    ``stream`` is the picture's stream index; without it the first video stream that is not a cover image.
+    """
     scale = f"scale=-2:{height}" if height else f"scale={width or 360}:-2"
     cmd = [
         ffmpeg,
         "-v", "quiet",
         "-ss", f"{time_sec:.3f}",
         "-i", str(path),
+        "-map", f"0:{stream}" if stream is not None and stream >= 0 else "0:V:0",
         "-frames:v", "1",
         "-vf", scale,
         "-f", "image2",

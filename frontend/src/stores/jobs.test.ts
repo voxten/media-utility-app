@@ -1,7 +1,7 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { api, emitLocal } from "../lib/bridge";
 import type { HistoryEntry, JobInfo, Settings } from "../lib/types";
-import { earlierJobs, historyJob, initJobEvents, isQuietJob, listedJobs, pruneJobs, retryJob, useJobs } from "./jobs";
+import { earlierJobs, historyJob, initJobEvents, isQuietJob, listedJobs, pruneJobs, retryFailedLinks, retryJob, useJobs } from "./jobs";
 import { useSettings } from "./settings";
 
 const started = (id: string, extra: Partial<JobInfo> = {}): JobInfo => ({
@@ -19,7 +19,7 @@ const started = (id: string, extra: Partial<JobInfo> = {}): JobInfo => ({
 });
 
 beforeAll(() => initJobEvents());
-beforeEach(() => useJobs.setState({ jobs: {}, order: [], history: [] }));
+beforeEach(() => useJobs.setState({ jobs: {}, order: [], history: [], retried: {} }));
 afterEach(() => vi.restoreAllMocks());
 
 describe("jobs store", () => {
@@ -129,6 +129,22 @@ describe("retryJob", () => {
     const job = useJobs.getState().jobs.bad;
     expect(job.retryable).toBe(false);
     expect(job.dismissed).toBeUndefined();
+    expect(useJobs.getState().retried.bad).toBeUndefined();
+  });
+
+  it("remembers a started retry by job id, so every card of that job stops offering it", async () => {
+    vi.spyOn(api.jobs, "retry").mockResolvedValue("again");
+    await retryJob("saved-failed");
+    expect(useJobs.getState().retried["saved-failed"]).toBe(true);
+  });
+
+  it("remembers failed links handed to a new queue, but not ones a running queue takes back", async () => {
+    const retryFailed = vi.spyOn(api.download, "retryFailed").mockResolvedValueOnce("new-queue").mockResolvedValueOnce("running");
+    await retryFailedLinks("finished");
+    await retryFailedLinks("running");
+    expect(retryFailed).toHaveBeenCalledWith("finished");
+    expect(useJobs.getState().retried.finished).toBe(true);
+    expect(useJobs.getState().retried.running).toBeUndefined();
   });
 });
 

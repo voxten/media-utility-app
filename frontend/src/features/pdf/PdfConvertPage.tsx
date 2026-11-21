@@ -171,7 +171,7 @@ export default function PdfConvertPage() {
             compact={imageFiles.length > 0}
             fill={imageFiles.length === 0}
             icon={ImageArrowForward24Regular}
-            title={imageFiles.length ? t("pdf.dropMore") : t("pdf.dropImagesTitle")}
+            title={imageFiles.length ? t("pdf.dropMoreImages") : t("pdf.dropImagesTitle")}
             hint={t("pdf.dropImagesHint", { formats: formatList(ALL_IMAGE_EXTENSIONS) })}
             accept={ALL_IMAGE_EXTENSIONS}
             onFiles={addImages}

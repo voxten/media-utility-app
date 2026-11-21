@@ -8,7 +8,7 @@ Polskie tłumaczenie [CHANGELOG.md](CHANGELOG.md), pokazywane w aplikacji przy p
 
 - **Pobieranie wideo** i **Instagram** mają przycisk „Wyczyść”, który czyści link, podgląd i ostatni wynik; folder i opcje zostają.
 - Historia zadań pamięta linki, z których pobierano: kolejka pokazuje każdy link z tytułem i wynikiem, menu „⋯” kopiuje link lub linki, a wyszukiwarka historii znajduje też linki.
-- **Łączenie PDF** i **PDF ↔ Obrazy** (obrazy do PDF) mają pole nazwy pliku obok folderu zapisu, zamiast zawsze zapisywać `polaczony.pdf` i `z_obrazow.pdf`.
+- **Łączenie PDF** i **PDF ↔ obrazy** (obrazy do PDF) mają pole nazwy pliku obok folderu zapisu, zamiast zawsze zapisywać `polaczony.pdf` i `z_obrazow.pdf`.
 - „Wyślij do” i upuszczenie pliku w dowolnym miejscu proponują **Transkrypcję** dla plików audio, a **Edytor GIF** dla animacji APNG.
 - Zakładka „Pobierz w Media Studio” do przeglądarki (Ustawienia → Przeglądarka): jedno kliknięcie otwiera bieżącą stronę w **Pobieraniu wideo**, a linki z Instagrama w **Instagramie**, także gdy aplikacja jest zamknięta albo schowana w zasobniku. Linki z YouTube, TikToka, X i Instagrama są od razu sprawdzane, z innych stron tylko trafiają do pola; pobieranie i tak czeka na Twoje kliknięcie. Instalator ma do tego nową opcję, domyślnie zaznaczoną.
 - Opcjonalny skrót klawiszowy w całym Windows (Ustawienia → Przeglądarka, domyślnie wyłączony) otwiera skopiowany link w aplikacji. Skrót zajęty przez inny program zostaje odrzucony z komunikatem.
@@ -40,6 +40,14 @@ Polskie tłumaczenie [CHANGELOG.md](CHANGELOG.md), pokazywane w aplikacji przy p
 - **Synchronizacja audio-wideo** eksportuje MP4 z napisami do MKV zamiast kończyć się błędem i nie nadpisuje już istniejącego pliku o tej samej nazwie.
 - **Konwerter wideo i audio** pokazuje, dlaczego nie udało się przekonwertować pojedynczego pliku, zamiast samego „Nie udało się przekonwertować pliku”.
 - Opis Narzędzi obrazu nie wspomina już o folderach, których to narzędzie nie przyjmuje.
+- **PDF ↔ obrazy** (obrazy do PDF) po dodaniu obrazów proponuje „Dodaj kolejne obrazy” zamiast „Dodaj kolejne pliki PDF”.
+- Nazwa narzędzia **Synchronizacja audio-wideo** pisze się małą literą w środku, a angielskie nazwy narzędzi wielką literą tylko na początku, jak reszta aplikacji.
+- Komunikat po zakończeniu kolejki pobierania i „Dopisano … linków do kolejki” mają poprawne formy liczby mnogiej, np. „1 błąd” zamiast „1 błędów”.
+- Czytnik ekranu ogłasza przeciąganie w kolejce pobierania, listach plików, stronach PDF i paskach postępu po polsku, z nazwą elementu i jego pozycją.
+- „Ponów niepobrane” dla zakończonej kolejki pobierania działa też po restarcie: oferuje je menu „⋯” kolejki w historii zadań.
+- „Wyrównaj głośność” przy zapisie tylko dźwięku, np. do FLAC albo WAV, nie daje już plików 192 kHz: zostaje częstotliwość źródła, a 48 kHz, gdy format jej nie przyjmuje.
+- Nieudane zadanie widoczne jednocześnie na stronie Start i w panelu zadań przestaje proponować „Ponów” na obu kartach, gdy zostanie ponowione na jednej, więc nie uruchomi się dwa razy.
+- „Otwórz z tymi ustawieniami” dla pojedynczego pobrania przywraca wybór napisów, wybrany format (jeśli link nadal go oferuje) i fragment filmu.
 
 ## [0.15.0] - 2026-11-14
 
