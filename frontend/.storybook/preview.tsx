@@ -2,7 +2,7 @@ import { useEffect, type ReactNode } from "react";
 import type { Decorator, Preview } from "@storybook/react-vite";
 import { FluentProvider, makeStyles, mergeClasses, tokens } from "@fluentui/react-components";
 import i18n from "../src/i18n";
-import { appTokens, darkTheme, lightTheme } from "../src/app/theme";
+import { ACCENT_PRESETS, appTokens, buildTheme } from "../src/app/theme";
 import "../src/global.css";
 import "./preview.css";
 
@@ -42,9 +42,10 @@ function Surface({ page, docs, locale, children }: SurfaceProps) {
 
 const withAppProviders: Decorator = (Story, context) => {
   const dark = context.globals.theme !== "light";
+  const accent: string = context.globals.accent ?? "app";
   document.documentElement.style.colorScheme = dark ? "dark" : "light";
   return (
-    <FluentProvider theme={dark ? darkTheme : lightTheme}>
+    <FluentProvider theme={buildTheme(dark, accent === "app" ? null : accent)}>
       <Surface page={context.parameters.surface === "page"} docs={context.viewMode === "docs"} locale={context.globals.locale ?? "pl"}>
         <Story />
       </Surface>
@@ -60,6 +61,19 @@ const preview: Preview = {
     controls: { expanded: true },
   },
   globalTypes: {
+    accent: {
+      description: "Accent colour",
+      toolbar: {
+        title: "Accent",
+        icon: "paintbrush",
+        items: [
+          { value: "app", title: "Indigo (app)" },
+          ...Object.entries(ACCENT_PRESETS).map(([name, color]) => ({ value: color, title: name })),
+          { value: "#ffff00", title: "yellow (contrast check)" },
+        ],
+        dynamicTitle: true,
+      },
+    },
     theme: {
       description: "App theme",
       toolbar: {
@@ -85,7 +99,7 @@ const preview: Preview = {
       },
     },
   },
-  initialGlobals: { theme: "dark", locale: "pl" },
+  initialGlobals: { theme: "dark", locale: "pl", accent: "app" },
 };
 
 export default preview;

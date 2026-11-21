@@ -198,6 +198,20 @@
     "version": "Version {{version}}",
     "python": "Python {{version}}",
     "backendMock": "Preview mode (no Python backend)",
+    "accent": "Accent color",
+    "accentDescription": "Buttons, selection, switches and progress bars.",
+    "accents": {
+      "app": "Indigo (default)",
+      "system": "Windows accent",
+      "blue": "Blue",
+      "teal": "Teal",
+      "green": "Green",
+      "orange": "Orange",
+      "red": "Red",
+      "pink": "Pink",
+      "purple": "Purple",
+      "graphite": "Graphite"
+    },
     "backdrop": "Window background",
     "backdrops": {
       "mica": "Mica",

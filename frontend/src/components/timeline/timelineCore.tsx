@@ -6,8 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } fro
 import { Button, makeStyles, tokens, Tooltip, type Theme } from "@fluentui/react-components";
 import { ZoomIn16Regular, ZoomOut16Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
-import { darkTheme, lightTheme, useIsDark } from "../../app/theme";
-import { useSettings } from "../../stores/settings";
+import { useAppTheme } from "../../app/theme";
 import type { VideoFrame } from "../../lib/types";
 import { reportError } from "../../lib/errors";
 
@@ -29,7 +28,7 @@ export const useTimelineStyles = makeStyles({
 });
 
 export function useTimelineTheme(): Theme {
-  return useIsDark(useSettings((s) => s.settings?.theme ?? "system")) ? darkTheme : lightTheme;
+  return useAppTheme().theme;
 }
 
 /** Canvas width, zoom and horizontal scroll; Ctrl+wheel zooms around the cursor, Shift+wheel scrolls. */

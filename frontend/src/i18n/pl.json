@@ -200,6 +200,20 @@
     "version": "Wersja {{version}}",
     "python": "Python {{version}}",
     "backendMock": "Tryb podglądu (bez backendu Python)",
+    "accent": "Kolor akcentu",
+    "accentDescription": "Przyciski, zaznaczenie, przełączniki i paski postępu.",
+    "accents": {
+      "app": "Indygo (domyślny)",
+      "system": "Jak w Windows",
+      "blue": "Niebieski",
+      "teal": "Morski",
+      "green": "Zielony",
+      "orange": "Pomarańczowy",
+      "red": "Czerwony",
+      "pink": "Różowy",
+      "purple": "Fioletowy",
+      "graphite": "Grafitowy"
+    },
     "backdrop": "Tło okna",
     "backdrops": {
       "mica": "Mica",

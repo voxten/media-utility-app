@@ -5,6 +5,7 @@ import ctypes
 import json
 import locale
 import os
+import re
 import sys
 import threading
 from pathlib import Path
@@ -53,6 +54,7 @@ def default_settings() -> Dict[str, Any]:
     return {
         "theme": "system",  # system | light | dark
         "language": system_language(),  # pl | en
+        "accent": "app",  # app (indigo) | system (Windows accent) | #rrggbb
         "backdrop": "mica",  # mica | micaAlt | none; to or from none applies on next start
         "animations": True,  # False turns animations off even when Windows has them on
         "outputDir": str(default_output_dir()),
@@ -95,6 +97,7 @@ CHOICES: Dict[str, frozenset] = {
     "downloadRateLimit": frozenset({0, 1, 2, 5, 10, 20}),
 }
 MAX_CONCURRENCY = 16
+ACCENT_PATTERN = re.compile(r"app|system|#[0-9a-fA-F]{6}")
 
 
 def _check_type(key: str, value: Any, expected: type) -> None:
@@ -133,6 +136,8 @@ def validate_patch(patch: Any) -> Dict[str, Any]:
                 if name not in default:
                     raise ValueError(f"Setting {key}.{name} cannot be changed")
                 _check_type(f"{key}.{name}", item, type(default[name]))
+    if "accent" in patch and not ACCENT_PATTERN.fullmatch(patch["accent"]):
+        raise ValueError("Setting accent has an unknown value")
     if "maxConcurrency" in patch and not 1 <= patch["maxConcurrency"] <= MAX_CONCURRENCY:
         raise ValueError("Setting maxConcurrency is out of range")
     if not _ffmpeg_folder_ok(patch.get("customFfmpegPath", "")):

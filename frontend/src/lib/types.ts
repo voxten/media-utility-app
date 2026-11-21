@@ -3,10 +3,13 @@
 export type ThemePreference = "system" | "light" | "dark";
 export type Language = "pl" | "en";
 export type Backdrop = "mica" | "micaAlt" | "none";
+/** "app" is the app's indigo, "system" the Windows accent, otherwise a colour as #rrggbb. */
+export type Accent = "app" | "system" | `#${string}`;
 
 export interface Settings {
   theme: ThemePreference;
   language: Language;
+  accent: Accent;
   backdrop: Backdrop;
   animations: boolean;
   outputDir: string;

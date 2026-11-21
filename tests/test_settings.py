@@ -1,6 +1,7 @@
 """Tests for backend.core.settings.validate_patch: what the window may change in the settings."""
 
 import json
+import re
 import sys
 
 import pytest
@@ -18,6 +19,8 @@ from backend.core.settings import Settings, validate_patch
         {"gifOutput": {"format": "gif", "lossy": 30}, "transcribe": {"model": "base"}, "downloadSubtitles": "auto"},
         {"clipboardLastLink": "https://x.com/a/status/1", "lastSeenVersion": "0.13.0", "engineUpdateCheck": False},
         {"backdrop": "micaAlt", "animations": False},
+        {"accent": "system"},
+        {"accent": "#0f6cbd"},
     ],
 )
 def test_changes_the_ui_makes_are_accepted(patch):
@@ -46,6 +49,10 @@ def test_changes_the_ui_makes_are_accepted(patch):
         ({"backdrop": "acrylic"}, "backdrop"),
         ({"mica": True}, "mica"),
         ({"animations": 0}, "animations"),
+        ({"accent": "red"}, "accent"),
+        ({"accent": "#12345"}, "accent"),
+        ({"accent": "#0f6cbd; x"}, "accent"),
+        ({"accent": 5}, "accent"),
     ],
 )
 def test_other_changes_are_refused(patch, key):
@@ -88,3 +95,10 @@ def test_default_language_follows_the_system(monkeypatch, tmp_path):
 
     monkeypatch.setattr(settings_module, "system_language", lambda: "en")
     assert settings_module.Settings(path=tmp_path / "s.json").get("language") == "en"
+
+
+def test_windows_accent_is_a_hex_colour_or_nothing():
+    from backend.core import win_theme
+
+    accent = win_theme.system_accent()
+    assert accent is None or re.fullmatch(r"#[0-9a-f]{6}", accent)

@@ -44,6 +44,23 @@ def set_dark_title_bar(window: Any, dark: bool) -> bool:
     return ok
 
 
+def system_accent() -> Optional[str]:
+    """The Windows accent colour as #rrggbb, or None. DWM stores it as a 0xAABBGGRR DWORD."""
+    if sys.platform != "win32":
+        return None
+    try:
+        import winreg
+
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\DWM") as key:
+            value, kind = winreg.QueryValueEx(key, "AccentColor")
+    except OSError:
+        return None
+    if kind != winreg.REG_DWORD:
+        return None
+    red, green, blue = value & 0xFF, (value >> 8) & 0xFF, (value >> 16) & 0xFF
+    return f"#{red:02x}{green:02x}{blue:02x}"
+
+
 def set_window_icon(window: Any, ico_path: str) -> bool:
     """Title bar / taskbar icon from an .ico file (needed when running unfrozen via python.exe)."""
     hwnd = window_handle(window)

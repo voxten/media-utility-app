@@ -126,6 +126,7 @@ export const api = {
     info: () => call<AppInfo>("app", "info"),
     setTitleBarTheme: (dark: boolean) => call<boolean>("app", "set_title_bar_theme", dark),
     setBackdrop: (kind: Backdrop) => call<boolean>("app", "set_backdrop", kind),
+    systemAccent: () => call<string | null>("app", "system_accent"),
     notify: (title: string, body: string, force = false) => call<boolean>("app", "notify", title, body, force),
     setShellLabels: (labels: ShellLabels) => call<void>("app", "set_shell_labels", labels),
     reportError: (source: string, message: string, stack: string) => call<void>("app", "report_error", source, message, stack),

@@ -121,6 +121,9 @@ class AppApi(_Namespace):
     def set_title_bar_theme(self, dark: bool) -> bool:
         return win_theme.set_dark_title_bar(self._ctx.window, bool(dark))
 
+    def system_accent(self) -> Optional[str]:
+        return win_theme.system_accent()
+
     def set_backdrop(self, kind: str) -> bool:
         """Mica ↔ Mica Alt at once; only while the window was created transparent."""
         if not self._ctx.mica:

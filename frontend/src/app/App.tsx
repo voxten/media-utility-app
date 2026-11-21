@@ -11,7 +11,7 @@ import { initJobEvents, useJobs } from "../stores/jobs";
 import { useSettings } from "../stores/settings";
 import { useUi } from "../stores/ui";
 import { Shell } from "./Shell";
-import { darkTheme, lightTheme, useIsDark } from "./theme";
+import { useAppTheme } from "./theme";
 
 const useStyles = makeStyles({
   splash: { height: "100vh", display: "grid", placeItems: "center", backgroundColor: tokens.colorNeutralBackground2 },
@@ -34,7 +34,7 @@ async function boot(load: () => Promise<unknown>) {
   on("app:mica", ({ active }) => useUi.setState({ mica: active }));
   on("clipboard:link", openClipboardLink); // a link that started the app arrives right after ready()
   useJobs.getState().loadHistory().catch(() => undefined);
-  await load();
+  await Promise.all([load(), useUi.getState().refreshSystemAccent()]); // both before the first paint, so the accent does not flash
   if (mode === "native") {
     const info = await api.app.ready();
     useUi.setState({
@@ -51,9 +51,8 @@ export function App() {
   const settings = useSettings((s) => s.settings);
   const load = useSettings((s) => s.load);
   const [bootError, setBootError] = useState<string | null>(null);
-  const dark = useIsDark(settings?.theme ?? "system");
+  const { theme, dark } = useAppTheme();
   const mica = useUi((s) => s.mica);
-  const theme = dark ? darkTheme : lightTheme;
 
   useEffect(() => {
     withTimeout(boot(load), BOOT_TIMEOUT_MS).catch((err) => setBootError(errorMessage(i18n.t, err)));
@@ -77,6 +76,15 @@ export function App() {
       })
       .catch(() => undefined);
   }, [language]);
+
+  // A changed Windows accent shows once the user comes back to the window.
+  const followsWindows = settings?.accent === "system";
+  useEffect(() => {
+    if (!followsWindows) return;
+    const refresh = () => void useUi.getState().refreshSystemAccent();
+    window.addEventListener("focus", refresh);
+    return () => window.removeEventListener("focus", refresh);
+  }, [followsWindows]);
 
   const animations = settings?.animations ?? true;
   useEffect(() => {
