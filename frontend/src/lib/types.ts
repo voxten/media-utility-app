@@ -2,11 +2,13 @@
 
 export type ThemePreference = "system" | "light" | "dark";
 export type Language = "pl" | "en";
+export type Backdrop = "mica" | "micaAlt" | "none";
 
 export interface Settings {
   theme: ThemePreference;
   language: Language;
-  mica: boolean;
+  backdrop: Backdrop;
+  animations: boolean;
   outputDir: string;
   cookies: { youtube: string; x: string; instagram: string };
   cookiesFromBrowser: "" | "firefox" | "chrome" | "edge" | "brave" | "opera" | "vivaldi";

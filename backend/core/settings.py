@@ -53,7 +53,8 @@ def default_settings() -> Dict[str, Any]:
     return {
         "theme": "system",  # system | light | dark
         "language": system_language(),  # pl | en
-        "mica": True,  # Windows 11 backdrop; applied on next start
+        "backdrop": "mica",  # mica | micaAlt | none; to or from none applies on next start
+        "animations": True,  # False turns animations off even when Windows has them on
         "outputDir": str(default_output_dir()),
         "cookies": {"youtube": "", "x": "", "instagram": ""},
         "cookiesFromBrowser": "",  # "" | firefox | chrome | edge | brave | opera | vivaldi
@@ -86,6 +87,7 @@ INTERNAL_KEYS = frozenset({"trayHintShown", "engineLastCheck", "engineLatest"})
 TOOL_OPTION_TYPES: Dict[str, type] = {"gifOutput": dict, "transcribe": dict, "downloadSubtitles": str, "ocrLanguage": str}
 CHOICES: Dict[str, frozenset] = {
     "theme": frozenset({"system", "light", "dark"}),
+    "backdrop": frozenset({"mica", "micaAlt", "none"}),
     "language": frozenset({"pl", "en"}),
     "downloadSubtitles": frozenset({"off", "site", "auto"}),
     "globalHotkey": frozenset({"", "ctrl+alt+d", "ctrl+alt+shift+d", "ctrl+alt+y", "ctrl+alt+shift+y"}),
@@ -138,6 +140,14 @@ def validate_patch(patch: Any) -> Dict[str, Any]:
     return patch
 
 
+def _migrate(stored: Dict[str, Any]) -> Dict[str, Any]:
+    """Turn keys written by older versions into their current form."""
+    if "mica" in stored:
+        mica = stored.pop("mica")
+        stored.setdefault("backdrop", "mica" if mica else "none")
+    return stored
+
+
 def _merge(defaults: Dict[str, Any], stored: Dict[str, Any]) -> Dict[str, Any]:
     merged = copy.deepcopy(defaults)
     for key, value in stored.items():
@@ -158,7 +168,7 @@ class Settings:
         try:
             stored = json.loads(self.path.read_text(encoding="utf-8"))
             if isinstance(stored, dict):
-                return _merge(default_settings(), stored)
+                return _merge(default_settings(), _migrate(stored))
         except (OSError, ValueError):
             pass
         return default_settings()

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { FluentProvider, makeStyles, Spinner, tokens } from "@fluentui/react-components";
+import { MotionBehaviourProvider } from "@fluentui/react-motion";
 import { useTranslation } from "react-i18next";
 import { ErrorBoundary, ErrorScreen } from "../components/ErrorBoundary";
 import i18n from "../i18n";
@@ -77,6 +78,12 @@ export function App() {
       .catch(() => undefined);
   }, [language]);
 
+  const animations = settings?.animations ?? true;
+  useEffect(() => {
+    if (animations) delete document.documentElement.dataset.motion;
+    else document.documentElement.dataset.motion = "off";
+  }, [animations]);
+
   useEffect(() => {
     // With Mica the window base must stay transparent so DWM's backdrop shows through.
     document.body.style.backgroundColor = mica ? "transparent" : theme.colorNeutralBackground2;
@@ -86,22 +93,24 @@ export function App() {
 
   return (
     <FluentProvider theme={theme}>
-      {settings ? (
-        <ErrorBoundary actions={() => [{ label: t("errors.reload"), onClick: () => window.location.reload() }]}>
-          <Shell />
-        </ErrorBoundary>
-      ) : (
-        <div className={styles.splash}>
-          {bootError ? (
-            <ErrorScreen
-              message={t("errors.bootFailed", { error: bootError })}
-              actions={[{ label: t("errors.reload"), onClick: () => window.location.reload() }]}
-            />
-          ) : (
-            <Spinner />
-          )}
-        </div>
-      )}
+      <MotionBehaviourProvider value={animations ? "default" : "skip"}>
+        {settings ? (
+          <ErrorBoundary actions={() => [{ label: t("errors.reload"), onClick: () => window.location.reload() }]}>
+            <Shell />
+          </ErrorBoundary>
+        ) : (
+          <div className={styles.splash}>
+            {bootError ? (
+              <ErrorScreen
+                message={t("errors.bootFailed", { error: bootError })}
+                actions={[{ label: t("errors.reload"), onClick: () => window.location.reload() }]}
+              />
+            ) : (
+              <Spinner />
+            )}
+          </div>
+        )}
+      </MotionBehaviourProvider>
     </FluentProvider>
   );
 }

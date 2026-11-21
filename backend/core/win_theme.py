@@ -7,6 +7,8 @@ from typing import Any, Optional
 DWMWA_USE_IMMERSIVE_DARK_MODE = 20
 DWMWA_SYSTEMBACKDROP_TYPE = 38
 DWMSBT_MAINWINDOW = 2  # Mica
+DWMSBT_TABBEDWINDOW = 4  # Mica Alt
+BACKDROP_TYPES = {"mica": DWMSBT_MAINWINDOW, "micaAlt": DWMSBT_TABBEDWINDOW}
 
 
 def window_handle(window: Any) -> Optional[int]:
@@ -70,8 +72,8 @@ def mica_supported() -> bool:
     return sys.platform == "win32" and sys.getwindowsversion().build >= 22621
 
 
-def enable_mica(window: Any) -> bool:
-    """Show the Mica backdrop behind a transparent pywebview window.
+def enable_mica(window: Any, kind: str = "mica") -> bool:
+    """Show the Mica (or Mica Alt) backdrop behind a transparent pywebview window.
 
     Requires the window to be created with ``transparent=True``. DWM draws the backdrop
     where the client area is black, so the WinForms form background is set to black and
@@ -89,4 +91,12 @@ def enable_mica(window: Any) -> bool:
         return False
     margins = _Margins(-1, -1, -1, -1)
     ctypes.windll.dwmapi.DwmExtendFrameIntoClientArea(ctypes.c_void_p(hwnd), ctypes.byref(margins))
-    return _set_attribute(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, DWMSBT_MAINWINDOW)
+    return set_backdrop(window, kind)
+
+
+def set_backdrop(window: Any, kind: str) -> bool:
+    """Switch between Mica and Mica Alt in a window whose backdrop is already on."""
+    hwnd = window_handle(window)
+    if not hwnd or not mica_supported() or kind not in BACKDROP_TYPES:
+        return False
+    return _set_attribute(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, BACKDROP_TYPES[kind])

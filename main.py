@@ -134,7 +134,8 @@ def main() -> None:
     api = Api(bus, settings)
     dark = resolve_dark(settings.get("theme", "system"))
     # Mica needs a transparent window, which can only be chosen at creation time.
-    use_mica = bool(settings.get("mica", True)) and win_theme.mica_supported()
+    backdrop = settings.get("backdrop", "mica")
+    use_mica = backdrop in win_theme.BACKDROP_TYPES and win_theme.mica_supported()
 
     window_kwargs = {}
     if args.dev:
@@ -181,7 +182,7 @@ def main() -> None:
         if icon.is_file():
             win_theme.set_window_icon(window, str(icon))
         if use_mica:
-            active = win_theme.enable_mica(window)
+            active = win_theme.enable_mica(window, backdrop)
             api._set_mica(active)
             bus.emit("app:mica", {"active": active})
         # Native drop gives full file paths, which the browser drop event cannot.

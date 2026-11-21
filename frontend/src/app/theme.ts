@@ -42,12 +42,15 @@ const fontFamilyBase = "'Segoe UI Variable Text', 'Segoe UI', -apple-system, Bli
 export interface AppTheme extends Theme {
   /** The content area behind the cards (Shell), between the window base and the cards. */
   colorAppLayer: string;
+  /** The content area over Mica: translucent like WinUI's layer fill, so the backdrop shows under the whole window. */
+  colorAppLayerMica: string;
   /** Page titles: the Display optical size of Segoe UI Variable reads better at large sizes. */
   fontFamilyDisplay: string;
 }
 
 export const appTokens = {
   colorAppLayer: "var(--colorAppLayer)",
+  colorAppLayerMica: "var(--colorAppLayerMica)",
   fontFamilyDisplay: "var(--fontFamilyDisplay)",
 } as const;
 
@@ -64,6 +67,7 @@ export const darkTheme: AppTheme = {
   fontFamilyBase,
   fontFamilyDisplay,
   colorAppLayer: "#242424",
+  colorAppLayerMica: "rgba(58, 58, 58, 0.3)",
   colorNeutralCardBackground: "#2c2c2c",
   colorNeutralCardBackgroundHover: "#323232",
   colorNeutralCardBackgroundPressed: "#2a2a2a",
@@ -88,6 +92,7 @@ export const lightTheme: AppTheme = {
   fontFamilyBase,
   fontFamilyDisplay,
   colorAppLayer: "#f9f9f9",
+  colorAppLayerMica: "rgba(255, 255, 255, 0.5)",
   colorNeutralCardBackground: "#ffffff",
   colorNeutralCardBackgroundHover: "#fbfbfb",
   colorNeutralCardBackgroundPressed: "#f5f5f5",

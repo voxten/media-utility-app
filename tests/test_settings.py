@@ -1,5 +1,6 @@
 """Tests for backend.core.settings.validate_patch: what the window may change in the settings."""
 
+import json
 import sys
 
 import pytest
@@ -16,6 +17,7 @@ from backend.core.settings import Settings, validate_patch
         {"outputDir": "D:/Wyniki ąę", "closeToTray": False, "customFfmpegPath": ""},
         {"gifOutput": {"format": "gif", "lossy": 30}, "transcribe": {"model": "base"}, "downloadSubtitles": "auto"},
         {"clipboardLastLink": "https://x.com/a/status/1", "lastSeenVersion": "0.13.0", "engineUpdateCheck": False},
+        {"backdrop": "micaAlt", "animations": False},
     ],
 )
 def test_changes_the_ui_makes_are_accepted(patch):
@@ -41,6 +43,9 @@ def test_changes_the_ui_makes_are_accepted(patch):
         ({"theme": "neon"}, "theme"),
         ({"downloadSubtitles": "all"}, "downloadSubtitles"),
         ({"gifOutput": "big"}, "gifOutput"),
+        ({"backdrop": "acrylic"}, "backdrop"),
+        ({"mica": True}, "mica"),
+        ({"animations": 0}, "animations"),
     ],
 )
 def test_other_changes_are_refused(patch, key):
@@ -67,6 +72,15 @@ def test_backend_writes_are_not_restricted(tmp_path):
     settings = Settings(tmp_path / "settings.json")
     settings.update({"engineLatest": {"yt-dlp": {"version": "1"}}, "trayHintShown": True})
     assert settings.get("trayHintShown") is True
+
+
+@pytest.mark.parametrize("mica, backdrop", [(True, "mica"), (False, "none")])
+def test_old_mica_switch_becomes_the_backdrop(tmp_path, mica, backdrop):
+    path = tmp_path / "settings.json"
+    path.write_text(json.dumps({"mica": mica}), encoding="utf-8")
+    settings = Settings(path)
+    assert settings.get("backdrop") == backdrop
+    assert "mica" not in settings.all()
 
 
 def test_default_language_follows_the_system(monkeypatch, tmp_path):

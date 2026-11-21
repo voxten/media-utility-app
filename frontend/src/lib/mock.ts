@@ -9,7 +9,8 @@ const SETTINGS_KEY = "mock-settings";
 const DEFAULT_SETTINGS: Settings = {
   theme: "system",
   language: "pl",
-  mica: false,
+  backdrop: "none",
+  animations: true,
   outputDir: "C:\\Users\\demo\\Downloads",
   cookies: { youtube: "", x: "", instagram: "" },
   cookiesFromBrowser: "",
@@ -293,6 +294,7 @@ export function createMockBackend(emit: Emit) {
       ready: () => ok({ name: "Media Studio", version: "dev-mock", python: "—", platform: navigator.userAgent }),
       info: () => ok({ name: "Media Studio", version: "dev-mock", python: "—", platform: navigator.userAgent }),
       set_title_bar_theme: () => ok(false),
+      set_backdrop: () => ok(false),
       set_taskbar_progress: () => ok(undefined),
       notify: () => ok(false),
       set_shell_labels: () => ok(undefined),

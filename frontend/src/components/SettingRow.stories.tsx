@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Switch } from "@fluentui/react-components";
-import { DarkTheme24Regular, Folder24Regular, LocalLanguage24Regular, WindowNew24Regular } from "@fluentui/react-icons";
+import { DarkTheme24Regular, Folder24Regular, LocalLanguage24Regular, SlideTransition24Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { PathPicker } from "./PathPicker";
 import { Select } from "./Select";
@@ -21,7 +21,7 @@ export const Group: Story = {
     const { t } = useTranslation();
     const [theme, setTheme] = useState("system");
     const [language, setLanguage] = useState("pl");
-    const [mica, setMica] = useState(false);
+    const [animations, setAnimations] = useState(true);
     const [folder, setFolder] = useState("C:\\Users\\demo\\Downloads");
     return (
       <SettingGroup>
@@ -42,8 +42,8 @@ export const Group: Story = {
             ]}
           />
         </SettingRow>
-        <SettingRow icon={WindowNew24Regular} title={t("settings.mica")} description={t("settings.micaDescription")}>
-          <Switch checked={mica} onChange={(_, d) => setMica(d.checked)} />
+        <SettingRow icon={SlideTransition24Regular} title={t("settings.animations")} description={t("settings.animationsDescription")}>
+          <Switch checked={animations} onChange={(_, d) => setAnimations(d.checked)} />
         </SettingRow>
         <SettingRow icon={Folder24Regular} title={t("common.outputFolder")} wide>
           <PathPicker value={folder} onChange={setFolder} openable />

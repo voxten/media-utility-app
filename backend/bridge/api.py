@@ -121,6 +121,12 @@ class AppApi(_Namespace):
     def set_title_bar_theme(self, dark: bool) -> bool:
         return win_theme.set_dark_title_bar(self._ctx.window, bool(dark))
 
+    def set_backdrop(self, kind: str) -> bool:
+        """Mica ↔ Mica Alt at once; only while the window was created transparent."""
+        if not self._ctx.mica:
+            return False
+        return win_theme.set_backdrop(self._ctx.window, str(kind))
+
     def notify(self, title: str, body: str = "", force: bool = False) -> bool:
         """System notification; skipped while the window is in front unless ``force``."""
         return self._ctx.shell.notify(str(title or APP_NAME), str(body or ""), bool(force))

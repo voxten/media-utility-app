@@ -105,6 +105,13 @@ html[style*="color-scheme: light"] textarea::-webkit-resizer:hover {
   }
 }
 
+/* Animations turned off in Settings → Appearance, whatever Windows says. */
+html[data-motion="off"] * {
+  animation-duration: 0.01ms !important;
+  transition-duration: 0.01ms !important;
+  transition-delay: 0s !important;
+}
+
 @keyframes spin {
   from {
     transform: rotate(0deg);

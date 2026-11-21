@@ -198,8 +198,19 @@
     "version": "Version {{version}}",
     "python": "Python {{version}}",
     "backendMock": "Preview mode (no Python backend)",
-    "mica": "Mica effect",
-    "micaDescription": "Windows 11 translucent window background tinted by your wallpaper.",
+    "backdrop": "Window background",
+    "backdrops": {
+      "mica": "Mica",
+      "micaAlt": "Mica Alt",
+      "none": "Solid"
+    },
+    "backdropDescriptions": {
+      "mica": "Translucent, lightly tinted by your wallpaper.",
+      "micaAlt": "Translucent, more strongly tinted by your wallpaper.",
+      "none": "A plain background without the Windows 11 effect."
+    },
+    "animations": "Animations",
+    "animationsDescription": "When on, the app follows the animation effects setting in Windows.",
     "micaRestart": "The change takes effect after restarting the app.",
     "micaUnsupported": "Requires Windows 11 (22H2 or later).",
     "engines": {

@@ -12,7 +12,8 @@ def test_default_settings_keys():
     expected_keys = {
         "theme",
         "language",
-        "mica",
+        "backdrop",
+        "animations",
         "outputDir",
         "cookies",
         "maxConcurrency",

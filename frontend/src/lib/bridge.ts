@@ -9,6 +9,7 @@
 import type {
   AnimationInfo,
   AppInfo,
+  Backdrop,
   BridgeEventName,
   BridgeEvents,
   ClearCacheResult,
@@ -124,6 +125,7 @@ export const api = {
     ready: () => call<AppInfo>("app", "ready"),
     info: () => call<AppInfo>("app", "info"),
     setTitleBarTheme: (dark: boolean) => call<boolean>("app", "set_title_bar_theme", dark),
+    setBackdrop: (kind: Backdrop) => call<boolean>("app", "set_backdrop", kind),
     notify: (title: string, body: string, force = false) => call<boolean>("app", "notify", title, body, force),
     setShellLabels: (labels: ShellLabels) => call<void>("app", "set_shell_labels", labels),
     reportError: (source: string, message: string, stack: string) => call<void>("app", "report_error", source, message, stack),

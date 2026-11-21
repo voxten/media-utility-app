@@ -78,6 +78,7 @@ const useStyles = makeStyles({
   },
   // Mica: transparent base; nav surfaces become translucent overlays instead of solid greys.
   mica: { backgroundColor: "transparent" },
+  contentMica: { backgroundColor: appTokens.colorAppLayerMica },
   loading: { height: "100%", display: "grid", placeItems: "center" },
   // Subtle WinUI-like page entrance; disabled by prefers-reduced-motion in global.css.
   page: {
@@ -141,7 +142,7 @@ export function Shell() {
   return (
     <div className={mergeClasses(styles.shell, mica && styles.mica)} style={mica ? MICA_TOKENS : undefined}>
       <Navigation route={route} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
-      <main className={styles.content}>
+      <main className={mergeClasses(styles.content, mica && styles.contentMica)}>
         <Suspense
           fallback={
             <div className={styles.loading}>

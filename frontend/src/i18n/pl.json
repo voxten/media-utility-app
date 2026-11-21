@@ -200,8 +200,19 @@
     "version": "Wersja {{version}}",
     "python": "Python {{version}}",
     "backendMock": "Tryb podglądu (bez backendu Python)",
-    "mica": "Efekt Mica",
-    "micaDescription": "Półprzezroczyste tło okna w stylu Windows 11, dopasowane do tapety.",
+    "backdrop": "Tło okna",
+    "backdrops": {
+      "mica": "Mica",
+      "micaAlt": "Mica Alt",
+      "none": "Jednolite"
+    },
+    "backdropDescriptions": {
+      "mica": "Półprzezroczyste, lekko zabarwione kolorem tapety.",
+      "micaAlt": "Półprzezroczyste, mocniej zabarwione kolorem tapety.",
+      "none": "Zwykłe tło bez efektu Windows 11."
+    },
+    "animations": "Animacje",
+    "animationsDescription": "Gdy włączone, aplikacja stosuje ustawienie efektów animacji z Windows.",
     "micaRestart": "Zmiana zostanie zastosowana po ponownym uruchomieniu aplikacji.",
     "micaUnsupported": "Wymaga Windows 11 (22H2 lub nowszego).",
     "engines": {

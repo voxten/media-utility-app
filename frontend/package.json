@@ -22,6 +22,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@fluentui/react-components": "^9.74.9",
     "@fluentui/react-icons": "^2.0.343",
+    "@fluentui/react-motion": "^9.16.4",
     "html-to-image": "^1.11.13",
     "i18next": "^26.4.2",
     "react": "^19.3.0",
