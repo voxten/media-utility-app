@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Button, Divider, makeStyles, Switch, Text, Toolbar, Tooltip } from "@fluentui/react-components";
 import { ArrowMaximize16Filled } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
-import { create } from "zustand";
 import { ModelBanner } from "../../components/ModelBanner";
 import { Select } from "../../components/Select";
 import { useNotify } from "../../components/notify";
@@ -11,34 +10,10 @@ import { SingleImageTool } from "../../components/SingleImageTool";
 import { api } from "../../lib/bridge";
 import { formatList, IMAGE_EXTENSIONS } from "../../lib/fileTypes";
 import { fileName } from "../../lib/format";
-import type { UpscaleOptions, UpscalePreview, UpscaleResult } from "../../lib/types";
+import type { UpscaleOptions, UpscaleResult } from "../../lib/types";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { errorMessage } from "../../lib/errors";
-
-type ModelType = "general" | "anime";
-type AlphaMode = "smooth" | "ai";
-
-interface UpscaleFormState {
-  image: UpscalePreview | null;
-  sourcePath: string;
-  result: UpscaleResult | null;
-  model: ModelType;
-  scale: 2 | 4;
-  alphaMode: AlphaMode;
-  antiHalo: boolean;
-  set: (patch: Partial<Omit<UpscaleFormState, "set">>) => void;
-}
-
-const useForm = create<UpscaleFormState>((set) => ({
-  image: null,
-  sourcePath: "",
-  result: null,
-  model: "general",
-  scale: 4,
-  alphaMode: "smooth",
-  antiHalo: true,
-  set: (patch) => set(patch),
-}));
+import { useUpscaleForm, type AlphaMode, type ModelType } from "./store";
 
 const useStyles = makeStyles({
   toolbar: {
@@ -95,7 +70,7 @@ export default function UpscalePage() {
   const { t } = useTranslation();
   const styles = useStyles();
   const notify = useNotify();
-  const form = useForm();
+  const form = useUpscaleForm();
   const output = useSaveOutput("upscale", api.upscale.save);
 
   const [modelsReady, setModelsReady] = useState<{ general: boolean; anime: boolean }>({
@@ -135,6 +110,11 @@ export default function UpscalePage() {
       notify.error(t("upscale.toast.loadError"), { body: errorMessage(t, err) });
     }
   };
+
+  // A file put in the store without its preview (opened from the task history).
+  useEffect(() => {
+    if (form.sourcePath && !form.image) load(form.sourcePath);
+  }, [form.sourcePath, form.image]); // eslint-disable-line react-hooks/exhaustive-deps -- load once per file
 
   const currentModelReady = modelsReady[form.model];
 

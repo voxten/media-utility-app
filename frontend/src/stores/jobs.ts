@@ -94,6 +94,8 @@ interface JobsStore {
   history: HistoryEntry[];
   clearFinished: () => void;
   loadHistory: () => Promise<void>;
+  /** Forgets one finished job; this session's card of it stays. */
+  removeHistory: (id: string) => Promise<void>;
   clearHistory: () => Promise<void>;
 }
 
@@ -102,6 +104,10 @@ export const useJobs = create<JobsStore>((set) => ({
   order: [],
   history: [],
   loadHistory: async () => set({ history: await api.jobs.history() }),
+  removeHistory: async (id) => {
+    await api.jobs.removeHistory(id);
+    set((state) => ({ history: state.history.filter((entry) => entry.id !== id) }));
+  },
   clearHistory: async () => {
     await api.jobs.clearHistory();
     set({ history: [] });

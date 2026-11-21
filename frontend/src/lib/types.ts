@@ -213,6 +213,14 @@ export interface HistoryEntry {
   meta?: JobMeta;
   /** Items of a finished queue (backend/core/history.py result_items). */
   items?: HistoryItem[];
+  /** The bridge call the job was started with; present when the job can run again (backend/bridge/replay.py). */
+  replay?: JobReplay;
+}
+
+/** A bridge call as `{ method: "converter.start", args: [options] }`. */
+export interface JobReplay {
+  method: string;
+  args: unknown[];
 }
 
 export interface LogEntry {

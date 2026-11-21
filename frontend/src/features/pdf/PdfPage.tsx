@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   closestCenter,
   DndContext,
@@ -38,7 +38,6 @@ import {
   ArrowRight16Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
-import { create } from "zustand";
 import { ActionBar } from "../../components/ActionBar";
 import { DropZone } from "../../components/DropZone";
 import { LogPanel } from "../../components/LogPanel";
@@ -56,16 +55,12 @@ import { useTransferStore } from "../../stores/transfer";
 import { groupColor } from "./groupColors";
 import { usePdfPagePreview } from "./PdfPagePreview";
 import type { PdfPageInfo } from "./usePdfPages";
+import { usePdfMergeForm, type MergePage, type PdfPageItem } from "./store";
 import { errorMessage } from "../../lib/errors";
 import { useOutputDir } from "../../components/OutputFolderField";
 import { PdfOutputFields, pdfName } from "./PdfOutputFields";
 import { ResultCard } from "../../components/ResultCard";
 import { useToolShortcuts } from "../../lib/useToolShortcuts";
-
-interface PdfPageItem extends PdfPageInfo {
-  key: string;
-  rotation?: number;
-}
 
 interface InspectResult {
   pageCount: number;
@@ -81,21 +76,14 @@ interface MergeResult {
 let keySeq = 0;
 const withKey = (p: PdfPageInfo): PdfPageItem => ({ ...p, key: `p${++keySeq}` });
 
-const useForm = create<{
-  pages: PdfPageItem[];
-  outputDir: string;
-  outputName: string;
-  setPages: (pages: PdfPageItem[]) => void;
-  setOutputDir: (outputDir: string) => void;
-  setOutputName: (outputName: string) => void;
-}>((set) => ({
-  pages: [],
-  outputDir: "",
-  outputName: "",
-  setPages: (pages) => set({ pages }),
-  setOutputDir: (outputDir) => set({ outputDir }),
-  setOutputName: (outputName) => set({ outputName }),
-}));
+/** The pages of a merge opened from the task history, in its order and rotation; pages no longer in the files are left out. */
+function restoredPages(selection: MergePage[], found: PdfPageInfo[]): PdfPageItem[] {
+  const byPage = new Map(found.map((p) => [`${p.file}|${p.page}`, p]));
+  return selection.flatMap(({ file, page, rotation }) => {
+    const info = byPage.get(`${file}|${page}`);
+    return info ? [{ ...withKey(info), rotation }] : [];
+  });
+}
 
 const useStyles = makeStyles({
   toolbar: { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" },
@@ -277,18 +265,28 @@ export default function PdfPage() {
   const styles = useStyles();
   const notify = useNotify();
 
-  const { pages, setPages, setOutputDir, outputDir: pickedDir, outputName, setOutputName } = useForm();
+  const { pages, setPages, setOutputDir, outputDir: pickedDir, outputName, setOutputName, restore } = usePdfMergeForm();
   const outputDir = useOutputDir(pickedDir);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const preview = usePdfPagePreview();
 
   const inspect = useJobRunner<InspectResult>("pdf.inspect", {
     onResult: (result, job) => {
-      setPages([...useForm.getState().pages, ...(job.partials as PdfPageInfo[]).map(withKey)]);
+      const found = job.partials as PdfPageInfo[];
+      const state = usePdfMergeForm.getState();
+      if (state.restore) {
+        setPages(restoredPages(state.restore, found));
+        state.setRestore(null);
+      } else {
+        setPages([...state.pages, ...found.map(withKey)]);
+      }
       result.errors.forEach((e) => notify.error(t("pdf.toast.readError", { file: fileName(e.file) }), { body: e.error }));
       inspect.reset();
     },
-    onError: (error) => notify.error(t("pdf.toast.readError", { file: "" }), { body: error }),
+    onError: (error) => {
+      usePdfMergeForm.getState().setRestore(null);
+      notify.error(t("pdf.toast.readError", { file: "" }), { body: error });
+    },
   });
 
   const merge = useJobRunner<MergeResult>("pdf.merge", {
@@ -313,6 +311,10 @@ export default function PdfPage() {
   useIncomingTransfer("pdf", (files) => {
     addMergeFiles(files);
   });
+
+  useEffect(() => {
+    if (restore) addMergeFiles([...new Set(restore.map((p) => p.file))]);
+  }, [restore]); // eslint-disable-line react-hooks/exhaustive-deps -- read the files once per restored selection
 
   const browseMerge = async () => addMergeFiles(await api.dialogs.openFiles([dialogFilter(t, "pdf")]));
 

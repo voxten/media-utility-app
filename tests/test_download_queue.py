@@ -260,7 +260,7 @@ def test_resumed_queue_keeps_sponsorblock(monkeypatch, ctx, tmp_path, queue_file
     started = {}
     monkeypatch.setattr(download_queue, "download_batch", lambda job_ctx, urls, *args, **kwargs: started.update(urls=urls, **kwargs))
     settings = SimpleNamespace(cookie_files=lambda: {}, get=lambda key: False)
-    jobs = SimpleNamespace(submit=lambda kind, fn, title: fn(ctx))
+    jobs = SimpleNamespace(submit=lambda kind, fn, title, **_: fn(ctx))
     api.DownloadApi(SimpleNamespace(settings=settings, jobs=jobs)).resume_queue()
 
     assert started["urls"] == URLS[1:]
@@ -495,7 +495,7 @@ def test_retry_failed_after_the_queue_uses_its_own_options(monkeypatch, ctx, tmp
         download_queue, "download_batch", lambda job_ctx, urls, outdir, *args, **kwargs: started.update(urls=urls, outdir=outdir, **kwargs)
     )
     settings = SimpleNamespace(cookie_files=lambda: {}, get=lambda key: {"downloadParallel": 2, "downloadRateLimit": 5}.get(key))
-    jobs = SimpleNamespace(submit=lambda kind, fn, title: fn(ctx) or "new-job")
+    jobs = SimpleNamespace(submit=lambda kind, fn, title, **_: fn(ctx) or "new-job")
     bridge = api.DownloadApi(SimpleNamespace(settings=settings, jobs=jobs))
 
     assert bridge.retry_failed(ctx.job_id) == "new-job"

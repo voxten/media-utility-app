@@ -157,8 +157,13 @@ class JobHistory:
         tmp.write_text(json.dumps(self._entries, indent=1, ensure_ascii=False), encoding="utf-8")
         tmp.replace(self.path)
 
-    def record(self, job: Dict[str, Any], result: Any = None) -> Optional[Dict[str, Any]]:
-        """Store a finished job (``JobInfo.to_dict()``) and return the entry, or None when skipped."""
+    def record(
+        self, job: Dict[str, Any], result: Any = None, replay: Optional[Dict[str, Any]] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Store a finished job (``JobInfo.to_dict()``) and return the entry, or None when skipped.
+
+        ``replay`` is the bridge call that started the job (``jobs.replay_record``), kept so it can run again.
+        """
         if job.get("kind") in SKIPPED_KINDS:
             return None
         items = result_items(result)
@@ -176,6 +181,8 @@ class JobHistory:
         }
         if items:
             entry["items"] = items
+        if replay:
+            entry["replay"] = replay
         with self._lock:
             self._entries = [entry, *(e for e in self._entries if e.get("id") != entry["id"])][:MAX_ENTRIES]
             try:
@@ -189,6 +196,24 @@ class JobHistory:
         with self._lock:
             entries = copy.deepcopy(self._entries)
         return [_with_availability(entry) for entry in entries]
+
+    def get(self, entry_id: str) -> Optional[Dict[str, Any]]:
+        with self._lock:
+            entry = next((e for e in self._entries if e.get("id") == entry_id), None)
+            return copy.deepcopy(entry) if entry else None
+
+    def remove(self, entry_id: str) -> bool:
+        """Forget one finished job; False when it is not in the history."""
+        with self._lock:
+            kept = [e for e in self._entries if e.get("id") != entry_id]
+            if len(kept) == len(self._entries):
+                return False
+            self._entries = kept
+            try:
+                self._save()
+            except OSError:
+                logger.exception("could not save job history")
+        return True
 
     def clear(self) -> None:
         with self._lock:

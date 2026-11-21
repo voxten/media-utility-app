@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Button, Field, Input, Switch, Tab, TabList } from "@fluentui/react-components";
 import { MusicNote216Regular, Play16Filled, Video16Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
-import { create } from "zustand";
 import { ActionBar } from "../../components/ActionBar";
 import { Columns } from "../../components/Columns";
 import { DropZone } from "../../components/DropZone";
@@ -28,20 +27,20 @@ import { useJobRunner } from "../../lib/useJobRunner";
 import { useToolShortcuts } from "../../lib/useToolShortcuts";
 import { useSettings } from "../../stores/settings";
 import { useFrameLoader } from "../gif/useFrameLoader";
+import {
+  AUDIO_FORMATS,
+  BITRATES,
+  HEIGHTS,
+  LOSSLESS,
+  QUALITIES,
+  useMediaConvertForm,
+  VIDEO_FORMATS,
+  type OutputFormat,
+  type SizeMode,
+  type VideoFormat,
+} from "./store";
 
 const MEDIA_EXTENSIONS = [...VIDEO_EXTENSIONS, ...AUDIO_EXTENSIONS];
-const VIDEO_FORMATS = ["mp4", "mkv", "mov", "webm"] as const;
-const AUDIO_FORMATS = ["mp3", "m4a", "ogg", "opus", "wav", "flac"] as const;
-type OutputFormat = (typeof VIDEO_FORMATS)[number] | (typeof AUDIO_FORMATS)[number];
-const LOSSLESS = new Set<OutputFormat>(["wav", "flac"]);
-const QUALITIES = ["high", "balanced", "small"] as const;
-type Quality = (typeof QUALITIES)[number];
-const HEIGHTS = ["0", "2160", "1440", "1080", "720", "480", "360"] as const;
-type Height = (typeof HEIGHTS)[number];
-const BITRATES = ["96", "128", "160", "192", "256", "320"] as const;
-type Bitrate = (typeof BITRATES)[number];
-type SizeMode = "quality" | "size" | "copy";
-type VideoFormat = (typeof VIDEO_FORMATS)[number];
 const ENCODE_CODECS: Record<VideoFormat, readonly VideoCodec[]> = {
   mp4: ["h264", "hevc", "av1"],
   mkv: ["h264", "hevc", "av1"],
@@ -52,43 +51,10 @@ const CODEC_LABELS: Record<VideoCodec, string> = { h264: "H.264", hevc: "H.265",
 
 const isVideoFormat = (format: OutputFormat): format is VideoFormat => (VIDEO_FORMATS as readonly string[]).includes(format);
 
-interface MediaConvertForm {
-  files: string[];
-  format: OutputFormat;
-  codec: VideoCodec;
-  sizeMode: SizeMode;
-  quality: Quality;
-  targetMb: number;
-  height: Height;
-  mute: boolean;
-  audioKbps: Bitrate;
-  normalize: boolean;
-  /** Trim of the only file, in seconds; null keeps the whole file. */
-  range: { start: number; end: number } | null;
-  outputDir: string;
-  set: (patch: Partial<Omit<MediaConvertForm, "set">>) => void;
-}
-
-const useForm = create<MediaConvertForm>((set) => ({
-  files: [],
-  format: "mp4",
-  codec: "h264",
-  sizeMode: "quality",
-  quality: "balanced",
-  targetMb: 25,
-  height: "0",
-  mute: false,
-  audioKbps: "192",
-  normalize: false,
-  range: null,
-  outputDir: "",
-  set: (patch) => set(patch),
-}));
-
 export default function MediaConvertPage() {
   const { t } = useTranslation();
   const notify = useNotify();
-  const form = useForm();
+  const form = useMediaConvertForm();
   const outputDir = useOutputDir(form.outputDir);
   const single = form.files.length === 1 ? form.files[0] : null;
   const [info, setInfo] = useState<VideoInfo | null>(null);
@@ -127,7 +93,7 @@ export default function MediaConvertPage() {
     const apply = (formats: string[]) => {
       if (!current) return;
       setCopyFormats(formats);
-      const state = useForm.getState();
+      const state = useMediaConvertForm.getState();
       if (state.sizeMode !== "copy") return;
       if (!formats.length) state.set({ sizeMode: "quality" });
       else if (!formats.includes(state.format)) state.set({ format: formats[0] as OutputFormat });
@@ -149,7 +115,7 @@ export default function MediaConvertPage() {
   const acceptFiles = useAcceptFiles(MEDIA_EXTENSIONS);
   const addFiles = (paths: string[]) => {
     const accepted = acceptFiles(paths);
-    if (accepted.length) form.set({ files: addUnique(useForm.getState().files, accepted), range: null });
+    if (accepted.length) form.set({ files: addUnique(useMediaConvertForm.getState().files, accepted), range: null });
   };
   const browse = async () =>
     addFiles(await api.dialogs.openFiles([dialogFilter(t, "videos", MEDIA_EXTENSIONS)]));

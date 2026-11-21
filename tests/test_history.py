@@ -174,3 +174,26 @@ def test_record_limits_queue_items(tmp_path):
     entry = history.record(job(kind="download.batch"), {"items": items})
 
     assert len(entry["items"]) == MAX_ITEMS
+
+
+def test_remove_forgets_one_entry_and_keeps_the_rest(tmp_path):
+    path = tmp_path / "history.json"
+    history = JobHistory(path)
+    for job_id in ("a", "b", "c"):
+        history.record(job(job_id))
+    assert history.remove("b") is True
+    assert history.remove("missing") is False
+    assert [e["id"] for e in history.entries()] == ["c", "a"]
+    assert [e["id"] for e in JobHistory(path).entries()] == ["c", "a"]
+
+
+def test_replay_is_kept_with_the_entry(tmp_path):
+    path = tmp_path / "history.json"
+    replay = {"method": "converter.start", "args": [{"files": ["C:/a.png"], "outFormat": "WEBP"}]}
+    JobHistory(path).record(job("a"), replay=replay)
+    JobHistory(path).record(job("b"))
+    entries = {e["id"]: e for e in JobHistory(path).entries()}
+    assert entries["a"]["replay"] == replay
+    assert "replay" not in entries["b"]
+    assert JobHistory(path).get("a")["replay"] == replay
+    assert JobHistory(path).get("missing") is None

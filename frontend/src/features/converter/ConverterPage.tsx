@@ -20,7 +20,6 @@ import {
   Play16Filled,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
-import { create } from "zustand";
 import { ActionBar } from "../../components/ActionBar";
 import { DropZone } from "../../components/DropZone";
 import { FileList } from "../../components/FileList";
@@ -45,10 +44,8 @@ import { AfterGallery } from "../../components/AfterGallery";
 import { errorMessage } from "../../lib/errors";
 import { addUnique } from "../../lib/fileList";
 import { useToolShortcuts } from "../../lib/useToolShortcuts";
+import { FORMATS, INPUT_FORMATS, useConverterForm, type Source } from "./store";
 
-const FORMATS = ["PNG", "WEBP", "JPEG", "GIF", "TIFF", "BMP", "PDF"] as const;
-type ImageFormat = (typeof FORMATS)[number];
-const INPUT_FORMATS = FORMATS.filter((f): f is Exclude<ImageFormat, "PDF"> => f !== "PDF");
 const LOSSY = new Set(["WEBP", "JPEG"]);
 
 interface ConvertResult {
@@ -67,34 +64,6 @@ interface ConvertResult {
     originalSize: number;
   }>;
 }
-
-type Source = "files" | "folder";
-
-interface ConverterForm {
-  source: Source;
-  inputDir: string;
-  files: string[];
-  inFormat: Exclude<ImageFormat, "PDF">;
-  outFormat: ImageFormat;
-  outputDir: string;
-  quality: number;
-  method: number;
-  matching: number | null;
-  set: (patch: Partial<Omit<ConverterForm, "set">>) => void;
-}
-
-const useForm = create<ConverterForm>((set) => ({
-  source: "files",
-  inputDir: "",
-  files: [],
-  inFormat: "PNG",
-  outFormat: "WEBP",
-  outputDir: "",
-  quality: 80,
-  method: 6,
-  matching: null,
-  set: (patch) => set(patch),
-}));
 
 const useStyles = makeStyles({
   row: { display: "flex", gap: "12px", alignItems: "flex-end", flexWrap: "wrap", minWidth: 0 },
@@ -176,7 +145,7 @@ export default function ConverterPage() {
   const { t } = useTranslation();
   const styles = useStyles();
   const notify = useNotify();
-  const form = useForm();
+  const form = useConverterForm();
   const outputDir = useOutputDir(form.outputDir);
 
   const runner = useJobRunner<ConvertResult>("converter", {
@@ -209,7 +178,7 @@ export default function ConverterPage() {
   }, [form.source, form.inputDir, form.files.length, fileCount, t]);
 
   const acceptFiles = useAcceptFiles(ALL_IMAGE_EXTENSIONS);
-  const addFiles = (paths: string[]) => form.set({ files: addUnique(useForm.getState().files, acceptFiles(paths)) });
+  const addFiles = (paths: string[]) => form.set({ files: addUnique(useConverterForm.getState().files, acceptFiles(paths)) });
   const browseFiles = async () => addFiles(await api.dialogs.openFiles([dialogFilter(t, "images", ALL_IMAGE_EXTENSIONS)]));
   const browse = async () => {
     if (form.source === "files") return browseFiles();
@@ -218,7 +187,7 @@ export default function ConverterPage() {
   };
 
   useIncomingTransfer("converter", (files) => {
-    if (files.length) form.set({ source: "files", files: addUnique(useForm.getState().files, files) });
+    if (files.length) form.set({ source: "files", files: addUnique(useConverterForm.getState().files, files) });
   });
 
   const start = () =>

@@ -1183,7 +1183,12 @@
     "yesterday": "Wczoraj",
     "noSessionJobs": "Brak zadań w tej sesji",
     "showHistory": "Pokaż historię",
-    "historyEmpty": "Historia jest pusta"
+    "historyEmpty": "Historia jest pusta",
+    "openWithSettings": "Otwórz z tymi ustawieniami",
+    "rerun": "Uruchom ponownie",
+    "rerunStarted": "Uruchomiono ponownie",
+    "rerunFailed": "Nie udało się uruchomić zadania ponownie",
+    "removeFromHistory": "Usuń z historii"
   },
   "palette": {
     "title": "Szukaj",
@@ -1641,7 +1646,9 @@
     "allFilesFailed_other": "Nie udało się przekonwertować żadnego z {{count}} plików. Szczegóły są w logu.",
     "nothingToRetry": "Nie ma nieudanych linków do ponowienia.",
     "ocrNoLanguage": "Windows nie rozpoznaje tekstu w tym języku. Dodaj język z funkcją optycznego rozpoznawania znaków w Ustawieniach Windows → Czas i język → Język i region.",
-    "ocrUnavailable": "Rozpoznawanie tekstu wbudowane w Windows nie jest dostępne na tym komputerze."
+    "ocrUnavailable": "Rozpoznawanie tekstu wbudowane w Windows nie jest dostępne na tym komputerze.",
+    "rerunMissing": "Plik {{file}} już nie istnieje.",
+    "rerunUnsupported": "Ustawienia tego zadania nie zostały zapisane."
   },
   "media_convert": {
     "output": "Wynik",

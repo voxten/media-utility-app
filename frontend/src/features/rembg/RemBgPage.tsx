@@ -13,7 +13,6 @@ import {
 } from "@fluentui/react-components";
 import { Checkmark16Regular, Wand16Filled } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
-import { create } from "zustand";
 import { ModelBanner } from "../../components/ModelBanner";
 import { Select } from "../../components/Select";
 import { useNotify } from "../../components/notify";
@@ -23,12 +22,10 @@ import { api } from "../../lib/bridge";
 import { checkerboard } from "../../lib/checkerboard";
 import { formatList, IMAGE_EXTENSIONS } from "../../lib/fileTypes";
 import { fileName } from "../../lib/format";
-import type { RemBgOptions, RemBgPreview, RemBgResult } from "../../lib/types";
+import type { RemBgOptions, RemBgResult } from "../../lib/types";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { errorMessage } from "../../lib/errors";
-
-type ModelType = "birefnet" | "birefnet-lite" | "isnet" | "u2net";
-type BgMode = "checker" | "black" | "white" | "green";
+import { useRemBgForm, type BgMode, type ModelType } from "./store";
 
 // Literal backdrops for judging the cutout; theme tokens would shift with light/dark mode.
 const PREVIEW_COLORS = { black: "#000000", white: "#ffffff", green: "#00b140" } as const;
@@ -39,32 +36,6 @@ const BG_MODES: { id: BgMode; labelKey: string }[] = [
   { id: "white", labelKey: "rembg.options.bgWhite" },
   { id: "green", labelKey: "rembg.options.bgGreen" },
 ];
-
-interface RemBgFormState {
-  image: RemBgPreview | null;
-  sourcePath: string;
-  result: RemBgResult | null;
-  model: ModelType;
-  antiHalo: boolean;
-  choke: number;
-  feather: number;
-  despeckle: boolean;
-  bgMode: BgMode;
-  set: (patch: Partial<Omit<RemBgFormState, "set">>) => void;
-}
-
-const useForm = create<RemBgFormState>((set) => ({
-  image: null,
-  sourcePath: "",
-  result: null,
-  model: "birefnet",
-  antiHalo: true,
-  choke: 1,
-  feather: 0,
-  despeckle: true,
-  bgMode: "checker",
-  set: (patch) => set(patch),
-}));
 
 const useStyles = makeStyles({
   toolbar: {
@@ -148,7 +119,7 @@ export default function RemBgPage() {
   const styles = useStyles();
   const { t } = useTranslation();
   const notify = useNotify();
-  const form = useForm();
+  const form = useRemBgForm();
   const [modelAvailable, setModelAvailable] = useState<boolean | null>(null);
   const output = useSaveOutput("rembg", api.rembg.save);
 
@@ -181,6 +152,11 @@ export default function RemBgPage() {
       notify.error(t("common.jobStatus.error"), { body: errorMessage(t, err) });
     }
   };
+
+  // A file put in the store without its preview (opened from the task history).
+  useEffect(() => {
+    if (form.sourcePath && !form.image) load(form.sourcePath);
+  }, [form.sourcePath, form.image]); // eslint-disable-line react-hooks/exhaustive-deps -- load once per file
 
   const canRun = !!form.image && modelAvailable === true && !runner.running;
 

@@ -15,6 +15,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { toolForJob } from "../app/tools";
 import { api } from "../lib/bridge";
+import { errorMessage } from "../lib/errors";
 import { useOpenPath } from "../lib/useOpenPath";
 import { jobMessage, translateMessage } from "../lib/jobMessage";
 import type { HistoryEntry } from "../lib/types";
@@ -25,6 +26,7 @@ import { SubtaskRow } from "./jobCard/SubtaskRow";
 import { jobInfoLine, SEPARATOR } from "./jobCard/summary";
 import { extractSubtasks, jobLinks, openTarget, revealTarget, transferTargets } from "./jobCard/targets";
 import { useLiveElapsed } from "./LiveElapsed";
+import { useNotify } from "./notify";
 
 function StatusBadge({ status }: { status: JobState["status"] }) {
   const styles = useJobCardStyles();
@@ -40,6 +42,8 @@ interface JobCardProps {
   onNavigate?: () => void;
   /** Set for a job from an earlier session: shows when it finished and whether its output still exists. */
   saved?: { available: boolean };
+  /** Set on a card in the history: its saved entry, which may run again or be removed. */
+  entry?: Pick<HistoryEntry, "id" | "replay">;
   /** When the job finished: the full date (default for saved jobs) or only the time, under a day heading. */
   when?: "date" | "time";
 }
@@ -48,9 +52,10 @@ interface JobCardProps {
  * One job: what it works on, its progress or result in one line, and its actions as icons and a menu.
  * Memoised: a progress event re-renders only the card of the job it belongs to.
  */
-export const JobCard = memo(function JobCard({ job, onNavigate, saved, when = saved ? "date" : undefined }: JobCardProps) {
+export const JobCard = memo(function JobCard({ job, onNavigate, saved, entry, when = saved ? "date" : undefined }: JobCardProps) {
   const styles = useJobCardStyles();
   const { t, i18n } = useTranslation();
+  const notify = useNotify();
   const files = useOpenPath();
   const tool = toolForJob(job.kind);
   const Icon = tool?.icon;
@@ -75,7 +80,9 @@ export const JobCard = memo(function JobCard({ job, onNavigate, saved, when = sa
   );
   const revealPath = done ? revealTarget(job.result) : null;
   const openPath = done && !outputMissing ? openTarget(job.result) : null;
-  const canRetry = failed && job.retryable && !saved;
+  // A saved card stays after its retry starts (only this session's card gives way), so it stops offering it.
+  const [retried, setRetried] = useState(false);
+  const canRetry = failed && !retried && (saved ? !!entry?.replay : !!job.retryable);
   const message = jobMessage(t, job);
   const errorText = failed ? message : "";
 
@@ -134,7 +141,11 @@ export const JobCard = memo(function JobCard({ job, onNavigate, saved, when = sa
         <div className={styles.headActions}>
           {running && iconButton(t("common.cancel"), <Dismiss16Regular />, () => api.jobs.cancel(job.id))}
           {canRetry &&
-            iconButton(t("jobs.retry"), <ArrowClockwise16Regular />, () => retryJob(job.id).catch(() => undefined))}
+            iconButton(t("jobs.retry"), <ArrowClockwise16Regular />, () =>
+              retryJob(job.id)
+                .then((newId) => setRetried(!!newId))
+                .catch((err) => notify.error(t("jobs.rerunFailed"), { body: errorMessage(t, err) })),
+            )}
           {openPath &&
             iconButton(t("jobs.openFile"), <Open16Regular />, () => files.openPath(openPath))}
           {revealPath &&
@@ -151,6 +162,8 @@ export const JobCard = memo(function JobCard({ job, onNavigate, saved, when = sa
               copyPath={copyPath}
               errorText={errorText}
               links={links}
+              entry={entry}
+              retryShown={canRetry}
               onNavigate={onNavigate}
             />
           )}
@@ -209,8 +222,8 @@ export const HistoryJobCard = memo(function HistoryJobCard({ entry, preferLive, 
   const live = useJobs((state) => (preferLive ? state.jobs[entry.id] : undefined));
   const saved = useMemo(() => historyJob(entry), [entry]);
   return live ? (
-    <JobCard job={live} when={when} onNavigate={onNavigate} />
+    <JobCard job={live} entry={entry} when={when} onNavigate={onNavigate} />
   ) : (
-    <JobCard job={saved} saved={entry} when={when} onNavigate={onNavigate} />
+    <JobCard job={saved} saved={entry} entry={entry} when={when} onNavigate={onNavigate} />
   );
 });

@@ -1087,7 +1087,12 @@
     "yesterday": "Yesterday",
     "noSessionJobs": "No tasks in this session",
     "showHistory": "Show history",
-    "historyEmpty": "History is empty"
+    "historyEmpty": "History is empty",
+    "openWithSettings": "Open with these settings",
+    "rerun": "Run again",
+    "rerunStarted": "Started again",
+    "rerunFailed": "Could not run the task again",
+    "removeFromHistory": "Remove from history"
   },
   "palette": {
     "title": "Search",
@@ -1527,7 +1532,9 @@
     "allFilesFailed_other": "None of the {{count}} files could be converted. Details are in the log.",
     "nothingToRetry": "There are no failed links to retry.",
     "ocrNoLanguage": "Windows cannot recognize text in this language. Add the language with optical character recognition in Windows Settings → Time & language → Language & region.",
-    "ocrUnavailable": "Text recognition built into Windows is not available on this computer."
+    "ocrUnavailable": "Text recognition built into Windows is not available on this computer.",
+    "rerunMissing": "{{file}} no longer exists.",
+    "rerunUnsupported": "The settings of this task were not saved."
   },
   "media_convert": {
     "output": "Output",

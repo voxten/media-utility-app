@@ -18,6 +18,10 @@ const DEFAULT_OUTPUT: GifOutputOptions = {
 /** Output settings per GIF tool, kept across page switches. */
 const useGifOutputs = create<{ byTool: Record<string, GifOutputOptions> }>(() => ({ byTool: {} }));
 
+/** Puts `output` into the tool's form, as when a render is opened from the task history. */
+export const setGifOutput = (toolId: string, output: Partial<GifOutputOptions>) =>
+  useGifOutputs.setState((s) => ({ byTool: { ...s.byTool, [toolId]: { ...DEFAULT_OUTPUT, ...output } } }));
+
 /** Output settings shared by the GIF tools; the last used ones are kept in the app settings. */
 export function useGifOutput(toolId: string, formats: readonly GifFormat[], gifsicle: boolean) {
   const stored = useSettings((s) => s.settings?.gifOutput);

@@ -1,7 +1,7 @@
 // In-browser stand-in for the Python backend, used when the UI runs outside pywebview
 // (e.g. `npm run dev` opened in a normal browser). Data is fake; jobs are simulated.
 
-import type { EngineInfo, HistoryEntry, Settings } from "./types";
+import type { EngineInfo, HistoryEntry, JobReplay, Settings } from "./types";
 
 type Emit = (event: string, payload: unknown) => void;
 
@@ -45,6 +45,10 @@ const mockHistory = (now: number): HistoryEntry[] => [
   {
     id: "hist1", kind: "converter", title: "WEBP", status: "done", startedAt: now - 2 * HOUR - 40, finishedAt: now - 2 * HOUR,
     error: null, outputs: ["C:\\Users\\demo\\Pictures\\converted\\holiday.webp"], available: true, singleFile: true,
+    replay: {
+      method: "converter.start",
+      args: [{ files: ["C:\\Users\\demo\\Pictures\\holiday.png"], outputDir: "C:\\Users\\demo\\Pictures\\converted", outFormat: "WEBP", quality: 65, method: 4 }],
+    },
   },
   {
     id: "hist2", kind: "download", title: "Big Buck Bunny", status: "done", startedAt: now - 26 * HOUR - 95, finishedAt: now - 26 * HOUR,
@@ -70,11 +74,23 @@ const mockHistory = (now: number): HistoryEntry[] => [
   {
     id: "hist3", kind: "compressor", title: "", status: "error", startedAt: now - 50 * HOUR - 5, finishedAt: now - 50 * HOUR,
     error: "cannot identify image file", outputs: [], available: false,
+    replay: {
+      method: "compressor.start",
+      args: [{ files: ["C:\\Users\\demo\\Pictures\\scan.png"], outputDir: "C:\\Users\\demo\\Pictures", format: "webp", mode: "smart", quality: 70 }],
+    },
   },
 ];
 
+/** Bridge calls the mock saves with a job, as the backend does (backend/bridge/replay.py INPUTS). */
+const REPLAYABLE = new Set([
+  "converter.start", "media_convert.start", "image_editor.start_batch", "compressor.start", "pdf.merge", "pdf.compress",
+  "pdf.split", "pdf.pdf_to_images", "pdf.images_to_pdf", "pdf.extract_text", "tts.synthesize", "video_to_gif.start",
+  "gif_editor.start", "video_sync.start", "transcribe.start", "upscale.start", "rembg.remove", "download.start",
+  "download.batch", "instagram.start", "ocr.images", "ocr.pdf",
+]);
+
 /** History entry for a finished mock job, using the same result shapes as the backend. */
-function historyEntry(job: { id: string; kind: string; title: string; startedAt: number }, result: unknown): HistoryEntry {
+function historyEntry(job: { id: string; kind: string; title: string; startedAt: number }, result: unknown, replay?: JobReplay): HistoryEntry {
   const r = (result ?? {}) as Record<string, unknown>;
   const files = Array.isArray(r.files) ? r.files.filter((f): f is string => typeof f === "string") : [];
   const single = [r.outPath, r.path].filter((p): p is string => typeof p === "string" && p !== "");
@@ -82,6 +98,7 @@ function historyEntry(job: { id: string; kind: string; title: string; startedAt:
   return {
     id: job.id, kind: job.kind, title: job.title, status: "done", startedAt: job.startedAt, finishedAt: Date.now() / 1000,
     error: null, outputs, available: outputs.length > 0, singleFile: single.length + files.length === 1,
+    ...(replay ? { replay } : {}),
   };
 }
 
@@ -128,8 +145,12 @@ export function createMockBackend(emit: Emit) {
   const NOT_RETRYABLE = ["download.probe", "instagram.probe", "pdf.inspect", "duplicates.trash"];
   const NOT_IN_HISTORY = [...NOT_RETRYABLE, "download.engines"];
 
+  /** The bridge call being handled, saved with the job it starts. */
+  let currentCall: JobReplay | undefined;
+
   const simulateJob = (kind: string, title: string, result: unknown, durationMs = 2500): Promise<string> => {
     const jobId = `mock${++counter}`;
+    const replay = currentCall && REPLAYABLE.has(currentCall.method) ? currentCall : undefined;
     const started = Date.now();
     emit("job:started", {
       id: jobId, kind, title, status: "running", startedAt: started / 1000,
@@ -143,7 +164,7 @@ export function createMockBackend(emit: Emit) {
         running.delete(jobId);
         emit("job:done", { jobId, result });
         if (!NOT_IN_HISTORY.includes(kind)) {
-          const entry = historyEntry({ id: jobId, kind, title, startedAt: started / 1000 }, result);
+          const entry = historyEntry({ id: jobId, kind, title, startedAt: started / 1000 }, result, replay);
           history = [entry, ...history];
           emit("jobs:history", entry);
         }
@@ -380,8 +401,20 @@ export function createMockBackend(emit: Emit) {
         emit("job:cancelled", { jobId: id });
         return ok(true);
       },
-      retry: () => ok(null),
+      retry: (id: string) => {
+        const entry = history.find((e) => e.id === id);
+        return entry?.status === "error" && entry.replay ? rerun(entry.replay) : ok(null);
+      },
+      rerun: (id: string) => {
+        const entry = history.find((e) => e.id === id);
+        return entry?.replay ? rerun(entry.replay) : Promise.reject(new Error("errors.rerunUnsupported"));
+      },
       history: () => ok(history),
+      remove_history: (id: string) => {
+        const before = history.length;
+        history = history.filter((e) => e.id !== id);
+        return ok(history.length < before);
+      },
       clear_history: () => {
         history = [];
         return ok(undefined);
@@ -1018,5 +1051,25 @@ export function createMockBackend(emit: Emit) {
       },
     },
   };
+
+  type Method = (...args: unknown[]) => Promise<unknown>;
+  const namespaces = backend as unknown as Record<string, Record<string, Method>>;
+  for (const [ns, methods] of Object.entries(namespaces)) {
+    for (const [name, fn] of Object.entries(methods)) {
+      methods[name] = (...args: unknown[]) => {
+        currentCall = { method: `${ns}.${name}`, args };
+        try {
+          return fn(...args);
+        } finally {
+          currentCall = undefined;
+        }
+      };
+    }
+  }
+  function rerun(replay: JobReplay): Promise<unknown> {
+    const [ns, name] = replay.method.split(".");
+    const fn = namespaces[ns]?.[name];
+    return fn ? fn(...replay.args) : Promise.reject(new Error("errors.rerunUnsupported"));
+  }
   return backend;
 }

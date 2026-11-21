@@ -14,7 +14,6 @@ import {
 } from "@fluentui/react-components";
 import { Cloud24Regular, Desktop24Regular, Dismiss16Regular, FolderOpen16Regular, Speaker216Filled } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
-import { create } from "zustand";
 import { ActionBar } from "../../components/ActionBar";
 import { AudioPlayer } from "../../components/AudioPlayer";
 import { useNotify } from "../../components/notify";
@@ -32,10 +31,10 @@ import { useJobRunner } from "../../lib/useJobRunner";
 import { errorMessage } from "../../lib/errors";
 import { claimDrop, DROP_ZONE_ATTR, matchesExtensions } from "../../lib/drop";
 import { useToolShortcuts } from "../../lib/useToolShortcuts";
+import { FORMATS, useTtsForm, type AudioFormat, type Engine } from "./store";
 
 const TEXT_EXTENSIONS = [".txt"];
 
-type Engine = "edge" | "pyttsx3";
 interface Voice {
   id: string;
   name: string;
@@ -43,39 +42,10 @@ interface Voice {
   gender: string;
 }
 
-const FORMATS = ["mp3", "wav", "ogg", "flac"] as const;
 const RATE = {
   edge: { min: -50, max: 100, step: 5, default: 0, format: (v: number) => `${v > 0 ? "+" : ""}${v}%` },
   pyttsx3: { min: 80, max: 320, step: 10, default: 200, format: null },
 };
-
-interface TtsForm {
-  text: string;
-  engine: Engine;
-  voice: string;
-  locale: string;
-  rate: { edge: number; pyttsx3: number };
-  format: (typeof FORMATS)[number];
-  outDir: string;
-  fileName: string;
-  audioSrc: string | null;
-  lastOutput: string | null;
-  set: (patch: Partial<Omit<TtsForm, "set">>) => void;
-}
-
-const useForm = create<TtsForm>((set) => ({
-  text: "",
-  engine: "edge",
-  voice: "",
-  locale: "",
-  rate: { edge: 0, pyttsx3: 200 },
-  format: "mp3",
-  outDir: "",
-  fileName: "",
-  audioSrc: null,
-  lastOutput: null,
-  set: (patch) => set(patch),
-}));
 
 const voiceCache: Partial<Record<Engine, Voice[]>> = {};
 
@@ -116,7 +86,7 @@ export default function TtsPage() {
   const { reveal } = useOpenPath();
   const styles = useStyles();
   const notify = useNotify();
-  const form = useForm();
+  const form = useTtsForm();
   const [voices, setVoices] = useState<Voice[] | null>(voiceCache[form.engine] ?? null);
   const [dropOver, setDropOver] = useState(false);
   // Local, so a recording plays by itself only right after it is made, not on every visit.
@@ -178,7 +148,8 @@ export default function TtsPage() {
   useEffect(() => {
     if (!voices?.length) return;
     const preferred = i18n.language === "pl" ? "pl-PL" : "en-US";
-    const locale = locales.includes(form.locale) ? form.locale : locales.includes(preferred) ? preferred : locales[0] ?? "";
+    const voiceLocale = voices.find((v) => v.id === form.voice)?.locale ?? "";
+    const locale = [form.locale, voiceLocale, preferred].find((l) => locales.includes(l)) ?? locales[0] ?? "";
     const voiceOk = voices.some((v) => v.id === form.voice && (!locale || v.locale === locale));
     form.set({ locale, voice: voiceOk ? form.voice : voices.find((v) => v.locale === locale)?.id ?? voices[0].id });
   }, [voices]); // eslint-disable-line react-hooks/exhaustive-deps -- defaults only when a voice list loads, never over the user's pick
@@ -207,7 +178,7 @@ export default function TtsPage() {
   const outPath = joinPath(effectiveOutDir, effectiveFileName);
   const words = form.text.trim() ? form.text.trim().split(/\s+/).length : 0;
 
-  const setFormat = (format: (typeof FORMATS)[number]) => form.set({ format });
+  const setFormat = (format: AudioFormat) => form.set({ format });
 
   const canStart = !!form.text.trim() && !!form.voice && !runner.running;
   const start = () =>
@@ -226,7 +197,7 @@ export default function TtsPage() {
     }
     try {
       const text = (await api.tts.readText(path)).trim();
-      const current = useForm.getState().text.trimEnd();
+      const current = useTtsForm.getState().text.trimEnd();
       form.set({ text: current ? `${current}\n\n${text}` : text });
     } catch (err) {
       notify.error(t("tts.errors.readText"), { body: errorMessage(t, err) });

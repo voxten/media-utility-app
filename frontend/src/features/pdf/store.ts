@@ -1,6 +1,7 @@
 // PDF tools form state, kept across page switches.
 
 import { create } from "zustand";
+import type { PdfPageInfo } from "./usePdfPages";
 
 type Patch<T> = Partial<Omit<T, "set">>;
 
@@ -80,3 +81,36 @@ const singleFileForm = () =>
 
 export const usePdfCompressForm = singleFileForm();
 export const usePdfExtractForm = singleFileForm();
+
+/** One page of the merged file: 0-based page of `file`, turned by `rotation` degrees. */
+export interface MergePage {
+  file: string;
+  page: number;
+  rotation: number;
+}
+
+/** A page in the merge grid: its thumbnail, a key for dragging and the turn the user gave it. */
+export type PdfPageItem = PdfPageInfo & { key: string; rotation?: number };
+
+interface MergeForm {
+  pages: PdfPageItem[];
+  outputDir: string;
+  outputName: string;
+  /** Pages to read from their files and show in this order (a merge opened from the task history). */
+  restore: MergePage[] | null;
+  setPages: (pages: PdfPageItem[]) => void;
+  setOutputDir: (outputDir: string) => void;
+  setOutputName: (outputName: string) => void;
+  setRestore: (restore: MergePage[] | null) => void;
+}
+
+export const usePdfMergeForm = create<MergeForm>((set) => ({
+  pages: [],
+  outputDir: "",
+  outputName: "",
+  restore: null,
+  setPages: (pages) => set({ pages }),
+  setOutputDir: (outputDir) => set({ outputDir }),
+  setOutputName: (outputName) => set({ outputName }),
+  setRestore: (restore) => set({ restore }),
+}));

@@ -20,6 +20,7 @@ SHUTDOWN_WAIT_S = 3.0
 
 from backend import APP_NAME, APP_VERSION
 from backend.core.errors import AppError
+from backend.bridge import replay
 from backend.bridge.events import EventBus
 from backend.core import clipboard, deps, encoders, engines, ffmpeg, logs, media_server, paths, system, win_theme
 from backend.core.app_shell import AppShell
@@ -70,6 +71,7 @@ class _Context:
         self.taskbar = TaskbarProgress(lambda: win_theme.window_handle(self.window) if self.window else None)
         self.mica = False  # set by main.py once the backdrop is active
         self.started = False
+        self.api: Any = None  # the bridge root, for running a job from the history again
 
     def apply_saved_hotkey(self) -> None:
         try:
@@ -279,10 +281,27 @@ class JobsApi(_Namespace):
         return self._ctx.jobs.cancel(job_id)
 
     def retry(self, job_id: str) -> Optional[str]:
-        return self._ctx.jobs.retry(job_id)
+        """Run a failed job again: this run's own job, or the saved call of one from an earlier run."""
+        new_id = self._ctx.jobs.retry(job_id)
+        if new_id:
+            return new_id
+        entry = self._ctx.history.get(job_id)
+        if not entry or entry.get("status") != "error" or not entry.get("replay"):
+            return None
+        return replay.rerun(self._ctx.api, entry["replay"])
+
+    def rerun(self, job_id: str) -> str:
+        """Run a finished job from the history again with the same files and settings; the new job's id."""
+        entry = self._ctx.history.get(job_id)
+        if not entry or not entry.get("replay"):
+            raise AppError("errors.rerunUnsupported")
+        return replay.rerun(self._ctx.api, entry["replay"])
 
     def history(self) -> List[Dict[str, Any]]:
         return self._ctx.history.entries()
+
+    def remove_history(self, job_id: str) -> bool:
+        return self._ctx.history.remove(job_id)
 
     def clear_history(self) -> None:
         self._ctx.history.clear()
@@ -296,7 +315,12 @@ class ConverterApi(_Namespace):
 
     def start(self, options: Dict[str, Any]) -> str:
         opts = converter.ConvertOptions.from_dict(options)
-        return self._ctx.jobs.submit("converter", lambda ctx: converter.convert(ctx, opts), title=opts.out_fmt.upper())
+        return self._ctx.jobs.submit(
+            "converter",
+            lambda ctx: converter.convert(ctx, opts),
+            title=opts.out_fmt.upper(),
+            replay=replay.call("converter.start", options),
+        )
 
 
 class PdfApi(_Namespace):
@@ -310,13 +334,19 @@ class PdfApi(_Namespace):
         return pdf.render_page(path, int(page))
 
     def merge(self, pages: List[Dict[str, Any]], out_path: str) -> str:
-        return self._ctx.jobs.submit("pdf.merge", lambda ctx: pdf.merge(ctx, pages, out_path), title=Path(out_path).name)
+        return self._ctx.jobs.submit(
+            "pdf.merge",
+            lambda ctx: pdf.merge(ctx, pages, out_path),
+            title=Path(out_path).name,
+            replay=replay.call("pdf.merge", pages, out_path),
+        )
 
     def compress(self, path: str, out_path: str, quality: str = "balanced") -> str:
         return self._ctx.jobs.submit(
             "pdf.compress",
             lambda ctx: pdf.compress(ctx, path, out_path, quality_preset=quality),
             title=Path(path).name,
+            replay=replay.call("pdf.compress", path, out_path, quality),
         )
 
     def split(self, path: str, out_dir: str, mode: str = "all", groups: Optional[List[List[int]]] = None) -> str:
@@ -324,6 +354,7 @@ class PdfApi(_Namespace):
             "pdf.split",
             lambda ctx: pdf.split(ctx, path, out_dir, mode=mode, groups=groups or []),
             title=Path(path).name,
+            replay=replay.call("pdf.split", path, out_dir, mode, groups or []),
         )
 
     def pdf_to_images(self, path: str, out_dir: str, fmt: str = "png", dpi: int = 150, range_spec: str = "") -> str:
@@ -331,6 +362,7 @@ class PdfApi(_Namespace):
             "pdf.to_images",
             lambda ctx: pdf.pdf_to_images(ctx, path, out_dir, fmt=fmt, dpi=int(dpi), range_spec=range_spec),
             title=Path(path).name,
+            replay=replay.call("pdf.pdf_to_images", path, out_dir, fmt, dpi, range_spec),
         )
 
     def images_to_pdf(self, paths: List[str], out_path: str) -> str:
@@ -338,6 +370,7 @@ class PdfApi(_Namespace):
             "pdf.from_images",
             lambda ctx: pdf.images_to_pdf(ctx, paths, out_path),
             title=Path(out_path).name,
+            replay=replay.call("pdf.images_to_pdf", paths, out_path),
         )
 
     def extract_text(self, path: str, out_path: str) -> str:
@@ -345,6 +378,7 @@ class PdfApi(_Namespace):
             "pdf.extract_text",
             lambda ctx: pdf.extract_text(ctx, path, out_path),
             title=Path(path).name,
+            replay=replay.call("pdf.extract_text", path, out_path),
         )
 
 
@@ -377,6 +411,7 @@ class TtsApi(_Namespace):
                 ctx, params["text"], params["engine"], params.get("voice", ""), params.get("rate", 0), params["outPath"]
             ),
             title=Path(params["outPath"]).name,
+            replay=replay.call("tts.synthesize", params),
         )
 
     def read_text(self, path: str) -> str:
@@ -419,10 +454,13 @@ class DownloadApi(_Namespace):
                 params.get("section"),
             ),
             title=params.get("title") or params["url"],
+            replay=replay.call("download.start", params),
         )
 
-    def _submit_batch(self, urls: List[str], params: Dict[str, Any], replaces: Optional[str]) -> str:
-        """``replaces`` is the saved unfinished queue this one resumes or replaces."""
+    def _submit_batch(
+        self, urls: List[str], params: Dict[str, Any], replaces: Optional[str], persist: bool = True
+    ) -> str:
+        """``replaces`` is the saved unfinished queue this one resumes or replaces; ``persist`` saves it as unfinished."""
         cookies = self._ctx.settings.cookie_files()
         settings = self._ctx.settings
         max_height = params.get("maxHeight") or 0
@@ -443,14 +481,20 @@ class DownloadApi(_Namespace):
                 embed_meta=bool(settings.get("downloadEmbedMeta")),
                 skip_archived=bool(settings.get("downloadSkipArchived")),
                 archive=str(download.archive_path()),
-                persist=True,
+                persist=persist,
                 replaces=replaces,
                 sponsorblock=bool(params.get("sponsorblock")),
                 parallel=parallel,
                 rate_limit=rate_limit,
             ),
             title=f'download.batchTitle|{{"count": {len(urls)}}}',
+            replay=replay.call("download.batch", {**params, "urls": urls}),
         )
+
+    def _rerun_batch(self, params: Dict[str, Any]) -> str:
+        """A queue from the history: a new, independent one that leaves the saved unfinished queue alone."""
+        urls = [u for u in params.get("urls") or [] if isinstance(u, str) and u.strip()]
+        return self._submit_batch(urls, params, None, persist=False)
 
     def batch(self, params: Dict[str, Any]) -> str:
         """A new queue replaces the offered unfinished one (the window asks before starting)."""
@@ -528,6 +572,7 @@ class InstagramApi(_Namespace):
                 ctx, params["url"], params["outdir"], params.get("keys") or None, cookies
             ),
             title=params.get("title") or params["url"],
+            replay=replay.call("instagram.start", params),
         )
 
 
@@ -583,6 +628,7 @@ class UpscaleApi(_Namespace):
                 anti_halo=anti_halo,
             ),
             title=f"{Path(path).name} ({scale}x)",
+            replay=replay.call("upscale.start", params),
         )
 
     def save(self, result_path: str, out_path: str) -> str:
@@ -602,6 +648,8 @@ class RemBgApi(_Namespace):
             "rembg",
             lambda ctx: rembg_service.remove(ctx, params),
             title=Path(path).name,
+            # A painted mask is an image too large to keep in the history.
+            replay=None if params.get("userMask") else replay.call("rembg.remove", params),
         )
 
     def save(self, result_path: str, out_path: str) -> str:
@@ -622,6 +670,7 @@ class CompressorApi(_Namespace):
             "compressor",
             lambda ctx: compressor.compress(ctx, params),
             title=title,
+            replay=replay.call("compressor.start", params),
         )
 
 
@@ -663,6 +712,7 @@ class ImageEditorApi(_Namespace):
                 ctx, files, output_dir, operations, out_fmt=out_fmt, quality=quality
             ),
             title=title,
+            replay=replay.call("image_editor.start_batch", files, output_dir, operations, out_fmt, quality),
         )
 
 
@@ -706,6 +756,7 @@ class VideoSyncApi(_Namespace):
             "video_sync",
             lambda ctx: video_sync.sync_video(ctx, params),
             title=title,
+            replay=replay.call("video_sync.start", params),
         )
 
 
@@ -724,6 +775,7 @@ class VideoToGifApi(_Namespace):
             "video_to_gif.render",
             lambda ctx: video_to_gif.render(ctx, params),
             title=Path(params["path"]).name,
+            replay=replay.call("video_to_gif.start", params),
         )
 
 
@@ -748,6 +800,7 @@ class MediaConvertApi(_Namespace):
             "media_convert",
             lambda ctx: media_convert.convert(ctx, params, hardware=hardware),
             title=title,
+            replay=replay.call("media_convert.start", params),
         )
 
 
@@ -763,6 +816,7 @@ class TranscribeApi(_Namespace):
             "transcribe",
             lambda ctx: transcribe.run(ctx, params),
             title=Path(params["path"]).name,
+            replay=replay.call("transcribe.start", params),
         )
 
 
@@ -773,10 +827,17 @@ class OcrApi(_Namespace):
     def images(self, params: Dict[str, Any]) -> str:
         paths = [str(p) for p in params.get("paths") or []]
         title = Path(paths[0]).name if len(paths) == 1 else f'common.filesTitle|{{"count": {len(paths)}}}'
-        return self._ctx.jobs.submit("ocr.images", lambda ctx: ocr.images(ctx, params), title=title)
+        return self._ctx.jobs.submit(
+            "ocr.images", lambda ctx: ocr.images(ctx, params), title=title, replay=replay.call("ocr.images", params)
+        )
 
     def pdf(self, params: Dict[str, Any]) -> str:
-        return self._ctx.jobs.submit("ocr.pdf", lambda ctx: ocr.pdf(ctx, params), title=Path(str(params["path"])).name)
+        return self._ctx.jobs.submit(
+            "ocr.pdf",
+            lambda ctx: ocr.pdf(ctx, params),
+            title=Path(str(params["path"])).name,
+            replay=replay.call("ocr.pdf", params),
+        )
 
     def clipboard_image(self) -> List[str]:
         """Files for what is on the clipboard: a copied picture (saved as PNG) or copied image / PDF files."""
@@ -803,12 +864,14 @@ class GifEditorApi(_Namespace):
             "gif_editor.render",
             lambda ctx: gif_editor.render(ctx, params),
             title=title,
+            replay=replay.call("gif_editor.start", params),
         )
 
 
 class Api:
     def __init__(self, bus: EventBus, settings: Settings) -> None:
         self._ctx = _Context(bus, settings)
+        self._ctx.api = self
         deps.ensure_app_paths(settings.get("customFfmpegPath"))
         self.app = AppApi(self._ctx)
         self.settings = SettingsApi(self._ctx)

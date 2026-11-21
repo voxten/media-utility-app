@@ -32,7 +32,7 @@ import { api } from "../../lib/bridge";
 import { ANIMATION_EXTENSIONS, dialogFilter, formatList, formatName } from "../../lib/fileTypes";
 import { fileName, formatBytes, formatDuration } from "../../lib/format";
 import { IMAGE_STAGE_HEIGHT } from "../../lib/imageStage";
-import type { AnimationInfo, GifEditorPreview, GifEditorResult, GifFormat, GifOperations } from "../../lib/types";
+import type { AnimationInfo, GifEditorPreview, GifEditorResult, GifFormat } from "../../lib/types";
 import { useIncomingTransfer } from "../../lib/useIncomingTransfer";
 import { useJobRunner } from "../../lib/useJobRunner";
 import { useAcceptFiles } from "../../lib/useAcceptFiles";
@@ -44,23 +44,9 @@ import { errorMessage } from "../../lib/errors";
 import { useOutputDir } from "../../components/OutputFolderField";
 import { addUnique, removeFileAt } from "../../lib/fileList";
 import { useToolShortcuts } from "../../lib/useToolShortcuts";
-import { NO_EDITS, useGifEditorForm, type Edits } from "./store";
+import { NO_EDITS, toOperations, useGifEditorForm, type Edits } from "./store";
 
 const FORMATS: GifFormat[] = ["gif", "webp", "apng", "mp4"];
-
-function toOperations(edits: Edits): GifOperations {
-  const ops: GifOperations = {};
-  if (edits.trim) ops.trim = edits.trim;
-  if (edits.crop) ops.crop = { x: edits.crop.x, y: edits.crop.y, width: edits.crop.w, height: edits.crop.h };
-  if (edits.rotate) ops.rotate = edits.rotate;
-  if (edits.flipH) ops.flip_h = true;
-  if (edits.flipV) ops.flip_v = true;
-  if (edits.scale < 100) ops.resize = { percent: edits.scale };
-  if (edits.speed !== 1) ops.speed = edits.speed;
-  if (edits.reverse) ops.reverse = true;
-  if (edits.boomerang) ops.boomerang = true;
-  return ops;
-}
 
 const isEdited = (edits: Edits | undefined) => !!edits && Object.keys(toOperations(edits)).length > 0;
 

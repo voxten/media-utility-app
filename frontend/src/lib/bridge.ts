@@ -163,7 +163,10 @@ export const api = {
   jobs: {
     cancel: (id: JobId) => call<boolean>("jobs", "cancel", id),
     retry: (id: JobId) => call<JobId | null>("jobs", "retry", id),
+    /** Runs a job from the history again with the same files and settings; the new job's id. */
+    rerun: (id: JobId) => call<JobId>("jobs", "rerun", id),
     history: () => call<HistoryEntry[]>("jobs", "history"),
+    removeHistory: (id: JobId) => call<boolean>("jobs", "remove_history", id),
     clearHistory: () => call<void>("jobs", "clear_history"),
   },
   converter: {

@@ -8,6 +8,7 @@ Events: ``job:started``, ``job:progress``, ``job:log``, ``job:partial``,
 ``job:meta``, ``job:done``, ``job:error``, ``job:cancelled``; ``jobs:history`` once a finished job is saved.
 """
 
+import json
 import logging
 import threading
 import time
@@ -31,6 +32,21 @@ POOL_SIZE = MAX_LIMIT + 8
 logger = logging.getLogger(__name__)
 # Finished jobs kept for get()/list()/retry(); older ones live on only in the saved history.
 MAX_FINISHED_JOBS = 100
+# Largest saved bridge call (method and arguments as JSON) a job can be run again from after a restart.
+MAX_REPLAY_BYTES = 16 * 1024
+
+
+def replay_record(replay: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """A copy of ``{"method", "args"}`` that survives a trip through JSON, or None when it cannot be saved or is too large."""
+    if not replay or not isinstance(replay.get("method"), str) or not isinstance(replay.get("args"), list):
+        return None
+    try:
+        encoded = json.dumps(replay, ensure_ascii=False, allow_nan=False)
+    except (TypeError, ValueError):
+        return None
+    if len(encoded.encode("utf-8")) > MAX_REPLAY_BYTES:
+        return None
+    return json.loads(encoded)
 
 
 class JobCancelled(Exception):
@@ -130,6 +146,8 @@ class JobInfo:
     fn: Optional[Callable[[JobContext], Any]] = None
     # Limited jobs wait for a free slot; quick lookups (probes, PDF inspection) skip the queue.
     limited: bool = True
+    # The bridge call that started the job (see replay_record), saved with the history.
+    replay: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
         ctx = self.context
@@ -186,15 +204,24 @@ class JobManager:
         title: str = "",
         retryable: bool = True,
         limited: bool = True,
+        replay: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Start ``fn`` in the background. ``retryable`` jobs that fail can be run again with :meth:`retry`.
 
         ``limited`` jobs share the ``maxConcurrency`` slots; pass False for quick lookups the UI waits on.
+        ``replay`` is the bridge call (``{"method": "converter.start", "args": [...]}``) that started the job,
+        saved with the history so the job can run again after a restart; left out when it is not JSON or too large.
         """
         job_id = uuid.uuid4().hex[:12]
         ctx = JobContext(job_id, self._emit)
         info = JobInfo(
-            id=job_id, kind=kind, title=title or kind, context=ctx, fn=fn if retryable else None, limited=limited
+            id=job_id,
+            kind=kind,
+            title=title or kind,
+            context=ctx,
+            fn=fn if retryable else None,
+            limited=limited,
+            replay=replay_record(replay),
         )
         with self._lock:
             self._jobs[job_id] = info
@@ -272,7 +299,7 @@ class JobManager:
         if self._history is None:
             return
         try:
-            entry = self._history.record(info.to_dict(), result)
+            entry = self._history.record(info.to_dict(), result, replay=info.replay)
         except Exception:  # noqa: BLE001 - history must never break a finished job
             logger.exception("Could not save job %s to the history", info.id)
             return
@@ -305,7 +332,7 @@ class JobManager:
             if not info or info.status != "error" or info.fn is None:
                 return None
             fn, info.fn = info.fn, None
-        return self.submit(info.kind, fn, info.title, limited=info.limited)
+        return self.submit(info.kind, fn, info.title, limited=info.limited, replay=info.replay)
 
     def cancel(self, job_id: str) -> bool:
         with self._lock:
